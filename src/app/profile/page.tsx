@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { getUser } from "@/api/auth";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import LogoutButton from "@/components/logout";
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -75,7 +74,6 @@ export default function ProfilePage() {
                     <strong>Role:</strong> {user.role}
                 </p>
             </div>
-            <LogoutButton/>
         </div>
     );
 }

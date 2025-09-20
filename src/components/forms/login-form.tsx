@@ -57,7 +57,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         onSuccess: (data) => {
             if (data.success) {
                 toast.success("Login successful");
-                router.push("/profile");
+                router.push("/");
             } else {
                 toast.error(data.message);
             }

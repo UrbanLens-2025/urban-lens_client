@@ -1,12 +1,22 @@
 "use client";
 
-import { getUser } from "@/api/auth";
 import { useQuery } from "@tanstack/react-query";
+import { getUser } from "@/api/auth";
 
 export function useUser() {
-  return useQuery({
+  
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["user"],
     queryFn: getUser,
-    staleTime: 1000 * 60,
+    staleTime: 1000 * 60 * 1, // 1 phút
+    enabled: !!token,
   });
+
+  return {
+    user: data?.data,
+    isLoading,
+    isError,
+  };
 }
