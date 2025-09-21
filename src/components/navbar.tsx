@@ -182,7 +182,7 @@ export function Navbar() {
             <DropdownMenuTrigger asChild>
               <Avatar className="h-10 w-10 cursor-pointer">
                 <AvatarImage
-                  src={user?.avatarUrl || "https://i.pravatar.cc/150?u=me"}
+                  src={user?.avatarUrl}
                   alt="User Avatar"
                 />
                 <AvatarFallback>

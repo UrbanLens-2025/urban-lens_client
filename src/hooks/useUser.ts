@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react"; // <-- Cần useState và useEffect
 import { useQuery } from "@tanstack/react-query";
-import { getUser } from "@/api/auth";
+import { getUser } from "@/api/user";
 
 export function useUser() {
   const [isMounted, setIsMounted] = useState(false);
@@ -25,7 +25,7 @@ export function useUser() {
   });
   
   return {
-    user: data?.data,
+    user: data,
     isLoading: !isMounted || (!!token && isLoading),
     isError,
   };

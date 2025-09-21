@@ -1,3 +1,10 @@
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  statusCode: number;
+  data: T;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -7,4 +14,5 @@ export interface User {
   avatarUrl?: string;
   coverUrl?: string;
   role: string;
+  token?: string;
 }

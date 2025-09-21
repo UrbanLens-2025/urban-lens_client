@@ -4,7 +4,7 @@ const tabs = ["Posts", "About", "Friends", "Photos", "Videos", "More"];
 
 export function ProfileTabs() {
   return (
-    <div className="bg-white rounded-lg shadow-md mt-4 p-2 mx-61">
+    <div className="bg-white rounded-lg shadow-md mt-4 p-2">
       <div className="flex justify-between items-center">
         <nav className="flex">
           {tabs.map((tab) => (
