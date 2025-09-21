@@ -2,13 +2,13 @@
 
 import { useUser } from "@/hooks/useUser";
 import { Loader2 } from "lucide-react";
-import { ProfileHeader } from "../components/profileHeader";
-import { ProfileTabs } from "../components/profileTabs";
-import { IntroCard } from "../components/introCard";
-import { PhotosCard } from "../components/photosCard";
-import { FriendsCard } from "../components/friendsCard";
-import { PostComposer } from "../components/postComposer";
-import { PostCard } from "../components/postCard";
+import { ProfileHeader } from "../components/ProfileHeader";
+import { ProfileTabs } from "../components/ProfileTabs";
+import { IntroCard } from "../components/IntroCard";
+import { PhotosCard } from "../components/PhotosCard";
+import { FriendsCard } from "../components/FriendsCard";
+import { PostComposer } from "../components/PostComposer";
+import { PostCard } from "../components/PostCard";
 
 export default function ProfilePage() {
   const { user, isLoading } = useUser();
