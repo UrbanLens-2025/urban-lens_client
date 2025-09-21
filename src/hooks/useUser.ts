@@ -1,22 +1,32 @@
+// hooks/useUser.ts
 "use client";
 
+import { useState, useEffect } from "react"; // <-- Cần useState và useEffect
 import { useQuery } from "@tanstack/react-query";
 import { getUser } from "@/api/auth";
 
 export function useUser() {
-  
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const [isMounted, setIsMounted] = useState(false);
 
-  const { data, isLoading, isError } = useQuery({
+  // useEffect đảm bảo logic chỉ chạy ở client sau khi hydration hoàn tất
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const token = isMounted ? localStorage.getItem("token") : null;
+
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["user"],
     queryFn: getUser,
     staleTime: 1000 * 60 * 1, // 1 phút
-    enabled: !!token,
+    
+    enabled: isMounted && !!token,
+    
   });
-
+  
   return {
     user: data?.data,
-    isLoading,
+    isLoading: !isMounted || (!!token && isLoading),
     isError,
   };
 }

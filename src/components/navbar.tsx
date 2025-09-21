@@ -29,13 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
-
-const loggedInUser = {
-  name: "John Doe",
-  avatarUrl: "https://i.pravatar.cc/150?u=me",
-  fallback: "CD",
-  profileUrl: "/profile",
-};
+import { useUser } from "@/hooks/useUser";
 
 const navItems = [
   { href: "/", icon: Home, label: "Home" },
@@ -97,7 +91,9 @@ function MainNavItem({ href, Icon, label, isActive }: MainNavItemProps) {
 
 export function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { user } = useUser();
   const pathname = usePathname();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -178,26 +174,42 @@ export function Navbar() {
             />
           ))}
 
-          <DropdownMenu>
+          <DropdownMenu
+            modal={false}
+            open={isMenuOpen}
+            onOpenChange={setIsMenuOpen}
+          >
             <DropdownMenuTrigger asChild>
               <Avatar className="h-10 w-10 cursor-pointer">
-                <AvatarImage src={loggedInUser.avatarUrl} alt="User Avatar" />
-                <AvatarFallback>{loggedInUser.fallback}</AvatarFallback>
+                <AvatarImage
+                  src={user?.avatarUrl || "https://i.pravatar.cc/150?u=me"}
+                  alt="User Avatar"
+                />
+                <AvatarFallback>
+                  {user?.firstName.charAt(0)}
+                  {user?.lastName.charAt(0)}
+                </AvatarFallback>
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-80" align="end">
               <DropdownMenuLabel>
                 <Link
-                  href={loggedInUser.profileUrl}
+                  href={`/profile/${user?.id}`}
+                  onClick={() => setIsMenuOpen(false)}
                   className="block p-2 rounded-lg hover:bg-gray-100"
                 >
                   <div className="flex items-center gap-3">
                     <Avatar>
-                      <AvatarImage src={loggedInUser.avatarUrl} />
-                      <AvatarFallback>{loggedInUser.fallback}</AvatarFallback>
+                      <AvatarImage src={user?.avatarUrl} />
+                      <AvatarFallback>
+                        {user?.firstName.charAt(0)}
+                        {user?.lastName.charAt(0)}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-bold text-base">{loggedInUser.name}</p>
+                      <p className="font-bold text-base">
+                        {user?.firstName} {user?.lastName}
+                      </p>
                       <p className="text-sm text-gray-500 font-normal">
                         See your profile
                       </p>

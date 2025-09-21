@@ -42,7 +42,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
     useEffect(() => {
         if (localStorage.getItem("token")) {
-            router.replace("/profile");
+            router.replace("/");
         } else setIsReady(true);
     }, [router]);
 
@@ -51,7 +51,6 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         defaultValues: { email: "", password: "" },
     });
 
-    // TanStack Query mutation
     const mutation = useMutation({
         mutationFn: (values: { email: string; password: string }) => login(values),
         onSuccess: (data) => {
@@ -153,7 +152,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
                                 </div>
                                 <Button
                                     type="submit"
-                                    className="w-full"
+                                    className="w-full hover:bg-[#58c6d7] cursor-pointer"
                                     disabled={mutation.isPending}
                                 >
                                     {mutation.isPending ? (

@@ -196,7 +196,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
                                         )}
                                     />
                                 </div>
-                                <Button type="submit" className="w-full" disabled={isLoading}>
+                                <Button type="submit" className="w-full hover:bg-[#58c6d7] cursor-pointer" disabled={isLoading}>
                                     {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Signup"}
                                 </Button>
                                 <div className="text-center text-sm">

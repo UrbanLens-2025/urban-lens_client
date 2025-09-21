@@ -108,10 +108,13 @@ export interface LoginPayload {
 }
 
 export interface LoginResponse {
+  id: string;
   email: string;
   firstName: string;
   lastName: string;
   phoneNumber: string;
+  avatarUrl?: string;
+  coverUrl?: string;
   role: string;
   token: string;
 }
