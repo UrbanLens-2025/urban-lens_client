@@ -1,5 +1,5 @@
 "use client";
-import { EditProfileModal } from "@/components/profile/edit-modal";
+import { EditProfileModal } from "@/components/profile/editModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { User } from "@/types";

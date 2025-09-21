@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/hooks/useUser";
-import { ChangePasswordModal } from "./settings/change-password-modal";
+import { ChangePasswordModal } from "./settings/changePasswordModal";
 
 const navItems = [
   { href: "/", icon: Home, label: "Home" },
