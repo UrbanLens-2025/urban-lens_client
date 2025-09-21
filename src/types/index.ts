@@ -10,9 +10,9 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  phoneNumber: string;
-  avatarUrl?: string;
-  coverUrl?: string;
+  phoneNumber?: string | null;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
   role: string;
   token?: string;
 }

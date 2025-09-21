@@ -33,12 +33,11 @@ export function EditProfileModal({
   const { mutate: updateProfile, isPending } = useUpdateProfile();
 
   const [formData, setFormData] = useState({
-    firstName: user.firstName || "",
-    lastName: user.lastName || "",
-    phoneNumber: user.phoneNumber || "",
-    avatarUrl: user.avatarUrl || "",
-    coverUrl: user.coverUrl || "",
-    bio: user.bio || "",
+    firstName: user.firstName || null,
+    lastName: user.lastName || null,
+    phoneNumber: user.phoneNumber || null,
+    avatarUrl: user.avatarUrl || null,
+    coverUrl: user.coverUrl || null,
   });
 
   const handleInputChange = (
@@ -49,20 +48,28 @@ export function EditProfileModal({
   };
 
   const handleSaveChanges = () => {
-    // updateProfile(formData, {
-    //   onSuccess: () => {
-    //     onOpenChange(false);
-    //   },
-    // });
-    const payload = {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      phoneNumber: formData.phoneNumber,
-      avatarUrl: formData.avatarUrl,
-      coverUrl: formData.coverUrl,
-    };
+    const processedData = { ...formData };
 
-    updateProfile(payload, {
+    for (const key in processedData) {
+      if (processedData[key as keyof typeof processedData] === "") {
+        processedData[key as keyof typeof processedData] = null;
+      }
+    }
+    
+    // Tạo payload cuối cùng để gửi đi
+    const payloadToSend = {
+      firstName: processedData.firstName,
+      lastName: processedData.lastName,
+      phoneNumber: processedData.phoneNumber,
+      avatarUrl: processedData.avatarUrl,
+      coverUrl: processedData.coverUrl,
+      // Bạn có thể thêm bio vào đây nếu API hỗ trợ
+      // bio: processedData.bio,
+    };
+    
+    console.log("Payload being sent:", payloadToSend); // Dòng này để debug, bạn có thể xóa sau
+
+    updateProfile(payloadToSend, {
       onSuccess: () => {
         onOpenChange(false);
       },
@@ -119,7 +126,6 @@ export function EditProfileModal({
             <h3 className="font-semibold">Bio</h3>
             <Textarea
               id="bio"
-              value={formData.bio}
               onChange={handleInputChange}
               placeholder="Describe who you are..."
             />
