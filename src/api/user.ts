@@ -10,6 +10,16 @@ export async function getUser(): Promise<User> {
 export type UpdateProfilePayload = Partial<Omit<User, 'id' | 'role' | 'email'>>;
 
 export const updateProfile = async (profileData: UpdateProfilePayload): Promise<User> => {
-  const { data } = await axiosInstance.put<ApiResponse<User>>('/user/auth/profile', profileData);
+  const { data } = await axiosInstance.patch<ApiResponse<User>>('/user/auth/profile', profileData);
   return data.data;
+};
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export const changePassword = async (payload: ChangePasswordPayload): Promise<ApiResponse<null>> => {
+  const { data } = await axiosInstance.patch('/user/auth/profile/password', payload);
+  return data;
 };

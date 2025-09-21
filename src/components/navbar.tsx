@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/hooks/useUser";
+import { ChangePasswordModal } from "./settings/change-password-modal";
 
 const navItems = [
   { href: "/", icon: Home, label: "Home" },
@@ -94,6 +95,8 @@ export function Navbar() {
   const { user } = useUser();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isChangePassWordModalOpen, setIsChangePasswordModalOpen] =
+    useState(false);
 
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -181,10 +184,7 @@ export function Navbar() {
           >
             <DropdownMenuTrigger asChild>
               <Avatar className="h-10 w-10 cursor-pointer">
-                <AvatarImage
-                  src={user?.avatarUrl}
-                  alt="User Avatar"
-                />
+                <AvatarImage src={user?.avatarUrl} alt="User Avatar" />
                 <AvatarFallback>
                   {user?.firstName.charAt(0)}
                   {user?.lastName.charAt(0)}
@@ -218,7 +218,10 @@ export function Navbar() {
                 </Link>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => setIsChangePasswordModalOpen(true)}
+              >
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
@@ -229,6 +232,10 @@ export function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        <ChangePasswordModal
+          open={isChangePassWordModalOpen}
+          onOpenChange={setIsChangePasswordModalOpen}
+        />
       </div>
     </header>
   );

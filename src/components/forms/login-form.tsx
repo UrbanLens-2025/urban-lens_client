@@ -1,177 +1,95 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { useMutation } from "@tanstack/react-query";
-
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
-
-import { z } from "zod";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { login } from "@/api/auth";
-import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+import { useLogin } from "@/hooks/useLogin";
+import { useUser } from "@/hooks/useUser";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 
 const formSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(8),
+  email: z.string().email({ message: "Invalid email address." }),
+  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
 });
 
-export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
-    const router = useRouter();
-    const [isReady, setIsReady] = useState(false);
+export function LoginForm() {
+  const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const { user, isLoading: isUserLoading } = useUser();
 
-    useEffect(() => {
-        if (localStorage.getItem("token")) {
-            router.replace("/");
-        } else setIsReady(true);
-    }, [router]);
-
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: { email: "", password: "" },
-    });
-
-    const mutation = useMutation({
-        mutationFn: (values: { email: string; password: string }) => login(values),
-        onSuccess: (data) => {
-            if (data.success) {
-                toast.success("Login successful");
-                router.push("/");
-            } else {
-                toast.error(data.message);
-            }
-        },
-        onError: (err) => {
-            toast.error(err.message || "Login failed");
-        },
-    });
-
-    function onSubmit(values: z.infer<typeof formSchema>) {
-        mutation.mutate(values);
+  useEffect(() => {
+    if (user) {
+      router.replace("/");
     }
+  }, [user, router]);
 
-    if (!isReady) {
-        return (
-            <div className="flex justify-center items-center h-screen">
-                <Loader2 className="animate-spin w-8 h-8" />
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  const { mutate: login, isPending } = useLogin();
+
+  if (isUserLoading || user) {
+    return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin w-8 h-8" /></div>;
+  }
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    login(values);
+  }
+
+  return (
+    <Card>
+      <CardHeader className="text-center">
+        <CardTitle className="text-xl">Welcome back</CardTitle>
+        <CardDescription>Enter your credentials to access your account</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-4">
+              <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl><Input placeholder="m@example.com" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              
+              <FormField control={form.control} name="password" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input type={showPassword ? "text" : "password"} placeholder="********" {...field} />
+                      <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
             </div>
-        );
-    }
-
-    return (
-        <div className={cn("flex flex-col gap-6", className)} {...props}>
-            <Card>
-                <CardHeader className="text-center">
-                    <CardTitle className="text-xl">Welcome back</CardTitle>
-                    <CardDescription>Login with your Google account</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                            <div className="grid gap-6">
-                                <div className="flex flex-col gap-4">
-                                    <Button
-                                        variant="outline"
-                                        className="w-full"
-                                        type="button"
-                                    // onClick={logInWithGoogle}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                                            <path
-                                                d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
-                                                fill="currentColor"
-                                            />
-                                        </svg>
-                                        Login with Google
-                                    </Button>
-                                </div>
-                                <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-                                    <span className="bg-card text-muted-foreground relative z-10 px-2">
-                                        Or continue with
-                                    </span>
-                                </div>
-                                <div className="grid gap-3">
-                                    <FormField
-                                        control={form.control}
-                                        name="email"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Email</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="m@example.com" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                                <div className="grid gap-3">
-                                    <FormField
-                                        control={form.control}
-                                        name="password"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Password</FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        type="password"
-                                                        placeholder="********"
-                                                        {...field}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <Link
-                                        href="/forgot-password"
-                                        className="ml-auto text-sm underline-offset-4 hover:underline"
-                                    >
-                                        Forgot your password?
-                                    </Link>
-                                </div>
-                                <Button
-                                    type="submit"
-                                    className="w-full hover:bg-[#58c6d7] cursor-pointer"
-                                    disabled={mutation.isPending}
-                                >
-                                    {mutation.isPending ? (
-                                        <Loader2 className="size-4 animate-spin" />
-                                    ) : (
-                                        "Login"
-                                    )}
-                                </Button>
-                                <div className="text-center text-sm">
-                                    Don&apos;t have an account?{" "}
-                                    <Link href="/signup" className="underline underline-offset-4">
-                                        Sign up
-                                    </Link>
-                                </div>
-                            </div>
-                        </form>
-                    </Form>
-                </CardContent>
-            </Card>
-        </div>
-    );
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending ? <Loader2 className="size-4 animate-spin" /> : "Login"}
+            </Button>
+            <div className="text-center text-sm">
+              Don&apos;t have an account?{" "}
+              <Link href="/signup" className="underline underline-offset-4 hover:text-primary">Sign up</Link>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
 }
