@@ -1,6 +1,5 @@
 "use client";
 
-import { useUser, useUserById } from "@/hooks/useUser";
 import { Loader2 } from "lucide-react";
 import { ProfileHeader } from "../components/ProfileHeader";
 import { ProfileTabs } from "../components/ProfileTabs";
@@ -10,14 +9,15 @@ import { FriendsCard } from "../components/FriendsCard";
 import { PostComposer } from "../components/PostComposer";
 import { PostCard } from "../components/PostCard";
 import { use } from "react";
+import { useUser } from "@/hooks/useUser";
 
 export default function ProfilePage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = use(params);
-  const { user: currentUser } = useUser();
-  const { user, isLoading, isError } = useUserById(userId);
+  const { user: currentUser, isLoading: isLoadingLoggedInUser } = useUser();
+  const { user: profileUser, isLoading: isLoadingProfileUser, isError } = useUser(userId);
   
 
-  if (isLoading) {
+  if (isLoadingLoggedInUser || isLoadingProfileUser) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin w-8 h-8" />
@@ -25,7 +25,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
     );
   }
 
-  if (isError) {
+  if (isError || !profileUser) {
     return (
       <div className="flex justify-center items-center h-screen">
         <p className="text-gray-500">User not found.</p>
@@ -33,12 +33,12 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
     );
   }
 
-  const isOwnProfile = currentUser?.id === user?.id;
+  const isOwnProfile = currentUser?.id === profileUser.id;
 
   return (
     <div className="container mx-auto">
       <ProfileHeader 
-        user={user!} 
+        user={profileUser} 
         isOwnProfile={isOwnProfile}
         isGuest={!currentUser} 
       />
@@ -47,15 +47,15 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
         <div className="py-8">
           <div className="grid grid-cols-1 lg:grid-cols-5 lg:gap-8">
             <div className="col-span-2 space-y-4">
-              <IntroCard user={user!} />
+              <IntroCard user={profileUser} />
               <PhotosCard />
               <FriendsCard />
             </div>
 
             <div className="col-span-3 space-y-4">
-              <PostComposer user={user!} />
+              <PostComposer user={profileUser} />
               <PostCard
-                user={user!}
+                user={profileUser}
                 time="1 hour ago"
                 caption="Thật tuyệt vời khi xây dựng giao diện này với Next.js và Tailwind!"
                 imageUrl="https://images.unsplash.com/photo-1618477388954-7852f32655ec?q=80"
@@ -63,7 +63,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
                 comments={18}
               />
               <PostCard
-                user={user!}
+                user={profileUser}
                 time="1 day ago"
                 caption="Chỉ là một status không có ảnh thôi."
                 likes={150}

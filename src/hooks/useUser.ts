@@ -4,40 +4,35 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getUser, getUserById } from "@/api/user";
 
-export function useUser() {
+export function useUser(userId?: string | null) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  const isCurrentUserQuery = !userId;
   const token = isMounted ? localStorage.getItem("token") : null;
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["user"],
-    queryFn: getUser,
-    staleTime: 1000 * 60 * 1,
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["user", userId || "current"],
 
-    enabled: isMounted && !!token,
+    queryFn: () => {
+      if (isCurrentUserQuery) {
+        return getUser();
+      }
+      return getUserById(userId!);
+    },
+
+    enabled: isCurrentUserQuery ? (isMounted && !!token) : !!userId,
+
+    staleTime: 1000 * 60 * 1, // 1 phút
   });
-
+  
   return {
     user: data,
-    isLoading: !isMounted || (!!token && isLoading),
+    isLoading: isCurrentUserQuery ? (!isMounted || (!!token && isLoading)) : isLoading,
     isError,
-  };
-}
-
-export function useUserById(userId: string | null | undefined) {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["user", userId],
-    queryFn: () => getUserById(userId!),
-    enabled: !!userId,
-  });
-
-  return {
-    user: data,
-    isLoading: isLoading,
-    isError,
+    error,
   };
 }
