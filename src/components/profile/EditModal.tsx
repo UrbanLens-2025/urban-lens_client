@@ -56,19 +56,14 @@ export function EditProfileModal({
       }
     }
     
-    // Tạo payload cuối cùng để gửi đi
     const payloadToSend = {
       firstName: processedData.firstName,
       lastName: processedData.lastName,
       phoneNumber: processedData.phoneNumber,
       avatarUrl: processedData.avatarUrl,
       coverUrl: processedData.coverUrl,
-      // Bạn có thể thêm bio vào đây nếu API hỗ trợ
-      // bio: processedData.bio,
     };
     
-    console.log("Payload being sent:", payloadToSend); // Dòng này để debug, bạn có thể xóa sau
-
     updateProfile(payloadToSend, {
       onSuccess: () => {
         onOpenChange(false);

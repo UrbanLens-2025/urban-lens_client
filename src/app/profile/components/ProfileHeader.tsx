@@ -1,18 +1,33 @@
 "use client";
+
 import { EditProfileModal } from "@/components/profile/EditModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { User } from "@/types";
-import { Camera, Pencil, Plus } from "lucide-react";
+import {
+  Camera,
+  Edit,
+  MessageCircle,
+  PlusCircle,
+  UserPlus,
+} from "lucide-react";
 import Image from "next/image";
+import Link, { useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface ProfileHeaderProps {
   user: User;
+  isOwnProfile: boolean;
+  isGuest: boolean;
 }
 
-export function ProfileHeader({ user }: ProfileHeaderProps) {
+export function ProfileHeader({
+  user,
+  isOwnProfile,
+  isGuest,
+}: ProfileHeaderProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const route = useRouter();
 
   return (
     <div className="min-w-screen justify-self-center bg-white shadow-md">
@@ -39,7 +54,7 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
         <div className="px-8 pb-4">
           <div className="flex flex-col md:flex-row items-center -mt-10">
             <Avatar className="w-44 h-44 border-4 border-white">
-              <AvatarImage src={user.avatarUrl} />
+              <AvatarImage src={user.avatarUrl || undefined} />
               <AvatarFallback>
                 {user.firstName?.charAt(0)}
                 {user.lastName?.charAt(0)}
@@ -54,16 +69,30 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
               </p>
             </div>
             <div className="flex gap-2 mt-4 md:mt-0 md:ml-auto">
-              <Button className="hover:bg-[#58c6d7] cursor-pointer">
-                <Plus className="mr-2 h-4 w-4" /> Add Story
-              </Button>
-              <Button
-                variant="secondary"
-                className="cursor-pointer"
-                onClick={() => setIsModalOpen(true)}
-              >
-                <Pencil className="mr-2 h-4 w-4" /> Edit Profile
-              </Button>
+              {!isGuest &&
+                (isOwnProfile ? (
+                  <>
+                    <Button>
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add to story
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setIsModalOpen(true)}
+                    >
+                      <Edit className="mr-2 h-4 w-4" /> Edit profile
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button>
+                      <UserPlus className="mr-2 h-4 w-4" /> Follow
+                    </Button>
+                    <Button variant="secondary">
+                      <MessageCircle className="mr-2 h-4 w-4" /> Message
+                    </Button>
+                  </>
+                ))}
+              {isGuest && <Button onClick={() => {route.push("/login")}}>Log in to interact</Button>}
             </div>
           </div>
         </div>

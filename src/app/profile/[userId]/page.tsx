@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@/hooks/useUser";
+import { useUser, useUserById } from "@/hooks/useUser";
 import { Loader2 } from "lucide-react";
 import { ProfileHeader } from "../components/ProfileHeader";
 import { ProfileTabs } from "../components/ProfileTabs";
@@ -9,9 +9,13 @@ import { PhotosCard } from "../components/PhotosCard";
 import { FriendsCard } from "../components/FriendsCard";
 import { PostComposer } from "../components/PostComposer";
 import { PostCard } from "../components/PostCard";
+import { use } from "react";
 
-export default function ProfilePage() {
-  const { user, isLoading } = useUser();
+export default function ProfilePage({ params }: { params: Promise<{ userId: string }> }) {
+  const { userId } = use(params);
+  const { user: currentUser } = useUser();
+  const { user, isLoading, isError } = useUserById(userId);
+  
 
   if (isLoading) {
     return (
@@ -21,7 +25,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) {
+  if (isError) {
     return (
       <div className="flex justify-center items-center h-screen">
         <p className="text-gray-500">User not found.</p>
@@ -29,23 +33,29 @@ export default function ProfilePage() {
     );
   }
 
+  const isOwnProfile = currentUser?.id === user?.id;
+
   return (
     <div className="container mx-auto">
-      <ProfileHeader user={user} />
+      <ProfileHeader 
+        user={user!} 
+        isOwnProfile={isOwnProfile}
+        isGuest={!currentUser} 
+      />
       <div className="mx-6 lg:mx-61">
         <ProfileTabs />
         <div className="py-8">
           <div className="grid grid-cols-1 lg:grid-cols-5 lg:gap-8">
             <div className="col-span-2 space-y-4">
-              <IntroCard user={user} />
+              <IntroCard user={user!} />
               <PhotosCard />
               <FriendsCard />
             </div>
 
             <div className="col-span-3 space-y-4">
-              <PostComposer user={user} />
+              <PostComposer user={user!} />
               <PostCard
-                user={user}
+                user={user!}
                 time="1 hour ago"
                 caption="Thật tuyệt vời khi xây dựng giao diện này với Next.js và Tailwind!"
                 imageUrl="https://images.unsplash.com/photo-1618477388954-7852f32655ec?q=80"
@@ -53,7 +63,7 @@ export default function ProfilePage() {
                 comments={18}
               />
               <PostCard
-                user={user}
+                user={user!}
                 time="1 day ago"
                 caption="Chỉ là một status không có ảnh thôi."
                 likes={150}

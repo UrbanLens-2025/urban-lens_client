@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import Image from "next/image";
 
-// Dữ liệu bạn bè mẫu
+// TODO: Replace with real data
 const friends = [
   { name: "John Doe", avatarUrl: "https://i.pravatar.cc/150?u=john" },
   { name: "Jane Smith", avatarUrl: "https://i.pravatar.cc/150?u=jane" },

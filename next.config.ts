@@ -8,13 +8,13 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
         port: '',
-        pathname: '/**', // Cho phép tất cả các đường dẫn ảnh từ hostname này
+        pathname: '/**', 
       },
       {
         protocol: 'https',
         hostname: 'i.pravatar.cc',
         port: '',
-        pathname: '/**', // Cho phép tất cả các đường dẫn ảnh từ hostname này
+        pathname: '/**', 
       },
     ],
   },

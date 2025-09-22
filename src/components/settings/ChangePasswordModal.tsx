@@ -12,19 +12,17 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
-// --- 1. Định nghĩa Schema xác thực bằng Zod ---
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, { message: "Current password is required." }),
   newPassword: z.string().min(8, { message: "Password must be at least 8 characters." }),
   confirmPassword: z.string().min(1, { message: "Please confirm your password." }),
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "New passwords do not match.",
-  path: ["confirmPassword"], // Lỗi sẽ hiển thị ở ô confirmPassword
+  path: ["confirmPassword"],
 });
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
-// --- Component chính ---
 interface ChangePasswordModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,7 +32,6 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
   const { mutate: changePassword, isPending } = useChangePassword();
   const [showPassword, setShowPassword] = useState(false);
 
-  // --- 2. Thiết lập React Hook Form ---
   const form = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
@@ -44,7 +41,6 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
     },
   });
 
-  // --- 3. Hàm xử lý khi submit ---
   const onSubmit = (data: PasswordFormValues) => {
     changePassword({
       currentPassword: data.currentPassword,
@@ -52,7 +48,7 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
     }, {
       onSuccess: () => {
         onOpenChange(false);
-        form.reset(); // Reset form sau khi thành công
+        form.reset();
       }
     });
   };
@@ -67,7 +63,6 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
           </DialogDescription>
         </DialogHeader>
         
-        {/* --- 4. Xây dựng Form với component của Shadcn --- */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField

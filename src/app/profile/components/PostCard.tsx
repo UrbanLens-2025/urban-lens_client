@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { User } from "@/types"; // Import kiểu User
+import { User } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,12 +14,11 @@ import { Separator } from "@/components/ui/separator";
 import { MessageCircle, MoreHorizontal, Share2, ThumbsUp } from "lucide-react";
 import Image from "next/image";
 
-// Định nghĩa các props mà PostCard sẽ nhận
 interface PostCardProps {
   user: User;
   time: string;
-  caption?: string; // Caption có thể không bắt buộc
-  imageUrl?: string; // Ảnh có thể không bắt buộc
+  caption?: string;
+  imageUrl?: string;
   likes: number;
   comments: number;
 }

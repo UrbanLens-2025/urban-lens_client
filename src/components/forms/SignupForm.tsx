@@ -7,8 +7,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-import { useSignup } from "@/hooks/useSignup"; // <-- Dùng hook mới
-import { useUser } from "@/hooks/useUser";   // <-- Dùng để kiểm tra đăng nhập
+import { useSignup } from "@/hooks/useSignup";
+import { useUser } from "@/hooks/useUser";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

@@ -22,7 +22,7 @@ export interface LoginPayload {
 }
 
 export async function signup(payload: SignupPayload): Promise<ApiResponse<SignupResponse>> {
-  const { data } = await axiosInstance.post('/public/auth/register/user', payload);
+  const { data } = await axiosInstance.post('/v1/public/auth/register/user', payload);
 
   if (data.success && data.data.confirmCode) {
     localStorage.setItem("signupEmail", payload.email);
@@ -32,17 +32,17 @@ export async function signup(payload: SignupPayload): Promise<ApiResponse<Signup
 }
 
 export async function verifyOtp(payload: VerifyOtpPayload): Promise<ApiResponse<User>> {
-  const { data } = await axiosInstance.post('/public/auth/register/confirm', payload);
+  const { data } = await axiosInstance.post('/v1/public/auth/register/confirm', payload);
   return data;
 }
 
 export async function resendOtp(payload: { email: string; confirmCode: string }): Promise<ApiResponse<SignupResponse>> {
-  const { data } = await axiosInstance.post('/public/auth/register/resend-otp', payload);
+  const { data } = await axiosInstance.post('/v1/public/auth/register/resend-otp', payload);
   return data;
 }
 
 export async function login(payload: LoginPayload): Promise<ApiResponse<User>> {
-  const { data } = await axiosInstance.post('/public/auth/login', payload);
+  const { data } = await axiosInstance.post('/v1/public/auth/login', payload);
 
   if (data.success && data.data.token) {
     localStorage.setItem("token", data.data.token);
