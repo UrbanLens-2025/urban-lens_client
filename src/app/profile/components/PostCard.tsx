@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { User } from "@/types";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,11 +41,7 @@ export function PostCard({
           <div className="flex items-center gap-3">
             <Link href={`/profile/${user.id}`}>
               <Avatar>
-                <AvatarImage src={user.avatarUrl} />
-                <AvatarFallback>
-                  {user.firstName?.charAt(0)}
-                  {user.lastName?.charAt(0)}
-                </AvatarFallback>
+                <AvatarImage src={user.avatarUrl || "/default-avatar.svg"} />
               </Avatar>
             </Link>
             <div>
@@ -61,7 +57,6 @@ export function PostCard({
         </div>
       </CardHeader>
 
-      {/* PHẦN CONTENT: Nội dung bài viết */}
       <CardContent className="px-4 pb-2">
         {caption && <p className="mb-4">{caption}</p>}
         {imageUrl && (
@@ -77,9 +72,7 @@ export function PostCard({
         )}
       </CardContent>
 
-      {/* PHẦN FOOTER: Thống kê và Nút hành động */}
       <CardFooter className="flex flex-col items-start p-4 pt-0">
-        {/* Thống kê likes, comments */}
         <div className="flex justify-between w-full text-sm text-muted-foreground mb-2">
           <div className="flex items-center gap-1">
             <ThumbsUp className="h-4 w-4 text-blue-500" />
@@ -90,7 +83,6 @@ export function PostCard({
 
         <Separator />
 
-        {/* Các nút hành động */}
         <div className="grid grid-cols-3 w-full mt-2">
           <Button variant="ghost" className="flex items-center gap-2">
             <ThumbsUp className="h-5 w-5" /> Like

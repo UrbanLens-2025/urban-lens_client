@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
 import { User } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,15 +12,39 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Loader2 } from "lucide-react";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
+import { FileUpload } from "@/components/shared/FileUpload";
+import Image from "next/image";
+
+const profileSchema = z.object({
+  firstName: z.string().min(1, { message: "First name is required." }),
+  lastName: z.string().min(1, { message: "Last name is required." }),
+
+  phoneNumber: z.string().min(10, { message: "Phone number is required." }),
+  avatarUrl: z.preprocess(
+    (val) => (val === "" ? null : val),
+    z.string().url("Must be a valid URL.").nullable().optional()
+  ),
+  coverUrl: z.preprocess(
+    (val) => (val === "" ? null : val),
+    z.string().url("Must be a valid URL.").nullable().optional()
+  ),
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 interface EditProfileModalProps {
   user: User;
@@ -32,141 +59,159 @@ export function EditProfileModal({
 }: EditProfileModalProps) {
   const { mutate: updateProfile, isPending } = useUpdateProfile();
 
-  const [formData, setFormData] = useState({
-    firstName: user.firstName || null,
-    lastName: user.lastName || null,
-    phoneNumber: user.phoneNumber || null,
-    avatarUrl: user.avatarUrl || null,
-    coverUrl: user.coverUrl || null,
+  const form = useForm<ProfileFormValues>({
+    // @ts-expect-error ignore this error for defaultValues
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
+      avatarUrl: user.avatarUrl || "",
+      coverUrl: user.coverUrl || "",
+    },
   });
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
-  };
-
-  const handleSaveChanges = () => {
-    const processedData = { ...formData };
-
-    for (const key in processedData) {
-      if (processedData[key as keyof typeof processedData] === "") {
-        processedData[key as keyof typeof processedData] = null;
-      }
-    }
-    
-    const payloadToSend = {
-      firstName: processedData.firstName,
-      lastName: processedData.lastName,
-      phoneNumber: processedData.phoneNumber,
-      avatarUrl: processedData.avatarUrl,
-      coverUrl: processedData.coverUrl,
-    };
-    
-    updateProfile(payloadToSend, {
+  const onSubmit = (values: ProfileFormValues) => {
+    updateProfile(values, {
       onSuccess: () => {
         onOpenChange(false);
       },
     });
   };
 
+  const avatarPreview = form.watch("avatarUrl");
+  const coverPreview = form.watch("coverUrl");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] p-0 grid grid-rows-[auto_1fr_auto] max-h-[90vh]">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle className="text-2xl font-bold">Edit Profile</DialogTitle>
-          <Separator />
         </DialogHeader>
 
-        <div className="overflow-y-auto px-6 space-y-6">
-          <div className="space-y-2">
-            <h3 className="font-semibold">Profile Picture</h3>
-            <div className="flex items-center gap-4">
-              <Avatar className="w-24 h-24">
-                <AvatarImage src={formData.avatarUrl} />
-                <AvatarFallback>
-                  {formData.firstName?.charAt(0)}
-                  {formData.lastName?.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="w-full space-y-2">
-                <Label htmlFor="avatarUrl">Avatar URL</Label>
-                <Input
-                  id="avatarUrl"
-                  value={formData.avatarUrl}
-                  onChange={handleInputChange}
-                  placeholder="https://..."
-                />
-              </div>
-            </div>
-          </div>
-          <Separator />
-
-          <div className="space-y-2">
-            <h3 className="font-semibold">Cover Photo</h3>
-            <div>
-              <Input
-                id="coverUrl"
-                value={formData.coverUrl}
-                onChange={handleInputChange}
-                placeholder="https://..."
-              />
-            </div>
-          </div>
-          <Separator />
-
-          {/* --- Bio --- */}
-          <div className="space-y-2">
-            <h3 className="font-semibold">Bio</h3>
-            <Textarea
-              id="bio"
-              onChange={handleInputChange}
-              placeholder="Describe who you are..."
+        <Form {...form}>
+          <form
+            id="edit-profile-form"
+            /* @ts-expect-error ignore this error for defaultValues */
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="overflow-y-auto px-6 space-y-6 h-full"
+          >
+            <FormField
+              /* @ts-expect-error ignore this error for defaultValues */
+              control={form.control}
+              name="avatarUrl"
+              render={() => (
+                <FormItem>
+                  <FormLabel className="font-semibold text-base">
+                    Profile Picture
+                  </FormLabel>
+                  <div className="flex items-center gap-4 pt-2">
+                    <Avatar className="w-24 h-24">
+                      <AvatarImage src={avatarPreview || undefined} />
+                    </Avatar>
+                    <FileUpload
+                      onUploadComplete={(url) => {
+                        form.setValue("avatarUrl", url, {
+                          shouldValidate: true,
+                        });
+                      }}
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <Separator />
+            <Separator />
 
-          {/* --- Details --- */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Details</h3>
+            <FormField
+              /* @ts-expect-error ignore this error for defaultValues */
+              control={form.control}
+              name="coverUrl"
+              render={() => (
+                <FormItem>
+                  <FormLabel className="font-semibold text-base">
+                    Cover Photo
+                  </FormLabel>
+                  <div className="w-full aspect-video bg-gray-100 rounded-md overflow-hidden relative my-2">
+                    {coverPreview && (
+                      <Image
+                        width={100}
+                        height={100}
+                        src={coverPreview}
+                        className="w-full h-full object-cover"
+                        alt="Cover preview"
+                      />
+                    )}
+                  </div>
+                  <FileUpload
+                    onUploadComplete={(url) => {
+                      form.setValue("coverUrl", url, { shouldValidate: true });
+                    }}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Separator />
+
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
-                <Input
-                  id="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  id="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number</Label>
-              <Input
-                id="phoneNumber"
-                type="tel"
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
+              <FormField
+                /* @ts-expect-error ignore this error for defaultValues */
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                /* @ts-expect-error ignore this error for defaultValues */
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
-        </div>
+
+            <FormField
+              /* @ts-expect-error ignore this error for defaultValues */
+              control={form.control}
+              name="phoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input type="tel" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </form>
+        </Form>
 
         <DialogFooter className="p-6 bg-white border-t">
-          <DialogClose asChild>
-            <Button variant="ghost" disabled={isPending}>
-              Cancel
-            </Button>
-          </DialogClose>
-          <Button onClick={handleSaveChanges} disabled={isPending}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" form="edit-profile-form" disabled={isPending}>
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Changes
           </Button>

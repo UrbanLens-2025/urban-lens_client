@@ -9,7 +9,7 @@ export async function getUser(): Promise<User> {
   return data.data;
 }
 
-export type UpdateProfilePayload = Partial<Omit<User, "id" | "role" | "email">>;
+export type UpdateProfilePayload = Partial<Omit<User, "id" | "role" | "email" | "phoneNumber">>;
 
 export const updateProfile = async (
   profileData: UpdateProfilePayload

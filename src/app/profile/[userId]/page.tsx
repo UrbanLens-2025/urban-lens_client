@@ -42,7 +42,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
         isOwnProfile={isOwnProfile}
         isGuest={!currentUser} 
       />
-      <div className="mx-6 lg:mx-61">
+      <div className="mx-6">
         <ProfileTabs />
         <div className="py-8">
           <div className="grid grid-cols-1 lg:grid-cols-5 lg:gap-8">

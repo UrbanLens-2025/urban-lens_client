@@ -10,7 +10,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  phoneNumber?: string | null;
+  phoneNumber: string;
   avatarUrl?: string | null;
   coverUrl?: string | null;
   role: string;

@@ -27,7 +27,7 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/hooks/useUser";
 import { ChangePasswordModal } from "./settings/ChangePasswordModal";
@@ -184,11 +184,7 @@ export function Navbar() {
           >
             <DropdownMenuTrigger asChild>
               <Avatar className="h-10 w-10 cursor-pointer">
-                <AvatarImage src={user?.avatarUrl} alt="User Avatar" />
-                <AvatarFallback>
-                  {user?.firstName.charAt(0)}
-                  {user?.lastName.charAt(0)}
-                </AvatarFallback>
+                <AvatarImage src={user?.avatarUrl || "/default-avatar.svg"} alt="User Avatar" />
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-80" align="end">
@@ -200,11 +196,7 @@ export function Navbar() {
                 >
                   <div className="flex items-center gap-3">
                     <Avatar>
-                      <AvatarImage src={user?.avatarUrl} />
-                      <AvatarFallback>
-                        {user?.firstName.charAt(0)}
-                        {user?.lastName.charAt(0)}
-                      </AvatarFallback>
+                      <AvatarImage src={user?.avatarUrl|| "/default-avatar.svg"} />
                     </Avatar>
                     <div>
                       <p className="font-bold text-base">

@@ -1,5 +1,5 @@
 import { User } from '@/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
@@ -13,8 +13,7 @@ export function PostComposer({ user }: PostComposerProps) {
       <CardContent className="p-4">
         <div className="flex items-center gap-4">
           <Avatar>
-            <AvatarImage src={user.avatarUrl} />
-            <AvatarFallback>{user.firstName.charAt(0)}</AvatarFallback>
+            <AvatarImage src={user.avatarUrl || "/default-avatar.svg"} />
           </Avatar>
           <Input 
             placeholder={`What's on your mind, ${user.firstName}?`}

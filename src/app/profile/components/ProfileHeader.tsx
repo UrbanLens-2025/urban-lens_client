@@ -1,7 +1,7 @@
 "use client";
 
 import { EditProfileModal } from "@/components/profile/EditModal";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { User } from "@/types";
 import {
@@ -31,34 +31,21 @@ export function ProfileHeader({
 
   return (
     <div className="min-w-screen justify-self-center bg-white shadow-md">
-      <div className="mx-6 lg:mx-53">
+      <div className="mx-6">
         <div className="relative h-80 md:h-100 rounded-b-lg bg-gray-200">
           <Image
             height={400}
             width={800}
-            src={
-              user.coverUrl ||
-              "https://images.unsplash.com/photo-1515879218367-8466d910aaa4"
-            }
+            src={user.coverUrl || "https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?w=800&dpr=2&q=80"}
             alt="Cover photo"
             className="w-full h-full object-cover rounded-b-lg"
           />
-          <Button
-            size="sm"
-            className="absolute h-9 bottom-5 right-8 bg-white text-black hover:bg-white/90 cursor-pointer"
-          >
-            <Camera className="mr-2 h-4 w-4" /> Edit cover photo
-          </Button>
         </div>
 
         <div className="px-8 pb-4">
           <div className="flex flex-col md:flex-row items-center -mt-10">
             <Avatar className="w-44 h-44 border-4 border-white">
-              <AvatarImage src={user.avatarUrl || undefined} />
-              <AvatarFallback>
-                {user.firstName?.charAt(0)}
-                {user.lastName?.charAt(0)}
-              </AvatarFallback>
+              <AvatarImage src={user.avatarUrl || "/default-avatar.svg"} />
             </Avatar>
             <div className="md:ml-4 mt-9 text-center md:text-left">
               <h1 className="text-3xl font-bold">
@@ -92,7 +79,15 @@ export function ProfileHeader({
                     </Button>
                   </>
                 ))}
-              {isGuest && <Button onClick={() => {route.push("/login")}}>Log in to interact</Button>}
+              {isGuest && (
+                <Button
+                  onClick={() => {
+                    route.push("/login");
+                  }}
+                >
+                  Log in to interact
+                </Button>
+              )}
             </div>
           </div>
         </div>
