@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { Loader2 } from "lucide-react";
-import { Navbar } from "./Navbar";
+import { Navbar } from "./navbar";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useUser();
