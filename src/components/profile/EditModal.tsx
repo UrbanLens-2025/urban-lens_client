@@ -23,11 +23,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Loader2 } from "lucide-react";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { FileUpload } from "@/components/shared/FileUpload";
-import Image from "next/image";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, { message: "First name is required." }),
@@ -79,9 +77,6 @@ export function EditProfileModal({
     });
   };
 
-  const avatarPreview = form.watch("avatarUrl");
-  const coverPreview = form.watch("coverUrl");
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] p-0 grid grid-rows-[auto_1fr_auto] max-h-[90vh]">
@@ -105,10 +100,6 @@ export function EditProfileModal({
                   <FormLabel className="font-semibold text-base">
                     Profile Picture
                   </FormLabel>
-                  <div className="flex items-center gap-4 pt-2">
-                    <Avatar className="w-24 h-24">
-                      <AvatarImage src={avatarPreview || undefined} />
-                    </Avatar>
                     <FileUpload
                       onUploadComplete={(url) => {
                         form.setValue("avatarUrl", url, {
@@ -116,7 +107,6 @@ export function EditProfileModal({
                         });
                       }}
                     />
-                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -132,17 +122,6 @@ export function EditProfileModal({
                   <FormLabel className="font-semibold text-base">
                     Cover Photo
                   </FormLabel>
-                  <div className="w-full aspect-video bg-gray-100 rounded-md overflow-hidden relative my-2">
-                    {coverPreview && (
-                      <Image
-                        width={100}
-                        height={100}
-                        src={coverPreview}
-                        className="w-full h-full object-cover"
-                        alt="Cover preview"
-                      />
-                    )}
-                  </div>
                   <FileUpload
                     onUploadComplete={(url) => {
                       form.setValue("coverUrl", url, { shouldValidate: true });
