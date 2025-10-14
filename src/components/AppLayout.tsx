@@ -4,12 +4,15 @@ import { usePathname } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { Loader2 } from "lucide-react";
 import { Navbar } from "./navbar";
+import { useOnboardingCheck } from "@/hooks/useOnboardingCheck";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useUser();
   const pathname = usePathname();
 
-  const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isAuthPage = pathname === "/login" || pathname === "/signup";
+
+  useOnboardingCheck();
 
   if (isAuthPage) {
     return <>{children}</>;
