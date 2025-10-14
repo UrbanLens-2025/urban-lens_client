@@ -60,7 +60,7 @@ export function BusinessOnboardingForm() {
   });
 
   function onSubmit(values: FormValues) {
-    const { province, ...payload } = values; 
+    const { ...payload } = values; 
     submit(payload);
   }
 
