@@ -107,6 +107,19 @@ export function Navbar() {
     router.push("/login");
   };
 
+  const getDashboardInfo = () => {
+    switch (user?.role) {
+      case 'BUSINESS_OWNER':
+        return { href: '/dashboard/business', text: 'Manage Your Business' };
+      case 'EVENT_CREATOR':
+        return { href: '/dashboard/creator', text: 'Manage Your Events' };
+      default:
+        return { href: `/profile/${user?.id}`, text: 'See your profile' };
+    }
+  };
+
+  const dashboardInfo = getDashboardInfo();
+
   if (isSearchOpen) {
     return (
       <header className="fixed top-0 left-0 w-full h-16 bg-white z-50 flex items-center gap-2 p-2 lg:hidden">
@@ -190,7 +203,7 @@ export function Navbar() {
             <DropdownMenuContent className="w-80" align="end">
               <DropdownMenuLabel>
                 <Link
-                  href={`/profile/${user?.id}`}
+                  href={dashboardInfo.href}
                   onClick={() => setIsMenuOpen(false)}
                   className="block p-2 rounded-lg hover:bg-gray-100"
                 >
@@ -203,7 +216,7 @@ export function Navbar() {
                         {user?.firstName} {user?.lastName}
                       </p>
                       <p className="text-sm text-gray-500 font-normal">
-                        See your profile
+                        {dashboardInfo.text}
                       </p>
                     </div>
                   </div>
