@@ -6,7 +6,7 @@ export async function uploadImage(file: File): Promise<string> {
   formData.append("file", file);
 
   const { data } = await axiosInstance.post<ApiResponse<string>>(
-    "/v1/file-storage/image",
+    "/v1/private/file-storage/image",
     formData,
     {
       headers: {

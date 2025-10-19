@@ -3,7 +3,7 @@ import axiosInstance from "./axios-config";
 
 export async function getUser(): Promise<User> {
   const { data } = await axiosInstance.get<ApiResponse<User>>(
-    "/v1/user/auth/profile"
+    "/v1/auth/profile"
   );
 
   return data.data;
@@ -15,7 +15,7 @@ export const updateProfile = async (
   profileData: UpdateProfilePayload
 ): Promise<User> => {
   const { data } = await axiosInstance.patch<ApiResponse<User>>(
-    "/v1/user/auth/profile",
+    "/v1/auth/profile",
     profileData
   );
   return data.data;
@@ -30,7 +30,7 @@ export const changePassword = async (
   payload: ChangePasswordPayload
 ): Promise<ApiResponse<null>> => {
   const { data } = await axiosInstance.patch(
-    "/v1/user/auth/profile/password",
+    "/v1/auth/profile/password",
     payload
   );
   return data;
