@@ -3,7 +3,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { login, LoginPayload } from "@/api/auth";
+import { login } from "@/api/auth";
+import { LoginPayload } from "@/types";
 
 export function useLogin() {
   const queryClient = useQueryClient();
@@ -17,6 +18,13 @@ export function useLogin() {
         toast.success("Login successful!");
         
         queryClient.invalidateQueries({ queryKey: ["user"] });
+
+        const userRole = data.data.user.role;
+        if (userRole === 'ADMIN') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/');
+        }
 
         router.push("/");
         router.refresh();

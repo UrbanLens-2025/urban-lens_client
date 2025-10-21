@@ -1,25 +1,5 @@
-import type { ApiResponse, User } from "@/types";
+import type { ApiResponse, LoginPayload, LoginResponseData, SignupPayload, SignupResponse, User, VerifyOtpPayload } from "@/types";
 import axiosInstance from "./axios-config";
-
-export interface SignupPayload {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-}
-export interface SignupResponse {
-  confirmCode: string;
-}
-export interface VerifyOtpPayload {
-  email: string;
-  confirmCode: string;
-  otpCode: string;
-}
-export interface LoginPayload {
-  email: string;
-  password: string;
-}
 
 export async function signup(payload: SignupPayload): Promise<ApiResponse<SignupResponse>> {
   const { data } = await axiosInstance.post('/v1/public/auth/register/user', payload);
@@ -41,7 +21,7 @@ export async function resendOtp(payload: { email: string; confirmCode: string })
   return data;
 }
 
-export async function login(payload: LoginPayload): Promise<ApiResponse<User>> {
+export async function login(payload: LoginPayload): Promise<ApiResponse<LoginResponseData>> {
   const { data } = await axiosInstance.post('/v1/public/auth/login', payload);
 
   if (data.success && data.data.token) {

@@ -17,6 +17,31 @@ export interface PaginatedData<T> {
   meta: Meta;
 }
 
+export interface SignupPayload {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+}
+export interface SignupResponse {
+  confirmCode: string;
+}
+export interface VerifyOtpPayload {
+  email: string;
+  confirmCode: string;
+  otpCode: string;
+}
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponseData {
+    user: User;
+    token: string;
+}
+
 export type UserRole = 'USER' | 'BUSINESS_OWNER' | 'EVENT_CREATOR' | 'ADMIN';
 export type BusinessCategory = 'FOOD' | 'RETAIL' | 'SERVICE' | 'ENTERTAINMENT' | 'HEALTH' | 'EDUCATION' | 'TECHNOLOGY' | 'OTHER';
 export type CreatorType = 'INDIVIDUAL' | 'ORGANIZATION';
@@ -151,4 +176,11 @@ export interface CreateLocationPayload {
   locationImageUrls: string[];
   locationValidationDocuments: LocationValidationDocument[];
   tagIds: number[];
+}
+
+export interface GetRequestsParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: LocationStatus;
 }
