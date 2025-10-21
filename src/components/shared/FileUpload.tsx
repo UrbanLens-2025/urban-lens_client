@@ -1,114 +1,156 @@
-"use client";
+"use client"
 
-import { useCallback, useState, useEffect } from "react";
-import { useDropzone, FileWithPath } from "react-dropzone";
-import { toast } from "sonner";
-import { uploadImage } from "@/api/upload";
-import { Loader2, UploadCloud, X } from "lucide-react";
-import { Button } from "../ui/button";
+import { useCallback, useState, useEffect } from "react"
+import { useDropzone, type FileWithPath } from "react-dropzone"
+import { toast } from "sonner"
+import { uploadImage } from "@/api/upload"
+import { Loader2, UploadCloud, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface FileUploadProps {
-  onUploadComplete: (url: string) => void;
-  initialPreview?: string | null;
+  onUploadComplete: (urls: string[]) => void
+  initialPreviews?: string[] | null
 }
 
-export function FileUpload({
-  onUploadComplete,
-  initialPreview,
-}: FileUploadProps) {
-  const [isUploading, setIsUploading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(initialPreview || null);
+interface UploadingFile {
+  id: string
+  file: FileWithPath
+  preview: string
+  isUploading: boolean
+  finalUrl?: string
+}
+
+export function FileUpload({ onUploadComplete, initialPreviews }: FileUploadProps) {
+  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([])
 
   useEffect(() => {
-    setPreview(initialPreview || null);
-  }, [initialPreview]);
+    if (initialPreviews) {
+      setUploadingFiles(
+        initialPreviews.map((url, index) => ({
+          id: `initial-${index}`,
+          file: {} as FileWithPath,
+          preview: url,
+          isUploading: false,
+          finalUrl: url,
+        })),
+      )
+    }
+  }, [initialPreviews])
 
   const onDrop = useCallback(
     async (acceptedFiles: FileWithPath[]) => {
-      const file = acceptedFiles[0];
-      if (!file) return;
+      if (acceptedFiles.length === 0) return
 
-      const tempUrl = URL.createObjectURL(file);
-      setPreview(tempUrl);
+      // Create temporary preview URLs for all files
+      const newFiles: UploadingFile[] = acceptedFiles.map((file) => ({
+        id: `${Date.now()}-${Math.random()}`,
+        file,
+        preview: URL.createObjectURL(file),
+        isUploading: true,
+      }))
 
-      setIsUploading(true);
-      toast.info("Uploading image...");
+      setUploadingFiles((prev) => [...prev, ...newFiles])
 
-      try {
-        const finalUrl = await uploadImage(file);
+      // Upload each file
+      for (const uploadingFile of newFiles) {
+        try {
+          const finalUrl = await uploadImage(uploadingFile.file)
 
-        onUploadComplete(finalUrl);
+          setUploadingFiles((prev) =>
+            prev.map((f) => (f.id === uploadingFile.id ? { ...f, isUploading: false, finalUrl } : f)),
+          )
+        } catch (error) {
+          toast.error(`Failed to upload ${uploadingFile.file.name}`)
+          setUploadingFiles((prev) => prev.filter((f) => f.id !== uploadingFile.id))
+        }
+      }
 
-        setPreview(finalUrl);
-
-        toast.success("Upload successful!");
-      } catch (error) {
-        toast.error("Upload failed. Please try again.");
-        setPreview(initialPreview || null);
-      } finally {
-        setIsUploading(false);
-        URL.revokeObjectURL(tempUrl);
+      // Notify parent of all uploaded URLs
+      const uploadedUrls = uploadingFiles.filter((f) => f.finalUrl).map((f) => f.finalUrl!)
+      if (uploadedUrls.length > 0) {
+        onUploadComplete(uploadedUrls)
       }
     },
-    [onUploadComplete, initialPreview]
-  );
+    [uploadingFiles, onUploadComplete],
+  )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    multiple: false,
+    multiple: true,
     accept: { "image/*": [".png", ".gif", ".jpeg", ".jpg"] },
-  });
+  })
 
-  if (preview) {
-    return (
-      <div className="w-full aspect-video bg-gray-100 rounded-md overflow-hidden relative my-2">
-        <img
-          src={preview}
-          alt="Preview"
-          className="w-full h-full object-cover rounded-md"
-        />
-        <Button
-          type="button"
-          variant="destructive"
-          size="icon"
-          className="absolute top-1 right-1 h-6 w-6 rounded-full"
-          onClick={() => {
-            setPreview(null);
-            onUploadComplete("");
-          }}
-          disabled={isUploading}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-        {isUploading && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
-            <Loader2 className="h-8 w-8 animate-spin text-white" />
-          </div>
-        )}
-      </div>
-    );
+  const handleRemoveFile = (id: string) => {
+    setUploadingFiles((prev) => {
+      const updated = prev.filter((f) => f.id !== id)
+      const remainingUrls = updated.filter((f) => f.finalUrl).map((f) => f.finalUrl!)
+      onUploadComplete(remainingUrls)
+      return updated
+    })
   }
 
-  // Nếu không có preview, hiển thị ô kéo-thả
+  if (uploadingFiles.length > 0) {
+    return (
+      <div className="w-full space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {uploadingFiles.map((uploadingFile) => (
+            <div key={uploadingFile.id} className="relative aspect-square bg-gray-100 rounded-md overflow-hidden">
+              <img
+                src={uploadingFile.preview || "/placeholder.svg"}
+                alt="Preview"
+                className="w-full h-full object-cover rounded-md"
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="absolute top-1 right-1 h-6 w-6 rounded-full"
+                onClick={() => handleRemoveFile(uploadingFile.id)}
+                disabled={uploadingFile.isUploading}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              {uploadingFile.isUploading && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
+                  <Loader2 className="h-6 w-6 animate-spin text-white" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div
+          {...getRootProps()}
+          className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+            ${isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-gray-400"}
+          `}
+        >
+          <input {...getInputProps()} />
+          <div className="flex flex-col items-center justify-center">
+            <UploadCloud className="h-10 w-10 text-gray-400" />
+            <p className="mt-2 text-sm text-muted-foreground">
+              <span className="font-semibold text-blue-500">Click to upload more</span> or drag and drop
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       {...getRootProps()}
       className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-        ${
-          isDragActive
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 hover:border-gray-400"
-        }
+        ${isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-gray-400"}
       `}
     >
       <input {...getInputProps()} />
       <div className="flex flex-col items-center justify-center">
         <UploadCloud className="h-10 w-10 text-gray-400" />
         <p className="mt-2 text-sm text-muted-foreground">
-          <span className="font-semibold text-blue-500">Click to upload</span>{" "}
-          or drag and drop
+          <span className="font-semibold text-blue-500">Click to upload</span> or drag and drop
         </p>
       </div>
     </div>
-  );
+  )
 }
