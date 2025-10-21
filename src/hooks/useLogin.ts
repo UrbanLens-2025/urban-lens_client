@@ -21,7 +21,7 @@ export function useLogin() {
 
         const userRole = data.data.user.role;
         if (userRole === 'ADMIN') {
-          router.push('/admin/dashboard');
+          router.push('/admin');
         } else {
           router.push('/');
         }
