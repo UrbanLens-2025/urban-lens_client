@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import usePlacesAutocomplete, { getGeocode, getLatLng } from "use-places-autocomplete";
 
-// Định nghĩa một kiểu dữ liệu rõ ràng cho kết quả trả về
 export interface PlaceDetails {
   address: string;
   lat: number;
@@ -33,7 +31,6 @@ export function PlacesAutocomplete({ onAddressSelect }: PlacesAutocompleteProps)
       const results = await getGeocode({ address });
       const { lat, lng } = await getLatLng(results[0]);
       
-      // Gửi object chi tiết bao gồm cả `address_components` lên cho cha
       onAddressSelect({ 
         address: results[0].formatted_address, 
         lat, 
@@ -51,7 +48,7 @@ export function PlacesAutocomplete({ onAddressSelect }: PlacesAutocompleteProps)
         value={value}
         onChange={(e) => setValue(e.target.value)}
         disabled={!ready}
-        placeholder="Bắt đầu nhập địa chỉ..."
+        placeholder="Searching address..."
       />
       {status === 'OK' && (
         <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg">
