@@ -130,23 +130,18 @@ export default function CreateLocationPage() {
   const processGeocodeResults = (results: google.maps.GeocoderResult[]) => {
     if (results && results[0]) {
       const components = results[0].address_components;
-
+      
+      const district = findAddressComponent(components, "administrative_area_level_1");
+      const province = findAddressComponent(components, "administrative_area_level_2") || findAddressComponent(components, "locality");
       const streetNumber = findAddressComponent(components, "street_number");
       const route = findAddressComponent(components, "route");
-      const district =
-        findAddressComponent(components, "administrative_area_level_1") ||
-        findAddressComponent(components, "locality");
-      const province = findAddressComponent(
-        components,
-        "administrative_area_level_2"
-      );
 
       const streetAddress = `${streetNumber} ${route}`.trim();
 
-      form.setValue("addressLine", streetAddress, { shouldValidate: true });
-      form.setValue("addressLevel1", district, { shouldValidate: true });
-      form.setValue("addressLevel2", province, { shouldValidate: true });
-
+      form.setValue("addressLine", streetAddress);
+      form.setValue("addressLevel1", province);
+      form.setValue("addressLevel2", district);
+      
       toast.info("Address has been auto-filled.");
     }
   };
@@ -163,7 +158,7 @@ export default function CreateLocationPage() {
       locationImageUrls: [],
       tagIds: [],
       documentImageUrl: "",
-      radiusMeters: 0,
+      radiusMeters: 1,
       latitude: 0,
       longitude: 0,
     },
@@ -337,7 +332,7 @@ export default function CreateLocationPage() {
                   />
                 </div>
                 <FormField
-                  name="addressLevel1"
+                  name="addressLevel2"
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
@@ -350,7 +345,7 @@ export default function CreateLocationPage() {
                   )}
                 />
                 <FormField
-                  name="addressLevel2"
+                  name="addressLevel1"
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
@@ -385,7 +380,7 @@ export default function CreateLocationPage() {
                       </FormLabel>
                       <FormControl>
                         <Slider
-                          min={0}
+                          min={1}
                           max={100}
                           step={1}
                           onValueChange={(value) => field.onChange(value[0])}
@@ -447,8 +442,8 @@ export default function CreateLocationPage() {
 
                 <div className="p-4 border rounded-md space-y-4">
                     <InfoRow label="Address" value={watchedValues.addressLine} />
-                    <InfoRow label="Province / City" value={watchedValues.addressLevel1} />
-                    <InfoRow label="District / Ward" value={watchedValues.addressLevel2} />
+                    <InfoRow label="District / Ward" value={watchedValues.addressLevel1} />
+                    <InfoRow label="Province / City" value={watchedValues.addressLevel2} />
                     <InfoRow label="Coordinates" value={`Lat: ${watchedValues.latitude?.toFixed(6)}, Lng: ${watchedValues.longitude?.toFixed(6)}`} />
                 </div>
 
