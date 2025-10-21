@@ -87,16 +87,14 @@ export interface Location {
   latitude: string;
   longitude: string;
   imageUrl: string[];
-  business: NestedBusinessForLocation; // <-- Dữ liệu business lồng nhau
+  business: NestedBusinessForLocation;
   tags: {
     id: number;
     tagId: number;
-    tag: Tag; // <-- Dữ liệu tag đã được populate đầy đủ
+    tag: Tag;
   }[];
 }
 
-
-// --- TYPE CHO API /v1/business/location-request (LỊCH SỬ YÊU CẦU) ---
 
 interface CreatedByBusiness {
   accountId: string;
@@ -105,7 +103,6 @@ interface CreatedByBusiness {
   wardCode: string;
   status: 'APPROVED' | 'PENDING' | 'REJECTED';
   category: BusinessCategory;
-  // ...
 }
 
 interface ProcessedByAdmin {
@@ -132,10 +129,9 @@ export interface LocationRequest {
   tags: {
     id: number;
     tagId: number;
-    // Lưu ý: API này không trả về object `tag` đầy đủ
   }[];
-  latitude: string;
-  longitude: string;
+  latitude: number;
+  longitude: number;
   locationImageUrls: string[];
   locationValidationDocuments: {
     documentType: string;
@@ -148,9 +144,10 @@ export interface CreateLocationPayload {
   description: string;
   latitude: number;
   longitude: number;
+  radiusMeters: number; 
   addressLine: string;
-  addressLevel1: string; // Tên Tỉnh/Thành
-  addressLevel2: string; // Tên Quận/Huyện hoặc Phường/Xã
+  addressLevel1: string;
+  addressLevel2: string;
   locationImageUrls: string[];
   locationValidationDocuments: LocationValidationDocument[];
   tagIds: number[];

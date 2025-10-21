@@ -1,6 +1,6 @@
 "use client";
 
-import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
+import { Map, AdvancedMarker } from "@vis.gl/react-google-maps";
 
 interface GoogleMapsPickerProps {
   onPositionChange: (latLng: { lat: number, lng: number }) => void;
@@ -17,13 +17,12 @@ export function GoogleMapsPicker({ onPositionChange, position }: GoogleMapsPicke
   const defaultCenter = { lat: 10.7769, lng: 106.7009 };
 
   return (
-    <APIProvider apiKey={apiKey}>
       <Map
         defaultCenter={defaultCenter}
         defaultZoom={13}
         gestureHandling={'greedy'}
         disableDefaultUI={true}
-        mapId="your-map-id" // Tùy chọn: ID cho map style
+        mapId="your-map-id"
         onClick={(e) => {
           if (e.detail.latLng) {
             onPositionChange(e.detail.latLng);
@@ -32,6 +31,5 @@ export function GoogleMapsPicker({ onPositionChange, position }: GoogleMapsPicke
       >
         {position && <AdvancedMarker position={position} />}
       </Map>
-    </APIProvider>
   );
 }

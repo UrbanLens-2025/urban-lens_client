@@ -1,17 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
-// --- Hooks ---
 import { useCreateLocationRequest } from "@/hooks/useCreateLocationRequest";
 import { useUser } from "@/hooks/useUser";
-import { useLocationRequestById } from "@/hooks/useLocationRequestById";
-
-// --- UI Components ---
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,22 +32,23 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
+import { PlacesAutocomplete } from "@/components/shared/PlacesAutocomplete";
+import { getGeocode } from "use-places-autocomplete";
+import { toast } from "sonner";
+import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
+import { PaginatedData, Tag } from "@/types";
+import { useTags } from "@/hooks/useTags";
 
-// --- Zod Schema Hoàn Chỉnh ---
 const locationSchema = z.object({
-  // Step 1
   name: z.string().min(1, "Name is required"),
   description: z.string().min(1, "Description is required"),
-  tagIds: z.array(z.number()).min(1, "At least one tag is required."),
-
-  // Step 2
-  addressLevel1: z.string().min(1, "Province/City is required"),
-  addressLevel2: z.string().min(1, "District/Ward is required"),
-  addressLine: z.string().min(1, "Street address is required"),
   latitude: z.number({ error: "Please select a location on the map." }),
   longitude: z.number({ error: "Please select a location on the map." }),
-
-  // Step 3
+  radiusMeters: z.number().min(1, "Radius must be at least 1 meter."),
+  addressLine: z.string().min(1, "Street address is required."),
+  addressLevel1: z.string().min(1, "Province/City is required"),
+  addressLevel2: z.string().min(1, "District/Ward is required"),
   locationImageUrls: z
     .array(z.string().url())
     .min(1, "At least one location image is required."),
@@ -59,10 +56,10 @@ const locationSchema = z.object({
     .string()
     .url("A validation document is required.")
     .min(1, "A validation document is required."),
+  tagIds: z.array(z.number()).min(1, "At least one tag is required."),
 });
 type FormValues = z.infer<typeof locationSchema>;
 
-// --- Định nghĩa các bước ---
 const steps = [
   {
     id: 1,
@@ -72,13 +69,7 @@ const steps = [
   {
     id: 2,
     title: "Address & Map",
-    fields: [
-      "addressLevel1",
-      "addressLevel2",
-      "addressLine",
-      "latitude",
-      "longitude",
-    ] as const,
+    fields: ["addressLine", "latitude", "longitude"] as const,
   },
   {
     id: 3,
@@ -88,16 +79,77 @@ const steps = [
   { id: 4, title: "Confirmation" },
 ];
 
+const findAddressComponent = (
+  components: google.maps.GeocoderAddressComponent[],
+  type: string
+) => {
+  return components.find((c) => c.types.includes(type))?.long_name || "";
+};
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  if (!value) return null;
+  return (
+    <div>
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <div className="text-base font-semibold">{value}</div>
+    </div>
+  );
+}
+
+function DisplayTags({
+  tagIds,
+  tagsMap,
+}: {
+  tagIds: number[] | undefined;
+  tagsMap: Map<number, Tag>;
+}) {
+  if (!tagIds || tagIds.length === 0)
+    return <span className="text-muted-foreground">None</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {tagIds.map((id) => {
+        const tag = tagsMap.get(id);
+        if (!tag) return null;
+        return (
+          <Badge key={tag.id} variant="secondary">
+            {tag.icon} {tag.displayName}
+          </Badge>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function CreateLocationPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const { user, isLoading: isUserLoading } = useUser();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const copyFromId = searchParams.get("copyFrom");
-
-  const { data: copiedData, isLoading: isLoadingCopiedData } =
-    useLocationRequestById(copyFromId);
   const { mutate: createLocation, isPending } = useCreateLocationRequest();
+  const { data: allTagsResponse } = useTags();
+
+  const processGeocodeResults = (results: google.maps.GeocoderResult[]) => {
+    if (results && results[0]) {
+      const components = results[0].address_components;
+
+      const streetNumber = findAddressComponent(components, "street_number");
+      const route = findAddressComponent(components, "route");
+      const district =
+        findAddressComponent(components, "administrative_area_level_1") ||
+        findAddressComponent(components, "locality");
+      const province = findAddressComponent(
+        components,
+        "administrative_area_level_2"
+      );
+
+      const streetAddress = `${streetNumber} ${route}`.trim();
+
+      form.setValue("addressLine", streetAddress, { shouldValidate: true });
+      form.setValue("addressLevel1", district, { shouldValidate: true });
+      form.setValue("addressLevel2", province, { shouldValidate: true });
+
+      toast.info("Address has been auto-filled.");
+    }
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(locationSchema),
@@ -105,33 +157,28 @@ export default function CreateLocationPage() {
     defaultValues: {
       name: "",
       description: "",
-      tagIds: [],
+      addressLine: "",
       addressLevel1: "",
       addressLevel2: "",
-      addressLine: "",
       locationImageUrls: [],
+      tagIds: [],
       documentImageUrl: "",
+      radiusMeters: 0,
+      latitude: 0,
+      longitude: 0,
     },
   });
 
-  // Tự động điền form khi có dữ liệu copy
-  useEffect(() => {
-    if (copiedData) {
-      form.reset({
-        name: copiedData.name,
-        description: copiedData.description,
-        addressLine: copiedData.createdBy.address,
-        addressLevel1: "Province Name", // Cần logic để lấy tên tỉnh từ code
-        addressLevel2: copiedData.createdBy.wardCode,
-        latitude: parseFloat(copiedData.latitude),
-        longitude: parseFloat(copiedData.longitude),
-        tagIds: copiedData.tags.map((t) => t.tagId),
-        locationImageUrls: copiedData.locationImageUrls,
-        documentImageUrl:
-          copiedData.locationValidationDocuments[0]?.documentImageUrls[0] || "",
-      });
+  const handlePositionChange = async (latLng: { lat: number; lng: number }) => {
+    form.setValue("latitude", latLng.lat, { shouldValidate: true });
+    form.setValue("longitude", latLng.lng, { shouldValidate: true });
+    try {
+      const results = await getGeocode({ location: latLng });
+      processGeocodeResults(results);
+    } catch (error) {
+      toast.error("Could not fetch address for this location.");
     }
-  }, [copiedData, form]);
+  };
 
   const watchedValues = form.watch();
   const markerPosition =
@@ -139,27 +186,27 @@ export default function CreateLocationPage() {
       ? { lat: watchedValues.latitude, lng: watchedValues.longitude }
       : null;
 
-  // Logic điều hướng
+  const tagsMap = useMemo(() => {
+    const map = new Map<number, Tag>();
+    const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];
+    allTags.forEach((tag) => map.set(tag.id, tag));
+    return map;
+  }, [allTagsResponse]);
+
   const handleNextStep = async () => {
     const fields = steps[currentStep].fields;
     if (fields) {
       const output = await form.trigger(fields, { shouldFocus: true });
       if (!output) return;
     }
-    if (currentStep < steps.length - 1) {
-      setCurrentStep((prev) => prev + 1);
-    }
+    setCurrentStep((prev) => prev + 1);
   };
-  const handlePrevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1);
-    }
-  };
+  const handlePrevStep = () => setCurrentStep((prev) => prev - 1);
 
   function onSubmit(values: FormValues) {
-    const { documentImageUrl, ...restOfValues } = values;
+    const { documentImageUrl, ...rest } = values;
     const payload = {
-      ...restOfValues,
+      ...rest,
       locationValidationDocuments: [
         {
           documentType: "LOCATION_REGISTRATION_CERTIFICATE",
@@ -170,8 +217,7 @@ export default function CreateLocationPage() {
     createLocation(payload);
   }
 
-  // Bảo vệ route và trạng thái loading
-  if (isUserLoading || isLoadingCopiedData) {
+  if (isUserLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="animate-spin" />
@@ -245,17 +291,49 @@ export default function CreateLocationPage() {
 
               {/* === STEP 2: Địa chỉ & Bản đồ === */}
               <div className={cn("space-y-6", currentStep !== 1 && "hidden")}>
+                <FormItem>
+                  <FormLabel>Search Address</FormLabel>
+                  <PlacesAutocomplete
+                    onAddressSelect={async ({ address, lat, lng }) => {
+                      form.setValue("latitude", lat, { shouldValidate: true });
+                      form.setValue("longitude", lng, { shouldValidate: true });
+
+                      try {
+                        const results = await getGeocode({ address });
+                        if (results && results[0]) {
+                          const components = results[0].address_components;
+                          form.setValue(
+                            "addressLine",
+                            results[0].formatted_address,
+                            { shouldValidate: true }
+                          );
+                          form.setValue(
+                            "addressLevel1",
+                            findAddressComponent(
+                              components,
+                              "administrative_area_level_1"
+                            ),
+                            { shouldValidate: true }
+                          );
+                          form.setValue(
+                            "addressLevel2",
+                            findAddressComponent(
+                              components,
+                              "administrative_area_level_2"
+                            ) || findAddressComponent(components, "locality"),
+                            { shouldValidate: true }
+                          );
+                        }
+                      } catch (error) {
+                        console.error("Geocoding error", error);
+                      }
+                    }}
+                  />
+                </FormItem>
                 <div className="h-80 rounded-lg overflow-hidden border">
                   <GoogleMapsPicker
                     position={markerPosition}
-                    onPositionChange={(latLng) => {
-                      form.setValue("latitude", latLng.lat, {
-                        shouldValidate: true,
-                      });
-                      form.setValue("longitude", latLng.lng, {
-                        shouldValidate: true,
-                      });
-                    }}
+                    onPositionChange={handlePositionChange}
                   />
                 </div>
                 <FormField
@@ -297,6 +375,28 @@ export default function CreateLocationPage() {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="radiusMeters"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Effective Radius: {field.value} meters
+                      </FormLabel>
+                      <FormControl>
+                        <Slider
+                          min={0}
+                          max={100}
+                          step={1}
+                          onValueChange={(value) => field.onChange(value[0])}
+                          defaultValue={[field.value]}
+                          className="pt-2"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               {/* === STEP 3: Upload Files === */}
@@ -307,7 +407,7 @@ export default function CreateLocationPage() {
                     <FormItem>
                       <FormLabel>Location Photos (at least 1)</FormLabel>
                       <FileUpload
-                        multiple
+                        // multiple
                         onUploadComplete={(url) =>
                           form.setValue("locationImageUrls", [
                             ...form.getValues("locationImageUrls"),
@@ -336,37 +436,34 @@ export default function CreateLocationPage() {
               </div>
 
               {/* === STEP 4: Xác nhận === */}
-              <div className={cn("space-y-4", currentStep !== 3 && "hidden")}>
-                <h3 className="text-lg font-semibold">
-                  Please review your information
-                </h3>
-                <div className="p-4 border rounded-md space-y-2 text-sm text-muted-foreground">
-                  <p>
-                    <strong>Name:</strong> {watchedValues.name}
-                  </p>
-                  <p>
-                    <strong>Address:</strong>{" "}
-                    {`${watchedValues.addressLine || ""}, ${
-                      watchedValues.addressLevel2 || ""
-                    }, ${watchedValues.addressLevel1 || ""}`}
-                  </p>
-                  <p>
-                    <strong>Coordinates:</strong> Lat:{" "}
-                    {watchedValues.latitude?.toFixed(4)}, Lng:{" "}
-                    {watchedValues.longitude?.toFixed(4)}
-                  </p>
-                  <p>
-                    <strong>Tags:</strong> {watchedValues.tagIds?.length || 0}{" "}
-                    selected
-                  </p>
-                  <p>
-                    <strong>Images:</strong>{" "}
-                    {watchedValues.locationImageUrls?.length || 0} uploaded
-                  </p>
+              <div className={cn("space-y-6", currentStep !== 3 && "hidden")}>
+                <h3 className="text-lg font-semibold">Please review your information</h3>
+                
+                <div className="p-4 border rounded-md space-y-4">
+                  <InfoRow label="Location Name" value={watchedValues.name} />
+                  <InfoRow label="Description" value={watchedValues.description} />
+                  <InfoRow label="Tags" value={<DisplayTags tagIds={watchedValues.tagIds} tagsMap={tagsMap} />} />
+                </div>
+
+                <div className="p-4 border rounded-md space-y-4">
+                    <InfoRow label="Address" value={watchedValues.addressLine} />
+                    <InfoRow label="Province / City" value={watchedValues.addressLevel1} />
+                    <InfoRow label="District / Ward" value={watchedValues.addressLevel2} />
+                    <InfoRow label="Coordinates" value={`Lat: ${watchedValues.latitude?.toFixed(6)}, Lng: ${watchedValues.longitude?.toFixed(6)}`} />
+                </div>
+
+                <div className="p-4 border rounded-md space-y-4">
+                    <InfoRow label="Location Photos" value={
+                        <div className="flex flex-wrap gap-2">
+                            {watchedValues.locationImageUrls?.map(url => <img key={url} src={url} className="w-24 h-24 object-cover rounded-md"/>)}
+                        </div>
+                    } />
+                    <InfoRow label="Validation Document" value={
+                        watchedValues.documentImageUrl && <img src={watchedValues.documentImageUrl} className="w-24 h-24 object-cover rounded-md"/>
+                    } />
                 </div>
               </div>
 
-              {/* --- Nút điều hướng --- */}
               <div className="flex justify-between pt-4">
                 <Button
                   type="button"

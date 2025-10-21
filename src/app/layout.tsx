@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import Providers from "./QueryClient";
 import { AppLayout } from "@/components/AppLayout";
+import { GoogleMapsProvider } from "@/components/providers/GoogleMapsProvider";
 // import { ThemeProvider } from "@/components/theme-provider";
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,10 +39,12 @@ export default function RootLayout({
           disableTransitionOnChange
         > */}
         <Providers>
-          <AppLayout>
-            {children}
-            <Toaster />
-          </AppLayout>
+          <GoogleMapsProvider>
+            <AppLayout>
+              {children}
+              <Toaster />
+            </AppLayout>
+          </GoogleMapsProvider>
         </Providers>
         {/* </ThemeProvider> */}
       </body>
