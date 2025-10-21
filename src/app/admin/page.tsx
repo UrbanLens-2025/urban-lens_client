@@ -2,7 +2,6 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -12,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, PlusCircle, Star, Eye } from "lucide-react";
+import { ArrowUpRight, Star, Eye } from "lucide-react";
 import Link from "next/link";
 
 function StatCard({ title, value, change, icon: Icon }: any) {
@@ -30,16 +29,11 @@ function StatCard({ title, value, change, icon: Icon }: any) {
   );
 }
 
-export default function BusinessDashboardPage() {
+export default function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Overview</h1>
-        <Link href="/dashboard/business/locations/create">
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Location
-          </Button>
-        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -68,7 +62,7 @@ export default function BusinessDashboardPage() {
           <CardHeader>
             <div className="flex justify-between">
               <CardTitle>My Locations</CardTitle>
-              <Link href={"/dashboard/business/locations"}>
+              <Link href={"/admin/locations"}>
                 <ArrowUpRight />
               </Link>
             </div>
