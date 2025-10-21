@@ -128,21 +128,37 @@ export default function CreateLocationPage() {
   const { data: allTagsResponse } = useTags();
 
   const processGeocodeResults = (results: google.maps.GeocoderResult[]) => {
-    if (results && results[0]) {
-      const components = results[0].address_components;
-      
-      const district = findAddressComponent(components, "administrative_area_level_1");
-      const province = findAddressComponent(components, "administrative_area_level_2") || findAddressComponent(components, "locality");
-      const streetNumber = findAddressComponent(components, "street_number");
-      const route = findAddressComponent(components, "route");
+    if (!results || !results[0]) return;
 
-      const streetAddress = `${streetNumber} ${route}`.trim();
+    const components = results[0].address_components;
 
-      form.setValue("addressLine", streetAddress);
-      form.setValue("addressLevel1", province);
-      form.setValue("addressLevel2", district);
-      
-      toast.info("Address has been auto-filled.");
+    const district = findAddressComponent(
+      components,
+      "administrative_area_level_1"
+    );
+    const province =
+      findAddressComponent(components, "administrative_area_level_2") ||
+      findAddressComponent(components, "locality");
+    const streetNumber = findAddressComponent(components, "street_number");
+    const route = findAddressComponent(components, "route");
+
+    const streetAddress = `${streetNumber} ${route}`.trim();
+
+    form.setValue("addressLevel1", province, { shouldValidate: true });
+    form.setValue("addressLevel2", district, { shouldValidate: true });
+    form.setValue("addressLine", streetAddress, { shouldValidate: true });
+
+    toast.info("Address has been auto-filled.");
+  };
+
+  const handlePositionChange = async (latLng: { lat: number; lng: number }) => {
+    form.setValue("latitude", latLng.lat, { shouldValidate: true });
+    form.setValue("longitude", latLng.lng, { shouldValidate: true });
+    try {
+      const results = await getGeocode({ location: latLng });
+      processGeocodeResults(results);
+    } catch (error) {
+      toast.error("Could not fetch address for this location.");
     }
   };
 
@@ -163,17 +179,6 @@ export default function CreateLocationPage() {
       longitude: 0,
     },
   });
-
-  const handlePositionChange = async (latLng: { lat: number; lng: number }) => {
-    form.setValue("latitude", latLng.lat, { shouldValidate: true });
-    form.setValue("longitude", latLng.lng, { shouldValidate: true });
-    try {
-      const results = await getGeocode({ location: latLng });
-      processGeocodeResults(results);
-    } catch (error) {
-      toast.error("Could not fetch address for this location.");
-    }
-  };
 
   const watchedValues = form.watch();
   const markerPosition =
@@ -292,33 +297,9 @@ export default function CreateLocationPage() {
                     onAddressSelect={async ({ address, lat, lng }) => {
                       form.setValue("latitude", lat, { shouldValidate: true });
                       form.setValue("longitude", lng, { shouldValidate: true });
-
                       try {
                         const results = await getGeocode({ address });
-                        if (results && results[0]) {
-                          const components = results[0].address_components;
-                          form.setValue(
-                            "addressLine",
-                            results[0].formatted_address,
-                            { shouldValidate: true }
-                          );
-                          form.setValue(
-                            "addressLevel1",
-                            findAddressComponent(
-                              components,
-                              "administrative_area_level_1"
-                            ),
-                            { shouldValidate: true }
-                          );
-                          form.setValue(
-                            "addressLevel2",
-                            findAddressComponent(
-                              components,
-                              "administrative_area_level_2"
-                            ) || findAddressComponent(components, "locality"),
-                            { shouldValidate: true }
-                          );
-                        }
+                        processGeocodeResults(results)
                       } catch (error) {
                         console.error("Geocoding error", error);
                       }
@@ -432,30 +413,71 @@ export default function CreateLocationPage() {
 
               {/* === STEP 4: Xác nhận === */}
               <div className={cn("space-y-6", currentStep !== 3 && "hidden")}>
-                <h3 className="text-lg font-semibold">Please review your information</h3>
-                
+                <h3 className="text-lg font-semibold">
+                  Please review your information
+                </h3>
+
                 <div className="p-4 border rounded-md space-y-4">
                   <InfoRow label="Location Name" value={watchedValues.name} />
-                  <InfoRow label="Description" value={watchedValues.description} />
-                  <InfoRow label="Tags" value={<DisplayTags tagIds={watchedValues.tagIds} tagsMap={tagsMap} />} />
+                  <InfoRow
+                    label="Description"
+                    value={watchedValues.description}
+                  />
+                  <InfoRow
+                    label="Tags"
+                    value={
+                      <DisplayTags
+                        tagIds={watchedValues.tagIds}
+                        tagsMap={tagsMap}
+                      />
+                    }
+                  />
                 </div>
 
                 <div className="p-4 border rounded-md space-y-4">
-                    <InfoRow label="Address" value={watchedValues.addressLine} />
-                    <InfoRow label="District / Ward" value={watchedValues.addressLevel1} />
-                    <InfoRow label="Province / City" value={watchedValues.addressLevel2} />
-                    <InfoRow label="Coordinates" value={`Lat: ${watchedValues.latitude?.toFixed(6)}, Lng: ${watchedValues.longitude?.toFixed(6)}`} />
+                  <InfoRow label="Address" value={watchedValues.addressLine} />
+                  <InfoRow
+                    label="District / Ward"
+                    value={watchedValues.addressLevel1}
+                  />
+                  <InfoRow
+                    label="Province / City"
+                    value={watchedValues.addressLevel2}
+                  />
+                  <InfoRow
+                    label="Coordinates"
+                    value={`Lat: ${watchedValues.latitude?.toFixed(
+                      6
+                    )}, Lng: ${watchedValues.longitude?.toFixed(6)}`}
+                  />
                 </div>
 
                 <div className="p-4 border rounded-md space-y-4">
-                    <InfoRow label="Location Photos" value={
-                        <div className="flex flex-wrap gap-2">
-                            {watchedValues.locationImageUrls?.map(url => <img key={url} src={url} className="w-24 h-24 object-cover rounded-md"/>)}
-                        </div>
-                    } />
-                    <InfoRow label="Validation Document" value={
-                        watchedValues.documentImageUrl && <img src={watchedValues.documentImageUrl} className="w-24 h-24 object-cover rounded-md"/>
-                    } />
+                  <InfoRow
+                    label="Location Photos"
+                    value={
+                      <div className="flex flex-wrap gap-2">
+                        {watchedValues.locationImageUrls?.map((url) => (
+                          <img
+                            key={url}
+                            src={url}
+                            className="w-24 h-24 object-cover rounded-md"
+                          />
+                        ))}
+                      </div>
+                    }
+                  />
+                  <InfoRow
+                    label="Validation Document"
+                    value={
+                      watchedValues.documentImageUrl && (
+                        <img
+                          src={watchedValues.documentImageUrl}
+                          className="w-24 h-24 object-cover rounded-md"
+                        />
+                      )
+                    }
+                  />
                 </div>
               </div>
 
