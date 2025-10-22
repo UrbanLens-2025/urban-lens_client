@@ -52,10 +52,9 @@ const locationSchema = z.object({
   locationImageUrls: z
     .array(z.string().url())
     .min(1, "At least one location image is required."),
-  documentImageUrl: z
-    .string()
-    .url("A validation document is required.")
-    .min(1, "A validation document is required."),
+  documentImageUrls: z
+    .array(z.string().url())
+    .min(1, "At least one validation document is required."),
   tagIds: z.array(z.number()).min(1, "At least one tag is required."),
 });
 type FormValues = z.infer<typeof locationSchema>;
@@ -74,7 +73,7 @@ const steps = [
   {
     id: 3,
     title: "Images & Documents",
-    fields: ["locationImageUrls", "documentImageUrl"] as const,
+    fields: ["locationImageUrls", "documentImageUrls"] as const,
   },
   { id: 4, title: "Confirmation" },
 ];
@@ -173,7 +172,7 @@ export default function CreateLocationPage() {
       addressLevel2: "",
       locationImageUrls: [],
       tagIds: [],
-      documentImageUrl: "",
+      documentImageUrls: [],
       radiusMeters: 1,
       latitude: 0,
       longitude: 0,
@@ -204,13 +203,13 @@ export default function CreateLocationPage() {
   const handlePrevStep = () => setCurrentStep((prev) => prev - 1);
 
   function onSubmit(values: FormValues) {
-    const { documentImageUrl, ...rest } = values;
+    const { documentImageUrls, ...rest } = values;
     const payload = {
       ...rest,
       locationValidationDocuments: [
         {
           documentType: "LOCATION_REGISTRATION_CERTIFICATE",
-          documentImageUrls: [documentImageUrl],
+          documentImageUrls: documentImageUrls,
         },
       ],
     };
@@ -299,7 +298,7 @@ export default function CreateLocationPage() {
                       form.setValue("longitude", lng, { shouldValidate: true });
                       try {
                         const results = await getGeocode({ address });
-                        processGeocodeResults(results)
+                        processGeocodeResults(results);
                       } catch (error) {
                         console.error("Geocoding error", error);
                       }
@@ -379,31 +378,29 @@ export default function CreateLocationPage() {
               <div className={cn("space-y-6", currentStep !== 2 && "hidden")}>
                 <FormField
                   name="locationImageUrls"
-                  render={() => (
+                  control={form.control} // Phải có control
+                  render={(
+                    { field } // `field` chứa value, onChange, onBlur,...
+                  ) => (
                     <FormItem>
                       <FormLabel>Location Photos (at least 1)</FormLabel>
                       <FileUpload
-                        // multiple
-                        onUploadComplete={(url) =>
-                          form.setValue("locationImageUrls", [
-                            ...form.getValues("locationImageUrls"),
-                            url,
-                          ])
-                        }
+                        value={field.value} // Truyền state hiện tại vào
+                        onChange={field.onChange} // Dùng hàm onChange của react-hook-form
                       />
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
-                  name="documentImageUrl"
-                  render={() => (
+                  name="documentImageUrls"
+                  control={form.control}
+                  render={({ field }) => (
                     <FormItem>
                       <FormLabel>Validation Document (required)</FormLabel>
                       <FileUpload
-                        onUploadComplete={(url) =>
-                          form.setValue("documentImageUrl", url)
-                        }
+                        value={field.value}
+                        onChange={field.onChange}
                       />
                       <FormMessage />
                     </FormItem>
@@ -470,12 +467,15 @@ export default function CreateLocationPage() {
                   <InfoRow
                     label="Validation Document"
                     value={
-                      watchedValues.documentImageUrl && (
-                        <img
-                          src={watchedValues.documentImageUrl}
-                          className="w-24 h-24 object-cover rounded-md"
-                        />
-                      )
+                      <div className="flex flex-wrap gap-2">
+                        {watchedValues.documentImageUrls?.map((url) => (
+                          <img
+                            key={url}
+                            src={url}
+                            className="w-24 h-24 object-cover rounded-md"
+                          />
+                        ))}
+                      </div>
                     }
                   />
                 </div>
