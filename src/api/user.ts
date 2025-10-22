@@ -3,7 +3,7 @@ import axiosInstance from "./axios-config";
 
 export async function getUser(): Promise<User> {
   const { data } = await axiosInstance.get<ApiResponse<User>>(
-    "/v1/auth/profile"
+    "/v1/private/account"
   );
 
   return data.data;

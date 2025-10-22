@@ -14,11 +14,13 @@ export function GoogleMapsPicker({ onPositionChange, position }: GoogleMapsPicke
     return <div>Google Maps API Key is missing.</div>;
   }
   
-  const defaultCenter = { lat: 10.7769, lng: 106.7009 };
+  const defaultCenter = { lat: 14.0583, lng: 108.2772 };
+
+  const mapCenter = position || defaultCenter;
 
   return (
       <Map
-        defaultCenter={defaultCenter}
+        defaultCenter={mapCenter}
         defaultZoom={13}
         gestureHandling={'greedy'}
         disableDefaultUI={true}

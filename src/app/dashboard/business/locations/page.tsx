@@ -41,7 +41,7 @@ import {
   LocationStatus,
 } from "@/types";
 
-function ActiveLocationActions({ locationId }: { locationId: string }) {
+function ActiveLocationActions({ location }: { location: Location }) {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
@@ -51,12 +51,12 @@ function ActiveLocationActions({ locationId }: { locationId: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
-          <Link href={`/dashboard/locations/${locationId}/edit`}>
+          <Link href={`/dashboard/business/locations/${location.id}/edit`}>
             <Edit className="mr-2 h-4 w-4" /> Edit Details
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href={`/dashboard/locations/${locationId}`}>
+          <Link href={`/dashboard/business/locations/${location.id}`}>
             <Eye className="mr-2 h-4 w-4" />
             View Live Page
           </Link>
@@ -225,7 +225,7 @@ export default function MyLocationsPage() {
                       <DisplayTags items={location.tags} tagsMap={tagsMap} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <ActiveLocationActions locationId={location.id} />
+                      <ActiveLocationActions location={location} />
                     </TableCell>
                   </TableRow>
                 ))

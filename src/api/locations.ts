@@ -25,3 +25,10 @@ export const getLocationRequestById = async (id: string): Promise<LocationReques
   );
   return response.data.data;
 };
+
+export const getLocationById = async (id: string): Promise<Location> => {
+  const { data } = await axiosInstance.get<ApiResponse<Location>>(
+    `/v1/owner/locations/${id}`
+  );
+  return data.data;
+};
