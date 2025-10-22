@@ -118,6 +118,7 @@ export interface Location {
     tagId: number;
     tag: Tag;
   }[];
+  isVisibleOnMap: boolean;
 }
 
 
@@ -183,4 +184,11 @@ export interface GetRequestsParams {
   limit?: number;
   search?: string;
   status?: LocationStatus;
+}
+
+export interface UpdateLocationPayload {
+  name: string;
+  description: string;
+  imageUrl: string[];
+  isVisibleOnMap: boolean;
 }

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axiosInstance from "./axios-config";
-import type { ApiResponse, CreateLocationPayload, Location, LocationRequest, PaginatedData } from "@/types";
+import type { ApiResponse, CreateLocationPayload, Location, LocationRequest, PaginatedData, UpdateLocationPayload } from "@/types";
 
 export const getMyLocations = async (): Promise<PaginatedData<Location>> => {
   const response = await axiosInstance.get<ApiResponse<PaginatedData<Location>>>(
@@ -29,6 +29,17 @@ export const getLocationRequestById = async (id: string): Promise<LocationReques
 export const getLocationById = async (id: string): Promise<Location> => {
   const { data } = await axiosInstance.get<ApiResponse<Location>>(
     `/v1/owner/locations/${id}`
+  );
+  return data.data;
+};
+
+export const updateLocation = async (
+  locationId: string, 
+  payload: UpdateLocationPayload
+): Promise<Location> => {
+  const { data } = await axiosInstance.put<ApiResponse<Location>>(
+    `/v1/owner/locations/${locationId}`, 
+    payload
   );
   return data.data;
 };

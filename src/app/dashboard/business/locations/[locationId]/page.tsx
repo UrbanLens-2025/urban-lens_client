@@ -102,7 +102,7 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
                 <CardContent className="h-80 rounded-lg overflow-hidden">
                     <GoogleMapsPicker 
                         position={position}
-                        onPositionChange={() => {}} // Để trống vì đây là chế độ xem
+                        onPositionChange={() => {}}
                     />
                 </CardContent>
             </Card>
