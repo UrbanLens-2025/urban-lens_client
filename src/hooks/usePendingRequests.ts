@@ -4,8 +4,8 @@ import { getLocationRequestsForAdmin } from "@/api/admin";
 
 export function usePendingRequests(page: number, search: string) {
   return useQuery({
-    queryKey: ['pendingLocationRequests', page, search],
-    queryFn: () => getLocationRequestsForAdmin({ page, search, status: 'AWAITING_ADMIN_REVIEW' }),
+    queryKey: ["pendingLocationRequests", page, search],
+    queryFn: () => getLocationRequestsForAdmin({ page, search }),
     placeholderData: (previousData) => previousData,
   });
 }

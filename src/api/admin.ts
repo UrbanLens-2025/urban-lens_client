@@ -6,11 +6,11 @@ export interface ProcessRequestPayload {
   adminNotes?: string;
 }
 
-export const getLocationRequestsForAdmin = async ({ page = 1, limit = 10, search, status }: GetRequestsParams): Promise<PaginatedData<LocationRequest>> => {
+export const getLocationRequestsForAdmin = async ({ page = 1, limit = 10, search }: GetRequestsParams): Promise<PaginatedData<LocationRequest>> => {
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<LocationRequest>>>(
     '/v1/admin/location-request/search', 
     {
-      params: { page, limit, search, status }
+      params: { page, limit, search }
     }
   );
   return data.data;

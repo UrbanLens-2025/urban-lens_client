@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useDebounce } from "use-debounce"; // Cần cài đặt: npm install use-debounce
+import { useDebounce } from "use-debounce";
 import { usePendingRequests } from "@/hooks/usePendingRequests";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,20 +16,30 @@ import { Textarea } from "@/components/ui/textarea";
 export default function AdminDashboardPage() {
     const [page, setPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState("");
-    const [debouncedSearchTerm] = useDebounce(searchTerm, 500); // Chờ 500ms sau khi gõ
+    const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
 
     const { data: response, isLoading } = usePendingRequests(page, debouncedSearchTerm);
     const requests = response?.data || [];
     const meta = response?.meta;
+    
+    const pendingRequests = requests.filter(
+        (req: LocationRequest) => req.status === 'AWAITING_ADMIN_REVIEW'
+    );
 
     const { mutate: processRequest, isPending } = useProcessLocationRequest();
     
-    // State để quản lý việc reject
+    const [approvingRequest, setApprovingRequest] = useState<LocationRequest | null>(null);
     const [rejectingRequest, setRejectingRequest] = useState<LocationRequest | null>(null);
     const [rejectReason, setRejectReason] = useState("");
 
-    const handleApprove = (id: string) => {
-        processRequest({ id, payload: { status: 'APPROVED' } });
+    const handleConfirmApprove = () => {
+        if (!approvingRequest) return;
+        
+        processRequest({ id: approvingRequest.id, payload: { status: 'APPROVED' } }, {
+            onSuccess: () => {
+                setApprovingRequest(null);
+            }
+        });
     };
 
     const handleConfirmReject = () => {
@@ -38,7 +48,7 @@ export default function AdminDashboardPage() {
                 id: rejectingRequest.id,
                 payload: { status: 'REJECTED', adminNotes: rejectReason }
             }, {
-                onSuccess: () => setRejectingRequest(null), // Đóng dialog khi thành công
+                onSuccess: () => setRejectingRequest(null),
             });
         }
     };
@@ -48,7 +58,7 @@ export default function AdminDashboardPage() {
             <h1 className="text-3xl font-bold">Admin Dashboard</h1>
             <Card>
                 <CardHeader>
-                    <CardTitle>Pending Location Requests</CardTitle>
+                    <CardTitle>Pending Location Requests ({pendingRequests.length})</CardTitle>
                     <CardDescription>
                         Review and approve new location submissions. 
                         Showing page {meta?.currentPage} of {meta?.totalPages}.
@@ -75,19 +85,19 @@ export default function AdminDashboardPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {requests.map((req: LocationRequest) => (
+                                {pendingRequests.map((req: LocationRequest) => (
                                     <TableRow key={req.id}>
                                         <TableCell className="font-medium">{req.name}</TableCell>
                                         <TableCell>{req.createdBy?.name || 'N/A'}</TableCell>
                                         <TableCell>{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right space-x-2">
                                             <Button variant="outline" size="sm">View</Button>
-                                            <Button size="sm" onClick={() => handleApprove(req.id)} disabled={isPending} className="bg-green-600 hover:bg-green-700">Approve</Button>
+                                            <Button size="sm" onClick={() => setApprovingRequest(req)} disabled={isPending} className="bg-green-600 hover:bg-green-700">Approve</Button>
                                             <Button variant="destructive" size="sm" onClick={() => setRejectingRequest(req)} disabled={isPending}>Reject</Button>
                                         </TableCell>
                                     </TableRow>
                                 ))}
-                                 {requests.length === 0 && (
+                                 {pendingRequests.length === 0 && (
                                     <TableRow><TableCell colSpan={4} className="text-center h-24">No pending requests found.</TableCell></TableRow>
                                  )}
                             </TableBody>
@@ -95,6 +105,24 @@ export default function AdminDashboardPage() {
                     )}
                 </CardContent>
             </Card>
+
+            <AlertDialog open={!!approvingRequest} onOpenChange={() => setApprovingRequest(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Approve this Location Request?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to approve the location &quot;{approvingRequest?.name}&quot;? This action will make it public.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmApprove} disabled={isPending}>
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            Confirm Approve
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <AlertDialog open={!!rejectingRequest} onOpenChange={() => setRejectingRequest(null)}>
                 <AlertDialogContent>
@@ -119,7 +147,6 @@ export default function AdminDashboardPage() {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* --- PHÂN TRANG --- */}
             <div className="flex items-center justify-end space-x-2 py-4">
                 <Button
                     variant="outline"
