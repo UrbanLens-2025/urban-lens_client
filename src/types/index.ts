@@ -138,15 +138,6 @@ export interface Location {
   isVisibleOnMap: boolean;
 }
 
-interface CreatedByBusiness {
-  accountId: string;
-  name: string;
-  address: string;
-  wardCode: string;
-  status: "APPROVED" | "PENDING" | "REJECTED";
-  category: BusinessCategory;
-}
-
 interface ProcessedByAdmin {
   id: string;
   firstName: string;
@@ -175,6 +166,9 @@ export interface LocationRequest {
   latitude: string;
   longitude: string;
   radiusMeters: number;
+  addressLine: string;
+  addressLevel1: string;
+  addressLevel2: string;
   locationImageUrls: string[];
   locationValidationDocuments: {
     documentType: string;

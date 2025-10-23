@@ -34,11 +34,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { ViewRequestModal } from "@/components/admin/ViewRequestModal";
 
 export default function AdminDashboardPage() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
+  const [viewingRequest, setViewingRequest] = useState<LocationRequest | null>(
+    null
+  );
 
   const [sort, setSort] = useState<SortState>({
     column: "createdAt",
@@ -168,7 +172,11 @@ export default function AdminDashboardPage() {
                       {new Date(req.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setViewingRequest(req)}
+                      >
                         View
                       </Button>
                       <Button
@@ -278,6 +286,14 @@ export default function AdminDashboardPage() {
           Next
         </Button>
       </div>
+
+      {viewingRequest && (
+        <ViewRequestModal
+          requestId={viewingRequest.id}
+          open={!!viewingRequest}
+          onOpenChange={() => setViewingRequest(null)}
+        />
+      )}
     </div>
   );
 }

@@ -54,3 +54,10 @@ export const processLocationRequest = async ({
   );
   return data;
 };
+
+export const getLocationRequestByIdForAdmin = async (id: string): Promise<LocationRequest> => {
+  const { data } = await axiosInstance.get<ApiResponse<LocationRequest>>(
+    `/v1/admin/location-request/search/${id}` 
+  );
+  return data.data;
+};
