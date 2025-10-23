@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLocationRequests, useMyLocations } from "@/hooks/useMyLocations";
 import { useTags } from "@/hooks/useTags";
 
@@ -31,6 +31,8 @@ import {
   Edit,
   Eye,
   BadgeX,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -39,7 +41,9 @@ import {
   PaginatedData,
   Tag,
   LocationStatus,
+  SortState,
 } from "@/types";
+import { useDebounce } from "use-debounce";
 
 function ActiveLocationActions({ location }: { location: Location }) {
   return (
@@ -156,10 +160,21 @@ function DisplayTags({
 }
 
 export default function MyLocationsPage() {
+  const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 50);
+
+  const [sort, setSort] = useState<SortState>({
+    column: "createdAt",
+    direction: "DESC",
+  });
+
+  const sortByString = `${sort.column}:${sort.direction}`;
+
   const { data: activeLocationsResponse, isLoading: isLoadingActive } =
     useMyLocations();
   const { data: requestsResponse, isLoading: isLoadingRequests } =
-    useLocationRequests();
+    useLocationRequests(page, debouncedSearchTerm, sortByString);
   const { data: allTagsResponse } = useTags();
 
   const activeLocations: Location[] = activeLocationsResponse?.data || [];
@@ -180,6 +195,26 @@ export default function MyLocationsPage() {
       </div>
     );
   }
+
+  const handleSort = (columnName: string) => {
+    setSort((currentSort) => ({
+      column: columnName,
+      direction:
+        currentSort.column === columnName && currentSort.direction === "DESC"
+          ? "ASC"
+          : "DESC",
+    }));
+    setPage(1);
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sort.column !== column) return null;
+    return sort.direction === "ASC" ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
+  };
 
   return (
     <div className="space-y-12">
@@ -250,7 +285,15 @@ export default function MyLocationsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Location Name</TableHead>
-                <TableHead>Submitted At</TableHead>
+                <TableHead>
+                  <Button
+                      variant="ghost"
+                      onClick={() => handleSort("createdAt")}
+                    >
+                      Submitted At <SortIcon column="createdAt" />
+                    </Button>
+                </TableHead>
+                
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>

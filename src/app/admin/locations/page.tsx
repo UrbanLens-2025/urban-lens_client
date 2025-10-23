@@ -39,7 +39,7 @@ import { ViewRequestModal } from "@/components/admin/ViewRequestModal";
 export default function AdminDashboardPage() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 50);
   const [viewingRequest, setViewingRequest] = useState<LocationRequest | null>(
     null
   );

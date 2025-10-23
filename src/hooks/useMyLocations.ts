@@ -5,14 +5,24 @@ import { useQuery } from "@tanstack/react-query";
 
 export function useMyLocations() {
   return useQuery({
-    queryKey: ['myLocations'],
+    queryKey: ["myLocations"],
     queryFn: getMyLocations,
   });
 }
 
-export function useLocationRequests() {
+export function useLocationRequests(
+  page: number,
+  search: string,
+  sortBy: string
+) {
   return useQuery({
-    queryKey: ['locationRequests'],
-    queryFn: getLocationRequests,
+    queryKey: ["locationRequests", page, search, sortBy],
+    queryFn: () =>
+      getLocationRequests({
+        page,
+        search,
+        status: "APPROVED",
+        sortBy,
+      }),
   });
 }
