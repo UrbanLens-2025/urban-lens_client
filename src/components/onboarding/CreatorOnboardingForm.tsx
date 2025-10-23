@@ -247,8 +247,9 @@ export function CreatorOnboardingForm() {
                 <FormItem>
                   <FormLabel>Avatar</FormLabel>
                   <FileUpload
-                    onUploadComplete={(url) =>
-                      form.setValue("avatarUrl", url, { shouldValidate: true })
+                    value={form.getValues("avatarUrl") ? [form.getValues("avatarUrl")] : []}
+                    onChange={(urls) =>
+                      form.setValue("avatarUrl", urls[0] || "", { shouldValidate: true })
                     }
                   />
                   <FormMessage />
@@ -263,8 +264,9 @@ export function CreatorOnboardingForm() {
                 <FormItem>
                   <FormLabel>Cover</FormLabel>
                   <FileUpload
-                    onUploadComplete={(url) =>
-                      form.setValue("coverUrl", url, { shouldValidate: true })
+                    value={form.getValues("coverUrl") ? [form.getValues("coverUrl")] : []}
+                    onChange={(urls) =>
+                      form.setValue("coverUrl", urls[0] || "", { shouldValidate: true })
                     }
                   />
                   <FormMessage />
