@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface ApiResponse<T> {
   success: boolean;
   message: string;
@@ -38,14 +39,29 @@ export interface LoginPayload {
 }
 
 export interface LoginResponseData {
-    user: User;
-    token: string;
+  user: User;
+  token: string;
 }
 
-export type UserRole = 'USER' | 'BUSINESS_OWNER' | 'EVENT_CREATOR' | 'ADMIN';
-export type BusinessCategory = 'FOOD' | 'RETAIL' | 'SERVICE' | 'ENTERTAINMENT' | 'HEALTH' | 'EDUCATION' | 'TECHNOLOGY' | 'OTHER';
-export type CreatorType = 'INDIVIDUAL' | 'ORGANIZATION';
-export type LocationStatus = 'AUTO_VALIDATING' | 'AWAITING_ADMIN_REVIEW' | 'APPROVED' | 'NEEDS_MORE_INFO' | 'REJECTED' | 'CANCELLED_BY_BUSINESS';
+export type UserRole = "USER" | "BUSINESS_OWNER" | "EVENT_CREATOR" | "ADMIN";
+export type BusinessCategory =
+  | "FOOD"
+  | "RETAIL"
+  | "SERVICE"
+  | "ENTERTAINMENT"
+  | "HEALTH"
+  | "EDUCATION"
+  | "TECHNOLOGY"
+  | "OTHER";
+export type CreatorType = "INDIVIDUAL" | "ORGANIZATION";
+export type LocationStatus =
+  | "AUTO_VALIDATING"
+  | "AWAITING_ADMIN_REVIEW"
+  | "APPROVED"
+  | "NEEDS_MORE_INFO"
+  | "REJECTED"
+  | "CANCELLED_BY_BUSINESS";
+export type SortDirection = "ASC" | "DESC";
 
 export interface User {
   id: string;
@@ -58,6 +74,7 @@ export interface User {
   role: UserRole;
   token?: string;
   hasOnboarded: boolean;
+  businessProfile?: any;
 }
 
 export interface BusinessOnboardingPayload {
@@ -121,13 +138,12 @@ export interface Location {
   isVisibleOnMap: boolean;
 }
 
-
 interface CreatedByBusiness {
   accountId: string;
   name: string;
   address: string;
   wardCode: string;
-  status: 'APPROVED' | 'PENDING' | 'REJECTED';
+  status: "APPROVED" | "PENDING" | "REJECTED";
   category: BusinessCategory;
 }
 
@@ -135,7 +151,7 @@ interface ProcessedByAdmin {
   id: string;
   firstName: string;
   lastName: string;
-  role: 'ADMIN';
+  role: "ADMIN";
 }
 
 interface LocationValidationDocument {
@@ -150,14 +166,15 @@ export interface LocationRequest {
   description: string;
   status: LocationStatus;
   adminNotes: string | null;
-  createdBy: CreatedByBusiness;
+  createdBy: User;
   processedBy: ProcessedByAdmin | null;
   tags: {
     id: number;
     tagId: number;
   }[];
-  latitude: number;
-  longitude: number;
+  latitude: string;
+  longitude: string;
+  radiusMeters: number;
   locationImageUrls: string[];
   locationValidationDocuments: {
     documentType: string;
@@ -170,7 +187,7 @@ export interface CreateLocationPayload {
   description: string;
   latitude: number;
   longitude: number;
-  radiusMeters: number; 
+  radiusMeters: number;
   addressLine: string;
   addressLevel1: string;
   addressLevel2: string;
@@ -191,4 +208,22 @@ export interface UpdateLocationPayload {
   description: string;
   imageUrl: string[];
   isVisibleOnMap: boolean;
+}
+
+export interface GetRequestsParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: LocationStatus;
+  sortBy?: string;
+}
+
+export interface ProcessRequestPayload {
+  status: "APPROVED" | "REJECTED";
+  adminNotes?: string;
+}
+
+export interface SortState {
+  column: string;
+  direction: SortDirection;
 }
