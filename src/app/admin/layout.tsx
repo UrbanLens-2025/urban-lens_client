@@ -3,7 +3,7 @@
 import { useUser } from "@/hooks/user/useUser";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Loader2, LayoutDashboard, MapPin } from "lucide-react";
+import { Loader2, LayoutDashboard, MapPin, Building2 } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -30,6 +30,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </Link>
                      <Link href="/admin/locations" className="flex items-center gap-2 p-2 rounded hover:bg-gray-200">
                         <MapPin className="h-4 w-4"/> Manage Locations
+                    </Link>
+                     <Link href="/admin/business" className="flex items-center gap-2 p-2 rounded hover:bg-gray-200">
+                        <Building2 className="h-4 w-4"/> Manage Businesses
                     </Link>
                 </nav>
             </aside>

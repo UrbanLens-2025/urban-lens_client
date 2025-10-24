@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-import { useSubmitBusinessOnboarding } from "@/hooks/useSubmitBusinessOnboarding";
+import { useSubmitBusinessOnboarding } from "@/hooks/onboarding/useSubmitBusinessOnboarding";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,8 +35,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
 import { FileUpload } from "../shared/FileUpload";
-import { ProvinceComboBox } from "../shared/ProvinceComboBox";
-import { WardComboBox } from "../shared/WardComboBox";
+import { LocationAddressPicker } from "../shared/LocationAddressPicker";
 
 const businessCategories = [
   "FOOD",
@@ -97,6 +96,8 @@ export function BusinessOnboardingForm() {
       website: "",
     },
   });
+
+  console.log("Form errors:", form.formState.errors);
 
   function onSubmit(values: FormValues) {
     const { ...payload } = values;
@@ -186,9 +187,13 @@ export function BusinessOnboardingForm() {
                 <FormItem>
                   <FormLabel>Business Avatar</FormLabel>
                   <FileUpload
-                    value={form.getValues("avatar") ? [form.getValues("avatar")] : []}
+                    value={
+                      form.getValues("avatar") ? [form.getValues("avatar")] : []
+                    }
                     onChange={(urls) =>
-                      form.setValue("avatar", urls[0] || "", { shouldValidate: true })
+                      form.setValue("avatar", urls[0] || "", {
+                        shouldValidate: true,
+                      })
                     }
                   />
                   <FormMessage />
@@ -231,55 +236,7 @@ export function BusinessOnboardingForm() {
             <Separator />
 
             <h3 className="font-semibold text-lg pt-2">Location</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                name="province"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Province</FormLabel>
-                    <ProvinceComboBox
-                      onSelect={(province) => {
-                        setSelectedProvinceCode(province?.code);
-                        form.setValue("province", province?.name || "");
-                        form.setValue("wardCode", "");
-                      }}
-                      value={field.value}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                name="wardCode"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Ward</FormLabel>
-                    <WardComboBox
-                      provinceCode={selectedProvinceCode}
-                      onSelect={(ward) => {
-                        form.setValue("wardCode", ward?.code || "");
-                      }}
-                      value={field.value}
-                      disabled={!selectedProvinceCode}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <FormField
-              name="address"
-              control={form.control}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Street Address</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., 123 Dien Bien Phu" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <LocationAddressPicker />
 
             <Separator />
 

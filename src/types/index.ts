@@ -62,6 +62,7 @@ export type LocationStatus =
   | "REJECTED"
   | "CANCELLED_BY_BUSINESS";
 export type SortDirection = "ASC" | "DESC";
+export type BusinessStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export interface User {
   id: string;
@@ -75,6 +76,28 @@ export interface User {
   token?: string;
   hasOnboarded: boolean;
   businessProfile?: any;
+}
+
+export interface GetBusinessesParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: BusinessStatus;
+  sortBy?: string;
+}
+
+export interface BusinessProfile {
+  accountId: string;
+  avatar: string | null;
+  website: string | null;
+  name: string;
+  address: string;
+  wardCode: string;
+  description: string;
+  status: BusinessStatus;
+  category: BusinessCategory;
+  email: string;
+  phone: string;
 }
 
 export interface BusinessOnboardingPayload {

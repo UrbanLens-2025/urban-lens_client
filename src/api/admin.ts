@@ -6,6 +6,8 @@ import type {
   LocationRequest,
   GetRequestsParams,
   ProcessRequestPayload,
+  GetBusinessesParams,
+  BusinessProfile,
 } from "@/types";
 
 export const getLocationRequestsForAdmin = async ({
@@ -13,7 +15,7 @@ export const getLocationRequestsForAdmin = async ({
   limit = 10,
   search,
   status,
-  sortBy
+  sortBy,
 }: GetRequestsParams): Promise<PaginatedData<LocationRequest>> => {
   const params: any = {
     page,
@@ -22,7 +24,7 @@ export const getLocationRequestsForAdmin = async ({
 
   if (search) {
     params.search = search;
-    params.searchBy = ['name']; 
+    params.searchBy = ["name"];
   }
 
   if (status) {
@@ -55,9 +57,50 @@ export const processLocationRequest = async ({
   return data;
 };
 
-export const getLocationRequestByIdForAdmin = async (id: string): Promise<LocationRequest> => {
+export const getLocationRequestByIdForAdmin = async (
+  id: string
+): Promise<LocationRequest> => {
   const { data } = await axiosInstance.get<ApiResponse<LocationRequest>>(
-    `/v1/admin/location-request/search/${id}` 
+    `/v1/admin/location-request/search/${id}`
   );
   return data.data;
+};
+
+export const getBusinessAccounts = async ({
+  page = 1,
+  limit = 10,
+  search,
+  status,
+  sortBy,
+}: GetBusinessesParams): Promise<PaginatedData<BusinessProfile>> => {
+  const params: any = { page, limit };
+  if (search) {
+    params.search = search;
+    params.searchBy = ["name", "email"];
+  }
+  if (status) {
+    params["filter.status"] = `$eq:${status}`;
+  }
+  if (sortBy) {
+    params.sortBy = sortBy;
+  }
+
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<BusinessProfile>>
+  >("/v1/admin/account/business", { params });
+  return data.data;
+};
+
+export const processBusinessAccount = async ({
+  id,
+  payload,
+}: {
+  id: string;
+  payload: ProcessRequestPayload;
+}) => {
+  const { data } = await axiosInstance.put(
+    `/v1/admin/account/business/${id}/process`,
+    payload
+  );
+  return data;
 };
