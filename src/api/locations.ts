@@ -96,3 +96,25 @@ export const updateLocation = async (
   );
   return data.data;
 };
+
+export const addTagsToLocation = async (
+  locationId: string, 
+  tagIds: number[]
+): Promise<any> => {
+  const { data } = await axiosInstance.post(
+    `/v1/owner/locations/${locationId}/tags`, 
+    { tagIds }
+  );
+  return data;
+};
+
+export const removeTagsFromLocation = async (
+  locationId: string, 
+  tagIds: number[]
+): Promise<any> => {
+  const { data } = await axiosInstance.delete(
+    `/v1/owner/locations/${locationId}/tags`, 
+    { data: { tagIds } }
+  );
+  return data;
+};

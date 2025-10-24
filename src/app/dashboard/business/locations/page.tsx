@@ -66,12 +66,6 @@ function ActiveLocationActions({ location }: { location: Location }) {
             View Live Page
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild className="text-red-500">
-          <Link href="#">
-            <BadgeX className="mr-2 h-4 w-4" />
-            Disable
-          </Link>
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

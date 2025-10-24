@@ -1,37 +1,64 @@
-"use client"
+"use client";
 
-import { use, useEffect } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { useRouter } from "next/navigation"
+import { use, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useRouter } from "next/navigation";
 
-import { useLocationById } from "@/hooks/useLocationById"
-import { useUpdateLocation } from "@/hooks/useUpdateLocation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Switch } from "@/components/ui/switch"
-import { Loader2, ArrowLeft } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileUpload } from "@/components/shared/FileUpload"
+import { useLocationById } from "@/hooks/useLocationById";
+import { useUpdateLocation } from "@/hooks/useUpdateLocation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, ArrowLeft } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { FileUpload } from "@/components/shared/FileUpload";
+import { TagMultiSelect } from "@/components/shared/TagMultiSelect";
+import { useAddTagsToLocation } from "@/hooks/useAddTagsToLocation";
+import { useRemoveTagsFromLocation } from "@/hooks/useRemoveTagsFromLocation";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 const updateLocationSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().min(1, "Description is required"),
   imageUrl: z.array(z.string().url()).min(1, "At least one image is required"),
   isVisibleOnMap: z.boolean().optional(),
-})
-type FormValues = z.infer<typeof updateLocationSchema>
+  tagIds: z.array(z.number()).min(1, "At least one tag is required"),
+});
+type FormValues = z.infer<typeof updateLocationSchema>;
 
-export default function EditLocationPage({ params }: { params: Promise<{ locationId: string }> }) {
-  const { locationId } = use(params)
-  const router = useRouter()
+export default function EditLocationPage({
+  params,
+}: {
+  params: Promise<{ locationId: string }>;
+}) {
+  const { locationId } = use(params);
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const { data: location, isLoading: isLoadingData } = useLocationById(locationId)
+  const { data: location, isLoading: isLoadingData } =
+    useLocationById(locationId);
 
-  const { mutate: updateLocation, isPending: isUpdating } = useUpdateLocation()
+  const { mutateAsync: updateLocation, isPending: isUpdating } = useUpdateLocation();
+  const { mutateAsync: addTags, isPending: isAddingTags } = useAddTagsToLocation();
+  const { mutateAsync: removeTags, isPending: isRemovingTags } = useRemoveTagsFromLocation();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(updateLocationSchema),
@@ -39,9 +66,10 @@ export default function EditLocationPage({ params }: { params: Promise<{ locatio
       name: "",
       description: "",
       imageUrl: [],
-      isVisibleOnMap: true,
+      isVisibleOnMap: false,
+      tagIds: [],
     },
-  })
+  });
 
   // 3. Điền (pre-fill) form khi dữ liệu được tải
   useEffect(() => {
@@ -51,27 +79,51 @@ export default function EditLocationPage({ params }: { params: Promise<{ locatio
         description: location.description,
         imageUrl: location.imageUrl || [],
         isVisibleOnMap: location.isVisibleOnMap ?? true,
-      })
+        tagIds: location.tags.map((t) => t.tag.id),
+      });
     }
-  }, [location, form])
+  }, [location, form]);
 
-  // 4. Hàm xử lý submit
-  const onSubmit = (values: FormValues) => {
-    updateLocation({
-      locationId,
-      payload: { ...values, isVisibleOnMap: values.isVisibleOnMap ?? false },
-    })
-  }
+  const onSubmit = async (values: FormValues) => {
+    try {
+      const { name, description, imageUrl, isVisibleOnMap, tagIds: newTagIds } = values;
+      const mainPayload = { name, description, imageUrl, isVisibleOnMap };
+      
+      const originalTagIds = location?.tags.map(t => t.tag.id) || [];
+      const tagsToAdd = newTagIds.filter(id => !originalTagIds.includes(id));
+      const tagsToRemove = originalTagIds.filter(id => !newTagIds.includes(id));
+
+      const mutationPromises = [];
+      
+      mutationPromises.push(updateLocation({ locationId, payload: mainPayload }));
+      
+      if (tagsToAdd.length > 0) {
+        mutationPromises.push(addTags({ locationId, tagIds: tagsToAdd }));
+      }
+      
+      if (tagsToRemove.length > 0) {
+        mutationPromises.push(removeTags({ locationId, tagIds: tagsToRemove }));
+      }
+
+      await Promise.all(mutationPromises);
+
+      queryClient.invalidateQueries({ queryKey: ['myLocations'] });
+      queryClient.invalidateQueries({ queryKey: ['location', locationId] });
+      router.refresh();
+    } catch (err) {
+      toast.error("An error occurred while saving. Please try again.");
+    }
+  };
 
   if (isLoadingData) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="animate-spin" />
       </div>
-    )
+    );
   }
   if (!location) {
-    return <div>Location not found.</div>
+    return <div>Location not found.</div>;
   }
 
   return (
@@ -86,7 +138,9 @@ export default function EditLocationPage({ params }: { params: Promise<{ locatio
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle>Update Location Details</CardTitle>
-          <CardDescription>Make changes to your active location.</CardDescription>
+          <CardDescription>
+            Make changes to your active location.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -120,13 +174,33 @@ export default function EditLocationPage({ params }: { params: Promise<{ locatio
               />
 
               <FormField
+                name="tagIds"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags</FormLabel>
+                    <FormControl>
+                      <TagMultiSelect
+                        selectedTagIds={field.value}
+                        onSelectionChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
                 name="imageUrl"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Location Images</FormLabel>
                     <FormControl>
-                      <FileUpload value={field.value} onChange={field.onChange} />
+                      <FileUpload
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -141,22 +215,33 @@ export default function EditLocationPage({ params }: { params: Promise<{ locatio
                     <div className="space-y-0.5">
                       <FormLabel>Visible on Map</FormLabel>
                       <p className="text-sm text-muted-foreground">
-                        Should this location be visible to the public on the map?
+                        Should this location be visible to the public on the
+                        map?
                       </p>
                     </div>
                     <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
                     </FormControl>
                   </FormItem>
                 )}
               />
 
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={() => router.back()} disabled={isUpdating}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => router.back()}
+                  disabled={isUpdating}
+                >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isUpdating}>
-                  {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isUpdating && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   Save Changes
                 </Button>
               </div>
@@ -165,5 +250,5 @@ export default function EditLocationPage({ params }: { params: Promise<{ locatio
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

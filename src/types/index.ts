@@ -198,6 +198,7 @@ export interface UpdateLocationPayload {
   description: string;
   imageUrl: string[];
   isVisibleOnMap: boolean;
+  tagIds: number[];
 }
 
 export interface GetRequestsParams {
