@@ -1,5 +1,5 @@
 "use client";
-import { useTags } from "@/hooks/useTags";
+import { useTags } from "@/hooks/tags/useTags";
 import { Tag } from "@/types";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";

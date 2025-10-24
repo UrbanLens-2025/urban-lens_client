@@ -1,4 +1,4 @@
-import type { ApiResponse, User } from "@/types";
+import type { ApiResponse, BusinessOnboardingPayload, CreatorOnboardingPayload, User } from "@/types";
 import axiosInstance from "./axios-config";
 
 export async function getUser(): Promise<User> {
@@ -42,3 +42,13 @@ export async function getUserById(userId: string): Promise<User> {
   );
   return data.data;
 }
+
+export const submitBusinessOnboarding = async (payload: BusinessOnboardingPayload): Promise<ApiResponse<null>> => {
+  const { data } = await axiosInstance.post('/v1/owner/account/onboard', payload);
+  return data;
+};
+
+export const submitCreatorOnboarding = async (payload: CreatorOnboardingPayload): Promise<ApiResponse<null>> => {
+  const { data } = await axiosInstance.post('/v1/creator/account/onboard', payload);
+  return data;
+};

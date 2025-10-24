@@ -6,8 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 
-import { useCreateLocationRequest } from "@/hooks/useCreateLocationRequest";
-import { useUser } from "@/hooks/useUser";
+import { useCreateLocationRequest } from "@/hooks/locations/useCreateLocationRequest";
+import { useUser } from "@/hooks/user/useUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,14 +31,11 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
-import { PlacesAutocomplete } from "@/components/shared/PlacesAutocomplete";
-import { getGeocode } from "use-places-autocomplete";
-import { toast } from "sonner";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { PaginatedData, Tag } from "@/types";
-import { useTags } from "@/hooks/useTags";
+import { useTags } from "@/hooks/tags/useTags";
+import { LocationAddressPicker } from "@/components/shared/LocationAddressPicker";
 
 const locationSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -77,13 +74,6 @@ const steps = [
   },
   { id: 4, title: "Confirmation" },
 ];
-
-const findAddressComponent = (
-  components: google.maps.GeocoderAddressComponent[],
-  type: string
-) => {
-  return components.find((c) => c.types.includes(type))?.long_name || "";
-};
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   if (!value) return null;
@@ -126,41 +116,6 @@ export default function CreateLocationPage() {
   const { mutate: createLocation, isPending } = useCreateLocationRequest();
   const { data: allTagsResponse } = useTags();
 
-  const processGeocodeResults = (results: google.maps.GeocoderResult[]) => {
-    if (!results || !results[0]) return;
-
-    const components = results[0].address_components;
-
-    const district = findAddressComponent(
-      components,
-      "administrative_area_level_1"
-    );
-    const province =
-      findAddressComponent(components, "administrative_area_level_2") ||
-      findAddressComponent(components, "locality");
-    const streetNumber = findAddressComponent(components, "street_number");
-    const route = findAddressComponent(components, "route");
-
-    const streetAddress = `${streetNumber} ${route}`.trim();
-
-    form.setValue("addressLevel1", province, { shouldValidate: true });
-    form.setValue("addressLevel2", district, { shouldValidate: true });
-    form.setValue("addressLine", streetAddress, { shouldValidate: true });
-
-    toast.info("Address has been auto-filled.");
-  };
-
-  const handlePositionChange = async (latLng: { lat: number; lng: number }) => {
-    form.setValue("latitude", latLng.lat, { shouldValidate: true });
-    form.setValue("longitude", latLng.lng, { shouldValidate: true });
-    try {
-      const results = await getGeocode({ location: latLng });
-      processGeocodeResults(results);
-    } catch (error) {
-      toast.error("Could not fetch address for this location.");
-    }
-  };
-
   const form = useForm<FormValues>({
     resolver: zodResolver(locationSchema),
     mode: "all",
@@ -180,10 +135,6 @@ export default function CreateLocationPage() {
   });
 
   const watchedValues = form.watch();
-  const markerPosition =
-    watchedValues.latitude && watchedValues.longitude
-      ? { lat: watchedValues.latitude, lng: watchedValues.longitude }
-      : null;
 
   const tagsMap = useMemo(() => {
     const map = new Map<number, Tag>();
@@ -290,66 +241,7 @@ export default function CreateLocationPage() {
 
               {/* === STEP 2: Địa chỉ & Bản đồ === */}
               <div className={cn("space-y-6", currentStep !== 1 && "hidden")}>
-                <FormItem>
-                  <FormLabel>Search Address</FormLabel>
-                  <PlacesAutocomplete
-                    onAddressSelect={async ({ address, lat, lng }) => {
-                      form.setValue("latitude", lat, { shouldValidate: true });
-                      form.setValue("longitude", lng, { shouldValidate: true });
-                      try {
-                        const results = await getGeocode({ address });
-                        processGeocodeResults(results);
-                      } catch (error) {
-                        console.error("Geocoding error", error);
-                      }
-                    }}
-                  />
-                </FormItem>
-                <div className="h-80 rounded-lg overflow-hidden border">
-                  <GoogleMapsPicker
-                    position={markerPosition}
-                    onPositionChange={handlePositionChange}
-                  />
-                </div>
-                <FormField
-                  name="addressLevel2"
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Province / City</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="addressLevel1"
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>District / Ward</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="addressLine"
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Street Address</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <LocationAddressPicker />
                 <FormField
                   control={form.control}
                   name="radiusMeters"
@@ -378,15 +270,15 @@ export default function CreateLocationPage() {
               <div className={cn("space-y-6", currentStep !== 2 && "hidden")}>
                 <FormField
                   name="locationImageUrls"
-                  control={form.control} // Phải có control
+                  control={form.control}
                   render={(
-                    { field } // `field` chứa value, onChange, onBlur,...
+                    { field }
                   ) => (
                     <FormItem>
                       <FormLabel>Location Photos (at least 1)</FormLabel>
                       <FileUpload
-                        value={field.value} // Truyền state hiện tại vào
-                        onChange={field.onChange} // Dùng hàm onChange của react-hook-form
+                        value={field.value}
+                        onChange={field.onChange}
                       />
                       <FormMessage />
                     </FormItem>

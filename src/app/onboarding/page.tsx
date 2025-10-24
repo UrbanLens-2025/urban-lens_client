@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from "next/navigation";
-import { useUser } from "@/hooks/useUser";
+import { useUser } from "@/hooks/user/useUser";
 import { Loader2 } from "lucide-react";
 import { BusinessOnboardingForm } from "@/components/onboarding/BusinessOnboardingForm";
 import { CreatorOnboardingForm } from "@/components/onboarding/CreatorOnboardingForm";

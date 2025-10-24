@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getLocationRequestsForAdmin } from "@/api/admin";
 
-export function usePendingRequests(
+export function useLocationAdminRequests(
   page: number,
   search: string,
   sortBy: string

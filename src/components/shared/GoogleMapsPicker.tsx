@@ -14,7 +14,7 @@ export function GoogleMapsPicker({ onPositionChange, position }: GoogleMapsPicke
     return <div>Google Maps API Key is missing.</div>;
   }
   
-  const defaultCenter = { lat: 14.0583, lng: 108.2772 };
+  const defaultCenter = { lat: 10.769444, lng: 106.681944 };
 
   const mapCenter = position || defaultCenter;
 

@@ -7,8 +7,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-import { useSignup } from "@/hooks/useSignup";
-import { useUser } from "@/hooks/useUser";
+import { useSignup } from "@/hooks/auth/useSignup";
+import { useUser } from "@/hooks/user/useUser";
 
 import { Button } from "@/components/ui/button";
 import {

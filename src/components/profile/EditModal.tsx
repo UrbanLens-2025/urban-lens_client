@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
-import { useUpdateProfile } from "@/hooks/useUpdateProfile";
+import { useUpdateProfile } from "@/hooks/user/useUpdateProfile";
 import { FileUpload } from "@/components/shared/FileUpload";
 
 const profileSchema = z.object({

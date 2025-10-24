@@ -1,6 +1,6 @@
 "use client";
 
-import { getAllTags } from "@/api/tag";
+import { getAllTags } from "@/api/locations";
 import { useQuery } from "@tanstack/react-query";
 
 export function useTags() {

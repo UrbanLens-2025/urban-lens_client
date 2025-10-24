@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocationById } from "@/hooks/useLocationById";
+import { useLocationById } from "@/hooks/locations/useLocationById";
 import { ArrowLeft, FilePenLine, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";

@@ -7,6 +7,7 @@ import type {
   Location,
   LocationRequest,
   PaginatedData,
+  Tag,
   UpdateLocationPayload,
 } from "@/types";
 
@@ -117,4 +118,9 @@ export const removeTagsFromLocation = async (
     { data: { tagIds } }
   );
   return data;
+};
+
+export const getAllTags = async (): Promise<PaginatedData<Tag>> => {
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Tag>>>('/v1/public/tag');
+  return data.data;
 };

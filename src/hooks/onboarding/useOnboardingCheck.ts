@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useUser } from './useUser';
+import { useUser } from '../user/useUser';
 
 const ROLES_REQUIRING_ONBOARDING = ['BUSINESS_OWNER', 'EVENT_CREATOR'];
 

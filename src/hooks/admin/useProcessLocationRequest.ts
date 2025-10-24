@@ -2,7 +2,8 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { processLocationRequest, ProcessRequestPayload } from "@/api/admin";
+import { processLocationRequest } from "@/api/admin";
+import { ProcessRequestPayload } from "@/types";
 
 export function useProcessLocationRequest() {
   const queryClient = useQueryClient();

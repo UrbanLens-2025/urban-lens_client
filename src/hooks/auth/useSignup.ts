@@ -3,7 +3,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { signup, SignupPayload } from "@/api/auth";
+import { signup } from "@/api/auth";
+import { SignupPayload } from "@/types";
 
 export function useSignup() {
   const router = useRouter();

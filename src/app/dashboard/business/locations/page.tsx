@@ -3,8 +3,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useLocationRequests, useMyLocations } from "@/hooks/useMyLocations";
-import { useTags } from "@/hooks/useTags";
+import { useLocationRequests, useMyLocations } from "@/hooks/locations/useMyLocations";
+import { useTags } from "@/hooks/tags/useTags";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
-import { useUser } from "@/hooks/useUser";
+import { useUser } from "@/hooks/user/useUser";
 import { ChangePasswordModal } from "./settings/ChangePasswordModal";
 
 const navItems = [

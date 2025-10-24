@@ -3,8 +3,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { submitCreatorOnboarding } from "@/api/onboarding";
 import { CreatorOnboardingPayload } from "@/types";
+import { submitCreatorOnboarding } from "@/api/user";
 
 export function useSubmitCreatorOnboarding() {
   const queryClient = useQueryClient();

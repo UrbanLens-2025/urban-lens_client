@@ -6,8 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 
-import { useLocationById } from "@/hooks/useLocationById";
-import { useUpdateLocation } from "@/hooks/useUpdateLocation";
+import { useLocationById } from "@/hooks/locations/useLocationById";
+import { useUpdateLocation } from "@/hooks/locations/useUpdateLocation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,8 +30,8 @@ import {
 } from "@/components/ui/card";
 import { FileUpload } from "@/components/shared/FileUpload";
 import { TagMultiSelect } from "@/components/shared/TagMultiSelect";
-import { useAddTagsToLocation } from "@/hooks/useAddTagsToLocation";
-import { useRemoveTagsFromLocation } from "@/hooks/useRemoveTagsFromLocation";
+import { useAddTagsToLocation } from "@/hooks/tags/useAddTagsToLocation";
+import { useRemoveTagsFromLocation } from "@/hooks/tags/useRemoveTagsFromLocation";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 

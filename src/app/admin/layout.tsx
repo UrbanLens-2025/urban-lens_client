@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@/hooks/useUser";
+import { useUser } from "@/hooks/user/useUser";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2, LayoutDashboard, MapPin } from "lucide-react";

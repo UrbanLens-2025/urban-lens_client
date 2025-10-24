@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { useLocationRequestByIdForAdmin } from "@/hooks/useLocationRequestByIdForAdmin";
-import { useTags } from "@/hooks/useTags"; // Hook để lấy tất cả tags
+import { useLocationRequestByIdForAdmin } from "@/hooks/admin/useLocationRequestByIdForAdmin";
+import { useTags } from "@/hooks/tags/useTags";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -14,9 +14,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { LocationRequest, PaginatedData, Tag } from "@/types";
+import { PaginatedData, Tag } from "@/types";
 
-// --- Component con để hiển thị một dòng thông tin ---
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   if (!value) return null;
   return (
@@ -27,7 +26,6 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-// --- Component con để hiển thị Tags ---
 function DisplayTags({
   tagLinks,
   tagsMap,
@@ -61,7 +59,6 @@ function DisplayTags({
   );
 }
 
-// --- Component Modal Chính ---
 interface ViewRequestModalProps {
   requestId: string;
   open: boolean;
@@ -73,15 +70,12 @@ export function ViewRequestModal({
   open,
   onOpenChange,
 }: ViewRequestModalProps) {
-  // 1. Fetch dữ liệu chi tiết của request
   const { data: request, isLoading: isLoadingRequest } =
     useLocationRequestByIdForAdmin(requestId);
-  // 2. Fetch tất cả tags để tra cứu
   const { data: allTagsResponse, isLoading: isLoadingTags } = useTags();
 
   const isLoading = isLoadingRequest || isLoadingTags;
 
-  // 3. Tạo bảng tra cứu cho tags
   const tagsMap = useMemo(() => {
     const map = new Map<number, Tag>();
     const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];

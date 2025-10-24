@@ -1,6 +1,6 @@
 "use client";
 
-import { submitBusinessOnboarding } from "@/api/onboarding";
+import { submitBusinessOnboarding } from "@/api/user";
 import { BusinessOnboardingPayload } from "@/types";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";

@@ -26,7 +26,7 @@ export function useUser(userId?: string | null) {
 
     enabled: isCurrentUserQuery ? (isMounted && !!token) : !!userId,
 
-    staleTime: 1000 * 60 * 1, // 1 phút
+    staleTime: 1000 * 60 * 1,
   });
   
   return {

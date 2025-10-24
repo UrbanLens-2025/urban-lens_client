@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useDebounce } from "use-debounce";
-import { usePendingRequests } from "@/hooks/usePendingRequests";
 import {
   Card,
   CardContent,
@@ -22,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { LocationRequest, SortState } from "@/types";
-import { useProcessLocationRequest } from "@/hooks/useProcessLocationRequest";
+import { useProcessLocationRequest } from "@/hooks/admin/useProcessLocationRequest";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { ViewRequestModal } from "@/components/admin/ViewRequestModal";
+import { useLocationAdminRequests } from "@/hooks/admin/useLocationAdminRequests";
 
 export default function AdminDashboardPage() {
   const [page, setPage] = useState(1);
@@ -51,7 +51,7 @@ export default function AdminDashboardPage() {
 
   const sortByString = `${sort.column}:${sort.direction}`;
 
-  const { data: response, isLoading } = usePendingRequests(
+  const { data: response, isLoading } = useLocationAdminRequests(
     page,
     debouncedSearchTerm,
     sortByString

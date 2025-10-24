@@ -9,7 +9,7 @@ import { FriendsCard } from "../components/FriendsCard";
 import { PostComposer } from "../components/PostComposer";
 import { PostCard } from "../components/PostCard";
 import { use } from "react";
-import { useUser } from "@/hooks/useUser";
+import { useUser } from "@/hooks/user/useUser";
 
 export default function ProfilePage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = use(params);
