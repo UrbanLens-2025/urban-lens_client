@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useRouter } from "next/navigation"
 
-// --- Hooks & Components ---
 import { useLocationById } from "@/hooks/useLocationById"
 import { useUpdateLocation } from "@/hooks/useUpdateLocation"
 import { Button } from "@/components/ui/button"
@@ -18,7 +17,6 @@ import { Loader2, ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileUpload } from "@/components/shared/FileUpload"
 
-// --- Zod Schema khớp với payload ---
 const updateLocationSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().min(1, "Description is required"),
@@ -31,10 +29,8 @@ export default function EditLocationPage({ params }: { params: Promise<{ locatio
   const { locationId } = use(params)
   const router = useRouter()
 
-  // 1. Fetch dữ liệu hiện tại
   const { data: location, isLoading: isLoadingData } = useLocationById(locationId)
 
-  // 2. Chuẩn bị hook mutation
   const { mutate: updateLocation, isPending: isUpdating } = useUpdateLocation()
 
   const form = useForm<FormValues>({
