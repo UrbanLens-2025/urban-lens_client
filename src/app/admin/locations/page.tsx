@@ -126,7 +126,7 @@ export default function AdminDashboardPage() {
           </CardDescription>
           <div className="pt-4">
             <Input
-              placeholder="Search by name or description..."
+              placeholder="Search by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />

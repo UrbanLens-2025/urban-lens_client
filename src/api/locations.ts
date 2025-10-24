@@ -10,20 +10,11 @@ import type {
   UpdateLocationPayload,
 } from "@/types";
 
-export const getMyLocations = async (): Promise<PaginatedData<Location>> => {
-  const response = await axiosInstance.get<
-    ApiResponse<PaginatedData<Location>>
-  >("/v1/owner/locations");
-  return response.data.data;
-};
-
-export const getLocationRequests = async ({
+export const getMyLocations = async ({
   page = 1,
   limit = 10,
   search,
-  status,
-  sortBy,
-}: GetRequestsParams): Promise<PaginatedData<LocationRequest>> => {
+}: GetRequestsParams): Promise<PaginatedData<Location>> => {
   const params: any = {
     page,
     limit,
@@ -33,6 +24,25 @@ export const getLocationRequests = async ({
     params.search = search;
     params.searchBy = ["name"];
   }
+
+  const response = await axiosInstance.get<
+    ApiResponse<PaginatedData<Location>>
+  >("/v1/owner/locations", {
+    params: params,
+  });
+  return response.data.data;
+};
+
+export const getLocationRequests = async ({
+  page = 1,
+  limit = 10,
+  status,
+  sortBy,
+}: GetRequestsParams): Promise<PaginatedData<LocationRequest>> => {
+  const params: any = {
+    page,
+    limit,
+  };
 
   if (status) {
     params["filter.status"] = `$not:${status}`;

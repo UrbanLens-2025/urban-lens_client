@@ -3,26 +3,27 @@
 import { getLocationRequests, getMyLocations } from "@/api/locations";
 import { useQuery } from "@tanstack/react-query";
 
-export function useMyLocations() {
+export function useMyLocations(page: number, search: string) {
   return useQuery({
-    queryKey: ["myLocations"],
-    queryFn: getMyLocations,
+    queryKey: ["myLocations", page, search],
+    queryFn: () =>
+      getMyLocations({
+        page,
+        search,
+      }),
+    placeholderData: (previousData) => previousData,
   });
 }
 
-export function useLocationRequests(
-  page: number,
-  search: string,
-  sortBy: string
-) {
+export function useLocationRequests(page: number, sortBy: string) {
   return useQuery({
-    queryKey: ["locationRequests", page, search, sortBy],
+    queryKey: ["locationRequests", page, sortBy],
     queryFn: () =>
       getLocationRequests({
         page,
-        search,
         status: "APPROVED",
         sortBy,
       }),
+    placeholderData: (previousData) => previousData,
   });
 }

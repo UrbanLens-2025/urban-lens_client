@@ -116,26 +116,29 @@ export interface Tag {
   icon: string;
 }
 
-interface NestedBusinessForLocation {
-  name: string;
-  address: string;
-  category: BusinessCategory;
-}
-
 export interface Location {
   id: string;
+  ownershipType: string;
   name: string;
   description: string;
   latitude: string;
   longitude: string;
+  addressLine: string;
+  addressLevel1: string;
+  addressLevel2: string;
+  radiusMeters: number;
   imageUrl: string[];
-  business: NestedBusinessForLocation;
+  totalCheckIns: string;
+  createdAt: string;
+  updatedAt: string;
+  isVisibleOnMap: boolean;
+  businessId: string;
+  business: BusinessInLocation;
   tags: {
     id: number;
     tagId: number;
     tag: Tag;
   }[];
-  isVisibleOnMap: boolean;
 }
 
 interface ProcessedByAdmin {
@@ -190,13 +193,6 @@ export interface CreateLocationPayload {
   tagIds: number[];
 }
 
-export interface GetRequestsParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  status?: LocationStatus;
-}
-
 export interface UpdateLocationPayload {
   name: string;
   description: string;
@@ -220,4 +216,25 @@ export interface ProcessRequestPayload {
 export interface SortState {
   column: string;
   direction: SortDirection;
+}
+
+interface BusinessInLocation {
+  accountId: string;
+  avatar: string;
+  website: string;
+  name: string;
+  address: string;
+  wardCode: string;
+  description: string;
+  licenseNumber: string;
+  licenseExpirationDate: string;
+  licenseType: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  status: LocationStatus;
+  adminNotes: string | null;
+  email: string;
+  phone: string;
+  category: BusinessCategory;
 }
