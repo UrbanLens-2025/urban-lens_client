@@ -56,9 +56,12 @@ export default function EditLocationPage({
   const { data: location, isLoading: isLoadingData } =
     useLocationById(locationId);
 
-  const { mutateAsync: updateLocation, isPending: isUpdating } = useUpdateLocation();
-  const { mutateAsync: addTags, isPending: isAddingTags } = useAddTagsToLocation();
-  const { mutateAsync: removeTags, isPending: isRemovingTags } = useRemoveTagsFromLocation();
+  const { mutateAsync: updateLocation, isPending: isUpdating } =
+    useUpdateLocation();
+  const { mutateAsync: addTags, isPending: isAddingTags } =
+    useAddTagsToLocation();
+  const { mutateAsync: removeTags, isPending: isRemovingTags } =
+    useRemoveTagsFromLocation();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(updateLocationSchema),
@@ -78,7 +81,7 @@ export default function EditLocationPage({
         name: location.name,
         description: location.description,
         imageUrl: location.imageUrl || [],
-        isVisibleOnMap: location.isVisibleOnMap ?? true,
+        isVisibleOnMap: location.isVisibleOnMap ?? false,
         tagIds: location.tags.map((t) => t.tag.id),
       });
     }
@@ -86,34 +89,49 @@ export default function EditLocationPage({
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const { name, description, imageUrl, isVisibleOnMap, tagIds: newTagIds } = values;
-      const mainPayload = { name, description, imageUrl, isVisibleOnMap };
+      const {
+        name,
+        description,
+        imageUrl,
+        isVisibleOnMap,
+        tagIds: newTagIds,
+      } = values;
       
-      const originalTagIds = location?.tags.map(t => t.tag.id) || [];
-      const tagsToAdd = newTagIds.filter(id => !originalTagIds.includes(id));
-      const tagsToRemove = originalTagIds.filter(id => !newTagIds.includes(id));
+      const mainPayload = { name,
+        description,
+        imageUrl,
+        isVisibleOnMap: isVisibleOnMap ?? false,
+        tagIds: newTagIds, };
+
+      const originalTagIds = location?.tags.map((t) => t.tag.id) || [];
+      const tagsToAdd = newTagIds.filter((id) => !originalTagIds.includes(id));
+      const tagsToRemove = originalTagIds.filter(
+        (id) => !newTagIds.includes(id)
+      );
 
       const mutationPromises = [];
-      
-      mutationPromises.push(updateLocation({ locationId, payload: mainPayload }));
-      
+
+      mutationPromises.push(
+        updateLocation({ locationId, payload: mainPayload })
+      );
+
       if (tagsToAdd.length > 0) {
         mutationPromises.push(addTags({ locationId, tagIds: tagsToAdd }));
       }
-      
+
       if (tagsToRemove.length > 0) {
         mutationPromises.push(removeTags({ locationId, tagIds: tagsToRemove }));
       }
 
       await Promise.all(mutationPromises);
 
-      queryClient.invalidateQueries({ queryKey: ['myLocations'] });
-      queryClient.invalidateQueries({ queryKey: ['location', locationId] });
+      queryClient.invalidateQueries({ queryKey: ["myLocations"] });
+      queryClient.invalidateQueries({ queryKey: ["location", locationId] });
       router.refresh();
     } catch (err) {
       toast.error("An error occurred while saving. Please try again.");
     }
-  };
+  };
 
   if (isLoadingData) {
     return (
@@ -234,7 +252,7 @@ export default function EditLocationPage({
                   type="button"
                   variant="ghost"
                   onClick={() => router.back()}
-                  disabled={isUpdating}
+                  disabled={isUpdating || isAddingTags || isRemovingTags}
                 >
                   Cancel
                 </Button>
