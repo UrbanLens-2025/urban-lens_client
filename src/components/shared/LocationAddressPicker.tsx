@@ -36,11 +36,11 @@ export function LocationAddressPicker() {
 
   const processPlaceDetails = (details: PlaceDetails) => {
     const { address, lat, lng, components } = details;
-    const district = findAddressComponent(
+    const province = findAddressComponent(
       components,
       "administrative_area_level_1"
     );
-    const province =
+    const district =
       findAddressComponent(components, "administrative_area_level_2") ||
       findAddressComponent(components, "locality");
     const streetAddress = `${findAddressComponent(
@@ -53,7 +53,6 @@ export function LocationAddressPicker() {
     form.setValue("addressLine", streetAddress || address);
     form.setValue("addressLevel1", district);
     form.setValue("addressLevel2", province);
-    toast.info("Address has been auto-filled.");
   };
 
   const handlePositionChange = async (latLng: { lat: number; lng: number }) => {
@@ -97,7 +96,7 @@ export function LocationAddressPicker() {
       </div>
       <div className="space-y-4 animate-in fade-in-50">
         <FormField
-          name="addressLevel1"
+          name="addressLevel2"
           control={form.control}
           render={({ field }) => (
             <FormItem>
@@ -110,7 +109,7 @@ export function LocationAddressPicker() {
           )}
         />
         <FormField
-          name="addressLevel2"
+          name="addressLevel1"
           control={form.control}
           render={({ field }) => (
             <FormItem>

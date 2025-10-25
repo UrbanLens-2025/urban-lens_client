@@ -181,10 +181,8 @@ export default function LocationForm({
 
     if (isEditMode && initialData) {
       dataToLoad = initialData;
-      toast.info("Loading data for editing...");
     } else if (!isEditMode && copiedData) {
       dataToLoad = copiedData;
-      toast.info("Pre-filling form with data from previous request...");
     }
 
     console.log("Current form values:", dataToLoad);
@@ -269,10 +267,8 @@ export default function LocationForm({
         }
 
         await Promise.all(mutationPromises);
-        toast.success("Location request updated successfully!");
       } else {
         await createLocation({ ...payload, tagIds: newTagIds } as any);
-        toast.success("Location request submitted successfully!");
       }
 
       queryClient.invalidateQueries({ queryKey: ["locationRequests"] });
@@ -442,11 +438,11 @@ export default function LocationForm({
                   <InfoRow label="Address" value={watchedValues.addressLine} />
                   <InfoRow
                     label="District / Ward"
-                    value={watchedValues.addressLevel2}
-                  />
+                    value={watchedValues.addressLevel1}
+                    />
                   <InfoRow
                     label="Province / City"
-                    value={watchedValues.addressLevel1}
+                    value={watchedValues.addressLevel2}
                   />
                   <InfoRow
                     label="Coordinates"
