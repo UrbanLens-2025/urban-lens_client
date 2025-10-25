@@ -140,3 +140,13 @@ export const updateLocationRequest = async ({
   );
   return data;
 };
+
+export const cancelLocationRequest = async (
+  requestId: string
+): Promise<any> => {
+  const { data } = await axiosInstance.put(
+    `/v1/business/location-request/${requestId}/cancel`,
+    {}
+  );
+  return data;
+};

@@ -3,11 +3,20 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useLocationRequests, useMyLocations } from "@/hooks/locations/useMyLocations";
+import {
+  useLocationRequests,
+  useMyLocations,
+} from "@/hooks/locations/useMyLocations";
 import { useTags } from "@/hooks/tags/useTags";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -45,6 +54,8 @@ import {
 } from "@/types";
 import { useDebounce } from "use-debounce";
 import { Input } from "@/components/ui/input";
+import { useCancelLocationRequest } from "@/hooks/locations/useCancelLocationRequest";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 function ActiveLocationActions({ location }: { location: Location }) {
   return (
@@ -78,49 +89,90 @@ function RequestActions({
   requestId: string;
   status: LocationStatus;
 }) {
+  const [isCancelAlertOpen, setIsCancelAlertOpen] = useState(false);
+  const { mutate: cancelRequest, isPending } = useCancelLocationRequest();
+
+  const onCancelConfirm = () => {
+    cancelRequest(requestId, {
+      // Đóng dialog sau khi thành công
+      onSuccess: () => setIsCancelAlertOpen(false),
+    });
+  };
+
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem asChild>
-          <Link href={`/dashboard/business/locations/request/${requestId}`}>
-            <Eye className="mr-2 h-4 w-4" />
-            View Details
-          </Link>
-        </DropdownMenuItem>
-
-        {(status === "AWAITING_ADMIN_REVIEW" ||
-          status === "NEEDS_MORE_INFO") && (
+    <>
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
           <DropdownMenuItem asChild>
-            <Link href={`/dashboard/business/locations/request/${requestId}/edit`}>
-              <Edit className="mr-2 h-4 w-4" /> Edit Request
+            <Link href={`/dashboard/business/locations/request/${requestId}`}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
             </Link>
           </DropdownMenuItem>
-        )}
 
-        {(status === "REJECTED" || status === "CANCELLED_BY_BUSINESS") && (
-          <DropdownMenuItem asChild>
-            <Link href={`/dashboard/locations/create?copyFrom=${requestId}`}>
-              <Copy className="mr-2 h-4 w-4" /> Copy & Create New
-            </Link>
-          </DropdownMenuItem>
-        )}
+          {(status === "AWAITING_ADMIN_REVIEW" ||
+            status === "NEEDS_MORE_INFO") && (
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/dashboard/business/locations/request/${requestId}/edit`}
+              >
+                <Edit className="mr-2 h-4 w-4" /> Edit Request
+              </Link>
+            </DropdownMenuItem>
+          )}
 
-        {(status === "AWAITING_ADMIN_REVIEW" ||
-          status === "NEEDS_MORE_INFO") && (
-          <DropdownMenuItem asChild className="text-red-500">
-            <Link href="#">
+          {(status === "REJECTED" || status === "CANCELLED_BY_BUSINESS") && (
+            <DropdownMenuItem asChild>
+              <Link href={`/dashboard/locations/create?copyFrom=${requestId}`}>
+                <Copy className="mr-2 h-4 w-4" /> Copy & Create New
+              </Link>
+            </DropdownMenuItem>
+          )}
+
+          {(status === "AWAITING_ADMIN_REVIEW" ||
+            status === "NEEDS_MORE_INFO") && (
+            <DropdownMenuItem
+              className="text-red-500"
+              onClick={() => setIsCancelAlertOpen(true)}
+              disabled={isPending}
+            >
               <BadgeX className="mr-2 h-4 w-4" />
-              Disable
-            </Link>
-          </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+              Cancel Request
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={isCancelAlertOpen} onOpenChange={setIsCancelAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Are you sure you want to cancel this request?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. Your request status will be changed
+              to &apos;CANCELLED_BY_BUSINESS&apos;.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Back</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onCancelConfirm}
+              disabled={isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Yes, Cancel Request
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -236,8 +288,7 @@ export default function MyLocationsPage() {
             Active Locations ({activeMeta?.totalItems || 0})
           </CardTitle>
           <CardDescription>
-            Showing page{" "}
-            {activeMeta?.currentPage} of {activeMeta?.totalPages}.
+            Showing page {activeMeta?.currentPage} of {activeMeta?.totalPages}.
           </CardDescription>
           <div className="pt-4">
             <Input
@@ -314,8 +365,8 @@ export default function MyLocationsPage() {
             Request History ({historyMeta?.totalItems || 0})
           </CardTitle>
           <CardDescription>
-            Showing page{" "}
-            {historyMeta?.currentPage} of {historyMeta?.totalPages}.
+            Showing page {historyMeta?.currentPage} of {historyMeta?.totalPages}
+            .
           </CardDescription>
         </CardHeader>
         <CardContent>
