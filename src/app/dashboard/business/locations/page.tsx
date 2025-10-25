@@ -87,7 +87,7 @@ function RequestActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
-          <Link href={`/dashboard/business/locations/${requestId}`}>
+          <Link href={`/dashboard/business/locations/request/${requestId}`}>
             <Eye className="mr-2 h-4 w-4" />
             View Details
           </Link>
