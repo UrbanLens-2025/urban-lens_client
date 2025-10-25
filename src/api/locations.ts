@@ -109,12 +109,34 @@ export const addTagsToLocation = async (
   return data;
 };
 
+export const addTagsToLocationRequest = async (
+  requestId: string,
+  tagIds: number[]
+): Promise<any> => {
+  const { data } = await axiosInstance.post(
+    `/v1/business/location-request/${requestId}/tags`,
+    { tagIds }
+  );
+  return data;
+};
+
 export const removeTagsFromLocation = async (
   locationId: string,
   tagIds: number[]
 ): Promise<any> => {
   const { data } = await axiosInstance.delete(
     `/v1/owner/locations/${locationId}/tags`,
+    { data: { tagIds } }
+  );
+  return data;
+};
+
+export const removeTagsFromLocationRequest = async (
+  requestId: string,
+  tagIds: number[]
+): Promise<any> => {
+  const { data } = await axiosInstance.delete(
+    `/v1/business/location-request/${requestId}/tags`,
     { data: { tagIds } }
   );
   return data;

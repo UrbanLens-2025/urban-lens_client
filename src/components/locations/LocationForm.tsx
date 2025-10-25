@@ -40,6 +40,9 @@ import { LocationAddressPicker } from "@/components/shared/LocationAddressPicker
 import { useUpdateLocationRequest } from "@/hooks/locations/useUpdateLocationRequest";
 import { toast } from "sonner";
 import { useLocationRequestById } from "@/hooks/locations/useLocationRequestById";
+import { useAddTagsToRequest } from "@/hooks/locations/useAddTagsToRequest";
+import { useRemoveTagsFromRequest } from "@/hooks/locations/useRemoveTagsFromRequest";
+import { useQueryClient } from "@tanstack/react-query";
 
 const locationSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -139,6 +142,7 @@ export default function LocationForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const copyFromId = searchParams.get("copyFrom");
+  const queryClient = useQueryClient();
 
   const { data: copiedData, isLoading: isLoadingCopiedData } =
     useLocationRequestById(copyFromId);
@@ -146,6 +150,10 @@ export default function LocationForm({
     useCreateLocationRequest();
   const { mutate: updateLocationRequest, isPending: isUpdating } =
     useUpdateLocationRequest();
+  const { mutateAsync: addTags } =
+    useAddTagsToRequest();
+  const { mutateAsync: removeTags } =
+    useRemoveTagsFromRequest();
   const { data: allTagsResponse } = useTags();
 
   const isPending = isCreating || isUpdating;
@@ -217,27 +225,61 @@ export default function LocationForm({
   };
   const handlePrevStep = () => setCurrentStep((prev) => prev - 1);
 
-  function onSubmit(values: FormValues) {
-    const { documentImageUrls, ...rest } = values;
-    const payload = {
-      ...rest,
-      locationValidationDocuments: [
-        {
-          documentType: "LOCATION_REGISTRATION_CERTIFICATE",
-          documentImageUrls: documentImageUrls,
-        },
-      ],
-    };
+  async function onSubmit(values: FormValues) {
+    try {
+      const { documentImageUrls, tagIds: newTagIds, ...rest } = values;
+      const payload = {
+        ...rest,
+        locationValidationDocuments: [
+          {
+            documentType: "LOCATION_REGISTRATION_CERTIFICATE",
+            documentImageUrls: documentImageUrls,
+          },
+        ],
+      };
 
-    console.log("Submitting payload:", payload);
+      if (isEditMode && locationId) {
+        const originalTagIds = initialData?.tags.map((t) => t.id) || [];
+        const tagsToAdd = newTagIds.filter(
+          (id) => !originalTagIds.includes(id)
+        );
+        const tagsToRemove = originalTagIds.filter(
+          (id) => !newTagIds.includes(id)
+        );
 
-    if (isEditMode && locationId) {
-      updateLocationRequest({
-        locationRequestId: locationId,
-        payload: payload as any,
-      });
-    } else {
-      createLocation(payload as any);
+        const mutationPromises = [];
+
+        mutationPromises.push(
+          updateLocationRequest({
+            locationRequestId: locationId,
+            payload: payload as any,
+          })
+        );
+
+        if (tagsToAdd.length > 0) {
+          mutationPromises.push(
+            addTags({ locationRequestId: locationId, tagIds: tagsToAdd })
+          );
+        }
+
+        if (tagsToRemove.length > 0) {
+          mutationPromises.push(
+            removeTags({ requestId: locationId, tagIds: tagsToRemove })
+          );
+        }
+
+        await Promise.all(mutationPromises);
+        toast.success("Location request updated successfully!");
+      } else {
+        await createLocation({ ...payload, tagIds: newTagIds } as any);
+        toast.success("Location request submitted successfully!");
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["locationRequests"] });
+      router.refresh();
+      router.push("/dashboard/business/locations");
+    } catch (err) {
+      toast.error("An error occurred. Please try again.");
     }
   }
 
@@ -258,7 +300,8 @@ export default function LocationForm({
       <Card className="w-full max-w-3xl mx-auto">
         <CardHeader>
           <CardTitle>
-            Submit a New Location (Step {currentStep + 1}/{steps.length})
+            {isEditMode ? "Edit Location Request" : "Submit a New Location"}{" "}
+            (Step {currentStep + 1}/{steps.length})
           </CardTitle>
           <CardDescription>{steps[currentStep].title}</CardDescription>
           <Progress
