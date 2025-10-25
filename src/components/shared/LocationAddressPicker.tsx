@@ -36,11 +36,11 @@ export function LocationAddressPicker() {
 
   const processPlaceDetails = (details: PlaceDetails) => {
     const { address, lat, lng, components } = details;
-    const province = findAddressComponent(
+    const district = findAddressComponent(
       components,
       "administrative_area_level_1"
     );
-    const district =
+    const province =
       findAddressComponent(components, "administrative_area_level_2") ||
       findAddressComponent(components, "locality");
     const streetAddress = `${findAddressComponent(
@@ -51,8 +51,8 @@ export function LocationAddressPicker() {
     form.setValue("latitude", lat, { shouldValidate: true });
     form.setValue("longitude", lng, { shouldValidate: true });
     form.setValue("addressLine", streetAddress || address);
-    form.setValue("addressLevel1", province);
-    form.setValue("addressLevel2", district);
+    form.setValue("addressLevel1", district);
+    form.setValue("addressLevel2", province);
     toast.info("Address has been auto-filled.");
   };
 
@@ -83,9 +83,7 @@ export function LocationAddressPicker() {
           <FormItem>
             <FormLabel>Search Address (or click the map)</FormLabel>
             <FormControl>
-              <PlacesAutocomplete
-                onAddressSelect={processPlaceDetails}
-              />
+              <PlacesAutocomplete onAddressSelect={processPlaceDetails} />
             </FormControl>
             <FormMessage />
           </FormItem>
