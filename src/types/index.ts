@@ -144,8 +144,8 @@ export interface Location {
   ownershipType: string;
   name: string;
   description: string;
-  latitude: string;
-  longitude: string;
+  latitude: number;
+  longitude: number;
   addressLine: string;
   addressLevel1: string;
   addressLevel2: string;
@@ -189,8 +189,8 @@ export interface LocationRequest {
     id: number;
     tagId: number;
   }[];
-  latitude: string;
-  longitude: string;
+  latitude: number;
+  longitude: number;
   radiusMeters: number;
   addressLine: string;
   addressLevel1: string;

@@ -74,10 +74,10 @@ export const createLocationRequest = async (
 export const getLocationRequestById = async (
   id: string
 ): Promise<LocationRequest> => {
-  const response = await axiosInstance.get<ApiResponse<LocationRequest>>(
+  const { data } = await axiosInstance.get<ApiResponse<LocationRequest>>(
     `/v1/business/location-request/${id}`
   );
-  return response.data.data;
+  return data.data;
 };
 
 export const getLocationById = async (id: string): Promise<Location> => {
@@ -99,28 +99,44 @@ export const updateLocation = async (
 };
 
 export const addTagsToLocation = async (
-  locationId: string, 
+  locationId: string,
   tagIds: number[]
 ): Promise<any> => {
   const { data } = await axiosInstance.post(
-    `/v1/owner/locations/${locationId}/tags`, 
+    `/v1/owner/locations/${locationId}/tags`,
     { tagIds }
   );
   return data;
 };
 
 export const removeTagsFromLocation = async (
-  locationId: string, 
+  locationId: string,
   tagIds: number[]
 ): Promise<any> => {
   const { data } = await axiosInstance.delete(
-    `/v1/owner/locations/${locationId}/tags`, 
+    `/v1/owner/locations/${locationId}/tags`,
     { data: { tagIds } }
   );
   return data;
 };
 
 export const getAllTags = async (): Promise<PaginatedData<Tag>> => {
-  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Tag>>>('/v1/public/tag');
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Tag>>>(
+    "/v1/public/tag"
+  );
   return data.data;
+};
+
+export const updateLocationRequest = async ({
+  locationRequestId,
+  payload,
+}: {
+  locationRequestId: string;
+  payload: CreateLocationPayload;
+}): Promise<any> => {
+  const { data } = await axiosInstance.put(
+    `/v1/business/location-request/${locationRequestId}`,
+    payload
+  );
+  return data;
 };

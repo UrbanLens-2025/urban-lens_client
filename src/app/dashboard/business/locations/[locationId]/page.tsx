@@ -38,8 +38,8 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
   }
 
   const position = {
-      lat: parseFloat(location.latitude),
-      lng: parseFloat(location.longitude),
+      lat: location.latitude,
+      lng: location.longitude,
   };
 
   return (

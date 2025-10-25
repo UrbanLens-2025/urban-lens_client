@@ -87,7 +87,7 @@ function RequestActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
-          <Link href={`/dashboard/locations`}>
+          <Link href={`/dashboard/business/locations/${requestId}`}>
             <Eye className="mr-2 h-4 w-4" />
             View Details
           </Link>
@@ -96,7 +96,7 @@ function RequestActions({
         {(status === "AWAITING_ADMIN_REVIEW" ||
           status === "NEEDS_MORE_INFO") && (
           <DropdownMenuItem asChild>
-            <Link href={`/dashboard/locations/${requestId}/edit`}>
+            <Link href={`/dashboard/business/locations/request/${requestId}/edit`}>
               <Edit className="mr-2 h-4 w-4" /> Edit Request
             </Link>
           </DropdownMenuItem>
