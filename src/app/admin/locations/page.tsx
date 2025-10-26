@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowDown, ArrowUp, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Loader2, PlusCircle } from "lucide-react";
 import { LocationRequest, SortState } from "@/types";
 import { useProcessLocationRequest } from "@/hooks/admin/useProcessLocationRequest";
 import {
@@ -35,6 +35,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ViewRequestModal } from "@/components/admin/ViewRequestModal";
 import { useLocationAdminRequests } from "@/hooks/admin/useLocationAdminRequests";
+import Link from "next/link";
 
 export default function AdminDashboardPage() {
   const [page, setPage] = useState(1);
@@ -116,7 +117,19 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Locations</h1>
+          <p className="text-muted-foreground">
+            Manage locations.
+          </p>
+        </div>
+        <Link href="/admin/locations/create">
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New Public Location
+          </Button>
+        </Link>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Pending Location Requests ({requests.length})</CardTitle>

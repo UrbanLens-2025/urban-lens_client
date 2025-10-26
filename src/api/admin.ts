@@ -8,6 +8,7 @@ import type {
   ProcessRequestPayload,
   GetBusinessesParams,
   BusinessProfile,
+  CreatePublicLocationPayload,
 } from "@/types";
 
 export const getLocationRequestsForAdmin = async ({
@@ -102,5 +103,10 @@ export const processBusinessAccount = async ({
     `/v1/admin/account/business/${id}/process`,
     payload
   );
+  return data;
+};
+
+export const createPublicLocation = async (payload: CreatePublicLocationPayload): Promise<any> => {
+  const { data } = await axiosInstance.post('/v1/admin/locations/public', payload);
   return data;
 };

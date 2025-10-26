@@ -262,3 +262,17 @@ interface BusinessInLocation {
   phone: string;
   category: BusinessCategory;
 }
+
+export interface CreatePublicLocationPayload {
+  name: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  addressLine: string;
+  addressLevel1: string;
+  addressLevel2: string;
+  imageUrl: string[];
+  isVisibleOnMap: boolean;
+  tagIds: number[];
+}
