@@ -11,6 +11,7 @@ import type {
   CreatePublicLocationPayload,
   GetLocationsParams,
   Location,
+  UpdateLocationPayload,
 } from "@/types";
 
 export const getLocationRequestsForAdmin = async ({
@@ -144,6 +145,17 @@ export const getAllLocationsForAdmin = async ({
 export const getLocationByIdForAdmin = async (id: string): Promise<Location> => {
   const { data } = await axiosInstance.get<ApiResponse<Location>>(
     `/v1/admin/locations/${id}`
+  );
+  return data.data;
+};
+
+export const updateLocationAsAdmin = async (
+  locationId: string, 
+  payload: UpdateLocationPayload
+): Promise<Location> => {
+  const { data } = await axiosInstance.put<ApiResponse<Location>>(
+    `/v1/admin/locations/${locationId}`, 
+    payload
   );
   return data.data;
 };

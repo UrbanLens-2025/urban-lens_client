@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowDown, ArrowUp, Loader2, PlusCircle } from "lucide-react";
+import { ArrowDown, ArrowUp, Edit, Loader2, PlusCircle } from "lucide-react";
 import { Location, LocationRequest, SortState } from "@/types";
 import { useProcessLocationRequest } from "@/hooks/admin/useProcessLocationRequest";
 import {
@@ -230,6 +230,11 @@ export default function LocationDashboardPage() {
                         checked={loc.isVisibleOnMap}
                         // onCheckedChange={(checked) => handleVisibilityChange(loc.id, checked)}
                       />
+                      <Button asChild variant="ghost" size="icon">
+                        <Link href={`/admin/locations/${loc.id}/edit`}>
+                          <Edit className="h-4 w-4" />
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
