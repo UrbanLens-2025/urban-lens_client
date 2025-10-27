@@ -54,19 +54,25 @@ export default function AdminLayout({
           <h2 className="text-xl font-bold">Admin Dashboard</h2>
         </div>
         <nav className="flex flex-col p-2">
-          {sidebarNavItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                pathname === item.href && "bg-muted text-primary"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.title}
-            </Link>
-          ))}
+          {sidebarNavItems.map((item) => {
+            const isActive =
+              item.href === "/admin"
+                ? pathname === item.href
+                : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                  isActive && "bg-muted text-primary"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.title}
+              </Link>
+            );
+          })}
         </nav>
       </aside>
       <main className="flex-1 p-4 md:p-8 md:pl-72">{children}</main>
