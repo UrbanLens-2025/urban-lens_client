@@ -37,7 +37,7 @@ import { ViewRequestModal } from "@/components/admin/ViewRequestModal";
 import { useLocationAdminRequests } from "@/hooks/admin/useLocationAdminRequests";
 import Link from "next/link";
 
-export default function AdminDashboardPage() {
+export default function LocationDashboardPage() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 50);

@@ -53,8 +53,9 @@ const businessSchema = z.object({
   description: z
     .string()
     .min(10, "Description must be at least 10 characters."),
-  address: z.string().min(5, "Street address is required."),
-  wardCode: z.string().min(1, "Ward is required."),
+  addressLine: z.string().min(1, "Street address is required."),
+  addressLevel1: z.string().min(1, "Province/City is required"),
+  addressLevel2: z.string().min(1, "District/Ward is required"),
   email: z.string().email("Invalid email address."),
   phone: z.string().min(10, "A valid phone number is required."),
   avatar: z
@@ -68,25 +69,21 @@ const businessSchema = z.object({
   category: z.enum(businessCategories, {
     message: "Please select a category.",
   }),
-  province: z.string().min(1, "Province is required"),
 });
 
 type FormValues = z.infer<typeof businessSchema>;
 
 export function BusinessOnboardingForm() {
   const { mutate: submit, isPending } = useSubmitBusinessOnboarding();
-  const [selectedProvinceCode, setSelectedProvinceCode] = useState<
-    string | undefined
-  >();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(businessSchema),
     defaultValues: {
       name: "",
       description: "",
-      address: "",
-      province: "",
-      wardCode: "",
+      addressLine: "",
+      addressLevel1: "",
+      addressLevel2: "",
       email: "",
       phone: "",
       avatar: "",

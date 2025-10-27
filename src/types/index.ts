@@ -91,8 +91,9 @@ export interface BusinessProfile {
   avatar: string | null;
   website: string | null;
   name: string;
-  address: string;
-  wardCode: string;
+  addressLine: string;
+  addressLevel1: string;
+  addressLevel2: string;
   description: string;
   status: BusinessStatus;
   category: BusinessCategory;
@@ -103,8 +104,9 @@ export interface BusinessProfile {
 export interface BusinessOnboardingPayload {
   name: string;
   description: string;
-  address: string;
-  wardCode: string;
+  addressLine: string;
+  addressLevel1: string;
+  addressLevel2: string;
   email: string;
   phone: string;
   avatar: string;
@@ -247,8 +249,9 @@ interface BusinessInLocation {
   avatar: string;
   website: string;
   name: string;
-  address: string;
-  wardCode: string;
+  addressLine: string;
+  addressLevel1: string;
+  addressLevel2: string;
   description: string;
   licenseNumber: string;
   licenseExpirationDate: string;
