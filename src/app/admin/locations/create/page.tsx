@@ -90,8 +90,8 @@ export default function CreatePublicLocationPage() {
       "street_number"
     )} ${findAddressComponent(components, "route")}`.trim();
 
-    form.setValue("addressLevel1", province, { shouldValidate: true });
-    form.setValue("addressLevel2", district, { shouldValidate: true });
+    form.setValue("addressLevel1", district, { shouldValidate: true });
+    form.setValue("addressLevel2", province, { shouldValidate: true });
     form.setValue(
       "addressLine",
       streetAddress || results[0].formatted_address,
@@ -241,7 +241,7 @@ export default function CreatePublicLocationPage() {
                     />
                   </div>
                   <FormField
-                    name="addressLevel1"
+                    name="addressLevel2"
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
@@ -254,7 +254,7 @@ export default function CreatePublicLocationPage() {
                     )}
                   />
                   <FormField
-                    name="addressLevel2"
+                    name="addressLevel1"
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
