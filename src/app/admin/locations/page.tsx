@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowDown, ArrowUp, Loader2, PlusCircle } from "lucide-react";
-import {  Location, LocationRequest, SortState } from "@/types";
+import { Location, LocationRequest, SortState } from "@/types";
 import { useProcessLocationRequest } from "@/hooks/admin/useProcessLocationRequest";
 import {
   AlertDialog,
@@ -72,11 +72,8 @@ export default function LocationDashboardPage() {
   const requests = response?.data || [];
   const reqMeta = response?.meta;
 
-  const { data: allLocationsResponse, isLoading: isLoadingAll } = useAllLocations(
-    page,
-    debouncedSearchTerm,
-    sortByString
-  );
+  const { data: allLocationsResponse, isLoading: isLoadingAll } =
+    useAllLocations(page, debouncedSearchTerm, sortByString);
 
   const allLocations = allLocationsResponse?.data || [];
   const allLocationsMeta = allLocationsResponse?.meta;
@@ -197,12 +194,8 @@ export default function LocationDashboardPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort("name")}
-                    >
-                      Name{" "}
-                      <SortIcon column="name" />
+                    <Button variant="ghost" onClick={() => handleSort("name")}>
+                      Name <SortIcon column="name" />
                     </Button>
                   </TableHead>
                   <TableHead>Business Owner</TableHead>
@@ -211,10 +204,7 @@ export default function LocationDashboardPage() {
                       variant="ghost"
                       onClick={() => handleSort("createdAt")}
                     >
-                      Created At{" "}
-                      <SortIcon
-                        column="createdAt"
-                      />
+                      Created At <SortIcon column="createdAt" />
                     </Button>
                   </TableHead>
                   <TableHead className="text-right">Visible</TableHead>
@@ -223,7 +213,14 @@ export default function LocationDashboardPage() {
               <TableBody>
                 {allLocations.map((loc: Location) => (
                   <TableRow key={loc.id}>
-                    <TableCell className="font-medium">{loc.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        href={`/admin/locations/${loc.id}`}
+                        className="hover:underline"
+                      >
+                        {loc.name}
+                      </Link>
+                    </TableCell>
                     <TableCell>{loc.business?.name || "N/A"}</TableCell>
                     <TableCell>
                       {new Date(loc.createdAt).toLocaleDateString()}
@@ -248,13 +245,26 @@ export default function LocationDashboardPage() {
           )}
         </CardContent>
         <div className="flex items-center justify-end space-x-2 py-4">
-        <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={!allLocationsMeta || allLocationsMeta.currentPage <= 1}>
-          Previous
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={!allLocationsMeta || allLocationsMeta.currentPage >= allLocationsMeta.totalPages}>
-          Next
-        </Button>
-      </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(page - 1)}
+            disabled={!allLocationsMeta || allLocationsMeta.currentPage <= 1}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(page + 1)}
+            disabled={
+              !allLocationsMeta ||
+              allLocationsMeta.currentPage >= allLocationsMeta.totalPages
+            }
+          >
+            Next
+          </Button>
+        </div>
       </Card>
 
       <Card>

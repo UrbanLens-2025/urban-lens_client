@@ -140,3 +140,10 @@ export const getAllLocationsForAdmin = async ({
   >("/v1/admin/locations/search", { params });
   return data.data;
 };
+
+export const getLocationByIdForAdmin = async (id: string): Promise<Location> => {
+  const { data } = await axiosInstance.get<ApiResponse<Location>>(
+    `/v1/admin/locations/${id}`
+  );
+  return data.data;
+};
