@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowDown, ArrowUp, Loader2, PlusCircle } from "lucide-react";
-import { LocationRequest, SortState } from "@/types";
+import {  Location, LocationRequest, SortState } from "@/types";
 import { useProcessLocationRequest } from "@/hooks/admin/useProcessLocationRequest";
 import {
   AlertDialog,
@@ -36,14 +36,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { ViewRequestModal } from "@/components/admin/ViewRequestModal";
 import { useLocationAdminRequests } from "@/hooks/admin/useLocationAdminRequests";
 import Link from "next/link";
+import { useAllLocations } from "@/hooks/admin/useAllLocations";
+import { Switch } from "@/components/ui/switch";
 
 export default function LocationDashboardPage() {
   const [page, setPage] = useState(1);
+  const [reqPage, setReqPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchReqTerm, setSearchReqTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 50);
+  const [debouncedSearchReqTerm] = useDebounce(searchReqTerm, 50);
   const [viewingRequest, setViewingRequest] = useState<LocationRequest | null>(
     null
   );
+
+  const [sortReq, setSortReq] = useState<SortState>({
+    column: "createdAt",
+    direction: "DESC",
+  });
 
   const [sort, setSort] = useState<SortState>({
     column: "createdAt",
@@ -51,14 +61,25 @@ export default function LocationDashboardPage() {
   });
 
   const sortByString = `${sort.column}:${sort.direction}`;
+  const sortReqByString = `${sortReq.column}:${sortReq.direction}`;
 
   const { data: response, isLoading } = useLocationAdminRequests(
+    reqPage,
+    debouncedSearchReqTerm,
+    sortReqByString
+  );
+
+  const requests = response?.data || [];
+  const reqMeta = response?.meta;
+
+  const { data: allLocationsResponse, isLoading: isLoadingAll } = useAllLocations(
     page,
     debouncedSearchTerm,
     sortByString
   );
-  const requests = response?.data || [];
-  const meta = response?.meta;
+
+  const allLocations = allLocationsResponse?.data || [];
+  const allLocationsMeta = allLocationsResponse?.meta;
 
   const { mutate: processRequest, isPending } = useProcessLocationRequest();
 
@@ -95,6 +116,17 @@ export default function LocationDashboardPage() {
     }
   };
 
+  const handleSortReq = (columnName: string) => {
+    setSortReq((currentSort) => ({
+      column: columnName,
+      direction:
+        currentSort.column === columnName && currentSort.direction === "DESC"
+          ? "ASC"
+          : "DESC",
+    }));
+    setReqPage(1);
+  };
+
   const handleSort = (columnName: string) => {
     setSort((currentSort) => ({
       column: columnName,
@@ -115,14 +147,21 @@ export default function LocationDashboardPage() {
     );
   };
 
+  const SortReqIcon = ({ column }: { column: string }) => {
+    if (sortReq.column !== column) return null;
+    return sortReq.direction === "ASC" ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Locations</h1>
-          <p className="text-muted-foreground">
-            Manage locations.
-          </p>
+          <p className="text-muted-foreground">Manage locations.</p>
         </div>
         <Link href="/admin/locations/create">
           <Button>
@@ -130,18 +169,106 @@ export default function LocationDashboardPage() {
           </Button>
         </Link>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            All Approved Locations ({allLocationsMeta?.totalItems || 0})
+          </CardTitle>
+          <CardDescription>
+            Manage all active locations on the platform. Showing page{" "}
+            {allLocationsMeta?.currentPage} of {allLocationsMeta?.totalPages}.
+          </CardDescription>
+          <div className="pt-4">
+            <Input
+              placeholder="Search all locations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingAll ? (
+            <div className="text-center p-8">
+              <Loader2 />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort("name")}
+                    >
+                      Name{" "}
+                      <SortIcon column="name" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>Business Owner</TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort("createdAt")}
+                    >
+                      Created At{" "}
+                      <SortIcon
+                        column="createdAt"
+                      />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="text-right">Visible</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {allLocations.map((loc: Location) => (
+                  <TableRow key={loc.id}>
+                    <TableCell className="font-medium">{loc.name}</TableCell>
+                    <TableCell>{loc.business?.name || "N/A"}</TableCell>
+                    <TableCell>
+                      {new Date(loc.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Switch
+                        checked={loc.isVisibleOnMap}
+                        // onCheckedChange={(checked) => handleVisibilityChange(loc.id, checked)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {allLocations.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center h-24">
+                      No locations found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+        <div className="flex items-center justify-end space-x-2 py-4">
+        <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={!allLocationsMeta || allLocationsMeta.currentPage <= 1}>
+          Previous
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={!allLocationsMeta || allLocationsMeta.currentPage >= allLocationsMeta.totalPages}>
+          Next
+        </Button>
+      </div>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Pending Location Requests ({requests.length})</CardTitle>
           <CardDescription>
             Review and approve new location submissions. Showing page{" "}
-            {meta?.currentPage} of {meta?.totalPages}.
+            {reqMeta?.currentPage} of {reqMeta?.totalPages}.
           </CardDescription>
           <div className="pt-4">
             <Input
               placeholder="Search by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchReqTerm}
+              onChange={(e) => setSearchReqTerm(e.target.value)}
             />
           </div>
         </CardHeader>
@@ -155,16 +282,16 @@ export default function LocationDashboardPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>
-                    Location Name <SortIcon column="name" />
+                    Location Name <SortReqIcon column="name" />
                   </TableHead>
                   <TableHead>Submitted By</TableHead>
                   <TableHead>Business Name</TableHead>
                   <TableHead>
                     <Button
                       variant="ghost"
-                      onClick={() => handleSort("createdAt")}
+                      onClick={() => handleSortReq("createdAt")}
                     >
-                      Date <SortIcon column="createdAt" />
+                      Date <SortReqIcon column="createdAt" />
                     </Button>
                   </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -285,16 +412,16 @@ export default function LocationDashboardPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setPage(page - 1)}
-          disabled={!meta || meta.currentPage <= 1}
+          onClick={() => setReqPage(reqPage - 1)}
+          disabled={!reqMeta || reqMeta.currentPage <= 1}
         >
           Previous
         </Button>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setPage(page + 1)}
-          disabled={!meta || meta.currentPage >= meta.totalPages}
+          onClick={() => setReqPage(reqPage + 1)}
+          disabled={!reqMeta || reqMeta.currentPage >= reqMeta.totalPages}
         >
           Next
         </Button>

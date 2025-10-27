@@ -9,6 +9,8 @@ import type {
   GetBusinessesParams,
   BusinessProfile,
   CreatePublicLocationPayload,
+  GetLocationsParams,
+  Location,
 } from "@/types";
 
 export const getLocationRequestsForAdmin = async ({
@@ -106,7 +108,35 @@ export const processBusinessAccount = async ({
   return data;
 };
 
-export const createPublicLocation = async (payload: CreatePublicLocationPayload): Promise<any> => {
-  const { data } = await axiosInstance.post('/v1/admin/locations/public', payload);
+export const createPublicLocation = async (
+  payload: CreatePublicLocationPayload
+): Promise<any> => {
+  const { data } = await axiosInstance.post(
+    "/v1/admin/locations/public",
+    payload
+  );
   return data;
+};
+
+export const getAllLocationsForAdmin = async ({
+  page = 1,
+  limit = 10,
+  search,
+  sortBy,
+}: GetLocationsParams): Promise<PaginatedData<Location>> => {
+  const params: any = { page, limit };
+
+  if (search) {
+    params.search = search;
+    params.searchBy = ["name"];
+  }
+
+  if (sortBy) {
+    params.sortBy = sortBy;
+  }
+
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<Location>>
+  >("/v1/admin/locations/search", { params });
+  return data.data;
 };

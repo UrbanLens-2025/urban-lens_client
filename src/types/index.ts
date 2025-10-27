@@ -62,7 +62,7 @@ export type LocationStatus =
   | "REJECTED"
   | "CANCELLED_BY_BUSINESS";
 export type SortDirection = "ASC" | "DESC";
-export type BusinessStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type BusinessStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface User {
   id: string;
@@ -157,8 +157,8 @@ export interface Location {
   createdAt: string;
   updatedAt: string;
   isVisibleOnMap: boolean;
-  businessId: string;
-  business: BusinessInLocation;
+  businessId: string | null;
+  business: BusinessInLocation | null;
   tags: {
     id: number;
     tagId: number;
@@ -278,4 +278,11 @@ export interface CreatePublicLocationPayload {
   imageUrl: string[];
   isVisibleOnMap: boolean;
   tagIds: number[];
+}
+
+export interface GetLocationsParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
 }
