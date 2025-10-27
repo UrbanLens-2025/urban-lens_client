@@ -1,9 +1,36 @@
 "use client";
 
-export default function Home() {
+import { useEffect } from "react";
+import { useUser } from "@/hooks/user/useUser";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
+
+export default function RedirectPage() {
+  const { user, isLoading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return; 
+
+    if (!user) {
+      router.replace('/login');
+      return;
+    }
+
+    if (user.role === 'ADMIN') {
+      router.replace('/admin');
+    } else if (user.role === 'BUSINESS_OWNER') {
+      router.replace('/dashboard/business/locations');
+    } else if (user.role === 'EVENT_CREATOR') {
+      router.replace('/dashboard/creator/events');
+    } else {
+      router.replace('/');
+    }
+  }, [user, isLoading, router]);
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Homepage</h1>
+    <div className="flex h-screen items-center justify-center">
+      <Loader2 className="h-12 w-12 animate-spin" />
     </div>
   );
 }

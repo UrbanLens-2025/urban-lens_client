@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/hooks/user/useUser";
-import { ChangePasswordModal } from "./settings/ChangePasswordModal";
+import { UserSettingsModal } from "../settings/UserSettingsModal";
 
 const navItems = [
   { href: "/", icon: Home, label: "Home" },
@@ -95,7 +95,7 @@ export function Navbar() {
   const { user } = useUser();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isChangePassWordModalOpen, setIsChangePasswordModalOpen] =
+  const [isSettingsModalOpen, setIsSettingsModalOpen] =
     useState(false);
 
   const queryClient = useQueryClient();
@@ -109,12 +109,12 @@ export function Navbar() {
 
   const getDashboardInfo = () => {
     switch (user?.role) {
-      case 'BUSINESS_OWNER':
-        return { href: '/dashboard/business', text: 'Manage Your Business' };
-      case 'EVENT_CREATOR':
-        return { href: '/dashboard/creator', text: 'Manage Your Events' };
+      case "BUSINESS_OWNER":
+        return { href: "/dashboard/business", text: "Manage Your Business" };
+      case "EVENT_CREATOR":
+        return { href: "/dashboard/creator", text: "Manage Your Events" };
       default:
-        return { href: `/profile/${user?.id}`, text: 'See your profile' };
+        return { href: `/profile/${user?.id}`, text: "See your profile" };
     }
   };
 
@@ -197,7 +197,10 @@ export function Navbar() {
           >
             <DropdownMenuTrigger asChild>
               <Avatar className="h-10 w-10 cursor-pointer">
-                <AvatarImage src={user?.avatarUrl || "/default-avatar.svg"} alt="User Avatar" />
+                <AvatarImage
+                  src={user?.avatarUrl || "/default-avatar.svg"}
+                  alt="User Avatar"
+                />
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-80" align="end">
@@ -209,7 +212,9 @@ export function Navbar() {
                 >
                   <div className="flex items-center gap-3">
                     <Avatar>
-                      <AvatarImage src={user?.avatarUrl|| "/default-avatar.svg"} />
+                      <AvatarImage
+                        src={user?.avatarUrl || "/default-avatar.svg"}
+                      />
                     </Avatar>
                     <div>
                       <p className="font-bold text-base">
@@ -225,7 +230,7 @@ export function Navbar() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="cursor-pointer"
-                onClick={() => setIsChangePasswordModalOpen(true)}
+                onClick={() => setIsSettingsModalOpen(true)}
               >
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
@@ -237,10 +242,13 @@ export function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <ChangePasswordModal
-          open={isChangePassWordModalOpen}
-          onOpenChange={setIsChangePasswordModalOpen}
-        />
+        {user && (
+          <UserSettingsModal
+            user={user}
+            open={isSettingsModalOpen}
+            onOpenChange={setIsSettingsModalOpen}
+          />
+        )}
       </div>
     </header>
   );
