@@ -1,44 +1,75 @@
 "use client";
 
 import { useUser } from "@/hooks/user/useUser";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Loader2, LayoutDashboard, MapPin, Building2 } from "lucide-react";
+import {
+  Loader2,
+  LayoutDashboard,
+  MapPin,
+  Building2,
+  Settings,
+} from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-    const { user, isLoading } = useUser();
-    const router = useRouter();
+const sidebarNavItems = [
+  { title: "Overview", href: "/admin", icon: LayoutDashboard },
+  {
+    title: "Locations",
+    href: "/admin/locations",
+    icon: MapPin,
+  },
+  { title: "Business", href: "/admin/business", icon: Building2 },
+  { title: "Settings", href: "/admin/settings", icon: Settings },
+];
 
-    useEffect(() => {
-        if (!isLoading && user?.role !== 'ADMIN') {
-            router.replace('/');
-        }
-    }, [user, isLoading, router]);
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { user, isLoading } = useUser();
+  const router = useRouter();
+  const pathname = usePathname();
 
-    if (isLoading || !user) {
-        return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin"/></div>;
+  useEffect(() => {
+    if (!isLoading && user?.role !== "ADMIN") {
+      router.replace("/");
     }
-    
+  }, [user, isLoading, router]);
+
+  if (isLoading || !user) {
     return (
-        <div className="flex min-h-screen">
-            <aside className="w-64 border-r bg-gray-100 p-4">
-                <h2 className="text-xl font-bold mb-8">Admin Panel</h2>
-                <nav className="flex flex-col gap-2">
-                    <Link href="/admin" className="flex items-center gap-2 p-2 rounded hover:bg-gray-200">
-                        <LayoutDashboard className="h-4 w-4"/> Dashboard
-                    </Link>
-                     <Link href="/admin/locations" className="flex items-center gap-2 p-2 rounded hover:bg-gray-200">
-                        <MapPin className="h-4 w-4"/> Manage Locations
-                    </Link>
-                     <Link href="/admin/business" className="flex items-center gap-2 p-2 rounded hover:bg-gray-200">
-                        <Building2 className="h-4 w-4"/> Manage Businesses
-                    </Link>
-                </nav>
-            </aside>
-            <main className="flex-1 p-8 bg-muted/40">
-                {children}
-            </main>
-        </div>
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="animate-spin" />
+      </div>
     );
+  }
+
+  return (
+    <div className="min-h-screen">
+      <aside className="w-64 border-r bg-background hidden md:block fixed h-screen top-0 left-0">
+        <div className="p-4">
+          <h2 className="text-xl font-bold">Admin Dashboard</h2>
+        </div>
+        <nav className="flex flex-col p-2">
+          {sidebarNavItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                pathname === item.href && "bg-muted text-primary"
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.title}
+            </Link>
+          ))}
+        </nav>
+      </aside>
+      <main className="flex-1 p-4 md:p-8 md:pl-72">{children}</main>
+    </div>
+  );
 }

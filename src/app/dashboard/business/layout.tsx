@@ -7,17 +7,25 @@ import { Home, MapPin, Star, Settings } from "lucide-react";
 
 const sidebarNavItems = [
   { title: "Overview", href: "/dashboard/business", icon: Home },
-  { title: "My Locations", href: "/dashboard/business/locations", icon: MapPin },
+  {
+    title: "My Locations",
+    href: "/dashboard/business/locations",
+    icon: MapPin,
+  },
   { title: "Reviews", href: "/dashboard/business/reviews", icon: Star },
   { title: "Settings", href: "/dashboard/business/settings", icon: Settings },
 ];
 
-export default function BusinessDashboardLayout({ children }: { children: React.ReactNode }) {
+export default function BusinessDashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-64 border-r bg-background hidden md:block">
+    <div className="min-h-screen">
+      <aside className="w-64 border-r bg-background hidden md:block fixed h-screen top-0 left-0">
         <div className="p-4">
           <h2 className="text-xl font-bold">Business Dashboard</h2>
         </div>
@@ -37,7 +45,7 @@ export default function BusinessDashboardLayout({ children }: { children: React.
           ))}
         </nav>
       </aside>
-      <main className="flex-1 p-4 md:p-8">{children}</main>
+      <main className="flex-1 p-4 md:p-8 md:pl-72">{children}</main>
     </div>
   );
 }

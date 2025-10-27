@@ -248,28 +248,28 @@ export default function LocationDashboardPage() {
               </TableBody>
             </Table>
           )}
+          <div className="flex items-center justify-end space-x-2 py-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page - 1)}
+              disabled={!allLocationsMeta || allLocationsMeta.currentPage <= 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page + 1)}
+              disabled={
+                !allLocationsMeta ||
+                allLocationsMeta.currentPage >= allLocationsMeta.totalPages
+              }
+            >
+              Next
+            </Button>
+          </div>
         </CardContent>
-        <div className="flex items-center justify-end space-x-2 py-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(page - 1)}
-            disabled={!allLocationsMeta || allLocationsMeta.currentPage <= 1}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(page + 1)}
-            disabled={
-              !allLocationsMeta ||
-              allLocationsMeta.currentPage >= allLocationsMeta.totalPages
-            }
-          >
-            Next
-          </Button>
-        </div>
       </Card>
 
       <Card>
@@ -363,6 +363,25 @@ export default function LocationDashboardPage() {
               </TableBody>
             </Table>
           )}
+
+          <div className="flex items-center justify-end space-x-2 py-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReqPage(reqPage - 1)}
+              disabled={!reqMeta || reqMeta.currentPage <= 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReqPage(reqPage + 1)}
+              disabled={!reqMeta || reqMeta.currentPage >= reqMeta.totalPages}
+            >
+              Next
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -422,25 +441,6 @@ export default function LocationDashboardPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setReqPage(reqPage - 1)}
-          disabled={!reqMeta || reqMeta.currentPage <= 1}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setReqPage(reqPage + 1)}
-          disabled={!reqMeta || reqMeta.currentPage >= reqMeta.totalPages}
-        >
-          Next
-        </Button>
-      </div>
 
       {viewingRequest && (
         <ViewRequestModal
