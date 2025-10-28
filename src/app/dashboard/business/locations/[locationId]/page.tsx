@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocationById } from "@/hooks/locations/useLocationById";
-import { ArrowLeft, FilePenLine, Loader2 } from "lucide-react";
+import { ArrowLeft, CalendarDays, FilePenLine, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 import { Badge } from "@/components/ui/badge";
@@ -53,12 +53,20 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
           </Button>
           <h1 className="text-3xl font-bold">{location.name}</h1>
         </div>
-        <Link href={`/dashboard/business/locations/${location.id}/edit`}>
-          <Button>
-            <FilePenLine className="mr-2 h-4 w-4" />
-            Edit Location
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href={`/dashboard/business/locations/${location.id}/availability`}>
+            <Button variant="outline">
+              <CalendarDays className="mr-2 h-4 w-4" />
+              Manage Availability
+            </Button>
+          </Link>
+          <Link href={`/dashboard/business/locations/${location.id}/edit`}>
+            <Button>
+              <FilePenLine className="mr-2 h-4 w-4" />
+              Edit Location
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -81,11 +89,11 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Address</p>
-                <p>{location.business.address}</p>
+                <p>{location.business?.addressLine}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Category</p>
-                <Badge variant="outline">{location.business.category}</Badge>
+                <Badge variant="outline">{location.business?.category}</Badge>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Tags</p>

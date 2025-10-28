@@ -286,3 +286,27 @@ export interface GetLocationsParams {
   search?: string;
   sortBy?: string;
 }
+
+export interface LocationAvailability {
+  id: number;
+  locationId: string;
+  status: string;
+  note: string | null;
+  startDateTime: string;
+  endDateTime: string;
+}
+
+export interface CreateAvailabilityPayload {
+  locationId: string;
+  startDateTime: string;
+  endDateTime: string;
+  status: string;
+  note?: string;
+}
+
+export interface UpdateAvailabilityPayload {
+  startDateTime?: string;
+  endDateTime?: string;
+  status?: string;
+  note?: string;
+}
