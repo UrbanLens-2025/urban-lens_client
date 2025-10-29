@@ -96,8 +96,6 @@ export function BusinessOnboardingForm() {
     },
   });
 
-  console.log("Form errors:", form.formState.errors);
-
   function onSubmit(values: FormValues) {
     const { ...payload } = values;
     submit(payload);

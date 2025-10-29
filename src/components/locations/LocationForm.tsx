@@ -186,7 +186,6 @@ export default function LocationForm({
       dataToLoad = copiedData;
     }
 
-    console.log("Current form values:", dataToLoad);
     if (dataToLoad) {
       form.reset({
         name: dataToLoad.name,

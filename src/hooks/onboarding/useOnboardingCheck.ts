@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useUser } from '../user/useUser';
+import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useUser } from "../user/useUser";
 
-const ROLES_REQUIRING_ONBOARDING = ['BUSINESS_OWNER', 'EVENT_CREATOR'];
+const ROLES_REQUIRING_ONBOARDING = ["BUSINESS_OWNER", "EVENT_CREATOR"];
 
 export function useOnboardingCheck() {
   const { user, isLoading } = useUser();
@@ -14,12 +14,18 @@ export function useOnboardingCheck() {
   useEffect(() => {
     if (isLoading || !user) return;
 
-    const needsOnboarding = 
+    const needsOnboarding =
       ROLES_REQUIRING_ONBOARDING.includes(user.role) && !user.hasOnboarded;
 
-    if (needsOnboarding && !pathname.startsWith('/onboarding')) {
-      router.replace('/onboarding');
+    if (needsOnboarding && !pathname.startsWith("/onboarding")) {
+      router.replace("/onboarding");
     }
 
+    if (user.hasOnboarded && user.businessProfile?.status === "PENDING") {
+      if (pathname !== "/onboarding/pending") {
+        router.replace("/onboarding/pending");
+      }
+      return;
+    }
   }, [user, isLoading, router, pathname]);
 }

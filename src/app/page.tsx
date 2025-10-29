@@ -17,6 +17,28 @@ export default function RedirectPage() {
       return;
     }
 
+    if (user.role === "BUSINESS_OWNER") {
+      if (!user.hasOnboarded) {
+        router.replace("/onboarding");
+        return;
+      }
+
+      if (user.businessProfile?.status === "PENDING") {
+        router.replace("/onboarding/pending");
+        return;
+      }
+
+      if (user.businessProfile?.status === "REJECTED") {
+        router.replace("/login");
+        return;
+      }
+
+      if (user.businessProfile?.status === "APPROVED") {
+        router.replace("/dashboard/business");
+        return;
+      }
+    }
+
     if (user.role === "ADMIN") {
       router.replace("/admin");
     } else if (user.role === "BUSINESS_OWNER") {
