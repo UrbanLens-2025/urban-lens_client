@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import {
-  IconBuildingBridge2,
+  IconBriefcase,
   IconCalendar,
   IconDashboard,
   IconHelp,
@@ -29,7 +29,7 @@ import { useUser } from "@/hooks/user/useUser";
 const adminNav = [
   { title: "Overview", url: "/admin", icon: IconDashboard },
   { title: "Locations", url: "/admin/locations", icon: IconMapPin },
-  { title: "Business", url: "/admin/business", icon: IconBuildingBridge2 },
+  { title: "Business", url: "/admin/business", icon: IconBriefcase },
 ];
 
 const businessNav = [
