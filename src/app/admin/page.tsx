@@ -32,10 +32,6 @@ function StatCard({ title, value, change, icon: Icon }: any) {
 export default function AdminDashboardPage() {
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Overview</h1>
-      </div>
-
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Total Reviews"

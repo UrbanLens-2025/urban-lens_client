@@ -87,7 +87,6 @@ export default function AdminBusinessPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold">Business Accounts</h1>
       <Card>
         <CardHeader>
           <CardTitle>Manage Business Registrations</CardTitle>

@@ -156,10 +156,6 @@ export default function LocationDashboardPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Locations</h1>
-          <p className="text-muted-foreground">Manage locations.</p>
-        </div>
         <Link href="/admin/locations/create">
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Public Location

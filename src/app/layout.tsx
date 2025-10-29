@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/sonner";
-import Providers from "./QueryClient";
-import { AppLayout } from "@/components/AppLayout";
-import { GoogleMapsProvider } from "@/components/providers/GoogleMapsProvider";
-// import { ThemeProvider } from "@/components/theme-provider";
+import RootLayoutClient from "./RootLayoutClient";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -24,29 +21,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        > */}
-        <Providers>
-          <GoogleMapsProvider>
-            <AppLayout>
-              {children}
-              <Toaster />
-            </AppLayout>
-          </GoogleMapsProvider>
-        </Providers>
-        {/* </ThemeProvider> */}
+        <RootLayoutClient>{children}</RootLayoutClient>
       </body>
     </html>
   );
