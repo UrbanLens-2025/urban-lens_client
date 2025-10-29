@@ -14,6 +14,8 @@ export function SiteHeader() {
     "/dashboard/business": "Overview",
     "/admin/locations": "Locations",
     "/admin/business": "Business",
+    "/admin/tags": "Tags",
+    "/admin/addresses": "Addresses",
     "/dashboard/business/locations": "My Locations",
   };
 

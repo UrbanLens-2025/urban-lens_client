@@ -3,12 +3,15 @@ import axiosInstance from "./axios-config";
 import type {
   ApiResponse,
   CreateLocationPayload,
+  CreateTagPayload,
   GetRequestsParams,
+  GetTagsParams,
   Location,
   LocationRequest,
   PaginatedData,
   Tag,
   UpdateLocationPayload,
+  UpdateTagPayload,
 } from "@/types";
 
 export const getMyLocations = async ({
@@ -142,11 +145,50 @@ export const removeTagsFromLocationRequest = async (
   return data;
 };
 
-export const getAllTags = async (): Promise<PaginatedData<Tag>> => {
+export const getAllTags = async ({
+  page = 1,
+  limit = 20,
+  search,
+  sortBy,
+}: GetTagsParams = {}): Promise<PaginatedData<Tag>> => {
+  const params: any = {
+    page,
+    limit,
+  };
+
+  if (search) {
+    params.search = search;
+    params.searchBy = ["displayName"];
+  }
+
+  if (sortBy) {
+    params.sortBy = sortBy;
+  }
+
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Tag>>>(
-    "/v1/public/tag"
+    "/v1/admin/tag",
+    { params }
   );
   return data.data;
+};
+
+export const createTags = async (
+  payload: CreateTagPayload
+): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>(
+    "/v1/admin/tag",
+    payload
+  );
+};
+
+export const updateTag = async (
+  tagId: number,
+  payload: UpdateTagPayload
+): Promise<void> => {
+  await axiosInstance.put<ApiResponse<void>>(
+    `/v1/admin/tag/${tagId}`,
+    payload
+  );
 };
 
 export const updateLocationRequest = async ({

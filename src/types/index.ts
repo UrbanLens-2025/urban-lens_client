@@ -11,6 +11,7 @@ export interface Meta {
   totalItems: number;
   currentPage: number;
   totalPages: number;
+  sortBy?: [string, string][]; // e.g., [["name", "DESC"]]
 }
 
 export interface PaginatedData<T> {
@@ -137,9 +138,40 @@ export interface CreatorOnboardingPayload {
 
 export interface Tag {
   id: number;
+  groupName: string | null;
   displayName: string;
   color: string;
   icon: string;
+  isSelectable: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetTagsParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+}
+
+export interface CreateTagItem {
+  groupName: string;
+  displayName: string;
+  color: string;
+  icon: string;
+  isSelectable: boolean;
+}
+
+export interface CreateTagPayload {
+  list: CreateTagItem[];
+}
+
+export interface UpdateTagPayload {
+  groupName?: string;
+  displayName?: string;
+  color?: string;
+  icon?: string;
+  isSelectable?: boolean;
 }
 
 export interface Location {
@@ -310,4 +342,70 @@ export interface UpdateAvailabilityPayload {
   endDateTime?: string;
   status?: string;
   note?: string;
+}
+
+export interface Province {
+  code: string;
+  name: string;
+  administrativeLevel: string;
+  isVisible: boolean;
+}
+
+export interface GetProvincesParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+}
+
+export interface CreateProvinceItem {
+  code: string;
+  name: string;
+  administrativeLevel: string;
+  isVisible: boolean;
+}
+
+export interface CreateProvincePayload {
+  values: CreateProvinceItem[];
+}
+
+export interface UpdateProvincePayload {
+  name: string;
+  administrativeLevel: string;
+  isVisible: boolean;
+}
+
+export interface Ward {
+  code: string;
+  name: string;
+  administrativeLevel: string;
+  provinceCode: string;
+  isVisible: boolean;
+}
+
+export interface GetWardsParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  provinceCode?: string;
+}
+
+export interface CreateWardItem {
+  code: string;
+  name: string;
+  administrativeLevel: string;
+  provinceCode: string;
+  isVisible: boolean;
+}
+
+export interface CreateWardPayload {
+  values: CreateWardItem[];
+}
+
+export interface UpdateWardPayload {
+  name: string;
+  administrativeLevel: string;
+  provinceCode: string;
+  isVisible: boolean;
 }
