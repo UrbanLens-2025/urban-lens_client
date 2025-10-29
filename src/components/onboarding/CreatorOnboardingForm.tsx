@@ -64,6 +64,8 @@ export function CreatorOnboardingForm() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(creatorSchema),
+    mode: "onChange",
+    reValidateMode: "onBlur",
     defaultValues: {
       displayName: "",
       description: "",

@@ -78,6 +78,8 @@ export function BusinessOnboardingForm() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(businessSchema),
+    mode: "onChange",
+    reValidateMode: "onBlur",
     defaultValues: {
       name: "",
       description: "",

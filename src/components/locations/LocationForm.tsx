@@ -160,7 +160,8 @@ export default function LocationForm({
 
   const form = useForm<FormValues>({
     resolver: zodResolver(locationSchema),
-    mode: "all",
+    mode: "onChange",
+    reValidateMode: "onBlur",
     defaultValues: {
       name: "",
       description: "",

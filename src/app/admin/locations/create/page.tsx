@@ -58,7 +58,8 @@ export default function CreatePublicLocationPage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(publicLocationSchema),
-    mode: "all",
+    mode: "onChange",
+    reValidateMode: "onBlur",
     defaultValues: {
       name: "",
       description: "",

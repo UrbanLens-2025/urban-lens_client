@@ -61,6 +61,8 @@ export default function EditLocationPage({
 
   const form = useForm<FormValues>({
     resolver: zodResolver(updateLocationSchema),
+    mode: "onChange",
+    reValidateMode: "onBlur",
     defaultValues: {
       name: "",
       description: "",
