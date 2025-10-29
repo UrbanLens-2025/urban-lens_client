@@ -27,10 +27,12 @@ export function useLogin() {
 
         const userRole = user.role;
 
+        if (!user.hasOnboarded) router.push("/onboarding");
+
         if (userRole === "ADMIN") {
           router.push("/admin");
         } else if (userRole === "BUSINESS_OWNER") {
-          router.push("/dashboard/business"); 
+          router.push("/dashboard/business");
         } else if (userRole === "EVENT_CREATOR") {
           router.push("/dashboard/creator");
         } else {

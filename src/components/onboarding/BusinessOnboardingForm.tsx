@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -36,6 +35,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
 import { FileUpload } from "../shared/FileUpload";
 import { LocationAddressPicker } from "../shared/LocationAddressPicker";
+import { SingleFileUpload } from "../shared/SingleFileUpload";
 
 const businessCategories = [
   "FOOD",
@@ -180,19 +180,16 @@ export function BusinessOnboardingForm() {
             />
             <FormField
               name="avatar"
-              render={() => (
+              control={form.control}
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Business Avatar</FormLabel>
-                  <FileUpload
-                    value={
-                      form.getValues("avatar") ? [form.getValues("avatar")] : []
-                    }
-                    onChange={(urls) =>
-                      form.setValue("avatar", urls[0] || "", {
-                        shouldValidate: true,
-                      })
-                    }
-                  />
+                  <FormLabel>Avatar</FormLabel>
+                  <FormControl>
+                    <SingleFileUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

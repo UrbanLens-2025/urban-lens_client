@@ -6,6 +6,13 @@ import { toast } from "sonner";
 import { uploadImage } from "@/api/upload";
 import { Loader2, UploadCloud, X } from "lucide-react";
 import { Button } from "../ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface FileUploadProps {
   value: string[];
@@ -15,6 +22,7 @@ interface FileUploadProps {
 export function FileUpload({ value, onChange }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [previews, setPreviews] = useState<string[]>(value || []);
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
   useEffect(() => {
     setPreviews(value || []);
@@ -35,7 +43,7 @@ export function FileUpload({ value, onChange }: FileUploadProps) {
         const uploadPromises = acceptedFiles.map((file) => uploadImage(file));
         const finalUrls = await Promise.all(uploadPromises);
 
-        const nonTempPreviews = (value || []).filter(p => !tempUrls.includes(p));
+        const nonTempPreviews = (value || []).filter((p) => !tempUrls.includes(p));
         onChange([...nonTempPreviews, ...finalUrls]);
 
         toast.success("All uploads successful!");
@@ -67,30 +75,47 @@ export function FileUpload({ value, onChange }: FileUploadProps) {
       {previews && previews.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
           {previews.map((url, index) => (
-            <div
-              key={url || index}
-              className="w-full aspect-video bg-gray-100 rounded-md overflow-hidden relative"
-            >
-              <img
-                src={url}
-                alt={`Preview ${index + 1}`}
-                className="w-full h-full object-cover rounded-md"
-              />
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="absolute top-1 right-1 h-6 w-6 rounded-full"
-                onClick={() => handleRemove(url)}
-                disabled={isUploading}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <Dialog key={url || index} onOpenChange={(open) => !open && setZoomedImage(null)}>
+              <DialogTrigger asChild>
+                <div className="relative w-full aspect-video bg-gray-100 rounded-md overflow-hidden group cursor-pointer">
+                  <img
+                    src={url}
+                    alt={`Preview ${index + 1}`}
+                    className="w-full h-full object-cover rounded-md transition-transform group-hover:scale-105"
+                    onClick={() => setZoomedImage(url)}
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-1 right-1 h-6 w-6 rounded-full z-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemove(url);
+                    }}
+                    disabled={isUploading}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </DialogTrigger>
+
+              <DialogContent className="max-w-4xl p-0 bg-transparent border-none shadow-none">
+                <VisuallyHidden>
+                  <DialogTitle>Image preview</DialogTitle>
+                </VisuallyHidden>
+                <img
+                  src={zoomedImage || url}
+                  alt="Zoomed preview"
+                  className="w-full h-auto max-h-[90vh] rounded-lg object-contain"
+                />
+              </DialogContent>
+            </Dialog>
           ))}
+
           {isUploading && (
-             <div className="w-full aspect-video bg-gray-100 rounded-md overflow-hidden relative flex items-center justify-center border-2 border-dashed">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            <div className="w-full aspect-video bg-gray-100 rounded-md overflow-hidden relative flex items-center justify-center border-2 border-dashed">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
             </div>
           )}
         </div>
@@ -98,13 +123,11 @@ export function FileUpload({ value, onChange }: FileUploadProps) {
 
       <div
         {...getRootProps()}
-        className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-          ${
-            isDragActive
-              ? "border-blue-500 bg-blue-50"
-              : "border-gray-300 hover:border-gray-400"
-          }
-        `}
+        className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+          isDragActive
+            ? "border-blue-500 bg-blue-50"
+            : "border-gray-300 hover:border-gray-400"
+        }`}
       >
         <input {...getInputProps()} />
         <div className="flex flex-col items-center justify-center">

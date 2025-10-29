@@ -33,6 +33,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, PlusCircle, Trash2 } from "lucide-react";
 import { FileUpload } from "../shared/FileUpload";
 import { Textarea } from "../ui/textarea";
+import { SingleFileUpload } from "../shared/SingleFileUpload";
 
 const socialLinkSchema = z.object({
   platform: z.string().min(1, "Required"),
@@ -240,18 +241,19 @@ export function CreatorOnboardingForm() {
             </div>
 
             <Separator />
+            
             <FormField
               control={form.control}
               name="avatarUrl"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Avatar</FormLabel>
-                  <FileUpload
-                    value={form.getValues("avatarUrl") ? [form.getValues("avatarUrl")] : []}
-                    onChange={(urls) =>
-                      form.setValue("avatarUrl", urls[0] || "", { shouldValidate: true })
-                    }
-                  />
+                  <FormControl>
+                    <SingleFileUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -260,15 +262,15 @@ export function CreatorOnboardingForm() {
             <FormField
               control={form.control}
               name="coverUrl"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Cover</FormLabel>
-                  <FileUpload
-                    value={form.getValues("coverUrl") ? [form.getValues("coverUrl")] : []}
-                    onChange={(urls) =>
-                      form.setValue("coverUrl", urls[0] || "", { shouldValidate: true })
-                    }
-                  />
+                  <FormControl>
+                    <SingleFileUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
