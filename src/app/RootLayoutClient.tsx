@@ -12,10 +12,13 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/shared/AppSidebar";
 import { SiteHeader } from "@/components/shared/SiteHeader";
 import { useUser } from "@/hooks/user/useUser";
+import { useOnboardingCheck } from "@/hooks/onboarding/useOnboardingCheck";
+import { ModeSwitcher } from "@/components/shared/ModeSwitcher";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useUser();
   const router = useRouter();
+  useOnboardingCheck();
 
   React.useEffect(() => {
     if (!isLoading && !user) {
@@ -64,7 +67,10 @@ export default function RootLayoutClient({
 }) {
   const pathname = usePathname();
   const isAuthPage =
-    pathname.startsWith("/login") || pathname.startsWith("/signup");
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/signup") ||
+    pathname.startsWith("/verify") ||
+    pathname.startsWith("/onboarding");
 
   return (
     <ThemeProvider
@@ -78,12 +84,20 @@ export default function RootLayoutClient({
           <GoogleMapsProvider>
             {isAuthPage ? (
               <>
+                <div className="fixed top-4 right-4 z-50">
+                  <ModeSwitcher />
+                </div>
                 {children}
                 <Toaster />
               </>
             ) : (
               <>
-                <AuthenticatedLayout>{children}</AuthenticatedLayout>
+                <AuthenticatedLayout>
+                  <div className="fixed top-4 right-4 z-50">
+                    <ModeSwitcher />
+                  </div>
+                  {children}
+                </AuthenticatedLayout>
                 <Toaster />
               </>
             )}

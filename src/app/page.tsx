@@ -10,21 +10,19 @@ export default function RedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading) return; 
+    if (isLoading) return;
 
     if (!user) {
-      router.replace('/login');
+      router.replace("/login");
       return;
     }
 
-    if (user.role === 'ADMIN') {
-      router.replace('/admin');
-    } else if (user.role === 'BUSINESS_OWNER') {
-      router.replace('/dashboard/business/locations');
-    } else if (user.role === 'EVENT_CREATOR') {
-      router.replace('/dashboard/creator/events');
-    } else {
-      router.replace('/');
+    if (user.role === "ADMIN") {
+      router.replace("/admin");
+    } else if (user.role === "BUSINESS_OWNER") {
+      router.replace("/dashboard/business");
+    } else if (user.role === "EVENT_CREATOR") {
+      router.replace("/dashboard/creator");
     }
   }, [user, isLoading, router]);
 

@@ -24,6 +24,7 @@ export interface SignupPayload {
   firstName: string;
   lastName: string;
   phoneNumber: string;
+  role: string;
 }
 export interface SignupResponse {
   confirmCode: string;

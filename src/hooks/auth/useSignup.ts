@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { signup } from "@/api/auth";
 import { SignupPayload } from "@/types";
+import Cookies from "js-cookie";
 
 export function useSignup() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export function useSignup() {
         toast.success(data.message || "Signup successful! Please check your email for verification.");
         localStorage.setItem("signupEmail", variables.email);
         localStorage.setItem("confirmCode", data.data.confirmCode);
+        Cookies.set("signup_pending", "true", { expires: 1/144 });
         router.push("/verify");
       } else {
         toast.error(data.message || "An unexpected error occurred.");

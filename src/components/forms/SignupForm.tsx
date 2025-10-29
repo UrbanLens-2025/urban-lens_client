@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,14 +28,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Loader2, Eye, EyeOff } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import { Checkbox } from "../ui/checkbox";
 
 const formSchema = z.object({
   firstName: z.string().min(1, { message: "First name is required." }),
@@ -45,19 +37,23 @@ const formSchema = z.object({
     .string()
     .min(8, { message: "Password must be at least 8 characters." }),
   phoneNumber: z.string().min(10, { message: "Invalid phone number." }),
-  role: z.enum(["USER", "BUSINESS_OWNER", "EVENT_CREATOR"]).optional(),
 });
-
-const roles = [
-  { value: "BUSINESS_OWNER", label: "Business Owner" },
-  { value: "EVENT_CREATOR", label: "Event Creator" },
-];
 
 export function SignupForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const { user, isLoading: isUserLoading } = useUser();
-  const [isSpecialRole, setIsSpecialRole] = useState(false);
+  const searchParams = useSearchParams();
+
+  const [role] = useState<"BUSINESS_OWNER" | "EVENT_CREATOR" | null>(() => {
+    const paramRole = searchParams.get("role");
+    if (paramRole === "EVENT_CREATOR" || paramRole === "BUSINESS_OWNER") {
+      return paramRole;
+    }
+    return null;
+  });
+
+  const title = role === "EVENT_CREATOR" ? "Event Creator" : "Business Owner";
 
   useEffect(() => {
     if (user) {
@@ -67,6 +63,8 @@ export function SignupForm() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    mode: "onChange",
+    reValidateMode: "onBlur",
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -78,12 +76,7 @@ export function SignupForm() {
 
   const { mutate: signup, isPending } = useSignup();
 
-  useEffect(() => {
-    form.setValue("role", undefined);
-    form.clearErrors("role");
-  }, [isSpecialRole, form]);
-
-  if (isUserLoading || user) {
+  if (isUserLoading || user || !role) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin w-8 h-8" />
@@ -92,24 +85,13 @@ export function SignupForm() {
   }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    const payload = {
-      ...values,
-      role: isSpecialRole ? values.role : "USER",
-    };
-    if (isSpecialRole && !payload.role) {
-      form.setError("role", {
-        type: "manual",
-        message: "Continuing as...",
-      });
-      return;
-    }
-    signup(payload);
+    signup({ ...values, role: role?? "USER" });
   }
 
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">Create an account</CardTitle>
+        <CardTitle className="text-xl">Create an {title} account</CardTitle>
         <CardDescription>
           Enter your details below to create your account
         </CardDescription>
@@ -206,53 +188,6 @@ export function SignupForm() {
                 </FormItem>
               )}
             />
-
-            <div className="items-top flex space-x-2 w-full">
-              <Checkbox
-                id="special-role-check"
-                checked={isSpecialRole}
-                onCheckedChange={(checked) =>
-                  setIsSpecialRole(Boolean(checked))
-                }
-              />
-              <div className="grid gap-1.5 leading-none">
-                <label
-                  htmlFor="special-role-check"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Continuing as...
-                </label>
-              </div>
-            </div>
-
-            {isSpecialRole && (
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl className="w-full">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {roles.map((role) => (
-                          <SelectItem key={role.value} value={role.value}>
-                            {role.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
 
             <Button type="submit" className="w-full" disabled={isPending}>
               {isPending ? (

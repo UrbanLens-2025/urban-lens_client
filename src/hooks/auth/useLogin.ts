@@ -23,7 +23,7 @@ export function useLogin() {
 
         localStorage.setItem("token", data.data.token);
         localStorage.setItem("userId", user.id);
-        localStorage.setItem("userRole", user.role);
+        localStorage.setItem("role", user.role);
 
         const userRole = user.role;
 
