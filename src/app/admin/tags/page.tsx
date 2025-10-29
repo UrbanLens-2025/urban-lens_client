@@ -234,6 +234,12 @@ export default function TagsManagementPage() {
   return (
     <>
       <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Tags Management</h1>
+          <p className="text-muted-foreground mt-2">
+            Create and manage tags for location categorization
+          </p>
+        </div>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-2 flex-1">
