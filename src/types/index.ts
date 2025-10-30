@@ -203,6 +203,8 @@ export interface LocationRequest {
     documentType: string;
     documentImageUrls: string[];
   }[];
+  type: string;
+  updatedAt: string;
 }
 
 export interface CreateLocationPayload {
