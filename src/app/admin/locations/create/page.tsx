@@ -27,6 +27,10 @@ import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 import { PlacesAutocomplete } from "@/components/shared/PlacesAutocomplete";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
+import { DisplayTags } from "@/components/shared/DisplayTags";
+import { useMemo } from "react";
+import { PaginatedData, Tag } from "@/types";
+import { useTags } from "@/hooks/tags/useTags";
 
 const publicLocationSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -55,6 +59,7 @@ const findAddressComponent = (
 export default function CreatePublicLocationPage() {
   const router = useRouter();
   const { mutate: createLocation, isPending } = useCreatePublicLocation();
+  const { data: allTagsResponse } = useTags();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(publicLocationSchema),
@@ -113,6 +118,23 @@ export default function CreatePublicLocationPage() {
   };
 
   const watchedValues = form.watch();
+  const tagsMap = useMemo(() => {
+      const map = new Map<number, Tag>();
+      const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];
+      allTags.forEach((tag) => map.set(tag.id, tag));
+      return map;
+    }, [allTagsResponse]);
+  
+    const tags = useMemo(() => {
+      if (!watchedValues.tagIds || !tagsMap) {
+        return [];
+      }
+  
+      return watchedValues.tagIds
+        .map((id) => tagsMap.get(id))
+        .filter((tag): tag is Tag => !!tag)
+        .map((tag) => ({ tag: tag }));
+    }, [watchedValues.tagIds, tagsMap]);
   const markerLat = watchedValues.latitude;
   const markerLng = watchedValues.longitude;
   const markerPosition =
@@ -181,6 +203,7 @@ export default function CreatePublicLocationPage() {
                       </FormItem>
                     )}
                   />
+                  <DisplayTags tags={tags} maxCount={4} />
                 </CardContent>
               </Card>
 
