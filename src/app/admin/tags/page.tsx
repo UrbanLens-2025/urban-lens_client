@@ -283,6 +283,9 @@ export default function TagsManagementPage() {
                           <SortIcon field="displayName" />
                         </Button>
                       </TableHead>
+                      <TableHead>Is Selectable</TableHead>
+                      <TableHead>Color</TableHead>
+                      <TableHead>Icon</TableHead>
                       <TableHead>
                         <Button
                           variant="ghost"
@@ -303,9 +306,6 @@ export default function TagsManagementPage() {
                           <SortIcon field="updatedAt" />
                         </Button>
                       </TableHead>
-                      <TableHead>Is Selectable</TableHead>
-                      <TableHead>Color</TableHead>
-                      <TableHead>Icon</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -322,12 +322,6 @@ export default function TagsManagementPage() {
                               </div>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(tag.createdAt)}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(tag.updatedAt)}
                         </TableCell>
                         <TableCell>
                           <Badge variant={tag.isSelectable ? "default" : "secondary"}>
@@ -347,6 +341,12 @@ export default function TagsManagementPage() {
                         </TableCell>
                         <TableCell>
                           <span className="text-2xl">{tag.icon}</span>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(tag.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(tag.updatedAt)}
                         </TableCell>
                         <TableCell>
                           <Button

@@ -44,7 +44,7 @@ export default function RedirectPage() {
     } else if (user.role === "BUSINESS_OWNER") {
       router.replace("/dashboard/business");
     } else if (user.role === "EVENT_CREATOR") {
-      router.replace("/dashboard/creator");
+      router.replace("/creator/dashboard");
     }
   }, [user, isLoading, router]);
 

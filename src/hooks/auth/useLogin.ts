@@ -34,7 +34,7 @@ export function useLogin() {
         } else if (userRole === "BUSINESS_OWNER") {
           router.push("/dashboard/business");
         } else if (userRole === "EVENT_CREATOR") {
-          router.push("/dashboard/creator");
+          router.push("/creator/dashboard");
         } else {
           router.push("/");
         }

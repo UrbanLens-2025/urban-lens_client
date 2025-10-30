@@ -11,6 +11,10 @@ import {
   IconSettings,
   IconTag,
   IconMapPinCode,
+  IconWallet,
+  IconCalendarEvent,
+  IconClipboardList,
+  IconPlus,
 } from "@tabler/icons-react";
 
 import {
@@ -45,10 +49,27 @@ const businessNav = [
   },
 ];
 
-const creatorNav = [{ title: "My Events", url: "#", icon: IconCalendar }];
+const creatorNav = [
+  { title: "Overview", url: "/creator/dashboard", icon: IconDashboard },
+  { 
+    title: "Events", 
+    icon: IconCalendar,
+    items: [
+      { title: "My Events", url: "/creator/events", icon: IconCalendarEvent },
+      { title: "Event Requests", url: "/creator/event-requests", icon: IconClipboardList },
+      { title: "Create Event", url: "/creator/events/create", icon: IconPlus },
+    ]
+  },
+];
 
 const navSecondary = [
   { title: "Settings", url: "#", icon: IconSettings },
+  { title: "Get Help", url: "#", icon: IconHelp },
+];
+
+const creatorNavSecondary = [
+  { title: "Settings", url: "#", icon: IconSettings },
+  { title: "Wallet", url: "/creator/wallet", icon: IconWallet },
   { title: "Get Help", url: "#", icon: IconHelp },
 ];
 
@@ -68,25 +89,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }, [user]);
 
-  const { navMain } = React.useMemo(() => {
-    if (!user) return { navMain: [] };
+  const { navMain, navSecondaryItems } = React.useMemo(() => {
+    if (!user) return { navMain: [], navSecondaryItems: navSecondary };
 
     switch (user.role) {
       case "ADMIN":
         return {
           navMain: adminNav,
+          navSecondaryItems: navSecondary,
         };
       case "BUSINESS_OWNER":
         return {
           navMain: businessNav,
+          navSecondaryItems: navSecondary,
         };
       case "EVENT_CREATOR":
         return {
           navMain: creatorNav,
+          navSecondaryItems: creatorNavSecondary,
         };
       default:
         return {
           navMain: [],
+          navSecondaryItems: navSecondary,
         };
     }
   }, [user]);
@@ -128,7 +153,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMain} />
-        <NavSecondary items={navSecondary} className="mt-auto" />
+        <NavSecondary items={navSecondaryItems} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser

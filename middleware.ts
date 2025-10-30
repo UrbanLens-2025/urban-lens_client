@@ -13,7 +13,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/verify", req.url));
   }
 
-  const protectedPaths = ["/dashboard", "/admin"];
+  const protectedPaths = ["/dashboard", "/admin", "/creator"];
   if (!token && protectedPaths.some((p) => pathname.startsWith(p))) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
@@ -23,6 +23,10 @@ export function middleware(req: NextRequest) {
       const decoded = jwt.verify(token, JWT_SECRET) as { role: string };
 
       if (pathname.startsWith("/admin") && decoded.role !== "ADMIN") {
+        return NextResponse.redirect(new URL("/", req.url));
+      }
+
+      if (pathname.startsWith("/creator") && decoded.role !== "EVENT_CREATOR") {
         return NextResponse.redirect(new URL("/", req.url));
       }
 
@@ -55,6 +59,7 @@ export const config = {
   matcher: [
     "/admin/:path*",
     "/dashboard/:path*",
+    "/creator/:path*",
     "/account/:path*",
     "/login",
     "/signup/:path*",
