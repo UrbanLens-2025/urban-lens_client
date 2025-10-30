@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useLocationById } from "@/hooks/locations/useLocationById"
+import { useLocationById } from "@/hooks/locations/useLocationById";
 import {
   ArrowLeft,
   CalendarDays,
@@ -17,32 +17,39 @@ import {
   Building,
   Calendar,
   Tag,
-} from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker"
-import { Badge } from "@/components/ui/badge"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { use } from "react"
-import { DisplayTags } from "@/components/shared/DisplayTags"
-import type React from "react"
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
+import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { use, useState } from "react";
+import { DisplayTags } from "@/components/shared/DisplayTags";
+import type React from "react";
+import { ImageViewer } from "@/components/shared/ImageViewer";
 
 function InfoRow({
   label,
   value,
   icon: Icon,
-}: { label: string; value: React.ReactNode; icon?: React.ComponentType<{ className?: string }> }) {
-  if (!value) return null
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon?: React.ComponentType<{ className?: string }>;
+}) {
+  if (!value) return null;
   return (
     <div className="flex gap-3">
-      {Icon && <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />}
+      {Icon && (
+        <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+      )}
       <div className="flex-1">
         <p className="text-sm font-semibold text-muted-foreground">{label}</p>
         <div className="text-base text-foreground">{value}</div>
       </div>
     </div>
-  )
+  );
 }
 
 function formatDate(dateString: string) {
@@ -50,29 +57,46 @@ function formatDate(dateString: string) {
     year: "numeric",
     month: "long",
     day: "numeric",
-  })
+  });
 }
 
-export default function LocationDetailsPage({ params }: { params: Promise<{ locationId: string }> }) {
-  const { locationId } = use(params)
-  const { data: location, isLoading, isError } = useLocationById(locationId)
-  const router = useRouter()
+export default function LocationDetailsPage({
+  params,
+}: {
+  params: Promise<{ locationId: string }>;
+}) {
+  const { locationId } = use(params);
+  const { data: location, isLoading, isError } = useLocationById(locationId);
+  const router = useRouter();
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState("");
+  const [currentImageAlt, setCurrentImageAlt] = useState("");
+
+  const handleImageClick = (src: string, alt: string) => {
+    setCurrentImageSrc(src);
+    setCurrentImageAlt(alt);
+    setIsImageViewerOpen(true);
+  };
 
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="animate-spin" />
       </div>
-    )
+    );
   }
   if (isError || !location) {
-    return <div className="text-center py-20 text-red-500">Error loading location details.</div>
+    return (
+      <div className="text-center py-20 text-red-500">
+        Error loading location details.
+      </div>
+    );
   }
 
   const position = {
     lat: location.latitude,
     lng: location.longitude,
-  }
+  };
 
   return (
     <div className="space-y-8 p-6">
@@ -86,12 +110,16 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
           <div>
             <h1 className="text-3xl font-bold">{location.name}</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {location.ownershipType === "OWNED_BY_BUSINESS" ? "Business Owned" : "User Owned"}
+              {location.ownershipType === "OWNED_BY_BUSINESS"
+                ? "Business Owned"
+                : "User Owned"}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/dashboard/business/locations/${location.id}/availability`}>
+          <Link
+            href={`/dashboard/business/locations/${location.id}/availability`}
+          >
             <Button variant="outline">
               <CalendarDays className="mr-2 h-4 w-4" />
               Manage Availability
@@ -118,9 +146,18 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <InfoRow label="Description" value={location.description || "No description"} />
-              <InfoRow label="Category" value={location.business?.category || "N/A"} />
-              <InfoRow label="Total Check-ins" value={location.totalCheckIns || "0"} />
+              <InfoRow
+                label="Description"
+                value={location.description || "No description"}
+              />
+              <InfoRow
+                label="Category"
+                value={location.business?.category || "N/A"}
+              />
+              <InfoRow
+                label="Total Check-ins"
+                value={location.totalCheckIns || "0"}
+              />
               <InfoRow
                 label="Visibility"
                 value={
@@ -155,30 +192,6 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
             </Card>
           )}
 
-          {/* Location Images */}
-          {location.imageUrl && location.imageUrl.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5" />
-                  Location Images
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-wrap gap-4">
-                {location.imageUrl.map((url, index) => (
-                  <div key={index} className="flex flex-col gap-2">
-                    <img
-                      src={url || "/placeholder.svg"}
-                      alt={`Location image ${index + 1}`}
-                      className="w-48 h-48 object-cover rounded-md border"
-                    />
-                    <p className="text-xs text-muted-foreground">Image {index + 1}</p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
           {/* Business Information */}
           {location.business && (
             <Card>
@@ -198,14 +211,30 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
                     />
                   )}
                   <div className="flex-1">
-                    <p className="font-semibold text-lg">{location.business.name}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{location.business.description}</p>
+                    <p className="font-semibold text-lg">
+                      {location.business.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {location.business.description}
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-3 pt-4 border-t">
-                  {location.business.email && <InfoRow label="Email" value={location.business.email} icon={Mail} />}
-                  {location.business.phone && <InfoRow label="Phone" value={location.business.phone} icon={Phone} />}
+                  {location.business.email && (
+                    <InfoRow
+                      label="Email"
+                      value={location.business.email}
+                      icon={Mail}
+                    />
+                  )}
+                  {location.business.phone && (
+                    <InfoRow
+                      label="Phone"
+                      value={location.business.phone}
+                      icon={Phone}
+                    />
+                  )}
                   {location.business.website && (
                     <InfoRow
                       label="Website"
@@ -226,11 +255,19 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
 
                 {location.business.licenseNumber && (
                   <div className="space-y-3 pt-4 border-t">
-                    <InfoRow label="License Type" value={location.business.licenseType} />
-                    <InfoRow label="License Number" value={location.business.licenseNumber} />
+                    <InfoRow
+                      label="License Type"
+                      value={location.business.licenseType}
+                    />
+                    <InfoRow
+                      label="License Number"
+                      value={location.business.licenseNumber}
+                    />
                     <InfoRow
                       label="License Expiration"
-                      value={formatDate(location.business.licenseExpirationDate)}
+                      value={formatDate(
+                        location.business.licenseExpirationDate
+                      )}
                     />
                   </div>
                 )}
@@ -239,7 +276,13 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
                   <InfoRow
                     label="Status"
                     value={
-                      <Badge variant={location.business.status === "APPROVED" ? "default" : "secondary"}>
+                      <Badge
+                        variant={
+                          location.business.status === "APPROVED"
+                            ? "default"
+                            : "secondary"
+                        }
+                      >
                         {location.business.status}
                       </Badge>
                     }
@@ -259,7 +302,10 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
             </CardHeader>
             <CardContent className="space-y-4">
               <InfoRow label="Created" value={formatDate(location.createdAt)} />
-              <InfoRow label="Last Updated" value={formatDate(location.updatedAt)} />
+              <InfoRow
+                label="Last Updated"
+                value={formatDate(location.updatedAt)}
+              />
             </CardContent>
           </Card>
         </div>
@@ -276,11 +322,20 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
             </CardHeader>
             <CardContent className="space-y-4">
               <InfoRow label="Address" value={location.addressLine} />
-              <InfoRow label="District/Ward" value={location.addressLevel1 || "N/A"} />
-              <InfoRow label="Province/City" value={location.addressLevel2 || "N/A"} />
+              <InfoRow
+                label="District/Ward"
+                value={location.addressLevel1 || "N/A"}
+              />
+              <InfoRow
+                label="Province/City"
+                value={location.addressLevel2 || "N/A"}
+              />
               <InfoRow label="Latitude" value={location.latitude} />
               <InfoRow label="Longitude" value={location.longitude} />
-              <InfoRow label="Service Radius" value={`${location.radiusMeters} meters`} />
+              <InfoRow
+                label="Service Radius"
+                value={`${location.radiusMeters} meters`}
+              />
             </CardContent>
           </Card>
 
@@ -295,20 +350,57 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
             <CardContent className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Check-ins</span>
-                <span className="font-semibold">{location.totalCheckIns || "0"}</span>
+                <span className="font-semibold">
+                  {location.totalCheckIns || "0"}
+                </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Service Radius</span>
+                <span className="text-sm text-muted-foreground">
+                  Service Radius
+                </span>
                 <span className="font-semibold">{location.radiusMeters}m</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Ownership</span>
                 <Badge variant="outline" className="text-xs">
-                  {location.ownershipType === "OWNED_BY_BUSINESS" ? "Business" : "User"}
+                  {location.ownershipType === "OWNED_BY_BUSINESS"
+                    ? "Business"
+                    : "User"}
                 </Badge>
               </div>
             </CardContent>
           </Card>
+
+          {/* Location Images */}
+          {location.imageUrl && location.imageUrl.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5" />
+                  Location Images
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4">
+                  {location.imageUrl.map((url, index) => (
+                    <div key={index} className="flex flex-col gap-2">
+                      <img
+                        src={url || "/placeholder.svg"}
+                        alt={`Location image ${index + 1}`}
+                        onClick={() =>
+                          handleImageClick(url, `Location ${index + 1}`)
+                        }
+                        className="w-full h-36 object-cover rounded-md border cursor-pointer"
+                      />
+                      <p className="text-xs text-muted-foreground text-center">
+                        Image {index + 1}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Map */}
           <Card className="sticky top-6">
@@ -319,11 +411,20 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
               </CardTitle>
             </CardHeader>
             <CardContent className="h-96 rounded-lg overflow-hidden">
-              <GoogleMapsPicker position={position} onPositionChange={() => {}} />
+              <GoogleMapsPicker
+                position={position}
+                onPositionChange={() => {}}
+              />
             </CardContent>
           </Card>
         </div>
       </div>
+      <ImageViewer
+        src={currentImageSrc}
+        alt={currentImageAlt}
+        open={isImageViewerOpen}
+        onOpenChange={setIsImageViewerOpen}
+      />
     </div>
-  )
+  );
 }

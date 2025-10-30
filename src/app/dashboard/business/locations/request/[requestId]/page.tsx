@@ -400,22 +400,24 @@ export default function LocationRequestDetailsPage({
                     Location Images
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-wrap gap-4">
-                  {request.locationImageUrls.map((url, index) => (
-                    <div key={index} className="flex flex-col gap-2">
-                      <img
-                        src={url || "/placeholder.svg"}
-                        alt={`Location ${index + 1}`}
-                        onClick={() =>
-                          handleImageClick(url, `Location ${index + 1}`)
-                        }
-                        className="w-48 h-48 object-cover rounded-md border cursor-pointer"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Image {index + 1}
-                      </p>
-                    </div>
-                  ))}
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {request.locationImageUrls.map((url, index) => (
+                      <div key={index} className="flex flex-col gap-2">
+                        <img
+                          src={url || "/placeholder.svg"}
+                          alt={`Location ${index + 1}`}
+                          onClick={() =>
+                            handleImageClick(url, `Location ${index + 1}`)
+                          }
+                          className="w-full h-36 object-cover rounded-md border cursor-pointer"
+                        />
+                        <p className="text-xs text-muted-foreground text-center">
+                          Image {index + 1}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}

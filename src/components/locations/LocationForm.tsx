@@ -193,9 +193,9 @@ export default function LocationForm({
     }
 
     return watchedValues.tagIds
-      .map((id) => tagsMap.get(id)) // 1. Tra cứu object Tag từ ID
-      .filter((tag): tag is Tag => !!tag) // 2. Lọc bỏ các tag không tìm thấy
-      .map((tag) => ({ tag: tag })); // 3. Bọc nó trong object `{ tag: ... }`
+      .map((id) => tagsMap.get(id))
+      .filter((tag): tag is Tag => !!tag)
+      .map((tag) => ({ tag: tag }));
   }, [watchedValues.tagIds, tagsMap]);
 
   const handleNextStep = async () => {
