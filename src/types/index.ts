@@ -137,9 +137,32 @@ export interface CreatorOnboardingPayload {
 
 export interface Tag {
   id: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  groupName: string | null;
   displayName: string;
   color: string;
   icon: string;
+  isSelectable: boolean;
+}
+
+export interface GetTagsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+}
+
+export interface TagCreationItem {
+  groupName?: string | null;
+  displayName: string;
+  color: string;
+  icon: string;
+}
+
+export interface CreateTagPayload {
+  list: TagCreationItem[];
 }
 
 export interface Location {

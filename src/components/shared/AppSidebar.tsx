@@ -9,6 +9,7 @@ import {
   IconInnerShadowTop,
   IconMapPin,
   IconSettings,
+  IconTag,
 } from "@tabler/icons-react";
 
 import {
@@ -30,6 +31,7 @@ const adminNav = [
   { title: "Overview", url: "/admin", icon: IconDashboard },
   { title: "Locations", url: "/admin/locations", icon: IconMapPin },
   { title: "Business", url: "/admin/business", icon: IconBriefcase },
+  { title: "Tags", url: "/admin/tags", icon: IconTag },
 ];
 
 const businessNav = [
