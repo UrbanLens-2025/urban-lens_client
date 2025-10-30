@@ -13,13 +13,10 @@ import {
   Eye,
   EyeOff,
   Layers,
-  FileText,
   ImageIcon,
-  Home,
   Building,
   Calendar,
   Tag,
-  Ruler,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker"
