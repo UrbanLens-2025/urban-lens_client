@@ -204,19 +204,15 @@ export default function LocationDashboardPage() {
               <TableBody>
                 {allLocations.map((loc: Location) => (
                   <TableRow key={loc.id}>
-                    <TableCell className="font-medium">
-                      <Link
-                        href={`/admin/locations/${loc.id}`}
-                        className="hover:underline"
-                      >
-                        {loc.name}
-                      </Link>
-                    </TableCell>
+                    <TableCell className="font-medium">{loc.name}</TableCell>
                     <TableCell>{loc.business?.name || "N/A"}</TableCell>
                     <TableCell>
                       {new Date(loc.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/admin/locations/${loc.id}`}>View</Link>
+                      </Button>
                       <Button asChild variant="ghost" size="icon">
                         <Link href={`/admin/locations/${loc.id}/edit`}>
                           <Edit className="h-4 w-4" />
