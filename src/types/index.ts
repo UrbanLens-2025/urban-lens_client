@@ -190,7 +190,7 @@ export interface LocationRequest {
   processedBy: ProcessedByAdmin | null;
   tags: {
     id: number;
-    tagId: number;
+    tag: Tag;
   }[];
   latitude: number;
   longitude: number;

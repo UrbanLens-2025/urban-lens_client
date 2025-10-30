@@ -5,24 +5,11 @@ import { ArrowLeft, CalendarDays, FilePenLine, Loader2, MapPin, Phone, Mail, Glo
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker"
 import { Badge } from "@/components/ui/badge"
-import type { Tag } from "@/types"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { use } from "react"
-
-function DisplayTags({ tags }: { tags: { tag: Tag }[] | undefined }) {
-  if (!tags || tags.length === 0) return <span className="text-muted-foreground">No tags</span>
-  return (
-    <div className="flex flex-wrap gap-2">
-      {tags.map(({ tag }) => (
-        <Badge key={tag.id} variant="secondary" style={{ backgroundColor: tag.color, color: "#fff" }}>
-          {tag.icon} {tag.displayName}
-        </Badge>
-      ))}
-    </div>
-  )
-}
+import { DisplayTags } from "@/components/shared/DisplayTags"
 
 function formatDate(dateString: string) {
   return new Date(dateString).toLocaleDateString("vi-VN", {
@@ -107,7 +94,7 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Tags</p>
                 <div className="mt-2">
-                  <DisplayTags tags={location.tags} />
+                  <DisplayTags tags={location.tags} maxCount={4} />
                 </div>
               </div>
               <div>

@@ -1,15 +1,14 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use } from "react";
 import { useRouter } from "next/navigation";
-import { useLocationByIdForAdmin } from "@/hooks/admin/useLocationByIdForAdmin"; // <-- Hook của Admin
-import { useTags } from "@/hooks/tags/useTags";
+import { useLocationByIdForAdmin } from "@/hooks/admin/useLocationByIdForAdmin";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Location, PaginatedData, Tag } from "@/types";
+import { DisplayTags } from "@/components/shared/DisplayTags";
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   if (!value) return null;
@@ -17,30 +16,6 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     <div className="mb-4">
       <p className="text-sm font-semibold text-muted-foreground">{label}</p>
       <div className="text-base">{value}</div>
-    </div>
-  );
-}
-
-function DisplayTags({
-  tags,
-  tagsMap,
-}: {
-  tags: { tag: Tag }[] | undefined;
-  tagsMap: Map<number, Tag>;
-}) {
-  if (!tags || tags.length === 0)
-    return <span className="text-muted-foreground">N/A</span>;
-  return (
-    <div className="flex flex-wrap gap-1">
-      {tags.map(({ tag }) => (
-        <Badge
-          key={tag.id}
-          variant="secondary"
-          style={{ backgroundColor: tag.color, color: "#fff" }}
-        >
-          {tag.icon} {tag.displayName}
-        </Badge>
-      ))}
     </div>
   );
 }
@@ -55,18 +30,8 @@ export default function AdminLocationDetailsPage({
 
   const { data: location, isLoading: isLoadingLocation } =
     useLocationByIdForAdmin(locationId);
-  const { data: allTagsResponse, isLoading: isLoadingTags } = useTags();
 
-  const isLoading = isLoadingLocation || isLoadingTags;
-
-  const tagsMap = useMemo(() => {
-    const map = new Map<number, Tag>();
-    const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];
-    allTags.forEach((tag) => map.set(tag.id, tag));
-    return map;
-  }, [allTagsResponse]);
-
-  if (isLoading) {
+  if (isLoadingLocation) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="animate-spin" />
@@ -116,7 +81,7 @@ export default function AdminLocationDetailsPage({
               <InfoRow label="Description" value={location.description} />
               <InfoRow
                 label="Tags"
-                value={<DisplayTags tags={location.tags} tagsMap={tagsMap} />}
+                value={<DisplayTags tags={location.tags} maxCount={4} />}
               />
               <InfoRow label="Address" value={location.addressLine} />
             </CardContent>

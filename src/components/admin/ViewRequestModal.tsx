@@ -1,8 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
 import { useLocationRequestByIdForAdmin } from "@/hooks/admin/useLocationRequestByIdForAdmin";
-import { useTags } from "@/hooks/tags/useTags";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -13,8 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { PaginatedData, Tag } from "@/types";
+import { DisplayTags } from "../shared/DisplayTags";
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   if (!value) return null;
@@ -22,39 +19,6 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     <div>
       <p className="text-sm font-semibold text-muted-foreground">{label}</p>
       <div className="text-base">{value}</div>
-    </div>
-  );
-}
-
-function DisplayTags({
-  tagLinks,
-  tagsMap,
-}: {
-  tagLinks: { tagId: number }[] | undefined;
-  tagsMap: Map<number, Tag>;
-}) {
-  if (!tagLinks || tagLinks.length === 0)
-    return <span className="text-muted-foreground">N/A</span>;
-  return (
-    <div className="flex flex-wrap gap-1">
-      {tagLinks.map(({ tagId }) => {
-        const tag = tagsMap.get(tagId);
-        if (!tag)
-          return (
-            <Badge key={tagId} variant="destructive">
-              Unknown Tag
-            </Badge>
-          );
-        return (
-          <Badge
-            key={tag.id}
-            variant="secondary"
-            style={{ backgroundColor: tag.color, color: "#fff" }}
-          >
-            {tag.icon} {tag.displayName}
-          </Badge>
-        );
-      })}
     </div>
   );
 }
@@ -72,30 +36,20 @@ export function ViewRequestModal({
 }: ViewRequestModalProps) {
   const { data: request, isLoading: isLoadingRequest } =
     useLocationRequestByIdForAdmin(requestId);
-  const { data: allTagsResponse, isLoading: isLoadingTags } = useTags();
-
-  const isLoading = isLoadingRequest || isLoadingTags;
-
-  const tagsMap = useMemo(() => {
-    const map = new Map<number, Tag>();
-    const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];
-    allTags.forEach((tag) => map.set(tag.id, tag));
-    return map;
-  }, [allTagsResponse]);
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-3xl">
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {isLoading ? "Loading..." : request?.name}
+            {isLoadingRequest ? "Loading..." : request?.name}
           </AlertDialogTitle>
           <AlertDialogDescription>
             Reviewing details for this location request.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {isLoading || !request ? (
+        {isLoadingRequest || !request ? (
           <div className="flex justify-center items-center h-60">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
@@ -116,7 +70,7 @@ export function ViewRequestModal({
               <InfoRow
                 label="Tags"
                 value={
-                  <DisplayTags tagLinks={request.tags} tagsMap={tagsMap} />
+                  <DisplayTags tags={request.tags} maxCount={4} />
                 }
               />
             </div>

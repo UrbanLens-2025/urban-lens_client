@@ -33,7 +33,6 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
 import { LocationRequest, PaginatedData, Tag } from "@/types";
 import { useTags } from "@/hooks/tags/useTags";
 import { LocationAddressPicker } from "@/components/shared/LocationAddressPicker";
@@ -43,6 +42,7 @@ import { useLocationRequestById } from "@/hooks/locations/useLocationRequestById
 import { useAddTagsToRequest } from "@/hooks/locations/useAddTagsToRequest";
 import { useRemoveTagsFromRequest } from "@/hooks/locations/useRemoveTagsFromRequest";
 import { useQueryClient } from "@tanstack/react-query";
+import { DisplayTags } from "../shared/DisplayTags";
 
 const locationSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -102,30 +102,6 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function DisplayTags({
-  tagIds,
-  tagsMap,
-}: {
-  tagIds: number[] | undefined;
-  tagsMap: Map<number, Tag>;
-}) {
-  if (!tagIds || tagIds.length === 0)
-    return <span className="text-muted-foreground">None</span>;
-  return (
-    <div className="flex flex-wrap gap-1">
-      {tagIds.map((id) => {
-        const tag = tagsMap.get(id);
-        if (!tag) return null;
-        return (
-          <Badge key={tag.id} variant="secondary">
-            {tag.icon} {tag.displayName}
-          </Badge>
-        );
-      })}
-    </div>
-  );
-}
-
 interface LocationFormProps {
   isEditMode: boolean;
   initialData?: LocationRequest;
@@ -150,10 +126,8 @@ export default function LocationForm({
     useCreateLocationRequest();
   const { mutate: updateLocationRequest, isPending: isUpdating } =
     useUpdateLocationRequest();
-  const { mutateAsync: addTags } =
-    useAddTagsToRequest();
-  const { mutateAsync: removeTags } =
-    useRemoveTagsFromRequest();
+  const { mutateAsync: addTags } = useAddTagsToRequest();
+  const { mutateAsync: removeTags } = useRemoveTagsFromRequest();
   const { data: allTagsResponse } = useTags();
 
   const isPending = isCreating || isUpdating;
@@ -196,7 +170,7 @@ export default function LocationForm({
         latitude: parseFloat(dataToLoad.latitude as any),
         longitude: parseFloat(dataToLoad.longitude as any),
         radiusMeters: dataToLoad.radiusMeters,
-        tagIds: dataToLoad.tags.map((t: { tagId: any }) => t.tagId),
+        tagIds: dataToLoad.tags.map((t) => t.id),
         locationImageUrls: dataToLoad.locationImageUrls || [],
         documentImageUrls:
           dataToLoad.locationValidationDocuments?.[0]?.documentImageUrls || [],
@@ -212,6 +186,17 @@ export default function LocationForm({
     allTags.forEach((tag) => map.set(tag.id, tag));
     return map;
   }, [allTagsResponse]);
+
+  const tags = useMemo(() => {
+    if (!watchedValues.tagIds || !tagsMap) {
+      return [];
+    }
+
+    return watchedValues.tagIds
+      .map((id) => tagsMap.get(id)) // 1. Tra cứu object Tag từ ID
+      .filter((tag): tag is Tag => !!tag) // 2. Lọc bỏ các tag không tìm thấy
+      .map((tag) => ({ tag: tag })); // 3. Bọc nó trong object `{ tag: ... }`
+  }, [watchedValues.tagIds, tagsMap]);
 
   const handleNextStep = async () => {
     const fields = steps[currentStep].fields;
@@ -350,6 +335,7 @@ export default function LocationForm({
                     </FormItem>
                   )}
                 />
+                <DisplayTags tags={tags} maxCount={4} />
               </div>
 
               {/* === STEP 2: Địa chỉ & Bản đồ === */}
@@ -425,12 +411,7 @@ export default function LocationForm({
                   />
                   <InfoRow
                     label="Tags"
-                    value={
-                      <DisplayTags
-                        tagIds={watchedValues.tagIds}
-                        tagsMap={tagsMap}
-                      />
-                    }
+                    value={<DisplayTags tags={tags} maxCount={4} />}
                   />
                 </div>
 
@@ -439,7 +420,7 @@ export default function LocationForm({
                   <InfoRow
                     label="District / Ward"
                     value={watchedValues.addressLevel1}
-                    />
+                  />
                   <InfoRow
                     label="Province / City"
                     value={watchedValues.addressLevel2}

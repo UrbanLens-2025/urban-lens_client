@@ -1,16 +1,15 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useLocationRequestById } from "@/hooks/locations/useLocationRequestById";
-import { useTags } from "@/hooks/tags/useTags";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PaginatedData, Tag } from "@/types";
 import { cn } from "@/lib/utils";
+import { DisplayTags } from "@/components/shared/DisplayTags";
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   if (!value) return null;
@@ -18,30 +17,6 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     <div>
       <p className="text-sm font-semibold text-muted-foreground">{label}</p>
       <div className="text-base">{value}</div>
-    </div>
-  );
-}
-
-function DisplayTags({
-  tagLinks,
-  tagsMap,
-}: {
-  tagLinks: { tagId: number }[] | undefined;
-  tagsMap: Map<number, Tag>;
-}) {
-  if (!tagLinks || tagLinks.length === 0)
-    return <span className="text-muted-foreground">N/A</span>;
-  return (
-    <div className="flex flex-wrap gap-1">
-      {tagLinks.map(({ tagId }) => {
-        const tag = tagsMap.get(tagId);
-        if (!tag) return null;
-        return (
-          <Badge key={tag.id} variant="secondary">
-            {tag.icon} {tag.displayName}
-          </Badge>
-        );
-      })}
     </div>
   );
 }
@@ -59,18 +34,8 @@ export default function LocationRequestDetailsPage({
     isLoading: isLoadingRequest,
     isError,
   } = useLocationRequestById(requestId);
-  const { data: allTagsResponse, isLoading: isLoadingTags } = useTags();
 
-  const isLoading = isLoadingRequest || isLoadingTags;
-
-  const tagsMap = useMemo(() => {
-    const map = new Map<number, Tag>();
-    const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];
-    allTags.forEach((tag) => map.set(tag.id, tag));
-    return map;
-  }, [allTagsResponse]);
-
-  if (isLoading) {
+  if (isLoadingRequest) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="animate-spin" />
@@ -126,9 +91,7 @@ export default function LocationRequestDetailsPage({
               />
               <InfoRow
                 label="Tags"
-                value={
-                  <DisplayTags tagLinks={request.tags} tagsMap={tagsMap} />
-                }
+                value={<DisplayTags tags={request.tags} maxCount={4} />}
               />
               {request.adminNotes && (
                 <InfoRow
