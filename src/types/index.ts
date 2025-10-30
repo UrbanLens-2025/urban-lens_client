@@ -337,3 +337,49 @@ export interface UpdateAvailabilityPayload {
   status?: string;
   note?: string;
 }
+
+export interface CreateLocationMissionPayload {
+  title: string;
+  description: string;
+  metric: string;
+  target: number;
+  reward: number;
+  startDate: string;
+  endDate: string;
+  imageUrls: string[];
+}
+
+export interface LocationMission {
+  id: string;
+  locationId: string;
+  title: string;
+  description: string;
+  metric: string;
+  target: number;
+  reward: number;
+  startDate: string;
+  endDate: string;
+  imageUrls: string[];
+  createdAt: string;
+  updatedAt: string;
+  location: Location;
+}
+
+export interface GetLocationMissionsParams {
+  locationId: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+}
+
+export interface UpdateLocationMissionPayload {
+  title: string;
+  description: string;
+  metric: string;
+  target: number;
+  reward: number;
+  startDate: string;
+  endDate: string;
+  imageUrls: string[];
+}

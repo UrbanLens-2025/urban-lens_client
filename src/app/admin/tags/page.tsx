@@ -34,7 +34,7 @@ export default function AdminTagsPage() {
   });
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 50);
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 1000);
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
 

@@ -1,0 +1,353 @@
+"use client";
+
+import { use, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
+// --- Hooks & Components ---
+import { useUpdateLocationMission } from "@/hooks/missions/useUpdateLocationMission";
+import { useLocationMissionById } from "@/hooks/missions/useLocationMissionById";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Loader2, ArrowLeft, CalendarIcon } from "lucide-react";
+import { FileUpload } from "@/components/shared/FileUpload";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Switch } from "@/components/ui/switch";
+
+// --- Zod Schema ---
+const missionSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  metric: z.string().min(1, "Metric is required"),
+  target: z.number().min(1, "Target must be at least 1"),
+  reward: z.number().min(1, "Reward must be at least 1"),
+  startDate: z.date({ error: "Start date is required." }),
+  endDate: z.date({ error: "End date is required." }),
+  imageUrls: z
+    .array(z.string().url())
+    .min(1, "At least one image is required."),
+});
+type FormValues = z.infer<typeof missionSchema>;
+
+export default function EditMissionPage({
+  params,
+}: {
+  params: Promise<{ missionId: string }>;
+}) {
+  const { missionId } = use(params);
+  const router = useRouter();
+
+  const { data: mission, isLoading: isLoadingData } =
+    useLocationMissionById(missionId);
+  const { mutate: updateMission, isPending: isUpdating } =
+    useUpdateLocationMission();
+
+  // --- Set sensible defaultValues so the form is controlled immediately ---
+  const form = useForm<FormValues>({
+    resolver: zodResolver(missionSchema),
+    mode: "all",
+    defaultValues: {
+      title: "",
+      description: "",
+      metric: "",
+      target: 1,
+      reward: 1,
+      // default to today and tomorrow for usability; they will be reset when mission loads
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      imageUrls: [],
+    },
+  });
+
+  useEffect(() => {
+    if (mission) {
+      form.reset({
+        title: mission.title ?? "",
+        description: mission.description ?? "",
+        metric: mission.metric ?? "",
+        target: mission.target ?? 1,
+        reward: mission.reward ?? 1,
+        startDate: mission.startDate ? new Date(mission.startDate) : new Date(),
+        endDate: mission.endDate
+          ? new Date(mission.endDate)
+          : new Date(Date.now() + 24 * 60 * 60 * 1000),
+        imageUrls: Array.isArray(mission.imageUrls) ? mission.imageUrls : [],
+      });
+    }
+  }, [mission, form]);
+
+  function onSubmit(values: FormValues) {
+    const payload = {
+      ...values,
+      startDate: values.startDate.toISOString(),
+      endDate: values.endDate.toISOString(),
+    };
+    updateMission({ missionId, payload });
+  }
+
+  if (isLoadingData) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
+  }
+  if (!mission) {
+    return <div>Mission not found.</div>;
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center gap-4">
+        <Button variant="outline" size="icon" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <h1 className="text-3xl font-bold">Edit Mission: {mission.title}</h1>
+      </div>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <Card className="max-w-2xl">
+            <CardHeader>
+              <CardTitle>Mission Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* --- Title --- */}
+              <FormField
+                name="title"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter mission title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* --- Description --- */}
+              <FormField
+                name="description"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter mission description"
+                        rows={4}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* --- Metric / Target / Reward --- */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  name="metric"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Metric</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. orders, check-ins..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="target"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Target</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          placeholder="Enter target"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="reward"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reward (points)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          placeholder="Enter reward"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* --- Start & End Dates --- */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  name="startDate"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Select date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="p-0">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="endDate"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Select date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="p-0">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* --- Image Upload --- */}
+              <FormField
+                name="imageUrls"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Images</FormLabel>
+                    <FormControl>
+                      <FileUpload
+                        value={field.value ?? []}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          <div className="mt-8 flex justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => router.back()}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="lg"
+              disabled={isUpdating}
+              className="ml-4"
+            >
+              {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
+  );
+}

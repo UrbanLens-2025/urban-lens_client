@@ -181,7 +181,7 @@ export default function MyLocationsPage() {
   const [activePage, setActivePage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
   const [activeSearchTerm, setActiveSearchTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(activeSearchTerm, 50);
+  const [debouncedSearchTerm] = useDebounce(activeSearchTerm, 1000);
 
   const [sort, setSort] = useState<SortState>({
     column: "createdAt",
