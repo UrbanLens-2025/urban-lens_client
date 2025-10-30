@@ -1,7 +1,26 @@
 "use client"
 
 import { useLocationById } from "@/hooks/locations/useLocationById"
-import { ArrowLeft, CalendarDays, FilePenLine, Loader2, MapPin, Phone, Mail, Globe, Eye, EyeOff } from "lucide-react"
+import {
+  ArrowLeft,
+  CalendarDays,
+  FilePenLine,
+  Loader2,
+  MapPin,
+  Phone,
+  Mail,
+  Globe,
+  Eye,
+  EyeOff,
+  Layers,
+  FileText,
+  ImageIcon,
+  Home,
+  Building,
+  Calendar,
+  Tag,
+  Ruler,
+} from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker"
 import { Badge } from "@/components/ui/badge"
@@ -10,9 +29,27 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { use } from "react"
 import { DisplayTags } from "@/components/shared/DisplayTags"
+import type React from "react"
+
+function InfoRow({
+  label,
+  value,
+  icon: Icon,
+}: { label: string; value: React.ReactNode; icon?: React.ComponentType<{ className?: string }> }) {
+  if (!value) return null
+  return (
+    <div className="flex gap-3">
+      {Icon && <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />}
+      <div className="flex-1">
+        <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+        <div className="text-base text-foreground">{value}</div>
+      </div>
+    </div>
+  )
+}
 
 function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("vi-VN", {
+  return new Date(dateString).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -41,7 +78,7 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -72,80 +109,87 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* LEFT COLUMN: DETAILS */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Basic Details */}
+        <div className="space-y-6">
+          {/* Basic Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="h-5 w-5" />
+                Basic Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Description</p>
-                <p className="mt-1">{location.description || "No description"}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Category</p>
-                <Badge variant="outline" className="mt-1">
-                  {location.business?.category || "N/A"}
-                </Badge>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Tags</p>
-                <div className="mt-2">
-                  <DisplayTags tags={location.tags} maxCount={4} />
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Check-ins</p>
-                <p className="mt-1 text-lg font-semibold">{location.totalCheckIns || "0"}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Visibility</p>
-                <div className="flex items-center gap-2 mt-1">
-                  {location.isVisibleOnMap ? (
-                    <>
-                      <Eye className="h-4 w-4 text-green-600" />
+              <InfoRow label="Description" value={location.description || "No description"} />
+              <InfoRow label="Category" value={location.business?.category || "N/A"} />
+              <InfoRow label="Total Check-ins" value={location.totalCheckIns || "0"} />
+              <InfoRow
+                label="Visibility"
+                value={
+                  location.isVisibleOnMap ? (
+                    <div className="flex items-center gap-2">
                       <span className="text-sm">Visible on map</span>
-                    </>
+                      <Eye className="h-4 w-4 text-green-600" />
+                    </div>
                   ) : (
-                    <>
-                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    <div className="flex items-center gap-2">
                       <span className="text-sm">Hidden from map</span>
-                    </>
-                  )}
-                </div>
-              </div>
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    </div>
+                  )
+                }
+              />
             </CardContent>
           </Card>
 
-          {/* Images */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Location Images</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-3">
-              {location.imageUrl && location.imageUrl.length > 0 ? (
-                location.imageUrl.map((url, index) => (
-                  <img
-                    key={index}
-                    src={url || "/placeholder.svg"}
-                    alt={`Location image ${index + 1}`}
-                    className="w-40 h-40 object-cover rounded-md border"
-                  />
-                ))
-              ) : (
-                <span className="text-muted-foreground">No images</span>
-              )}
-            </CardContent>
-          </Card>
+          {/* Tags */}
+          {location.tags && location.tags.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="h-5 w-5" />
+                  Tags
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DisplayTags tags={location.tags} maxCount={10} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Location Images */}
+          {location.imageUrl && location.imageUrl.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5" />
+                  Location Images
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-4">
+                {location.imageUrl.map((url, index) => (
+                  <div key={index} className="flex flex-col gap-2">
+                    <img
+                      src={url || "/placeholder.svg"}
+                      alt={`Location image ${index + 1}`}
+                      className="w-48 h-48 object-cover rounded-md border"
+                    />
+                    <p className="text-xs text-muted-foreground">Image {index + 1}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Business Information */}
           {location.business && (
             <Card>
               <CardHeader>
-                <CardTitle>Business Information</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Building className="h-5 w-5" />
+                  Business Information
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-4">
@@ -163,137 +207,93 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
                 </div>
 
                 <div className="space-y-3 pt-4 border-t">
-                  {location.business.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <a href={`mailto:${location.business.email}`} className="text-sm hover:underline">
-                        {location.business.email}
-                      </a>
-                    </div>
-                  )}
-                  {location.business.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <a href={`tel:${location.business.phone}`} className="text-sm hover:underline">
-                        {location.business.phone}
-                      </a>
-                    </div>
-                  )}
+                  {location.business.email && <InfoRow label="Email" value={location.business.email} icon={Mail} />}
+                  {location.business.phone && <InfoRow label="Phone" value={location.business.phone} icon={Phone} />}
                   {location.business.website && (
-                    <div className="flex items-center gap-2">
-                      <Globe className="h-4 w-4 text-muted-foreground" />
-                      <a
-                        href={location.business.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm hover:underline"
-                      >
-                        {location.business.website}
-                      </a>
-                    </div>
+                    <InfoRow
+                      label="Website"
+                      value={
+                        <a
+                          href={location.business.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          {location.business.website}
+                        </a>
+                      }
+                      icon={Globe}
+                    />
                   )}
                 </div>
 
                 {location.business.licenseNumber && (
                   <div className="space-y-3 pt-4 border-t">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">License Type</p>
-                      <p className="mt-1">{location.business.licenseType}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">License Number</p>
-                      <p className="mt-1 font-mono text-sm">{location.business.licenseNumber}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">License Expiration</p>
-                      <p className="mt-1">{formatDate(location.business.licenseExpirationDate)}</p>
-                    </div>
+                    <InfoRow label="License Type" value={location.business.licenseType} />
+                    <InfoRow label="License Number" value={location.business.licenseNumber} />
+                    <InfoRow
+                      label="License Expiration"
+                      value={formatDate(location.business.licenseExpirationDate)}
+                    />
                   </div>
                 )}
 
                 <div className="pt-4 border-t">
-                  <p className="text-sm font-medium text-muted-foreground">Status</p>
-                  <Badge variant={location.business.status === "APPROVED" ? "default" : "secondary"} className="mt-2">
-                    {location.business.status}
-                  </Badge>
+                  <InfoRow
+                    label="Status"
+                    value={
+                      <Badge variant={location.business.status === "APPROVED" ? "default" : "secondary"}>
+                        {location.business.status}
+                      </Badge>
+                    }
+                  />
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Timestamps */}
+          {/* Metadata */}
           <Card>
             <CardHeader>
-              <CardTitle>Metadata</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Metadata
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Created</p>
-                <p className="mt-1 text-sm">{formatDate(location.createdAt)}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
-                <p className="mt-1 text-sm">{formatDate(location.updatedAt)}</p>
-              </div>
+            <CardContent className="space-y-4">
+              <InfoRow label="Created" value={formatDate(location.createdAt)} />
+              <InfoRow label="Last Updated" value={formatDate(location.updatedAt)} />
             </CardContent>
           </Card>
         </div>
 
-        {/* RIGHT COLUMN: MAP */}
-        <div className="lg:col-span-1 space-y-6">
+        {/* RIGHT COLUMN: ADDRESS, MAP, AND STATS */}
+        <div className="space-y-6">
+          {/* Address Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Location Map</CardTitle>
-            </CardHeader>
-            <CardContent className="h-96 rounded-lg overflow-hidden">
-              <GoogleMapsPicker position={position} onPositionChange={() => {}} />
-            </CardContent>
-          </Card>
-
-          {/* Address Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Address Information</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Address Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Address</p>
-                <div className="flex gap-2 mt-1">
-                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                  <p>{location.addressLine}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">District/Ward</p>
-                  <p className="mt-1">{location.addressLevel1 || "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Province/City</p>
-                  <p className="mt-1">{location.addressLevel2 || "N/A"}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Latitude</p>
-                  <p className="mt-1 font-mono text-sm">{location.latitude}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Longitude</p>
-                  <p className="mt-1 font-mono text-sm">{location.longitude}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Service Radius</p>
-                <p className="mt-1">{location.radiusMeters} meters</p>
-              </div>
+              <InfoRow label="Address" value={location.addressLine} />
+              <InfoRow label="District/Ward" value={location.addressLevel1 || "N/A"} />
+              <InfoRow label="Province/City" value={location.addressLevel2 || "N/A"} />
+              <InfoRow label="Latitude" value={location.latitude} />
+              <InfoRow label="Longitude" value={location.longitude} />
+              <InfoRow label="Service Radius" value={`${location.radiusMeters} meters`} />
             </CardContent>
           </Card>
 
           {/* Quick Stats */}
           <Card>
             <CardHeader>
-              <CardTitle>Quick Stats</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="h-5 w-5" />
+                Quick Stats
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between items-center">
@@ -310,6 +310,19 @@ export default function LocationDetailsPage({ params }: { params: Promise<{ loca
                   {location.ownershipType === "OWNED_BY_BUSINESS" ? "Business" : "User"}
                 </Badge>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Map */}
+          <Card className="sticky top-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Location Map
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="h-96 rounded-lg overflow-hidden">
+              <GoogleMapsPicker position={position} onPositionChange={() => {}} />
             </CardContent>
           </Card>
         </div>
