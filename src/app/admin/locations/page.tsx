@@ -42,8 +42,8 @@ export default function LocationDashboardPage() {
   const [reqPage, setReqPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchReqTerm, setSearchReqTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 1000);
-  const [debouncedSearchReqTerm] = useDebounce(searchReqTerm, 1000);
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+  const [debouncedSearchReqTerm] = useDebounce(searchReqTerm, 300);
 
   const [sortReq, setSortReq] = useState<SortState>({
     column: "createdAt",

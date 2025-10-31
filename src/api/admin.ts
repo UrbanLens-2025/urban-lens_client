@@ -15,6 +15,7 @@ import type {
   GetTagsParams,
   Tag,
   CreateTagPayload,
+  UpdateTagPayload,
 } from "@/types";
 
 export const getLocationRequestsForAdmin = async ({
@@ -145,7 +146,9 @@ export const getAllLocationsForAdmin = async ({
   return data.data;
 };
 
-export const getLocationByIdForAdmin = async (id: string): Promise<Location> => {
+export const getLocationByIdForAdmin = async (
+  id: string
+): Promise<Location> => {
   const { data } = await axiosInstance.get<ApiResponse<Location>>(
     `/v1/admin/locations/${id}`
   );
@@ -153,11 +156,11 @@ export const getLocationByIdForAdmin = async (id: string): Promise<Location> => 
 };
 
 export const updateLocationAsAdmin = async (
-  locationId: string, 
+  locationId: string,
   payload: UpdateLocationPayload
 ): Promise<Location> => {
   const { data } = await axiosInstance.put<ApiResponse<Location>>(
-    `/v1/admin/locations/${locationId}`, 
+    `/v1/admin/locations/${locationId}`,
     payload
   );
   return data.data;
@@ -166,19 +169,18 @@ export const updateLocationAsAdmin = async (
 export const getTagsForAdmin = async ({
   page = 1,
   limit = 20,
-  sortBy = 'displayName:ASC',
-  search
+  sortBy = "displayName:ASC",
+  search,
 }: GetTagsParams): Promise<PaginatedData<Tag>> => {
-  
   const params: any = { page, limit, sortBy };
 
   if (search) {
     params.search = search;
-    params.searchBy = ['displayName']; 
+    params.searchBy = ["displayName"];
   }
 
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Tag>>>(
-    '/v1/admin/tag', 
+    "/v1/admin/tag",
     { params }
   );
   return data.data;
@@ -186,7 +188,18 @@ export const getTagsForAdmin = async ({
 
 export const createTag = async (payload: CreateTagPayload): Promise<Tag> => {
   const { data } = await axiosInstance.post<ApiResponse<Tag>>(
-    '/v1/admin/tag',
+    "/v1/admin/tag",
+    payload
+  );
+  return data.data;
+};
+
+export const updateTag = async (
+  tagId: number,
+  payload: UpdateTagPayload
+): Promise<Tag> => {
+  const { data } = await axiosInstance.put<ApiResponse<Tag>>(
+    `/v1/admin/tag/${tagId}`,
     payload
   );
   return data.data;

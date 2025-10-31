@@ -155,10 +155,11 @@ export interface GetTagsParams {
 }
 
 export interface TagCreationItem {
-  groupName?: string | null;
+  groupName: string;
   displayName: string;
   color: string;
   icon: string;
+  isSelectable: boolean;
 }
 
 export interface CreateTagPayload {
@@ -382,4 +383,12 @@ export interface UpdateLocationMissionPayload {
   startDate: string;
   endDate: string;
   imageUrls: string[];
+}
+
+export interface UpdateTagPayload {
+  groupName: string;
+  displayName: string;
+  color: string;
+  icon: string;
+  isSelectable: boolean;
 }

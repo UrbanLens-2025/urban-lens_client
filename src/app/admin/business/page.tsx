@@ -34,7 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 export default function AdminBusinessPage() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 1000);
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [statusTab, setStatusTab] = useState<BusinessStatus>("PENDING");
 
   const { data: response, isLoading } = useBusinessAccounts({

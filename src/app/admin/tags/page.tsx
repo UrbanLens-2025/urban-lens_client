@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, PlusCircle, ArrowUp, ArrowDown, Edit } from "lucide-react";
 import { TagFormModal } from "@/components/admin/TagFormModal";
 import { Badge } from "@/components/ui/badge";
 import { useDebounce } from "use-debounce";
@@ -34,9 +34,10 @@ export default function AdminTagsPage() {
   });
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 1000);
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [selectedTag, setSelectedTag] = useState<Tag | undefined>(undefined);
 
   const { data: response, isLoading } = useAdminTags({
     page,
@@ -46,6 +47,16 @@ export default function AdminTagsPage() {
 
   const tags = response?.data || [];
   const meta = response?.meta;
+
+  const openNewModal = () => {
+    setSelectedTag(undefined);
+    setIsFormModalOpen(true);
+  };
+
+  const openEditModal = (tag: Tag) => {
+    setSelectedTag(tag);
+    setIsFormModalOpen(true);
+  };
 
   const handleSort = (columnName: string) => {
     setSort((currentSort) => ({
@@ -76,7 +87,7 @@ export default function AdminTagsPage() {
             Create and view all tags on the platform.
           </p>
         </div>
-        <Button onClick={() => setIsFormModalOpen(true)}>
+        <Button onClick={openNewModal}>
           <PlusCircle className="mr-2 h-4 w-4" /> Create New Tag
         </Button>
       </div>
@@ -125,7 +136,7 @@ export default function AdminTagsPage() {
                       Created At <SortIcon column="createdAt" />
                     </Button>
                   </TableHead>
-                  {/* Bỏ cột Actions */}
+                  <TableHead className="text-right">Edit</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -142,6 +153,15 @@ export default function AdminTagsPage() {
                     <TableCell>{tag.color}</TableCell>
                     <TableCell>
                       {new Date(tag.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditModal(tag)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -170,7 +190,11 @@ export default function AdminTagsPage() {
         </Button>
       </div>
 
-      <TagFormModal open={isFormModalOpen} onOpenChange={setIsFormModalOpen} />
+      <TagFormModal
+        open={isFormModalOpen}
+        onOpenChange={setIsFormModalOpen}
+        initialData={selectedTag}
+      />
     </div>
   );
 }

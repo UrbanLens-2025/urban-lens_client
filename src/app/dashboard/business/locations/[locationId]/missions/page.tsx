@@ -100,7 +100,7 @@ export default function ManageMissionsPage({
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 3000);
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [sort, setSort] = useState<SortState>({
     column: "createdAt",
     direction: "DESC",
