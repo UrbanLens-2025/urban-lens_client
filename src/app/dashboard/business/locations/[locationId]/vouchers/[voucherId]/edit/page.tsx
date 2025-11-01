@@ -9,8 +9,8 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 // --- Hooks & Components ---
-import { useUpdateLocationMission } from "@/hooks/missions/useUpdateLocationMission";
-import { useLocationMissionById } from "@/hooks/missions/useLocationMissionById";
+import { useUpdateLocationVoucher } from "@/hooks/vouchers/useUpdateLocationVoucher";
+import { useLocationVoucherById } from "@/hooks/vouchers/useLocationVoucherById";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,8 +23,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Loader2, ArrowLeft, CalendarIcon } from "lucide-react";
-import { FileUpload } from "@/components/shared/FileUpload";
+import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Popover,
   PopoverContent,
@@ -33,76 +40,80 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 
-// --- Zod Schema ---
-const missionSchema = z.object({
+// --- Zod Schema (Khớp với Payload API PUT) ---
+const voucherSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
-  metric: z.string().min(1, "Metric is required"),
-  target: z.number().min(1, "Target must be at least 1"),
-  reward: z.number().min(1, "Reward must be at least 1"),
+  voucherCode: z.string().min(1, "Voucher code is required"),
+  imageUrl: z.string().url("Image URL is required").nullable(),
+  pricePoint: z.number().min(0, "Price must be 0 or more"),
+  maxQuantity: z.number().min(1, "Max quantity must be at least 1"),
+  userRedeemedLimit: z.number().min(1, "Limit must be at least 1"),
+  voucherType: z.string().min(1, "Type is required"),
   startDate: z.date({ error: "Start date is required." }),
   endDate: z.date({ error: "End date is required." }),
-  imageUrls: z
-    .array(z.string().url())
-    .min(1, "At least one image is required."),
 });
-type FormValues = z.infer<typeof missionSchema>;
+type FormValues = z.infer<typeof voucherSchema>;
 
-export default function EditMissionPage({
+export default function EditVoucherPage({
   params,
 }: {
-  params: Promise<{ missionId: string }>;
+  params: Promise<{ locationId: string; voucherId: string }>;
 }) {
-  const { missionId } = use(params);
+  const { locationId, voucherId } = use(params);
   const router = useRouter();
 
-  const { data: mission, isLoading: isLoadingData } =
-    useLocationMissionById(missionId);
-  const { mutate: updateMission, isPending: isUpdating } =
-    useUpdateLocationMission();
+  // 1. Fetch dữ liệu hiện tại của voucher
+  const { data: voucher, isLoading: isLoadingData } =
+    useLocationVoucherById(voucherId);
 
-  // --- Set sensible defaultValues so the form is controlled immediately ---
+  // 2. Chuẩn bị hook mutation
+  const { mutate: updateVoucher, isPending: isUpdating } =
+    useUpdateLocationVoucher();
+
   const form = useForm<FormValues>({
-    resolver: zodResolver(missionSchema),
+    resolver: zodResolver(voucherSchema),
     mode: "onChange",
     reValidateMode: "onBlur",
     defaultValues: {
       title: "",
       description: "",
-      metric: "",
-      target: 1,
-      reward: 1,
-      // default to today and tomorrow for usability; they will be reset when mission loads
-      startDate: new Date(),
-      endDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      imageUrls: [],
+      voucherCode: "",
+      imageUrl: null,
+      pricePoint: 0,
+      maxQuantity: 1,
+      userRedeemedLimit: 1,
+      voucherType: "public",
     },
   });
 
+  // 3. Điền (pre-fill) form khi dữ liệu được tải
   useEffect(() => {
-    if (mission) {
+    if (voucher) {
       form.reset({
-        title: mission.title ?? "",
-        description: mission.description ?? "",
-        metric: mission.metric ?? "",
-        target: mission.target ?? 1,
-        reward: mission.reward ?? 1,
-        startDate: mission.startDate ? new Date(mission.startDate) : new Date(),
-        endDate: mission.endDate
-          ? new Date(mission.endDate)
-          : new Date(Date.now() + 24 * 60 * 60 * 1000),
-        imageUrls: Array.isArray(mission.imageUrls) ? mission.imageUrls : [],
+        title: voucher.title,
+        description: voucher.description,
+        voucherCode: voucher.voucherCode,
+        imageUrl: voucher.imageUrl || null,
+        pricePoint: voucher.pricePoint,
+        maxQuantity: voucher.maxQuantity,
+        userRedeemedLimit: voucher.userRedeemedLimit,
+        voucherType: voucher.voucherType,
+        startDate: new Date(voucher.startDate),
+        endDate: new Date(voucher.endDate),
       });
     }
-  }, [mission, form]);
+  }, [voucher, form]);
 
+  // 4. Hàm xử lý submit
   function onSubmit(values: FormValues) {
     const payload = {
       ...values,
+      imageUrl: values.imageUrl || "",
       startDate: values.startDate.toISOString(),
       endDate: values.endDate.toISOString(),
     };
-    updateMission({ missionId, payload });
+    updateVoucher({ locationId, voucherId, payload });
   }
 
   if (isLoadingData) {
@@ -112,8 +123,9 @@ export default function EditMissionPage({
       </div>
     );
   }
-  if (!mission) {
-    return <div>Mission not found.</div>;
+
+  if (!voucher) {
+    return <div>Voucher not found.</div>;
   }
 
   return (
@@ -122,17 +134,16 @@ export default function EditMissionPage({
         <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-3xl font-bold">Edit Mission: {mission.title}</h1>
+        <h1 className="text-3xl font-bold">Edit Voucher: {voucher.title}</h1>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <Card className="max-w-2xl">
             <CardHeader>
-              <CardTitle>Mission Details</CardTitle>
+              <CardTitle>Voucher Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* --- Title --- */}
               <FormField
                 name="title"
                 control={form.control}
@@ -140,14 +151,13 @@ export default function EditMissionPage({
                   <FormItem>
                     <FormLabel>Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter mission title" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* --- Description --- */}
               <FormField
                 name="description"
                 control={form.control}
@@ -155,72 +165,89 @@ export default function EditMissionPage({
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Enter mission description"
-                        rows={4}
-                        {...field}
-                      />
+                      <Textarea {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* --- Metric / Target / Reward --- */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  name="voucherCode"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Voucher Code</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  name="voucherType"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Voucher Type</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="public">Public</SelectItem>
+                          <SelectItem value="private">Private</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
-                  name="metric"
+                  name="pricePoint"
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Metric</FormLabel>
+                      <FormLabel>Price (Points)</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="e.g. orders, check-ins..."
-                          {...field}
-                        />
+                        <Input type="number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
-                  name="target"
+                  name="maxQuantity"
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Target</FormLabel>
+                      <FormLabel>Max Quantity</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          min={1}
-                          placeholder="Enter target"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                        />
+                        <Input type="number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
-                  name="reward"
+                  name="userRedeemedLimit"
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Reward (points)</FormLabel>
+                      <FormLabel>Limit per User</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          min={1}
-                          placeholder="Enter reward"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                        />
+                        <Input type="number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -228,39 +255,37 @@ export default function EditMissionPage({
                 />
               </div>
 
-              {/* --- Start & End Dates --- */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   name="startDate"
                   control={form.control}
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>Start Date</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
-                              variant={"outline"}
+                              variant="outline"
                               className={cn(
-                                "w-full pl-3 text-left font-normal",
+                                "pl-3 text-left font-normal",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
                               {field.value ? (
                                 format(field.value, "PPP")
                               ) : (
-                                <span>Select date</span>
+                                <span>Pick a date</span>
                               )}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent align="start" className="p-0">
+                        <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            initialFocus
                           />
                         </PopoverContent>
                       </Popover>
@@ -272,33 +297,32 @@ export default function EditMissionPage({
                   name="endDate"
                   control={form.control}
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>End Date</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
-                              variant={"outline"}
+                              variant="outline"
                               className={cn(
-                                "w-full pl-3 text-left font-normal",
+                                "pl-3 text-left font-normal",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
                               {field.value ? (
                                 format(field.value, "PPP")
                               ) : (
-                                <span>Select date</span>
+                                <span>Pick a date</span>
                               )}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent align="start" className="p-0">
+                        <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            initialFocus
                           />
                         </PopoverContent>
                       </Popover>
@@ -308,16 +332,15 @@ export default function EditMissionPage({
                 />
               </div>
 
-              {/* --- Image Upload --- */}
               <FormField
-                name="imageUrls"
+                name="imageUrl"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Images</FormLabel>
+                    <FormLabel>Voucher Image</FormLabel>
                     <FormControl>
-                      <FileUpload
-                        value={field.value ?? []}
+                      <SingleFileUpload
+                        value={field.value}
                         onChange={field.onChange}
                       />
                     </FormControl>

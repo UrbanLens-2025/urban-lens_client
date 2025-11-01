@@ -392,3 +392,90 @@ export interface UpdateTagPayload {
   icon: string;
   isSelectable: boolean;
 }
+
+export interface GetLocationVouchersParams {
+  locationId: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+}
+
+export interface LocationVoucher {
+  id: string;
+  locationId: string;
+  title: string;
+  description: string;
+  voucherCode: string;
+  imageUrl: string;
+  pricePoint: number;
+  maxQuantity: number;
+  userRedeemedLimit: number;
+  voucherType: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt: string;
+  location: LocationForVoucher;
+}
+
+export interface CreateLocationVoucherPayload {
+  title: string;
+  description: string;
+  voucherCode: string;
+  imageUrl: string;
+  pricePoint: number;
+  maxQuantity: number;
+  userRedeemedLimit: number;
+  voucherType: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface CreateLocationVoucherPayload {
+  title: string;
+  description: string;
+  voucherCode: string;
+  imageUrl: string;
+  pricePoint: number;
+  maxQuantity: number;
+  userRedeemedLimit: number;
+  voucherType: string;
+  startDate: string;
+  endDate: string;
+}
+
+interface LocationForVoucher {
+  id: string;
+  name: string;
+  description: string;
+  addressLine: string;
+  addressLevel1: string;
+  addressLevel2: string;
+  radiusMeters: number;
+  imageUrl: string[];
+  latitude: string;
+  longitude: string;
+  isVisibleOnMap: boolean;
+}
+
+export interface GetLocationVouchersParams {
+  locationId: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+}
+
+export interface UpdateLocationVoucherPayload {
+  title: string;
+  description: string;
+  voucherCode: string;
+  imageUrl: string;
+  pricePoint: number;
+  maxQuantity: number;
+  userRedeemedLimit: number;
+  voucherType: string;
+  startDate: string;
+  endDate: string;
+}

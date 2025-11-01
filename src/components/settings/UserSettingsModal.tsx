@@ -73,6 +73,8 @@ export function UserSettingsModal({
   // --- Form 1: Profile ---
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
+    mode: "onChange",
+    reValidateMode: "onBlur",
     defaultValues: {
       firstName: user.firstName || "",
       lastName: user.lastName || "",

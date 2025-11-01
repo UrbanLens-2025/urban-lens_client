@@ -18,6 +18,7 @@ import {
   Calendar,
   Tag,
   Rocket,
+  Ticket,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
@@ -118,6 +119,12 @@ export default function LocationDetailsPage({
           </div>
         </div>
         <div className="flex gap-2">
+          <Link href={`/dashboard/business/locations/${location.id}/vouchers`}>
+            <Button variant="outline">
+              <Ticket className="mr-2 h-4 w-4" />
+              Manage Vouchers
+            </Button>
+          </Link>
           <Link href={`/dashboard/business/locations/${location.id}/missions`}>
             <Button variant="outline">
               <Rocket className="mr-2 h-4 w-4" />

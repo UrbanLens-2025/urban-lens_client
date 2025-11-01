@@ -60,6 +60,8 @@ export function TagFormModal({
 
   const form = useForm<FormValues>({
     resolver: zodResolver(tagSchema),
+    mode: "onChange",
+    reValidateMode: "onBlur",
     defaultValues: {
       displayName: "",
       icon: "",
