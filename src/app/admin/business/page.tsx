@@ -34,7 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 export default function AdminBusinessPage() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 50);
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [statusTab, setStatusTab] = useState<BusinessStatus>("PENDING");
 
   const { data: response, isLoading } = useBusinessAccounts({
@@ -61,6 +61,8 @@ export default function AdminBusinessPage() {
       { id: approvingBusiness.accountId, payload: { status: "APPROVED" } },
       {
         onSuccess: () => {
+          setStatusTab("APPROVED");
+          setPage(1);
           queryClient.invalidateQueries({ queryKey: ["businessAccounts"] });
           setApprovingBusiness(null);
         },
@@ -77,6 +79,8 @@ export default function AdminBusinessPage() {
       },
       {
         onSuccess: () => {
+          setStatusTab("REJECTED");
+          setPage(1);
           queryClient.invalidateQueries({ queryKey: ["businessAccounts"] });
           setRejectingBusiness(null);
           setAdminNotes("");
@@ -110,7 +114,7 @@ export default function AdminBusinessPage() {
               </TabsList>
               <div className="w-full max-w-sm">
                 <Input
-                  placeholder="Search by name or email..."
+                  placeholder="Search by name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />

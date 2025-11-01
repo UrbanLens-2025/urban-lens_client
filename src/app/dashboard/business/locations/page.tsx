@@ -2,12 +2,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   useLocationRequests,
   useMyLocations,
 } from "@/hooks/locations/useMyLocations";
-import { useTags } from "@/hooks/tags/useTags";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -44,18 +43,21 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Location,
-  LocationRequest,
-  PaginatedData,
-  Tag,
-  LocationStatus,
-  SortState,
-} from "@/types";
+import { Location, LocationRequest, LocationStatus, SortState } from "@/types";
 import { useDebounce } from "use-debounce";
 import { Input } from "@/components/ui/input";
 import { useCancelLocationRequest } from "@/hooks/locations/useCancelLocationRequest";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { DisplayTags } from "@/components/shared/DisplayTags";
 
 function ActiveLocationActions({ location }: { location: Location }) {
   return (
@@ -94,7 +96,6 @@ function RequestActions({
 
   const onCancelConfirm = () => {
     cancelRequest(requestId, {
-      // Đóng dialog sau khi thành công
       onSuccess: () => setIsCancelAlertOpen(false),
     });
   };
@@ -176,41 +177,11 @@ function RequestActions({
   );
 }
 
-function DisplayTags({
-  items,
-  tagsMap,
-}: {
-  items: any[] | undefined;
-  tagsMap: Map<number, Tag>;
-}) {
-  if (!items || items.length === 0)
-    return <span className="text-muted-foreground">-</span>;
-
-  return (
-    <div className="flex flex-wrap gap-1">
-      {items.slice(0, 3).map((item) => {
-        const tagDetails = item.tag ? item.tag : tagsMap.get(item.tagId);
-        if (!tagDetails) return null;
-        return (
-          <Badge
-            key={tagDetails.id}
-            variant="secondary"
-            className="font-normal"
-            style={{ backgroundColor: tagDetails.color, color: "#fff" }}
-          >
-            {tagDetails.icon} {tagDetails.displayName}
-          </Badge>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function MyLocationsPage() {
   const [activePage, setActivePage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
   const [activeSearchTerm, setActiveSearchTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(activeSearchTerm, 50);
+  const [debouncedSearchTerm] = useDebounce(activeSearchTerm, 300);
 
   const [sort, setSort] = useState<SortState>({
     column: "createdAt",
@@ -223,20 +194,12 @@ export default function MyLocationsPage() {
     useMyLocations(activePage, debouncedSearchTerm);
   const { data: requestsResponse, isLoading: isLoadingRequests } =
     useLocationRequests(historyPage, sortByString);
-  const { data: allTagsResponse } = useTags();
 
   const activeLocations: Location[] = activeLocationsResponse?.data || [];
   const activeMeta = activeLocationsResponse?.meta;
   const locationRequests: LocationRequest[] = requestsResponse?.data || [];
   const historyMeta = requestsResponse?.meta;
   const isLoading = isLoadingActive || isLoadingRequests;
-
-  const tagsMap = useMemo(() => {
-    const map = new Map<number, Tag>();
-    const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];
-    allTags.forEach((tag) => map.set(tag.id, tag));
-    return map;
-  }, [allTagsResponse]);
 
   if (isLoading) {
     return (
@@ -319,7 +282,7 @@ export default function MyLocationsPage() {
                       {location.description}
                     </TableCell>
                     <TableCell>
-                      <DisplayTags items={location.tags} tagsMap={tagsMap} />
+                      <DisplayTags tags={location.tags} maxCount={4} />
                     </TableCell>
                     <TableCell className="text-right">
                       <ActiveLocationActions location={location} />

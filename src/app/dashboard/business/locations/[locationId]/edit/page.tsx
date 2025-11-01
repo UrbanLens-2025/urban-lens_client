@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect } from "react";
+import { use, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -34,6 +34,9 @@ import { useAddTagsToLocation } from "@/hooks/tags/useAddTagsToLocation";
 import { useRemoveTagsFromLocation } from "@/hooks/tags/useRemoveTagsFromLocation";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { DisplayTags } from "@/components/shared/DisplayTags";
+import { PaginatedData, Tag } from "@/types";
+import { useTags } from "@/hooks/tags/useTags";
 
 const updateLocationSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -62,6 +65,7 @@ export default function EditLocationPage({
     useAddTagsToLocation();
   const { mutateAsync: removeTags, isPending: isRemovingTags } =
     useRemoveTagsFromLocation();
+  const { data: allTagsResponse } = useTags();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(updateLocationSchema),
@@ -75,6 +79,26 @@ export default function EditLocationPage({
       tagIds: [],
     },
   });
+  
+  const watchedValues = form.watch();
+
+  const tagsMap = useMemo(() => {
+    const map = new Map<number, Tag>();
+    const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];
+    allTags.forEach((tag) => map.set(tag.id, tag));
+    return map;
+  }, [allTagsResponse]);
+
+  const tags = useMemo(() => {
+    if (!watchedValues.tagIds || !tagsMap) {
+      return [];
+    }
+
+    return watchedValues.tagIds
+      .map((id) => tagsMap.get(id))
+      .filter((tag): tag is Tag => !!tag)
+      .map((tag) => ({ tag: tag }));
+  }, [watchedValues.tagIds, tagsMap]);
 
   // 3. Điền (pre-fill) form khi dữ liệu được tải
   useEffect(() => {
@@ -98,12 +122,14 @@ export default function EditLocationPage({
         isVisibleOnMap,
         tagIds: newTagIds,
       } = values;
-      
-      const mainPayload = { name,
+
+      const mainPayload = {
+        name,
         description,
         imageUrl,
         isVisibleOnMap: isVisibleOnMap ?? false,
-        tagIds: newTagIds, };
+        tagIds: newTagIds,
+      };
 
       const originalTagIds = location?.tags.map((t) => t.tag.id) || [];
       const tagsToAdd = newTagIds.filter((id) => !originalTagIds.includes(id));
@@ -209,6 +235,7 @@ export default function EditLocationPage({
                   </FormItem>
                 )}
               />
+              <DisplayTags tags={tags} maxCount={4} />
 
               <FormField
                 name="imageUrl"

@@ -137,9 +137,33 @@ export interface CreatorOnboardingPayload {
 
 export interface Tag {
   id: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  groupName: string | null;
   displayName: string;
   color: string;
   icon: string;
+  isSelectable: boolean;
+}
+
+export interface GetTagsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+}
+
+export interface TagCreationItem {
+  groupName: string;
+  displayName: string;
+  color: string;
+  icon: string;
+  isSelectable: boolean;
+}
+
+export interface CreateTagPayload {
+  list: TagCreationItem[];
 }
 
 export interface Location {
@@ -191,6 +215,7 @@ export interface LocationRequest {
   tags: {
     id: number;
     tagId: number;
+    tag: Tag;
   }[];
   latitude: number;
   longitude: number;
@@ -203,6 +228,8 @@ export interface LocationRequest {
     documentType: string;
     documentImageUrls: string[];
   }[];
+  type: string;
+  updatedAt: string;
 }
 
 export interface CreateLocationPayload {
@@ -310,4 +337,58 @@ export interface UpdateAvailabilityPayload {
   endDateTime?: string;
   status?: string;
   note?: string;
+}
+
+export interface CreateLocationMissionPayload {
+  title: string;
+  description: string;
+  metric: string;
+  target: number;
+  reward: number;
+  startDate: string;
+  endDate: string;
+  imageUrls: string[];
+}
+
+export interface LocationMission {
+  id: string;
+  locationId: string;
+  title: string;
+  description: string;
+  metric: string;
+  target: number;
+  reward: number;
+  startDate: string;
+  endDate: string;
+  imageUrls: string[];
+  createdAt: string;
+  updatedAt: string;
+  location: Location;
+}
+
+export interface GetLocationMissionsParams {
+  locationId: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+}
+
+export interface UpdateLocationMissionPayload {
+  title: string;
+  description: string;
+  metric: string;
+  target: number;
+  reward: number;
+  startDate: string;
+  endDate: string;
+  imageUrls: string[];
+}
+
+export interface UpdateTagPayload {
+  groupName: string;
+  displayName: string;
+  color: string;
+  icon: string;
+  isSelectable: boolean;
 }

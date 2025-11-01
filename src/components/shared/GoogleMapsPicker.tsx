@@ -19,8 +19,8 @@ export function GoogleMapsPicker({
   const numericPosition = useMemo(() => {
     if (!position) return null;
 
-    const lat = parseFloat(position.lat.toString());
-    const lng = parseFloat(position.lng.toString());
+    const lat = parseFloat(position.lat?.toString());
+    const lng = parseFloat(position.lng?.toString());
 
     if (!isNaN(lat) && !isNaN(lng)) {
       return { lat, lng };

@@ -33,22 +33,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { ViewRequestModal } from "@/components/admin/ViewRequestModal";
 import { useLocationAdminRequests } from "@/hooks/admin/useLocationAdminRequests";
 import Link from "next/link";
 import { useAllLocations } from "@/hooks/admin/useAllLocations";
-import { Switch } from "@/components/ui/switch";
 
 export default function LocationDashboardPage() {
   const [page, setPage] = useState(1);
   const [reqPage, setReqPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchReqTerm, setSearchReqTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 50);
-  const [debouncedSearchReqTerm] = useDebounce(searchReqTerm, 50);
-  const [viewingRequest, setViewingRequest] = useState<LocationRequest | null>(
-    null
-  );
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+  const [debouncedSearchReqTerm] = useDebounce(searchReqTerm, 300);
 
   const [sortReq, setSortReq] = useState<SortState>({
     column: "createdAt",
@@ -203,29 +198,21 @@ export default function LocationDashboardPage() {
                       Created At <SortIcon column="createdAt" />
                     </Button>
                   </TableHead>
-                  <TableHead className="text-right">Visible</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {allLocations.map((loc: Location) => (
                   <TableRow key={loc.id}>
-                    <TableCell className="font-medium">
-                      <Link
-                        href={`/admin/locations/${loc.id}`}
-                        className="hover:underline"
-                      >
-                        {loc.name}
-                      </Link>
-                    </TableCell>
+                    <TableCell className="font-medium">{loc.name}</TableCell>
                     <TableCell>{loc.business?.name || "N/A"}</TableCell>
                     <TableCell>
                       {new Date(loc.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Switch
-                        checked={loc.isVisibleOnMap}
-                        // onCheckedChange={(checked) => handleVisibilityChange(loc.id, checked)}
-                      />
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/admin/locations/${loc.id}`}>View</Link>
+                      </Button>
                       <Button asChild variant="ghost" size="icon">
                         <Link href={`/admin/locations/${loc.id}/edit`}>
                           <Edit className="h-4 w-4" />
@@ -323,13 +310,12 @@ export default function LocationDashboardPage() {
                       {new Date(req.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setViewingRequest(req)}
-                      >
-                        View
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/admin/locations/request/${req.id}`}>
+                          View
+                        </Link>
                       </Button>
+
                       <Button
                         size="sm"
                         onClick={() => setApprovingRequest(req)}
@@ -437,14 +423,6 @@ export default function LocationDashboardPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {viewingRequest && (
-        <ViewRequestModal
-          requestId={viewingRequest.id}
-          open={!!viewingRequest}
-          onOpenChange={() => setViewingRequest(null)}
-        />
-      )}
     </div>
   );
 }
