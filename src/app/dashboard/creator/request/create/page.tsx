@@ -1,165 +1,159 @@
 "use client";
 
-import { useForm, Controller } from "react-hook-form";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useCreateEventRequest } from "@/hooks/events/useCreateEventRequest";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
-import { FileUpload } from "@/components/shared/FileUpload";
-import { TagMultiSelect } from "@/components/shared/TagMultiSelect";
-import { useResolvedTags } from "@/hooks/tags/useResolvedTags";
-import { DisplayTags } from "@/components/shared/DisplayTags";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { CalendarIcon, Check, ChevronsUpDown, Loader2 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { useState } from "react";
-import { useDebounce } from "use-debounce";
-import { useBookableLocations } from "@/hooks/events/useBookableLocations";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { Form } from "@/components/ui/form";
+import { StepIndicator } from "./_components/StepIndicator";
+import { Step1BasicInfo } from "./_components/Step1BasicInfo";
+import { Step2TagsSelection } from "./_components/Step2TagsSelection";
+import { Step3LocationSelection } from "./_components/Step3LocationSelection";
+import { Step4ReviewPayment } from "./_components/Step4ReviewPayment";
 import { CreateEventRequestPayload } from "@/types";
 
-const formSchema = z.object({
-  eventName: z.string().min(3, "Tên sự kiện bắt buộc"),
-  eventDescription: z.string().min(5, "Mô tả bắt buộc"),
-  expectedNumberOfParticipants: z.number().min(1, "Phải lớn hơn 0"),
-  allowTickets: z.boolean(),
-  specialRequirements: z.string().optional(),
-  tagIds: z.array(z.number()).nonempty("Chọn ít nhất 1 tag"),
-  social: z
-    .array(
-      z.object({
-        platform: z.string(),
-        url: z.string().url("URL không hợp lệ"),
-        isMain: z.boolean(),
-      })
-    )
-    .optional(),
-  locationId: z.string().uuid("Phải chọn location"),
-  startDateTime: z.date({ error: "Start date is required." }),
-  endDateTime: z.date({ error: "End date is required." }),
-  eventValidationDocuments: z.array(
+// Custom validation for date ranges
+const dateRangeValidation = z
+  .array(
     z.object({
-      documentType: z.literal("EVENT_PERMIT"),
-      documentImageUrls: z.array(z.string().url()).nonempty(),
+      startDateTime: z.date(),
+      endDateTime: z.date(),
     })
-  ),
+  )
+  .refine(
+    (ranges) =>
+      ranges.every((range) => range.endDateTime > range.startDateTime),
+    {
+      message: "End time must be after start time for all slots",
+    }
+  )
+  .refine(
+    (ranges) =>
+      ranges.every((range) => range.startDateTime > new Date()),
+    {
+      message: "All event times must be in the future",
+    }
+  );
+
+const customVenueDetailsSchema = z.object({
+  venueName: z.string().min(1, "Venue name is required"),
+  addressLine: z.string().min(1, "Address is required"),
+  addressLevel1: z.string().optional(),
+  addressLevel2: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  additionalNotes: z.string().optional(),
 });
+
+const formSchema = z
+  .object({
+    // Step 1 fields
+    eventName: z
+      .string()
+      .min(3, "Event name must be at least 3 characters")
+      .max(255, "Event name must not exceed 255 characters"),
+    eventDescription: z
+      .string()
+      .min(5, "Description must be at least 5 characters")
+      .max(1024, "Description must not exceed 1024 characters"),
+    expectedNumberOfParticipants: z
+      .number()
+      .int("Must be a whole number")
+      .positive("Must be greater than 0"),
+    allowTickets: z.boolean(),
+    specialRequirements: z
+      .string()
+      .min(1, "Special requirements are required")
+      .max(624, "Special requirements must not exceed 624 characters"),
+    tagIds: z.array(z.number()).min(1, "Select at least 1 tag"),
+    eventValidationDocuments: z
+      .array(
+        z.object({
+          documentType: z.literal("EVENT_PERMIT"),
+          documentImageUrls: z.array(z.string().url()).min(1, "Upload at least 1 document"),
+        })
+      )
+      .min(1, "Upload at least 1 document"),
+    social: z
+      .array(
+        z.object({
+          platform: z.string(),
+          url: z.string().url("Invalid URL"),
+          isMain: z.boolean(),
+        })
+      )
+      .optional(),
+
+    // Step 2 fields (step 3 after tags)
+    venueType: z.enum(["business", "public", "custom"]),
+    locationId: z.string().uuid("Invalid location ID").optional(),
+    customVenueDetails: customVenueDetailsSchema.optional(),
+    dateRanges: z.array(
+      z.object({
+        startDateTime: z.date(),
+        endDateTime: z.date(),
+      })
+    ).min(1, "Select at least one time slot for your event"),
+    publicVenueTermsAccepted: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // Conditional validation: locationId required for business/public venues
+    if ((data.venueType === "business" || data.venueType === "public") && !data.locationId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please select a location",
+        path: ["locationId"],
+      });
+    }
+
+    // Conditional validation: customVenueDetails required for custom venues
+    if (data.venueType === "custom" && !data.customVenueDetails) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please provide custom venue details",
+        path: ["customVenueDetails"],
+      });
+    }
+
+    // Conditional validation: terms accepted required for public venues
+    if (data.venueType === "public" && !data.publicVenueTermsAccepted) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "You must agree to the terms of usage",
+        path: ["publicVenueTermsAccepted"],
+      });
+    }
+
+    // Validate date ranges
+    if (data.dateRanges && data.dateRanges.length > 0) {
+      for (const range of data.dateRanges) {
+        if (range.endDateTime <= range.startDateTime) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "End time must be after start time",
+            path: ["dateRanges"],
+          });
+        }
+        if (range.startDateTime <= new Date()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Event times must be in the future",
+            path: ["dateRanges"],
+          });
+        }
+      }
+    }
+  });
 
 export type CreateEventRequestForm = z.infer<typeof formSchema>;
 
-interface LocationComboBoxProps {
-  value: string | undefined; // The selected locationId
-  onChange: (value: string) => void; // Function to update the form
-}
-
-export function LocationComboBox({ value, onChange }: LocationComboBoxProps) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch] = useDebounce(search, 300); // Fetch locations dựa trên từ khóa search
-
-  const { data: response, isLoading } = useBookableLocations({
-    search: debouncedSearch,
-    limit: 10, // Tải 20 kết quả
-  });
-  const locations = response?.data || []; // Tìm object location đang được chọn để hiển thị tên
-
-  const selectedLocation = locations.find((loc) => loc.id === value);
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-        >
-          {value && selectedLocation
-            ? selectedLocation.name
-            : "Select a location..."}
-
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command>
-          <CommandInput
-            placeholder="Search location by name..."
-            value={search}
-            onValueChange={setSearch}
-          />
-
-          <CommandList>
-            <CommandEmpty>
-              {isLoading ? (
-                <div className="flex justify-center items-center p-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
-              ) : (
-                "No location found."
-              )}
-            </CommandEmpty>
-
-            <CommandGroup>
-              {locations.map((location) => (
-                <CommandItem
-                  key={location.id}
-                  value={location.id}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === location.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-
-                  <div>
-                    <p>{location.name}</p>{" "}
-                    <p className="text-xs text-muted-foreground">
-                      {location.addressLine}
-                    </p>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>{" "}
-    </Popover>
-  );
-}
-
 export default function CreateEventRequestPage() {
+  const [currentStep, setCurrentStep] = useState(1);
+  const createEvent = useCreateEventRequest();
+
   const form = useForm<CreateEventRequestForm>({
     resolver: zodResolver(formSchema),
     mode: "onChange",
@@ -167,289 +161,151 @@ export default function CreateEventRequestPage() {
     defaultValues: {
       eventName: "",
       eventDescription: "",
+      expectedNumberOfParticipants: undefined,
       allowTickets: true,
+      specialRequirements: "",
       tagIds: [],
       eventValidationDocuments: [],
       social: [],
+      venueType: "business",
+      locationId: undefined,
+      customVenueDetails: undefined,
+      dateRanges: [],
+      publicVenueTermsAccepted: false,
     },
   });
 
-  console.log(form.formState.errors);
+  const validateStep = async (step: number): Promise<boolean> => {
+    let fieldsToValidate: (keyof CreateEventRequestForm)[] = [];
 
-  const createEvent = useCreateEventRequest();
+    switch (step) {
+      case 1:
+        fieldsToValidate = [
+          "eventName",
+          "eventDescription",
+          "expectedNumberOfParticipants",
+          "specialRequirements",
+          "eventValidationDocuments",
+        ];
+        break;
+      case 2:
+        fieldsToValidate = ["tagIds"];
+        break;
+      case 3:
+        fieldsToValidate = [
+          "venueType",
+          "locationId",
+          "customVenueDetails",
+          "dateRanges",
+          "publicVenueTermsAccepted",
+        ];
+        break;
+      case 4:
+        // Validate entire form
+        return form.trigger();
+    }
 
-  const onSubmit = (values: CreateEventRequestForm) => {
-    const { startDateTime, endDateTime, ...rest } = values;
+    const result = await form.trigger(fieldsToValidate);
+    return result;
+  };
+
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStep);
+    if (isValid && currentStep < 4) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleSubmit = async () => {
+    const isValid = await validateStep(4);
+    if (!isValid) {
+      return;
+    }
+
+    const values = form.getValues();
+    const { dateRanges, customVenueDetails, publicVenueTermsAccepted, ...rest } =
+      values;
+
+    // For custom venues, we still need a locationId - this might need backend handling
+    // For now, we'll submit what we have and let the backend decide
     const payload: CreateEventRequestPayload = {
       ...rest,
-      social: values.social || [], // Đảm bảo mảng social tồn tại
-
-      // 3. Tạo mảng `dates` mà API yêu cầu
-      dates: [
-        {
-          startDateTime: startDateTime.toISOString(),
-          endDateTime: endDateTime.toISOString(),
-        },
-      ],
+      social: values.social || [],
+      locationId: values.locationId || "", // Will need to handle custom venues differently
+      dates: dateRanges.map((range) => ({
+        startDateTime: range.startDateTime.toISOString(),
+        endDateTime: range.endDateTime.toISOString(),
+      })),
     };
-    console.log(payload);
+
+    // Remove optional fields that shouldn't be in payload
+    delete (payload as any).customVenueDetails;
+    delete (payload as any).publicVenueTermsAccepted;
+    delete (payload as any).venueType;
+
     createEvent.mutate(payload);
   };
 
-  const watchedValues = form.watch();
-  const { resolvedTags: tags } = useResolvedTags(watchedValues.tagIds);
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return <Step1BasicInfo form={form} />;
+      case 2:
+        return <Step2TagsSelection form={form} />;
+      case 3:
+        return <Step3LocationSelection form={form} />;
+      case 4:
+        return (
+          <Step4ReviewPayment
+            form={form}
+            onSubmit={handleSubmit}
+            isSubmitting={createEvent.isPending}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create Event Request</CardTitle>
-        </CardHeader>
+    <div className="max-w-4xl mx-auto space-y-6 py-8 px-4">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Create Event Request</h1>
+        <p className="text-muted-foreground mt-2">
+          Fill out the form below to submit your event request
+        </p>
+      </div>
 
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* --- Basic Info --- */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="eventName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Event Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter event name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      <StepIndicator currentStep={currentStep} />
 
-                <FormField
-                  control={form.control}
-                  name="expectedNumberOfParticipants"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Expected Participants</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="e.g. 50"
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) =>
-                            field.onChange(e.target.valueAsNumber)
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+      <Form {...form}>
+        <Card>
+          <CardContent className="pt-6">{renderStepContent()}</CardContent>
+        </Card>
+      </Form>
 
-              <FormField
-                control={form.control}
-                name="eventDescription"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe your event..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="specialRequirements"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Special Requirements</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Any special requirements..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* --- Allow Tickets --- */}
-              <FormField
-                control={form.control}
-                name="allowTickets"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <FormLabel>Allow Ticketing</FormLabel>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="locationId"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Location *</FormLabel>
-                    <LocationComboBox
-                      value={field.value}
-                      onChange={field.onChange}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* --- 3. (Gợi ý) Chỉ hiển thị Lịch KHI đã chọn Location --- */}
-              {watchedValues.locationId && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    name="startDateTime"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Start Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="endDateTime"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>End Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-
-              {/* --- Tags --- */}
-              <Controller
-                control={form.control}
-                name="tagIds"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tags</FormLabel>
-                    <FormControl>
-                      <TagMultiSelect
-                        selectedTagIds={field.value}
-                        onSelectionChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DisplayTags tags={tags} maxCount={4} />
-
-              {/* --- Event Documents --- */}
-              <Controller
-                control={form.control}
-                name="eventValidationDocuments"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Event Permit Documents</FormLabel>
-                    <FormControl>
-                      <FileUpload
-                        value={field.value?.[0]?.documentImageUrls || []}
-                        onChange={(urls) =>
-                          field.onChange([
-                            {
-                              documentType: "EVENT_PERMIT",
-                              documentImageUrls: urls,
-                            },
-                          ])
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* --- Submit --- */}
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={createEvent.isPending}
-              >
-                {createEvent.isPending ? "Submitting..." : "Submit Request"}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+      {/* Navigation Buttons */}
+      {currentStep !== 4 && (
+        <div className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentStep === 1}
+          >
+            Previous
+          </Button>
+          <Button onClick={handleNext}>
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
+

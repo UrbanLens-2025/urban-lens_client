@@ -128,7 +128,7 @@ export default function EventRequestsPage() {
         </div>
         <Button
           onClick={() =>
-            (window.location.href = "/dashboard/creator/event-requests/create")
+            (window.location.href = "/dashboard/creator/request/create")
           }
         >
           <PlusCircle className="mr-2 h-4 w-4" />
