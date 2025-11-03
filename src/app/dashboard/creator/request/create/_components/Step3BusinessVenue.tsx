@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -231,7 +232,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
 
       {/* Availability Calendar Modal */}
       <Dialog open={showCalendar} onOpenChange={setShowCalendar}>
-        <DialogContent className="w-[90vw] max-w-[1400px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[90vw] !max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Select Your Event Times</DialogTitle>
           </DialogHeader>
