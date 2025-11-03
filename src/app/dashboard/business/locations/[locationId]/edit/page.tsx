@@ -37,6 +37,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { DisplayTags } from "@/components/shared/DisplayTags";
 import { PaginatedData, Tag } from "@/types";
 import { useTags } from "@/hooks/tags/useTags";
+import { useResolvedTags } from "@/hooks/tags/useResolvedTags";
 
 const updateLocationSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -65,7 +66,6 @@ export default function EditLocationPage({
     useAddTagsToLocation();
   const { mutateAsync: removeTags, isPending: isRemovingTags } =
     useRemoveTagsFromLocation();
-  const { data: allTagsResponse } = useTags();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(updateLocationSchema),
@@ -82,23 +82,7 @@ export default function EditLocationPage({
   
   const watchedValues = form.watch();
 
-  const tagsMap = useMemo(() => {
-    const map = new Map<number, Tag>();
-    const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];
-    allTags.forEach((tag) => map.set(tag.id, tag));
-    return map;
-  }, [allTagsResponse]);
-
-  const tags = useMemo(() => {
-    if (!watchedValues.tagIds || !tagsMap) {
-      return [];
-    }
-
-    return watchedValues.tagIds
-      .map((id) => tagsMap.get(id))
-      .filter((tag): tag is Tag => !!tag)
-      .map((tag) => ({ tag: tag }));
-  }, [watchedValues.tagIds, tagsMap]);
+  const { resolvedTags: tags } = useResolvedTags(watchedValues.tagIds);
 
   // 3. Điền (pre-fill) form khi dữ liệu được tải
   useEffect(() => {

@@ -43,6 +43,7 @@ import { useAddTagsToRequest } from "@/hooks/locations/useAddTagsToRequest";
 import { useRemoveTagsFromRequest } from "@/hooks/locations/useRemoveTagsFromRequest";
 import { useQueryClient } from "@tanstack/react-query";
 import { DisplayTags } from "../shared/DisplayTags";
+import { useResolvedTags } from "@/hooks/tags/useResolvedTags";
 
 const locationSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -128,7 +129,6 @@ export default function LocationForm({
     useUpdateLocationRequest();
   const { mutateAsync: addTags } = useAddTagsToRequest();
   const { mutateAsync: removeTags } = useRemoveTagsFromRequest();
-  const { data: allTagsResponse } = useTags();
 
   const isPending = isCreating || isUpdating;
 
@@ -180,23 +180,7 @@ export default function LocationForm({
 
   const watchedValues = form.watch();
 
-  const tagsMap = useMemo(() => {
-    const map = new Map<number, Tag>();
-    const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];
-    allTags.forEach((tag) => map.set(tag.id, tag));
-    return map;
-  }, [allTagsResponse]);
-
-  const tags = useMemo(() => {
-    if (!watchedValues.tagIds || !tagsMap) {
-      return [];
-    }
-
-    return watchedValues.tagIds
-      .map((id) => tagsMap.get(id))
-      .filter((tag): tag is Tag => !!tag)
-      .map((tag) => ({ tag: tag }));
-  }, [watchedValues.tagIds, tagsMap]);
+  const { resolvedTags: tags } = useResolvedTags(watchedValues.tagIds);
 
   const handleNextStep = async () => {
     const fields = steps[currentStep].fields;
