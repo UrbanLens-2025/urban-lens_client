@@ -115,8 +115,8 @@ export default function CreatePublicLocationPage() {
   };
 
   const watchedValues = form.watch();
-    const { resolvedTags: tags } = useResolvedTags(watchedValues.tagIds);
-  
+  const { resolvedTags: tags } = useResolvedTags(watchedValues.tagIds);
+
   const markerLat = watchedValues.latitude;
   const markerLng = watchedValues.longitude;
   const markerPosition =

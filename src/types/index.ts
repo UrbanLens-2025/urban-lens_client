@@ -64,6 +64,11 @@ export type LocationStatus =
   | "CANCELLED_BY_BUSINESS";
 export type SortDirection = "ASC" | "DESC";
 export type BusinessStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type EventRequestStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "UNDER_REVIEW";
 
 export interface User {
   id: string;
@@ -478,4 +483,108 @@ export interface UpdateLocationVoucherPayload {
   voucherType: string;
   startDate: string;
   endDate: string;
+}
+
+export interface EventRequest {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  eventName: string;
+  eventDescription: string;
+  expectedNumberOfParticipants: number;
+  allowTickets: boolean;
+  specialRequirements: string;
+  status: EventRequestStatus;
+  referencedLocationBookingId: string;
+  referencedLocationBooking: ReferencedLocationBooking;
+  eventValidationDocuments: {
+    documentType: string;
+    documentImageUrls: string[];
+  }[];
+
+  requestedLocation?: string;
+  locationOwner?: string;
+  eventDate?: string;
+}
+
+export interface GetEventRequestsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+}
+
+export interface CreateEventRequestPayload {
+  eventName: string;
+  eventDescription: string;
+  expectedNumberOfParticipants: number;
+  allowTickets: boolean;
+  specialRequirements?: string;
+  tagIds: number[];
+  social?: {
+    platform: string;
+    url: string;
+    isMain: boolean;
+  }[];
+  locationId: string;
+  dates: {
+    startDateTime: string;
+    endDateTime: string;
+  }[];
+  eventValidationDocuments: {
+    documentType: string;
+    documentImageUrls: string[];
+  }[];
+}
+
+export interface LocationBookingConfig {
+  locationId: string;
+  allowBooking: boolean;
+  baseBookingPrice: string;
+  currency: string;
+  minBookingDurationMinutes: number;
+  maxBookingDurationMinutes: number;
+  minGapBetweenBookingsMinutes: number;
+}
+
+export interface BookableLocation {
+  id: string;
+  name: string;
+  description: string;
+  addressLine: string;
+  addressLevel1: string;
+  addressLevel2: string;
+  imageUrl: string[];
+  isVisibleOnMap: boolean;
+  businessId: string;
+  bookingConfig: LocationBookingConfig;
+}
+
+export interface GetBookableLocationsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+}
+
+export interface ReferencedLocationBooking {
+  id: string;
+  bookingObject: string;
+  status: string;
+  amountToPay: string;
+  dates: {
+    startDateTime: string;
+    endDateTime: string;
+  }[];
+  locationId: string;
+  referencedTransactionId: string | null;
+  softLockedUntil: string;
+}
+
+export interface GetEventRequestsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
 }

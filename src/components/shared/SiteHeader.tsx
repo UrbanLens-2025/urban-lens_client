@@ -12,9 +12,12 @@ export function SiteHeader() {
   const titleMap: Record<string, string> = {
     "/admin": "Overview",
     "/dashboard/business": "Overview",
+    "/dashboard/creator": "Overview",
     "/admin/locations": "Locations",
     "/admin/business": "Business",
     "/dashboard/business/locations": "My Locations",
+    "/dashboard/creator/events": "My Events",
+    "/dashboard/creator/event-requests": "Event Requests",
   };
 
   const title =

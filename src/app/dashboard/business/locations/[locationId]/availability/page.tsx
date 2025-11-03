@@ -89,7 +89,7 @@ export default function AvailabilityPage({
     if (!availabilities) return [];
     return availabilities.map((av) => ({
       id: av.id.toString(),
-      title: av.note || "Available",
+      title: av.note || "",
       start: new Date(av.startDateTime),
       end: new Date(av.endDateTime),
       resource: av,

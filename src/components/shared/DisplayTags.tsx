@@ -18,11 +18,7 @@ interface DisplayTagsProps {
 export function DisplayTags({
   tags = [],
   maxCount = 5,
-  emptyText = "No tags",
 }: DisplayTagsProps) {
-  if (!tags || tags.length === 0) {
-    return <span className="text-muted-foreground">{emptyText}</span>;
-  }
 
   const visibleTags = tags.slice(0, maxCount);
   const hiddenTags = tags.slice(maxCount);

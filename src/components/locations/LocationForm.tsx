@@ -33,8 +33,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
-import { LocationRequest, PaginatedData, Tag } from "@/types";
-import { useTags } from "@/hooks/tags/useTags";
+import { LocationRequest } from "@/types";
 import { LocationAddressPicker } from "@/components/shared/LocationAddressPicker";
 import { useUpdateLocationRequest } from "@/hooks/locations/useUpdateLocationRequest";
 import { toast } from "sonner";
