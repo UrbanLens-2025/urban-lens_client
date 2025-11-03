@@ -16,6 +16,7 @@ export function SiteHeader() {
     "/admin/locations": "Locations",
     "/admin/business": "Business",
     "/dashboard/business/locations": "My Locations",
+    "/dashboard/business/locations/requests": "My Location Requests",
     "/dashboard/creator/events": "My Events",
     "/dashboard/creator/event-requests": "Event Requests",
   };

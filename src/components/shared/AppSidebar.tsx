@@ -11,6 +11,7 @@ import {
   IconMapPin,
   IconSettings,
   IconTag,
+  IconFileText,
 } from "@tabler/icons-react";
 
 import {
@@ -41,6 +42,11 @@ const businessNav = [
     title: "My Locations",
     url: "/dashboard/business/locations",
     icon: IconMapPin,
+  },
+  {
+    title: "My Location Requests",
+    url: "/dashboard/business/locations/requests",
+    icon: IconFileText,
   },
 ];
 
