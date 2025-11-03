@@ -35,8 +35,6 @@ import { useRemoveTagsFromLocation } from "@/hooks/tags/useRemoveTagsFromLocatio
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { DisplayTags } from "@/components/shared/DisplayTags";
-import { PaginatedData, Tag } from "@/types";
-import { useTags } from "@/hooks/tags/useTags";
 import { useResolvedTags } from "@/hooks/tags/useResolvedTags";
 
 const updateLocationSchema = z.object({
