@@ -41,20 +41,18 @@ export const getAvailabilities = async (
   return data.data;
 };
 
-// Create weekly availability payload
+// Create weekly availability payload (single entry)
 export interface CreateWeeklyAvailabilityPayload {
   locationId: string;
-  availabilities: Array<{
-    dayOfWeek: "SUNDAY" | "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY";
-    startTime: string; // Format: "HH:mm"
-    endTime: string; // Format: "HH:mm"
-  }>;
+  dayOfWeek: "SUNDAY" | "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY";
+  startTime: string; // Format: "HH:mm"
+  endTime: string; // Format: "HH:mm"
 }
 
 export const createWeeklyAvailability = async (
   payload: CreateWeeklyAvailabilityPayload
-): Promise<WeeklyAvailabilityResponse[]> => {
-  const { data } = await axiosInstance.post<ApiResponse<WeeklyAvailabilityResponse[]>>(
+): Promise<WeeklyAvailabilityResponse> => {
+  const { data } = await axiosInstance.post<ApiResponse<WeeklyAvailabilityResponse>>(
     '/v1/owner/location-availability',
     payload
   );

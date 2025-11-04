@@ -194,9 +194,24 @@ export default function AvailabilityPage({
     const startHour = Math.min(dragStartRef.current.hour, roundedHour);
     const endHour = Math.max(dragStartRef.current.hour, roundedHour);
 
+    // Check if any cell in the range overlaps with existing availability
+    let hasOverlap = false;
     for (let h = startHour; h <= endHour; h++) {
       const key = `${day}_${h}`;
-      // Only allow selecting cells that aren't already saved
+      if (availabilityCellsSet.has(key)) {
+        hasOverlap = true;
+        break;
+      }
+    }
+
+    // If there's an overlap, don't allow the selection
+    if (hasOverlap) {
+      return;
+    }
+
+    // Only allow selecting cells that aren't already saved
+    for (let h = startHour; h <= endHour; h++) {
+      const key = `${day}_${h}`;
       if (!availabilityCellsSet.has(key)) {
         newSelectedCells.add(key);
       }
@@ -301,13 +316,13 @@ export default function AvailabilityPage({
     return matchingSlot || null;
   };
 
-  // Convert internal format to API format for creation
-  const convertToApiFormat = (slots: WeeklyAvailabilitySlot[]) => {
-    return slots.map((slot) => ({
+  // Convert internal format to API format for creation (single entry)
+  const convertToApiFormat = (slot: WeeklyAvailabilitySlot) => {
+    return {
       dayOfWeek: DAY_OF_WEEK_REVERSE_MAP[slot.dayOfWeek] as "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY",
       startTime: `${String(slot.startHour).padStart(2, '0')}:00`,
       endTime: `${String(slot.endHour).padStart(2, '0')}:00`,
-    }));
+    };
   };
 
   // Handle single cell click - show dialog immediately
@@ -348,21 +363,33 @@ export default function AvailabilityPage({
     return `${String(hour).padStart(2, '0')}:00`;
   };
 
-  // Confirm and add availability slots
+  // Confirm and add availability slots (one at a time)
   const handleConfirmAdd = () => {
-    const apiPayload = {
-      locationId,
-      availabilities: convertToApiFormat(slotsToConfirm),
+    if (slotsToConfirm.length === 0) return;
+
+    // Create availability entries one by one
+    const createSequentially = async () => {
+      for (const slot of slotsToConfirm) {
+        const apiPayload = {
+          locationId,
+          ...convertToApiFormat(slot),
+        };
+
+        await new Promise<void>((resolve, reject) => {
+          createWeeklyAvailability(apiPayload, {
+            onSuccess: () => resolve(),
+            onError: (err) => reject(err),
+          });
+        });
+      }
+      
+      // Reset state after all creations
+      setSelectedCells(new Set());
+      setShowConfirmDialog(false);
+      setSlotsToConfirm([]);
     };
 
-    createWeeklyAvailability(apiPayload, {
-      onSuccess: () => {
-        // Reset state
-        setSelectedCells(new Set());
-        setShowConfirmDialog(false);
-        setSlotsToConfirm([]);
-      },
-    });
+    createSequentially();
   };
 
   // Cancel dialog
@@ -459,10 +486,10 @@ export default function AvailabilityPage({
     return cn(
       "w-full h-full rounded border cursor-pointer transition-all flex items-center justify-center text-[8px] font-medium",
       {
-        "bg-green-500 border-green-600 text-white": status === "saved" && !isHovered,
+        "bg-green-500 border-green-600 border-2 text-white": status === "saved" && !isHovered,
         "bg-green-600 border-green-700 border-2 text-white shadow-md": status === "saved" && isHovered,
-        "bg-blue-400 border-blue-500 text-white": isSelected && status === "available",
-        "bg-white border-gray-200 text-gray-700 hover:opacity-80": !isSelected && status === "available",
+        "bg-blue-400 border-blue-500 border-2 text-white": isSelected && status === "available",
+        "bg-white border-gray-300 border-2 text-gray-700 hover:opacity-80": !isSelected && status === "available",
       }
     );
   };
@@ -533,14 +560,14 @@ export default function AvailabilityPage({
           {/* Weekly Grid */}
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full">
-              <div className="border rounded-lg bg-gray-50 p-2">
+              <div className="border-2 border-gray-300 rounded-lg bg-gray-50 p-2">
                 {/* Header Row - Days of Week */}
-                <div className="grid grid-cols-[80px_repeat(7,1fr)] gap-1 mb-1">
-                  <div></div>
+                <div className="grid grid-cols-[95px_repeat(7,1fr)] gap-1 mb-2 border-b-2 border-gray-300 pb-2">
+                  <div className="border-r-2 border-gray-300"></div>
                   {DAYS_OF_WEEK.map((day, index) => (
                     <div
                       key={index}
-                      className="text-center font-semibold text-sm py-2"
+                      className="text-center font-semibold text-sm py-2 border-r border-gray-200 last:border-r-0"
                     >
                       {day.slice(0, 3)}
                     </div>
@@ -550,12 +577,12 @@ export default function AvailabilityPage({
                 {/* Time Slot Rows */}
                 <div className="space-y-0.5">
                   {HOURS.map((hour) => {
-                    const isNightTime = hour >= 20 || hour <= 5;
+                    const isNightTime = hour >= 21 || hour <= 5;
                     return (
                       <div
                         key={hour}
                         className={cn(
-                          "grid grid-cols-[90px_repeat(7,1fr)] gap-1",
+                          "grid grid-cols-[95px_repeat(7,1fr)] gap-1",
                           isNightTime && "bg-gray-100/50"
                         )}
                         onMouseUp={(e) => {
@@ -564,7 +591,7 @@ export default function AvailabilityPage({
                         }}
                       >
                         {/* Time Label */}
-                        <div className="flex items-center justify-center pr-2 text-xs font-medium text-gray-600">
+                        <div className="flex items-center justify-center pr-2 text-xs font-medium text-gray-600 border-r-2 border-gray-300">
                           {formatHourRange(hour)}
                         </div>
 
@@ -577,7 +604,7 @@ export default function AvailabilityPage({
                           return (
                             <div
                               key={`${dayIndex}_${hour}`}
-                              className="h-[20px] select-none"
+                              className="h-[20px] select-none border-r border-gray-200 last:border-r-0"
                               onClick={() => handleCellClick(dayIndex, hour)}
                               onMouseDown={(e) => handleMouseDown(dayIndex, hour, e)}
                               onMouseEnter={() => {
