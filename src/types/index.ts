@@ -625,7 +625,7 @@ export interface WalletExternalTransaction {
   provider: string;
   providerTransactionId: string;
   direction: string;
-  amount: string; 
+  amount: string;
   currency: string;
   paymentUrl: string;
   expiresAt: string;
@@ -669,4 +669,46 @@ export interface LocationBooking {
   locationId: string;
   referencedTransactionId: string | null;
   softLockedUntil: string;
+}
+
+interface LocationForEvent {
+  id: string;
+  name: string;
+  addressLine: string;
+  latitude: string;
+  longitude: string;
+}
+
+interface EventTag {
+  id: number;
+  eventId: string;
+  tagId: number;
+  tag: Tag;
+}
+
+export interface Event {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  createdBy: User;
+  displayName: string;
+  description: string;
+  avatarUrl: string | null;
+  coverUrl: string | null;
+  status: string;
+  locationId: string;
+  location: LocationForEvent;
+  social: any[];
+  refundPolicy: string | null;
+  termsAndConditions: string | null;
+  referencedEventRequestId: string;
+  tags: EventTag[];
+}
+
+export interface GetEventsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
 }

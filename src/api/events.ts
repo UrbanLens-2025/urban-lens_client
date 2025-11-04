@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axiosInstance from "./axios-config";
-import type { ApiResponse, PaginatedData, EventRequest, GetEventRequestsParams, CreateEventRequestPayload, GetBookableLocationsParams, BookableLocation } from "@/types";
+import type { ApiResponse, PaginatedData, EventRequest, GetEventRequestsParams, CreateEventRequestPayload, GetBookableLocationsParams, BookableLocation, GetEventsParams, Event } from "@/types";
 
 export const getEventRequests = async ({
   page = 1,
@@ -70,6 +70,34 @@ export const payForEventBooking = async (eventRequestId: string): Promise<EventR
   const { data } = await axiosInstance.post<ApiResponse<EventRequest>>(
     `/v1/creator/event-request/pay-for-booking/${eventRequestId}`,
     {}
+  );
+  return data.data;
+};
+
+export const getMyEvents = async ({
+  page = 1,
+  limit = 10,
+  sortBy = 'createdAt:DESC',
+  search
+}: GetEventsParams): Promise<PaginatedData<Event>> => {
+  
+  const params: any = { page, limit, sortBy };
+
+  if (search) {
+    params.search = search;
+    params.searchBy = ['displayName', 'description'];
+  }
+
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Event>>>(
+    '/v1/creator/events',
+    { params }
+  );
+  return data.data;
+};
+
+export const getEventById = async (eventId: string): Promise<Event> => {
+  const { data } = await axiosInstance.get<ApiResponse<Event>>(
+    `/v1/creator/events/${eventId}`
   );
   return data.data;
 };
