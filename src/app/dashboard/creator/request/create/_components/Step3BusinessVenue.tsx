@@ -51,43 +51,6 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     setShowCalendar(true);
   };
 
-  // Mock data for booked and unavailable slots - TODO: Replace with API calls
-  const mockBookedSlots = useMemo(() => {
-    // Example: Some slots booked on day 2 (tomorrow) at various times
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(13, 0, 0, 0);
-    
-    const day4 = new Date();
-    day4.setDate(day4.getDate() + 3);
-    day4.setHours(10, 0, 0, 0);
-
-    const day4_2 = new Date();
-    day4_2.setDate(day4_2.getDate() + 3);
-    day4_2.setHours(11, 0, 0, 0);
-
-    return [
-      { startDateTime: tomorrow, endDateTime: new Date(tomorrow.getTime() + 60 * 60 * 1000) },
-      { startDateTime: day4, endDateTime: new Date(day4.getTime() + 60 * 60 * 1000) },
-      { startDateTime: day4_2, endDateTime: new Date(day4_2.getTime() + 60 * 60 * 1000) },
-    ];
-  }, []);
-
-  const mockUnavailableSlots = useMemo(() => {
-    // Example: Some slots unavailable on day 1 (today) and day 5
-    const today = new Date();
-    today.setDate(today.getDate());
-    today.setHours(12, 0, 0, 0);
-
-    const day5 = new Date();
-    day5.setDate(day5.getDate() + 4);
-    day5.setHours(9, 0, 0, 0);
-
-    return [
-      { startDateTime: today, endDateTime: new Date(today.getTime() + 60 * 60 * 1000) },
-      { startDateTime: day5, endDateTime: new Date(day5.getTime() + 60 * 60 * 1000) },
-    ];
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -181,8 +144,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
           <AvailabilityCalendar
             onSlotsChange={handleSlotsChange}
             initialSlots={(form.watch as any)("dateRanges") || []}
-            bookedSlots={mockBookedSlots}
-            unavailableSlots={mockUnavailableSlots}
+            locationId={selectedLocationId}
           />
         </DialogContent>
       </Dialog>

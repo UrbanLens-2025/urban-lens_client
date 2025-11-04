@@ -23,6 +23,16 @@ export const getWeeklyAvailabilities = async (
   return data.data;
 };
 
+// Get weekly availability for creator
+export const getWeeklyAvailabilitiesForCreator = async (
+  locationId: string
+): Promise<WeeklyAvailabilityResponse[]> => {
+  const { data } = await axiosInstance.get<ApiResponse<WeeklyAvailabilityResponse[]>>(
+    `/v1/creator/location-availability/search/${locationId}`
+  );
+  return data.data;
+};
+
 export const getAvailabilities = async (
   locationId: string, 
   month: number,

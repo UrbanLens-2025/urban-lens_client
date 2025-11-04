@@ -74,6 +74,30 @@ export const payForEventBooking = async (eventRequestId: string): Promise<EventR
   return data.data;
 };
 
+// Get booked dates for location
+export interface BookedDatesResponse {
+  dates: Array<{
+    startDateTime: string;
+    endDateTime: string;
+  }>;
+}
+
+export const getBookedDates = async (
+  startDate: string,
+  endDate: string
+): Promise<BookedDatesResponse> => {
+  const { data } = await axiosInstance.get<ApiResponse<BookedDatesResponse>>(
+    `/v1/creator/location-booking/booked-dates`,
+    {
+      params: {
+        startDate,
+        endDate,
+      },
+    }
+  );
+  return data.data;
+};
+
 export const getMyEvents = async ({
   page = 1,
   limit = 10,
