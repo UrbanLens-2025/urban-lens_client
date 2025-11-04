@@ -211,7 +211,7 @@ export const processLocationBooking = async ({
   locationBookingId: string;
   payload: ProcessLocationBookingPayload;
 }): Promise<LocationBookingDetail> => {
-  const { data } = await axiosInstance.put<ApiResponse<LocationBookingDetail>>(
+  const { data } = await axiosInstance.post<ApiResponse<LocationBookingDetail>>(
     `/v1/owner/location-bookings/process/${locationBookingId}`,
     payload
   );

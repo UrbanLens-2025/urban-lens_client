@@ -607,7 +607,7 @@ export default function LocationBookingDetailPage({
             </CardHeader>
             <CardContent className="space-y-2">
               <Link href={`/dashboard/business/locations/${booking.locationId}`}>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full mb-2">
                   <MapPin className="h-4 w-4 mr-2" />
                   View Location
                 </Button>
