@@ -2,6 +2,27 @@
 import axiosInstance from "./axios-config";
 import type { ApiResponse, LocationAvailability, CreateAvailabilityPayload, UpdateAvailabilityPayload } from "@/types";
 
+// Weekly availability response from API
+export interface WeeklyAvailabilityResponse {
+  id: number;
+  locationId: string;
+  createdById: string;
+  dayOfWeek: "SUNDAY" | "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY";
+  startTime: string; // Format: "HH:mm"
+  endTime: string; // Format: "HH:mm"
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const getWeeklyAvailabilities = async (
+  locationId: string
+): Promise<WeeklyAvailabilityResponse[]> => {
+  const { data } = await axiosInstance.get<ApiResponse<WeeklyAvailabilityResponse[]>>(
+    `/v1/owner/location-availability/search/${locationId}`
+  );
+  return data.data;
+};
+
 export const getAvailabilities = async (
   locationId: string, 
   month: number,
@@ -16,6 +37,26 @@ export const getAvailabilities = async (
         year 
       } 
     }
+  );
+  return data.data;
+};
+
+// Create weekly availability payload
+export interface CreateWeeklyAvailabilityPayload {
+  locationId: string;
+  availabilities: Array<{
+    dayOfWeek: "SUNDAY" | "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY";
+    startTime: string; // Format: "HH:mm"
+    endTime: string; // Format: "HH:mm"
+  }>;
+}
+
+export const createWeeklyAvailability = async (
+  payload: CreateWeeklyAvailabilityPayload
+): Promise<WeeklyAvailabilityResponse[]> => {
+  const { data } = await axiosInstance.post<ApiResponse<WeeklyAvailabilityResponse[]>>(
+    '/v1/owner/location-availability',
+    payload
   );
   return data.data;
 };

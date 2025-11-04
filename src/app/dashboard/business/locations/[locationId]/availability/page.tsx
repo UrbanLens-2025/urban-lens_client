@@ -19,21 +19,56 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Loader2 } from "lucide-react";
+import { useWeeklyAvailabilities } from "@/hooks/availability/useWeeklyAvailabilities";
+import { useCreateWeeklyAvailability } from "@/hooks/availability/useCreateWeeklyAvailability";
+import { useDeleteAvailability } from "@/hooks/availability/useDeleteAvailability";
+import type { WeeklyAvailabilityResponse } from "@/api/availability";
 
-// Mock data structure for weekly availability slots
+// Internal data structure for weekly availability slots
 interface WeeklyAvailabilitySlot {
+  id?: number; // API ID for deletion
   dayOfWeek: number; // 0 = Monday, 6 = Sunday
   startHour: number; // 0-23
   endHour: number; // 0-23 (exclusive, so 7-11 means 7 AM to 11 AM)
 }
 
-// Mock saved availability data
-const MOCK_SAVED_AVAILABILITY: WeeklyAvailabilitySlot[] = [
-  { dayOfWeek: 0, startHour: 7, endHour: 11 }, // Mon 7-11 AM
-  { dayOfWeek: 0, startHour: 14, endHour: 17 }, // Mon 2-5 PM
-  { dayOfWeek: 2, startHour: 9, endHour: 17 }, // Wed 9 AM-5 PM
-  { dayOfWeek: 4, startHour: 10, endHour: 18 }, // Fri 10 AM-6 PM
-];
+// Day of week mapping: API string -> internal number (0=Monday, 6=Sunday)
+const DAY_OF_WEEK_MAP: Record<string, number> = {
+  MONDAY: 0,
+  TUESDAY: 1,
+  WEDNESDAY: 2,
+  THURSDAY: 3,
+  FRIDAY: 4,
+  SATURDAY: 5,
+  SUNDAY: 6,
+};
+
+const DAY_OF_WEEK_REVERSE_MAP: Record<number, string> = {
+  0: "MONDAY",
+  1: "TUESDAY",
+  2: "WEDNESDAY",
+  3: "THURSDAY",
+  4: "FRIDAY",
+  5: "SATURDAY",
+  6: "SUNDAY",
+};
+
+// Transform API response to internal format
+const transformApiResponse = (apiData: WeeklyAvailabilityResponse[]): WeeklyAvailabilitySlot[] => {
+  return apiData.map((item) => {
+    // Parse time strings like "11:00" to hour numbers
+    const startHour = parseInt(item.startTime.split(":")[0], 10);
+    const endHour = parseInt(item.endTime.split(":")[0], 10);
+    
+    return {
+      id: item.id,
+      dayOfWeek: DAY_OF_WEEK_MAP[item.dayOfWeek],
+      startHour,
+      endHour,
+    };
+  });
+};
 
 const DAYS_OF_WEEK = [
   "Monday",
@@ -56,10 +91,16 @@ export default function AvailabilityPage({
 }) {
   const { locationId } = use(params);
 
-  // Availability slots
-  const [availability, setAvailability] = useState<WeeklyAvailabilitySlot[]>(
-    MOCK_SAVED_AVAILABILITY
-  );
+  // Fetch weekly availability from API
+  const { data: apiAvailability, isLoading } = useWeeklyAvailabilities(locationId);
+  const { mutate: createWeeklyAvailability, isPending: isCreating } = useCreateWeeklyAvailability();
+  const { mutate: deleteAvailability, isPending: isDeleting } = useDeleteAvailability(locationId);
+
+  // Transform API data to internal format
+  const availability = useMemo(() => {
+    if (!apiAvailability) return [];
+    return transformApiResponse(apiAvailability);
+  }, [apiAvailability]);
 
   // Track which cells are selected (day_hour format: "0_7" = Monday 7 AM)
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
@@ -67,6 +108,14 @@ export default function AvailabilityPage({
   // Dialog state
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [slotsToConfirm, setSlotsToConfirm] = useState<WeeklyAvailabilitySlot[]>([]);
+  
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [slotsToDelete, setSlotsToDelete] = useState<WeeklyAvailabilitySlot[]>([]);
+  
+  // Track hovered block for highlighting
+  const [hoveredBlock, setHoveredBlock] = useState<WeeklyAvailabilitySlot | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Track if we should show dialog after selection
   const selectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -242,6 +291,25 @@ export default function AvailabilityPage({
     hasMovedRef.current = false;
   }, [selectedCells, processSelectedCellsWithSet]);
 
+  // Find the block of saved cells in the same day starting from a given hour
+  const findSavedBlockInDay = (day: number, startHour: number): WeeklyAvailabilitySlot | null => {
+    // Find the slot that contains this hour
+    const matchingSlot = availability.find((slot) => {
+      return slot.dayOfWeek === day && startHour >= slot.startHour && startHour < slot.endHour;
+    });
+
+    return matchingSlot || null;
+  };
+
+  // Convert internal format to API format for creation
+  const convertToApiFormat = (slots: WeeklyAvailabilitySlot[]) => {
+    return slots.map((slot) => ({
+      dayOfWeek: DAY_OF_WEEK_REVERSE_MAP[slot.dayOfWeek] as "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY",
+      startTime: `${String(slot.startHour).padStart(2, '0')}:00`,
+      endTime: `${String(slot.endHour).padStart(2, '0')}:00`,
+    }));
+  };
+
   // Handle single cell click - show dialog immediately
   const handleCellClick = (day: number, hour: number) => {
     // If mouse moved during the interaction, it was a drag, not a click
@@ -253,8 +321,13 @@ export default function AvailabilityPage({
     const roundedHour = roundHour(hour);
     const key = `${day}_${roundedHour}`;
 
-    // Don't allow selecting already saved cells
+    // If clicking on a saved cell, show delete dialog
     if (availabilityCellsSet.has(key)) {
+      const block = findSavedBlockInDay(day, roundedHour);
+      if (block) {
+        setSlotsToDelete([block]);
+        setShowDeleteDialog(true);
+      }
       return;
     }
 
@@ -277,19 +350,19 @@ export default function AvailabilityPage({
 
   // Confirm and add availability slots
   const handleConfirmAdd = () => {
-    // TODO: Replace with actual API call
-    console.log("Adding availability:", {
+    const apiPayload = {
       locationId,
-      slots: slotsToConfirm,
-    });
+      availabilities: convertToApiFormat(slotsToConfirm),
+    };
 
-    // Add to availability
-    setAvailability((prev) => [...prev, ...slotsToConfirm]);
-    
-    // Reset state
-    setSelectedCells(new Set());
-    setShowConfirmDialog(false);
-    setSlotsToConfirm([]);
+    createWeeklyAvailability(apiPayload, {
+      onSuccess: () => {
+        // Reset state
+        setSelectedCells(new Set());
+        setShowConfirmDialog(false);
+        setSlotsToConfirm([]);
+      },
+    });
   };
 
   // Cancel dialog
@@ -299,14 +372,97 @@ export default function AvailabilityPage({
     setSlotsToConfirm([]);
   };
 
+  // Confirm delete
+  const handleConfirmDelete = () => {
+    // Delete all slots (they should all have IDs from the API)
+    const slotsWithIds = slotsToDelete.filter((slot) => slot.id !== undefined);
+    
+    if (slotsWithIds.length === 0) {
+      setShowDeleteDialog(false);
+      setSlotsToDelete([]);
+      return;
+    }
+
+    // Delete slots sequentially
+    const deleteSequentially = async () => {
+      for (const slot of slotsWithIds) {
+        await new Promise<void>((resolve) => {
+          deleteAvailability(slot.id!, {
+            onSuccess: () => resolve(),
+            onError: () => resolve(), // Continue even if one fails
+          });
+        });
+      }
+      // Reset state after all deletions
+      setShowDeleteDialog(false);
+      setSlotsToDelete([]);
+    };
+
+    deleteSequentially();
+  };
+
+  // Cancel delete dialog
+  const handleCancelDeleteDialog = () => {
+    setShowDeleteDialog(false);
+    setSlotsToDelete([]);
+  };
+
+  // Check if a cell belongs to the hovered block
+  const isCellInHoveredBlock = (day: number, hour: number): boolean => {
+    if (!hoveredBlock) return false;
+    return (
+      hoveredBlock.dayOfWeek === day &&
+      hour >= hoveredBlock.startHour &&
+      hour < hoveredBlock.endHour
+    );
+  };
+
+  // Handle cell hover
+  const handleCellHover = (day: number, hour: number) => {
+    // Clear any pending timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+
+    const key = `${day}_${hour}`;
+    
+    // Only show hover effect for saved cells
+    if (availabilityCellsSet.has(key)) {
+      const block = findSavedBlockInDay(day, hour);
+      if (block) {
+        setHoveredBlock(block);
+      }
+    } else {
+      setHoveredBlock(null);
+    }
+  };
+
+  // Handle cell hover leave - clear with a small delay to allow smooth transitions
+  const handleCellHoverLeave = () => {
+    // Clear any pending timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    
+    // Small delay to allow mouse to move to adjacent cells in the same block
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredBlock(null);
+      hoverTimeoutRef.current = null;
+    }, 100);
+  };
+
   // Get cell class names
-  const getCellClassName = (status: CellStatus, isSelected: boolean) => {
+  const getCellClassName = (status: CellStatus, isSelected: boolean, day: number, hour: number) => {
+    const isHovered = isCellInHoveredBlock(day, hour);
+    
     return cn(
-      "w-full h-full rounded border cursor-pointer transition-all hover:opacity-80 flex items-center justify-center text-[8px] font-medium",
+      "w-full h-full rounded border cursor-pointer transition-all flex items-center justify-center text-[8px] font-medium",
       {
-        "bg-green-500 border-green-600 text-white": status === "saved",
+        "bg-green-500 border-green-600 text-white": status === "saved" && !isHovered,
+        "bg-green-600 border-green-700 border-2 text-white shadow-md": status === "saved" && isHovered,
         "bg-blue-400 border-blue-500 text-white": isSelected && status === "available",
-        "bg-white border-gray-200 text-gray-700": !isSelected && status === "available",
+        "bg-white border-gray-200 text-gray-700 hover:opacity-80": !isSelected && status === "available",
       }
     );
   };
@@ -335,6 +491,14 @@ export default function AvailabilityPage({
       }
     };
   }, [handleMouseUp]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -416,9 +580,13 @@ export default function AvailabilityPage({
                               className="h-[20px] select-none"
                               onClick={() => handleCellClick(dayIndex, hour)}
                               onMouseDown={(e) => handleMouseDown(dayIndex, hour, e)}
-                              onMouseEnter={() => handleMouseEnter(dayIndex, hour)}
+                              onMouseEnter={() => {
+                                handleMouseEnter(dayIndex, hour);
+                                handleCellHover(dayIndex, hour);
+                              }}
+                              onMouseLeave={handleCellHoverLeave}
                             >
-                              <div className={getCellClassName(status, isSelected)}></div>
+                              <div className={getCellClassName(status, isSelected, dayIndex, hour)}></div>
                             </div>
                           );
                         })}
@@ -457,11 +625,60 @@ export default function AvailabilityPage({
             ))}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={handleCancelDialog}>
+            <Button variant="outline" onClick={handleCancelDialog} disabled={isCreating}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmAdd}>
-              Confirm
+            <Button onClick={handleConfirmAdd} disabled={isCreating}>
+              {isCreating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Confirm"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Availability</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the following time ranges?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-4 max-h-[400px] overflow-y-auto">
+            {slotsToDelete.map((slot, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-2 bg-gray-50 rounded"
+              >
+                <div className="font-medium">
+                  {DAYS_OF_WEEK[slot.dayOfWeek]}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {formatHour(slot.startHour)} - {formatHour(slot.endHour)}
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelDeleteDialog} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
