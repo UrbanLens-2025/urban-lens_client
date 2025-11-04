@@ -13,7 +13,7 @@ import { useTags } from "@/hooks/tags/useTags"; // Vẫn cần hook này (nếu 
 import { EventRequest, PaginatedData, Tag, BookableLocation } from "@/types";
 
 // --- UI Components ---
-import { Loader2, ArrowLeft, Calendar, MapPin, User, FileText, ImageIcon, Layers, Zap, Users, Building, Ticket } from "lucide-react";
+import { Loader2, ArrowLeft, Calendar, MapPin, User, FileText, ImageIcon, Layers, Zap, Users, Building, Ticket, CreditCard, Phone, Wallet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { ImageViewer } from "@/components/shared/ImageViewer";
 import { DisplayTags } from "@/components/shared/DisplayTags";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
+import { usePayForEventBooking } from "@/hooks/events/usePayForEventBooking";
 
 // --- Component con: InfoRow ---
 function InfoRow({ label, value, icon: Icon }: { label: string, value: React.ReactNode, icon?: React.ComponentType<{ className?: string }> }) {
@@ -59,7 +60,36 @@ export default function EventRequestDetailsPage({
   
   const { data: allTagsResponse, isLoading: isLoadingTags } = useTags();
 
+  // Payment hook
+  const { mutate: payForBooking, isPending: isPaying } = usePayForEventBooking();
+
   const isLoading = isLoadingRequest || isLoadingLocation || isLoadingTags;
+  
+  // Check if payment is needed
+  const needsPayment = request?.status?.toUpperCase() === "PROCESSED";
+
+  const formatDateTime = (iso: string) => new Date(iso).toLocaleString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+
+  const formatCurrency = (amount: string | number, currency: string) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency, minimumFractionDigits: 0 }).format(num);
+  };
+
+  const statusVariant = (status: string) => {
+    const s = status?.toUpperCase();
+    if (s === 'CONFIRMED' || s === 'APPROVED' || s === 'PAYMENT_RECEIVED') return 'default' as const;
+    if (s === 'PENDING' || s === 'UNDER_REVIEW' || s === 'SOFT_LOCKED' || s === 'PROCESSED') return 'secondary' as const;
+    if (s === 'REJECTED' || s === 'CANCELLED') return 'destructive' as const;
+    return 'secondary' as const;
+  };
+
+  const handlePayNow = () => {
+    if (request?.id) {
+      payForBooking(request.id);
+    }
+  };
 
   // Xử lý Tags (nếu `location` có `tags`)
 //   const tagsMap = useMemo(() => {
@@ -111,7 +141,7 @@ export default function EventRequestDetailsPage({
               Booking for: <strong>{location.name}</strong>
             </p>
           </div>
-          <Badge>{request.status}</Badge>
+          <Badge variant={statusVariant(request.status)}>{request.status}</Badge>
         </div>
       </div>
 
@@ -119,6 +149,23 @@ export default function EventRequestDetailsPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cột Trái */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Quick stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4"/>Expected</CardTitle></CardHeader>
+              <CardContent><div className="text-2xl font-bold">{request.expectedNumberOfParticipants}</div></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex items-center gap-2"><Calendar className="h-4 w-4"/>Slots</CardTitle></CardHeader>
+              <CardContent><div className="text-2xl font-bold">{request.referencedLocationBooking?.dates?.length || 0}</div></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex items-center gap-2"><CreditCard className="h-4 w-4"/>Amount</CardTitle></CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(request.referencedLocationBooking.amountToPay, location.bookingConfig.currency)}</div>
+              </CardContent>
+            </Card>
+          </div>
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-2"><Layers /> Event Details</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -126,6 +173,16 @@ export default function EventRequestDetailsPage({
               <InfoRow label="Expected Attendees" value={request.expectedNumberOfParticipants} icon={Users} />
               <InfoRow label="Allow Ticketing" value={request.allowTickets ? "Yes" : "No"} icon={Ticket} />
               <InfoRow label="Special Requirements" value={request.specialRequirements} />
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-2">Requested Time Slots</p>
+                <div className="flex flex-wrap gap-2">
+                  {request.referencedLocationBooking.dates.map((d, i) => (
+                    <Badge key={i} variant="secondary" className="whitespace-nowrap">
+                      {formatDateTime(d.startDateTime)} - {formatDateTime(d.endDateTime)}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
           
@@ -134,8 +191,11 @@ export default function EventRequestDetailsPage({
             <CardContent className="space-y-4">
               <InfoRow label="Venue Name" value={location.name} />
               <InfoRow label="Venue Address" value={location.addressLine} />
-              <InfoRow label="Booking Status" value={<Badge>{request.referencedLocationBooking.status}</Badge>} />
-              <InfoRow label="Amount to Pay" value={`${parseFloat(request.referencedLocationBooking.amountToPay).toLocaleString()} ${location.bookingConfig.currency}`} />
+              <InfoRow label="Booking Status" value={<Badge variant={statusVariant(request.referencedLocationBooking.status)}>{request.referencedLocationBooking.status}</Badge>} />
+              <InfoRow label="Amount to Pay" value={formatCurrency(request.referencedLocationBooking.amountToPay, location.bookingConfig.currency)} />
+              {request.referencedLocationBooking.referencedTransactionId && (
+                <InfoRow label="Transaction" value={<span className="font-mono text-sm">{request.referencedLocationBooking.referencedTransactionId}</span>} />
+              )}
             </CardContent>
           </Card>
 
@@ -159,6 +219,68 @@ export default function EventRequestDetailsPage({
 
         {/* Cột Phải */}
         <div className="lg:col-span-1 space-y-6">
+          {/* Payment Card - Show when status is PROCESSED */}
+          {needsPayment && (
+            <Card className="border-2 border-amber-500 bg-amber-50/50 dark:bg-amber-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
+                  <Wallet className="h-5 w-5" />
+                  Payment Required
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-amber-900 dark:text-amber-200">
+                    Your event request has been processed. Please complete payment to confirm your booking.
+                  </p>
+                  <div className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <p className="text-xs text-muted-foreground mb-1">Amount to Pay</p>
+                    <p className="text-2xl font-bold text-amber-900 dark:text-amber-200">
+                      {formatCurrency(request.referencedLocationBooking.amountToPay, location.bookingConfig.currency)}
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handlePayNow} 
+                  disabled={isPaying}
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                  size="lg"
+                >
+                  {isPaying ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing Payment...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Pay Now
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-center text-amber-700 dark:text-amber-300">
+                  Payment will be deducted from your wallet balance
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2"><User /> Requester</CardTitle></CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <img src={request.createdBy?.avatarUrl || "/default-avatar.svg"} alt="avatar" className="h-10 w-10 rounded-full object-cover border" />
+                <div>
+                  <div className="font-medium">{request.createdBy?.firstName} {request.createdBy?.lastName}</div>
+                  <div className="text-xs text-muted-foreground">{request.createdBy?.email}</div>
+                </div>
+              </div>
+              <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2"><Phone className="h-3 w-3" /> {request.createdBy?.phoneNumber}</div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-2"><ImageIcon /> Location Images</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">

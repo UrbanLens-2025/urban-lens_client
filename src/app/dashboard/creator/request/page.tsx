@@ -22,6 +22,11 @@ import {
   XCircle,
   MapPin,
   Loader2,
+  Wallet,
+  Calendar,
+  Users,
+  Tag,
+  FileText,
 } from "lucide-react";
 import { useState } from "react";
 import { EventRequest, EventRequestStatus } from "@/types";
@@ -29,8 +34,9 @@ import { useDebounce } from "use-debounce";
 import { useEventRequests } from "@/hooks/events/useEventRequests";
 import Link from "next/link";
 
-const getStatusBadge = (status: EventRequestStatus) => {
-  switch (status) {
+const getStatusBadge = (status: string) => {
+  const statusUpper = status?.toUpperCase();
+  switch (statusUpper) {
     case "PENDING":
       return (
         <Badge
@@ -49,6 +55,26 @@ const getStatusBadge = (status: EventRequestStatus) => {
         >
           <CheckCircle className="h-3 w-3 mr-1" />
           Approved
+        </Badge>
+      );
+    case "CONFIRMED":
+      return (
+        <Badge
+          variant="outline"
+          className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-700"
+        >
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Confirmed
+        </Badge>
+      );
+    case "PROCESSED":
+      return (
+        <Badge
+          variant="outline"
+          className="bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-700"
+        >
+          <Wallet className="h-3 w-3 mr-1" />
+          Payment Required
         </Badge>
       );
     case "REJECTED":
@@ -90,6 +116,7 @@ export default function EventRequestsPage() {
   const requests = response?.data || [];
   const meta = response?.meta;
 
+  // Calculate stats from actual data
   const stats = [
     {
       label: "Total Requests",
@@ -98,22 +125,22 @@ export default function EventRequestsPage() {
       color: "text-blue-600",
     },
     {
+      label: "Payment Required",
+      value: requests.filter((r) => r.status?.toUpperCase() === "PROCESSED").length,
+      icon: Wallet,
+      color: "text-amber-600",
+    },
+    {
+      label: "Confirmed",
+      value: requests.filter((r) => r.status?.toUpperCase() === "CONFIRMED").length,
+      icon: CheckCircle,
+      color: "text-emerald-600",
+    },
+    {
       label: "Pending",
-      value: 0, // <-- Dữ liệu giả (API không cung cấp)
+      value: requests.filter((r) => r.status?.toUpperCase() === "PENDING").length,
       icon: Clock,
       color: "text-yellow-600",
-    },
-    {
-      label: "Approved",
-      value: 0, // <-- Dữ liệu giả (API không cung cấp)
-      icon: CheckCircle,
-      color: "text-green-600",
-    },
-    {
-      label: "Rejected",
-      value: 0, // <-- Dữ liệu giả (API không cung cấp)
-      icon: XCircle,
-      color: "text-red-600",
     },
   ];
 
@@ -178,51 +205,69 @@ export default function EventRequestsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Request ID</TableHead>
                   <TableHead>Event Name</TableHead>
-                  <TableHead>Requested Location</TableHead>
-                  <TableHead>Location Owner</TableHead>
-                  <TableHead>Request Date</TableHead>
-                  <TableHead>Event Date</TableHead>
+                  <TableHead>Description</TableHead>
                   <TableHead>Attendees</TableHead>
+                  <TableHead>Tags</TableHead>
+                  <TableHead>Created</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {requests.map((request: EventRequest) => (
-                  <TableRow key={request.id}>
-                    <TableCell className="font-mono text-sm">
-                      {request.id.substring(0, 8)}...
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {request.eventName}
-                    </TableCell>
+                  <TableRow key={request.id} className="hover:bg-muted/50">
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          N/A (API Missing)
+                      <div className="flex flex-col">
+                        <span className="font-medium">{request.eventName}</span>
+                        <span className="text-xs text-muted-foreground font-mono mt-1">
+                          {request.id.substring(0, 8)}...
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      N/A (API Missing)
+                    <TableCell className="max-w-xs">
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {request.eventDescription || "No description"}
+                      </p>
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {new Date(request.createdAt).toLocaleDateString()}
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">
+                          {request.expectedNumberOfParticipants}
+                        </span>
+                      </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      N/A (API Missing)
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {(request as any).tags && (request as any).tags.length > 0 ? (
+                          <>
+                            <Tag className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">
+                              {(request as any).tags.length} tag{(request as any).tags.length !== 1 ? "s" : ""}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No tags</span>
+                        )}
+                      </div>
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {request.expectedNumberOfParticipants}
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="text-sm">
+                          {new Date(request.createdAt).toLocaleDateString()}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(request.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
                       <Link href={`/dashboard/creator/request/${request.id}`}>
                         <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
                         </Button>
                       </Link>
                     </TableCell>
@@ -232,32 +277,61 @@ export default function EventRequestsPage() {
             </Table>
           )}
           {requests.length === 0 && !isLoading && (
-            <div className="text-center py-12">
-              <ClipboardList className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">No requests found</h3>
+            <div className="text-center py-16">
+              <ClipboardList className="mx-auto h-16 w-16 text-muted-foreground/30" />
+              <h3 className="mt-4 text-lg font-semibold">No event requests found</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {debouncedSearchTerm
+                  ? "Try adjusting your search terms"
+                  : "Create your first event request to get started"}
+              </p>
+              {!debouncedSearchTerm && (
+                <Button
+                  className="mt-4"
+                  onClick={() =>
+                    (window.location.href = "/dashboard/creator/request/create")
+                  }
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Create Event Request
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setPage(page - 1)}
-          disabled={!meta || meta.currentPage <= 1}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setPage(page + 1)}
-          disabled={!meta || meta.currentPage >= meta.totalPages}
-        >
-          Next
-        </Button>
-      </div>
+      {/* Pagination */}
+      {meta && meta.totalPages > 1 && (
+        <div className="flex items-center justify-between py-4">
+          <div className="text-sm text-muted-foreground">
+            Showing {((meta.currentPage - 1) * meta.itemsPerPage) + 1} to{" "}
+            {Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)} of{" "}
+            {meta.totalItems} requests
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page - 1)}
+              disabled={!meta || meta.currentPage <= 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground px-2">
+              Page {meta.currentPage} of {meta.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page + 1)}
+              disabled={!meta || meta.currentPage >= meta.totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -205,12 +205,12 @@ const payload: CreateEventRequestPayload = {
 onSuccess: () => {
   toast.success("Event request submitted successfully!");
   queryClient.invalidateQueries({ queryKey: ['eventRequests'] });
-  router.push('/dashboard/creator/event-requests');  // ← Navigates here
+  router.push('/dashboard/creator/request');  // ← Navigates here
 }
 ```
 
 ### Navigation Destination:
-- **Current**: `/dashboard/creator/event-requests`
+- **Current**: `/dashboard/creator/request`
 - **Expected**: Should navigate to events dashboard after submission
 
 ### Route Structure:
@@ -220,16 +220,16 @@ Based on file structure:
 - `/dashboard/creator/request/create` - Current create page
 
 ### ✅ **Navigation is Working**
-The hook correctly navigates to `/dashboard/creator/event-requests` after successful submission. However, user mentioned "events dashboard" - this might be `/dashboard/creator/events` instead.
+The hook correctly navigates to `/dashboard/creator/request` after successful submission. However, user mentioned "events dashboard" - this might be `/dashboard/creator/events` instead.
 
 ### ⚠️ **Potential Issue**
 User mentioned: "After that, it should go to the events dashboard (I don't know if it's done here)."
 
-**Current**: Goes to `/dashboard/creator/event-requests` (event requests list)  
+**Current**: Goes to `/dashboard/creator/request` (event requests list)  
 **Might need**: `/dashboard/creator/events` (events dashboard)
 
 **Action Required**: Clarify if navigation should go to:
-- `/dashboard/creator/event-requests` (current - shows pending requests)
+- `/dashboard/creator/request` (current - shows pending requests)
 - `/dashboard/creator/events` (shows approved/published events)
 
 ---

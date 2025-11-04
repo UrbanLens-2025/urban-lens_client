@@ -506,6 +506,7 @@ export interface EventRequest {
   requestedLocation?: string;
   locationOwner?: string;
   eventDate?: string;
+  locationBooking?: LocationBooking;
 }
 
 export interface GetEventRequestsParams {
@@ -651,4 +652,21 @@ export interface WalletExternalTransactionTimelineEvent {
   actorName: string;
   note: string;
   metadata: any;
+}
+
+export interface LocationBooking {
+  id: string;
+  bookingObject: string;
+  status: string;
+  amountToPay: string;
+  dates: {
+    startDateTime: string;
+    endDateTime: string;
+  }[];
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  locationId: string;
+  referencedTransactionId: string | null;
+  softLockedUntil: string;
 }

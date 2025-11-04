@@ -65,3 +65,11 @@ export const getBookableLocationById = async (locationId: string): Promise<Booka
   );
   return data.data;
 };
+
+export const payForEventBooking = async (eventRequestId: string): Promise<EventRequest> => {
+  const { data } = await axiosInstance.post<ApiResponse<EventRequest>>(
+    `/v1/creator/event-request/pay-for-booking/${eventRequestId}`,
+    {}
+  );
+  return data.data;
+};
