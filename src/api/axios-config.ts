@@ -23,7 +23,7 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      console.error("Authentication Error: Redirecting to login.");
+      console.error('Authentication Error: Redirecting to login.');
     }
     return Promise.reject(error.response?.data || error.message);
   }

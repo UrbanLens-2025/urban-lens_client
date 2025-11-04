@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useDebounce } from "use-debounce";
-import { useBusinessAccounts } from "@/hooks/admin/useBusinessAccounts";
-import { useProcessBusinessAccount } from "@/hooks/admin/useProcessBusinessAccount";
+import { useState } from 'react';
+import { useDebounce } from 'use-debounce';
+import { useBusinessAccounts } from '@/hooks/admin/useBusinessAccounts';
+import { useProcessBusinessAccount } from '@/hooks/admin/useProcessBusinessAccount';
 
 // Import các component UI
 import {
@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -20,28 +20,37 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
-import { BusinessProfile, BusinessStatus } from "@/types";
-import { cn } from "@/lib/utils";
-import { useQueryClient } from "@tanstack/react-query";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2 } from 'lucide-react';
+import { BusinessProfile, BusinessStatus } from '@/types';
+import { cn } from '@/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function AdminBusinessPage() {
   const [page, setPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-  const [statusTab, setStatusTab] = useState<BusinessStatus>("PENDING");
+  const [statusTab, setStatusTab] = useState<BusinessStatus>('PENDING');
 
   const { data: response, isLoading } = useBusinessAccounts({
     page,
     search: debouncedSearchTerm,
     status: statusTab,
-    sortBy: "createdAt:DESC",
+    sortBy: 'createdAt:DESC',
   });
   const businesses = response?.data || [];
   const meta = response?.meta;
@@ -52,18 +61,18 @@ export default function AdminBusinessPage() {
     useState<BusinessProfile | null>(null);
   const [rejectingBusiness, setRejectingBusiness] =
     useState<BusinessProfile | null>(null);
-  const [adminNotes, setAdminNotes] = useState("");
+  const [adminNotes, setAdminNotes] = useState('');
   const queryClient = useQueryClient();
 
   const handleConfirmApprove = () => {
     if (!approvingBusiness) return;
     processAccount(
-      { id: approvingBusiness.accountId, payload: { status: "APPROVED" } },
+      { id: approvingBusiness.accountId, payload: { status: 'APPROVED' } },
       {
         onSuccess: () => {
-          setStatusTab("APPROVED");
+          setStatusTab('APPROVED');
           setPage(1);
-          queryClient.invalidateQueries({ queryKey: ["businessAccounts"] });
+          queryClient.invalidateQueries({ queryKey: ['businessAccounts'] });
           setApprovingBusiness(null);
         },
       }
@@ -75,22 +84,22 @@ export default function AdminBusinessPage() {
     processAccount(
       {
         id: rejectingBusiness.accountId,
-        payload: { status: "REJECTED", adminNotes: adminNotes },
+        payload: { status: 'REJECTED', adminNotes: adminNotes },
       },
       {
         onSuccess: () => {
-          setStatusTab("REJECTED");
+          setStatusTab('REJECTED');
           setPage(1);
-          queryClient.invalidateQueries({ queryKey: ["businessAccounts"] });
+          queryClient.invalidateQueries({ queryKey: ['businessAccounts'] });
           setRejectingBusiness(null);
-          setAdminNotes("");
+          setAdminNotes('');
         },
       }
     );
   };
 
   return (
-    <div className="space-y-8">
+    <div className='space-y-8'>
       <Card>
         <CardHeader>
           <CardTitle>Manage Business Registrations</CardTitle>
@@ -106,25 +115,25 @@ export default function AdminBusinessPage() {
               setPage(1);
             }}
           >
-            <div className="flex justify-between items-center">
+            <div className='flex justify-between items-center'>
               <TabsList>
-                <TabsTrigger value="PENDING">Pending</TabsTrigger>
-                <TabsTrigger value="APPROVED">Approved</TabsTrigger>
-                <TabsTrigger value="REJECTED">Rejected</TabsTrigger>
+                <TabsTrigger value='PENDING'>Pending</TabsTrigger>
+                <TabsTrigger value='APPROVED'>Approved</TabsTrigger>
+                <TabsTrigger value='REJECTED'>Rejected</TabsTrigger>
               </TabsList>
-              <div className="w-full max-w-sm">
+              <div className='w-full max-w-sm'>
                 <Input
-                  placeholder="Search by name..."
+                  placeholder='Search by name...'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
 
-            <div className="mt-4">
+            <div className='mt-4'>
               {isLoading ? (
-                <div className="text-center p-8">
-                  <Loader2 className="animate-spin" />
+                <div className='text-center p-8'>
+                  <Loader2 className='animate-spin' />
                 </div>
               ) : (
                 <Table>
@@ -133,31 +142,31 @@ export default function AdminBusinessPage() {
                       <TableHead>Business Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className='text-right'>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {businesses.map((biz: BusinessProfile) => (
                       <TableRow key={biz.accountId}>
-                        <TableCell className="font-medium">
+                        <TableCell className='font-medium'>
                           {biz.name}
                         </TableCell>
                         <TableCell>{biz.email}</TableCell>
                         <TableCell>{biz.category}</TableCell>
-                        <TableCell className="text-right space-x-2">
-                          {statusTab === "PENDING" && (
+                        <TableCell className='text-right space-x-2'>
+                          {statusTab === 'PENDING' && (
                             <>
                               <Button
-                                size="sm"
+                                size='sm'
                                 onClick={() => setApprovingBusiness(biz)}
                                 disabled={isPending}
-                                className="bg-green-600 hover:bg-green-700"
+                                className='bg-green-600 hover:bg-green-700'
                               >
                                 Approve
                               </Button>
                               <Button
-                                variant="destructive"
-                                size="sm"
+                                variant='destructive'
+                                size='sm'
                                 onClick={() => setRejectingBusiness(biz)}
                                 disabled={isPending}
                               >
@@ -165,8 +174,8 @@ export default function AdminBusinessPage() {
                               </Button>
                             </>
                           )}
-                          {statusTab !== "PENDING" && (
-                            <Button variant="outline" size="sm">
+                          {statusTab !== 'PENDING' && (
+                            <Button variant='outline' size='sm'>
                               View
                             </Button>
                           )}
@@ -175,7 +184,7 @@ export default function AdminBusinessPage() {
                     ))}
                     {businesses.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center h-24">
+                        <TableCell colSpan={4} className='text-center h-24'>
                           No accounts found.
                         </TableCell>
                       </TableRow>
@@ -188,60 +197,74 @@ export default function AdminBusinessPage() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!approvingBusiness} onOpenChange={() => setApprovingBusiness(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Approve this Business Account?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to approve the business &quot;{approvingBusiness?.name}&quot;?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmApprove} disabled={isPending}>
-                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                            Confirm Approve
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+      <AlertDialog
+        open={!!approvingBusiness}
+        onOpenChange={() => setApprovingBusiness(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve this Business Account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to approve the business &quot;
+              {approvingBusiness?.name}&quot;?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmApprove}
+              disabled={isPending}
+            >
+              {isPending && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+              Confirm Approve
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-            <AlertDialog open={!!rejectingBusiness} onOpenChange={() => setRejectingBusiness(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Reject this Business Account?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Please provide a reason for rejecting &quot;{rejectingBusiness?.name}&quot;.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <Textarea 
-                        placeholder="Reason for rejection..."
-                        value={adminNotes}
-                        onChange={(e) => setAdminNotes(e.target.value)}
-                    />
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmReject} disabled={isPending}>
-                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                            Confirm Reject
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+      <AlertDialog
+        open={!!rejectingBusiness}
+        onOpenChange={() => setRejectingBusiness(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject this Business Account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please provide a reason for rejecting &quot;
+              {rejectingBusiness?.name}&quot;.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder='Reason for rejection...'
+            value={adminNotes}
+            onChange={(e) => setAdminNotes(e.target.value)}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmReject}
+              disabled={isPending}
+            >
+              {isPending && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+              Confirm Reject
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* --- PHÂN TRANG --- */}
-      <div className="flex items-center justify-end space-x-2 py-4">
+      <div className='flex items-center justify-end space-x-2 py-4'>
         <Button
-          variant="outline"
-          size="sm"
+          variant='outline'
+          size='sm'
           onClick={() => setPage(page - 1)}
           disabled={!meta || meta.currentPage <= 1}
         >
           Previous
         </Button>
         <Button
-          variant="outline"
-          size="sm"
+          variant='outline'
+          size='sm'
           onClick={() => setPage(page + 1)}
           disabled={!meta || meta.currentPage >= meta.totalPages}
         >

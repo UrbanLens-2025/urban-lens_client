@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 import {
   IconBriefcase,
   IconCalendar,
@@ -12,7 +12,8 @@ import {
   IconSettings,
   IconTag,
   IconFileText,
-} from "@tabler/icons-react";
+  IconWallet,
+} from '@tabler/icons-react';
 
 import {
   Sidebar,
@@ -22,43 +23,49 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { NavMain } from "./NavMain";
-import { NavSecondary } from "./NavSecondary";
-import { NavUser } from "./NavUser";
-import { Loader2 } from "lucide-react";
-import { useUser } from "@/hooks/user/useUser";
+} from '@/components/ui/sidebar';
+import { NavMain } from './NavMain';
+import { NavSecondary } from './NavSecondary';
+import { NavUser } from './NavUser';
+import { Loader2 } from 'lucide-react';
+import { useUser } from '@/hooks/user/useUser';
 
 const adminNav = [
-  { title: "Overview", url: "/admin", icon: IconDashboard },
-  { title: "Locations", url: "/admin/locations", icon: IconMapPin },
-  { title: "Business", url: "/admin/business", icon: IconBriefcase },
-  { title: "Tags", url: "/admin/tags", icon: IconTag },
+  { title: 'Overview', url: '/admin', icon: IconDashboard },
+  { title: 'Locations', url: '/admin/locations', icon: IconMapPin },
+  { title: 'Business', url: '/admin/business', icon: IconBriefcase },
+  { title: 'Events', url: '/admin/events', icon: IconCalendar },
+  { title: 'Wallet', url: '/admin/wallet', icon: IconWallet },
+  { title: 'Tags', url: '/admin/tags', icon: IconTag },
 ];
 
 const businessNav = [
-  { title: "Overview", url: "/dashboard/business", icon: IconDashboard },
+  { title: 'Overview', url: '/dashboard/business', icon: IconDashboard },
   {
-    title: "My Locations",
-    url: "/dashboard/business/locations",
+    title: 'My Locations',
+    url: '/dashboard/business/locations',
     icon: IconMapPin,
   },
   {
-    title: "My Location Requests",
-    url: "/dashboard/business/locations/requests",
+    title: 'My Location Requests',
+    url: '/dashboard/business/locations/requests',
     icon: IconFileText,
   },
 ];
 
 const creatorNav = [
-  { title: "Overview", url: "/dashboard/creator", icon: IconCalendar },
-  { title: "My Events", url: "/dashboard/creator/events", icon: IconCalendar },
-  { title: "Event Requests", url: "/dashboard/creator/request", icon: IconCalendarCheck },
+  { title: 'Overview', url: '/dashboard/creator', icon: IconCalendar },
+  { title: 'My Events', url: '/dashboard/creator/events', icon: IconCalendar },
+  {
+    title: 'Event Requests',
+    url: '/dashboard/creator/request',
+    icon: IconCalendarCheck,
+  },
 ];
 
 const navSecondary = [
-  { title: "Settings", url: "#", icon: IconSettings },
-  { title: "Get Help", url: "#", icon: IconHelp },
+  { title: 'Settings', url: '#', icon: IconSettings },
+  { title: 'Get Help', url: '#', icon: IconHelp },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -66,14 +73,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const dashboardTitle = React.useMemo(() => {
     switch (user?.role) {
-      case "ADMIN":
-        return "Admin Dashboard";
-      case "BUSINESS_OWNER":
-        return "Business Dashboard";
-      case "EVENT_CREATOR":
-        return "Creator Dashboard";
+      case 'ADMIN':
+        return 'Admin Dashboard';
+      case 'BUSINESS_OWNER':
+        return 'Business Dashboard';
+      case 'EVENT_CREATOR':
+        return 'Creator Dashboard';
       default:
-        return "Dashboard";
+        return 'Dashboard';
     }
   }, [user]);
 
@@ -81,15 +88,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     if (!user) return { navMain: [] };
 
     switch (user.role) {
-      case "ADMIN":
+      case 'ADMIN':
         return {
           navMain: adminNav,
         };
-      case "BUSINESS_OWNER":
+      case 'BUSINESS_OWNER':
         return {
           navMain: businessNav,
         };
-      case "EVENT_CREATOR":
+      case 'EVENT_CREATOR':
         return {
           navMain: creatorNav,
         };
@@ -102,12 +109,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   if (isLoading || !user) {
     return (
-      <Sidebar collapsible="icon" {...props}>
+      <Sidebar collapsible='icon' {...props}>
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton className="data-[slot=sidebar-menu-button]:!p-1.5">
-                <Loader2 className="animate-spin" />
+              <SidebarMenuButton className='data-[slot=sidebar-menu-button]:!p-1.5'>
+                <Loader2 className='animate-spin' />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -117,17 +124,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible='icon' {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
+              className='data-[slot=sidebar-menu-button]:!p-1.5'
             >
-              <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">
+              <a href='#'>
+                <IconInnerShadowTop className='!size-5' />
+                <span className='text-base font-semibold'>
                   {dashboardTitle}
                 </span>
               </a>
@@ -137,14 +144,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMain} />
-        <NavSecondary items={navSecondary} className="mt-auto" />
+        <NavSecondary items={navSecondary} className='mt-auto' />
       </SidebarContent>
       <SidebarFooter>
         <NavUser
           user={{
             name: `${user?.firstName} ${user?.lastName}`,
             email: user?.email,
-            avatar: user.avatarUrl || "",
+            avatar: user.avatarUrl || '',
           }}
         />
       </SidebarFooter>
