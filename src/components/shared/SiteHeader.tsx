@@ -16,9 +16,13 @@ export function SiteHeader() {
     "/admin/locations": "Locations",
     "/admin/business": "Business",
     "/dashboard/business/locations": "My Locations",
+    "/dashboard/business/location-bookings": "Location Bookings",
     "/dashboard/business/locations/requests": "My Location Requests",
     "/dashboard/creator/events": "My Events",
-    "/dashboard/creator/event-requests": "Event Requests",
+    "/dashboard/creator/request": "Event Requests",
+    "/dashboard/creator/wallet": "Wallet",
+    "/dashboard/business/wallet": "Wallet",
+    "/admin/wallet": "Wallet",
   };
 
   const title =

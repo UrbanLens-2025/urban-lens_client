@@ -16,7 +16,7 @@ export function useCreateEventRequest() {
     onSuccess: () => {
       toast.success("Event request submitted successfully!");
       queryClient.invalidateQueries({ queryKey: ['eventRequests'] });
-      router.push('/dashboard/creator/event-requests');
+      router.push('/dashboard/creator/request');
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to create event request.");

@@ -7,8 +7,9 @@ import { format } from "date-fns";
 import { useResolvedTags } from "@/hooks/tags/useResolvedTags";
 import { DisplayTags } from "@/components/shared/DisplayTags";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Loader2, Globe, Star } from "lucide-react";
 import { CreateEventRequestForm } from "../page";
+import Link from "next/link";
 
 interface Step4ReviewPaymentProps {
   form: UseFormReturn<CreateEventRequestForm>;
@@ -107,6 +108,43 @@ export function Step4ReviewPayment({
                 </p>
               </div>
             )}
+
+          {formValues.social && formValues.social.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Social Media Links
+              </p>
+              <div className="space-y-2">
+                {formValues.social.map((link, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-2 rounded-md border bg-muted/30"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{link.platform}</span>
+                        {link.isMain && (
+                          <Badge variant="default" className="text-xs">
+                            <Star className="h-3 w-3 mr-1" />
+                            Main
+                          </Badge>
+                        )}
+                      </div>
+                      <Link
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline truncate block"
+                      >
+                        {link.url}
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

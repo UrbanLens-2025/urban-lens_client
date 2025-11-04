@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { FileUpload } from "@/components/shared/FileUpload";
+import { SocialLinksInput } from "./SocialLinksInput";
+import { Separator } from "@/components/ui/separator";
 import { CreateEventRequestForm } from "../page";
 
 interface Step1BasicInfoProps {
@@ -32,7 +34,11 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
             <FormItem>
               <FormLabel>Event Name *</FormLabel>
               <FormControl>
-                <Input placeholder="Enter event name" {...field} />
+                <Input 
+                  placeholder="Enter event name" 
+                  {...field}
+                  className="h-11"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -56,6 +62,8 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
                       e.target.value ? Number.parseInt(e.target.value) : undefined
                     )
                   }
+                  className="h-11"
+                  min={1}
                 />
               </FormControl>
               <FormMessage />
@@ -73,12 +81,18 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
             <FormLabel>Description *</FormLabel>
             <FormControl>
               <Textarea
-                placeholder="Describe your event..."
-                rows={4}
+                placeholder="Describe your event, including what attendees can expect, key highlights, and any important information..."
+                rows={5}
                 {...field}
+                className="resize-none"
               />
             </FormControl>
-            <FormMessage />
+            <div className="flex justify-between">
+              <FormMessage />
+              <span className="text-xs text-muted-foreground">
+                {field.value?.length || 0}/1024 characters
+              </span>
+            </div>
           </FormItem>
         )}
       />
@@ -90,12 +104,16 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
         render={({ field }) => (
           <FormItem>
             <FormLabel>Special Requirements *</FormLabel>
+            <p className="text-sm text-muted-foreground mb-2">
+              List any special requirements, accommodations, or considerations needed for your event
+            </p>
             <FormControl>
               <Textarea
-                placeholder="Any special requirements for your event..."
-                rows={3}
+                placeholder="e.g., Accessibility requirements, equipment needs, dietary restrictions, security needs..."
+                rows={4}
                 maxLength={624}
                 {...field}
+                className="resize-none"
               />
             </FormControl>
             <div className="flex justify-between">
@@ -130,6 +148,16 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
         )}
       />
 
+      <Separator />
+
+      {/* Social Links */}
+      <Controller
+        control={form.control}
+        name="social"
+        render={() => <SocialLinksInput form={form} />}
+      />
+
+      <Separator />
 
       {/* Event Permit Documents */}
       <Controller
@@ -138,6 +166,9 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
         render={({ field }) => (
           <FormItem>
             <FormLabel>Event Permit Documents *</FormLabel>
+            <p className="text-sm text-muted-foreground mb-3">
+              Upload official permits or documents required for your event
+            </p>
             <FormControl>
               <FileUpload
                 value={field.value?.[0]?.documentImageUrls || []}

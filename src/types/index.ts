@@ -506,6 +506,7 @@ export interface EventRequest {
   requestedLocation?: string;
   locationOwner?: string;
   eventDate?: string;
+  locationBooking?: LocationBooking;
 }
 
 export interface GetEventRequestsParams {
@@ -583,6 +584,201 @@ export interface ReferencedLocationBooking {
 }
 
 export interface GetEventRequestsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+}
+
+export interface Wallet {
+  id: string;
+  ownedBy: string;
+  walletType: string;
+  balance: string;
+  currency: string;
+  totalTransactions: number;
+  isLocked: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ProviderResponse {
+  vnp_Amount: number;
+  vnp_TxnRef: string;
+  vnp_PayDate: number;
+  vnp_TmnCode: string;
+  vnp_BankCode: string;
+  vnp_CardType: string | null;
+  vnp_OrderInfo: string;
+  vnp_BankTranNo: string;
+  vnp_SecureHash: string;
+  vnp_ResponseCode: number;
+  vnp_TransactionNo: number;
+  vnp_TransactionStatus: number;
+}
+
+export interface WalletExternalTransaction {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  walletId: string;
+  provider: string;
+  providerTransactionId: string;
+  direction: string;
+  amount: string;
+  currency: string;
+  paymentUrl: string;
+  expiresAt: string;
+  providerResponse: ProviderResponse;
+  status: string;
+  createdById: string;
+  timeline: WalletExternalTransactionTimelineEvent[];
+}
+
+export interface GetWalletExternalTransactionsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+}
+
+export interface WalletExternalTransactionTimelineEvent {
+  id: string;
+  createdAt: string;
+  transactionId: string;
+  statusChangedTo: string;
+  action: string;
+  actorType: string;
+  actorId: string | null;
+  actorName: string;
+  note: string;
+  metadata: any;
+}
+
+export interface ReferencedEventRequest {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  eventName: string;
+  eventDescription: string;
+  expectedNumberOfParticipants: number;
+  allowTickets: boolean;
+  specialRequirements: string;
+  status: string;
+  referencedLocationBookingId: string;
+  eventValidationDocuments: {
+    documentType: string;
+    documentImageUrls: string[];
+  }[];
+}
+
+export interface CreatorProfile {
+  accountId: string;
+  displayName: string;
+  description: string;
+  email: string;
+  phoneNumber: string;
+  avatarUrl: string;
+  coverUrl: string;
+  type: string;
+  social: SocialLink[];
+}
+
+export interface UserWithCreatorProfile extends User {
+  creatorProfile?: CreatorProfile;
+}
+
+export interface ReferencedTransaction {
+  id: string;
+  amount: string;
+  currency: string;
+  type: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface LocationBooking {
+  id: string;
+  bookingObject: string;
+  status: string;
+  amountToPay: string;
+  dates: {
+    startDateTime: string;
+    endDateTime: string;
+  }[];
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  locationId: string;
+  referencedTransactionId: string | null;
+  softLockedUntil: string | null;
+  createdBy: User;
+  location: LocationForEvent;
+  referencedEventRequest: ReferencedEventRequest;
+}
+
+export interface LocationBookingDetail extends Omit<LocationBooking, 'createdBy'> {
+  createdBy: UserWithCreatorProfile;
+  referencedTransaction: ReferencedTransaction | null;
+}
+
+export interface GetOwnerLocationBookingsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+}
+
+export interface ProcessLocationBookingPayload {
+  status: "APPROVED" | "REJECTED";
+}
+
+interface LocationForEvent {
+  id: string;
+  ownershipType: string;
+  name: string;
+  description: string | null;
+  latitude: string;
+  longitude: string;
+  addressLine: string;
+  addressLevel1: string | null;
+  addressLevel2: string | null;
+  radiusMeters: number;
+  imageUrl: string[];
+  createdAt: string;
+  updatedAt: string;
+  isVisibleOnMap: boolean;
+  businessId: string | null;
+}
+
+interface EventTag {
+  id: number;
+  eventId: string;
+  tagId: number;
+  tag: Tag;
+}
+
+export interface Event {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  createdBy: User;
+  displayName: string;
+  description: string;
+  avatarUrl: string | null;
+  coverUrl: string | null;
+  status: string;
+  locationId: string;
+  location: LocationForEvent;
+  social: SocialLink[];
+  refundPolicy: string | null;
+  termsAndConditions: string | null;
+  referencedEventRequestId: string;
+  tags: EventTag[];
+}
+
+export interface GetEventsParams {
   page?: number;
   limit?: number;
   sortBy?: string;

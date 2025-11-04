@@ -4,9 +4,13 @@ import type {
   ApiResponse,
   CreateLocationPayload,
   GetRequestsParams,
+  GetOwnerLocationBookingsParams,
   Location,
+  LocationBooking,
+  LocationBookingDetail,
   LocationRequest,
   PaginatedData,
+  ProcessLocationBookingPayload,
   Tag,
   UpdateLocationPayload,
 } from "@/types";
@@ -171,4 +175,45 @@ export const cancelLocationRequest = async (
     {}
   );
   return data;
+};
+
+export const getOwnerLocationBookings = async ({
+  page = 1,
+  limit = 20,
+  sortBy = "createdAt:ASC",
+  search,
+}: GetOwnerLocationBookingsParams): Promise<PaginatedData<LocationBooking>> => {
+  const params: any = { page, limit, sortBy };
+  if (search) {
+    params.search = search;
+  }
+
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<LocationBooking>>
+  >("/v1/owner/location-bookings/search", { params });
+  return data.data;
+};
+
+export const getLocationBookingById = async (
+  locationBookingId: string
+): Promise<LocationBookingDetail> => {
+  const { data } = await axiosInstance.get<ApiResponse<LocationBookingDetail>>(
+    `/v1/owner/location-bookings/search/${locationBookingId}`,
+    { params: { locationBookingId } }
+  );
+  return data.data;
+};
+
+export const processLocationBooking = async ({
+  locationBookingId,
+  payload,
+}: {
+  locationBookingId: string;
+  payload: ProcessLocationBookingPayload;
+}): Promise<LocationBookingDetail> => {
+  const { data } = await axiosInstance.post<ApiResponse<LocationBookingDetail>>(
+    `/v1/owner/location-bookings/process/${locationBookingId}`,
+    payload
+  );
+  return data.data;
 };

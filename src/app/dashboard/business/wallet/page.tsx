@@ -1,0 +1,504 @@
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Wallet as WalletIcon,
+  Download,
+  Upload,
+  TrendingUp,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Building2,
+  Users,
+  ArrowLeftRight,
+  Landmark,
+  Loader2,
+} from "lucide-react";
+import { useState } from "react";
+import Link from "next/link";
+import { useWallet } from "@/hooks/user/useWallet";
+import { useWalletExternalTransactions } from "@/hooks/wallet/useWalletExternalTransactions";
+import type { WalletExternalTransaction } from "@/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useWalletTransactionById } from "@/hooks/wallet/useWalletExternalTransactionById";
+
+// Mock internal transaction data (wallet-to-wallet) — still mocked until internal API exists
+const mockInternalTransactions = [
+  {
+    id: "int_001",
+    type: "transfer_out",
+    amount: 25000,
+    description: "Payment to vendor",
+    otherParty: "Event Services",
+    otherPartyType: "business",
+    status: "completed",
+    date: "2025-10-28T14:30:00",
+    reference: "INT-2025-001",
+  },
+  {
+    id: "int_002",
+    type: "transfer_in",
+    amount: 45000,
+    description: "Venue booking revenue",
+    otherParty: "Urban Lens Platform",
+    otherPartyType: "system",
+    status: "completed",
+    date: "2025-10-26T16:45:00",
+    reference: "INT-2025-002",
+  },
+];
+
+const getInternalTransactionIcon = (type: string, otherPartyType: string) => {
+  if (otherPartyType === "system") {
+    return <ArrowLeftRight className="h-4 w-4 text-blue-600" />;
+  }
+  if (type === "transfer_in") {
+    return <ArrowDownLeft className="h-4 w-4 text-green-600" />;
+  }
+  return <ArrowUpRight className="h-4 w-4 text-orange-600" />;
+};
+
+const getExternalTransactionIcon = (type: string) => {
+  if (type === "deposit") {
+    return <Building2 className="h-4 w-4 text-green-600" />;
+  }
+  return <Landmark className="h-4 w-4 text-orange-600" />;
+};
+
+const getTransactionSign = (type: string) => {
+  return type === "withdrawal" || type === "transfer_out" ? "-" : "+";
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "completed":
+      return "default";
+    case "pending":
+      return "secondary";
+    case "failed":
+      return "destructive";
+    default:
+      return "secondary";
+  }
+};
+
+const getStatusLabel = (status: string) => {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+const getTypeLabel = (type: string) => {
+  switch (type) {
+    case "transfer_in":
+      return "Received";
+    case "transfer_out":
+      return "Sent";
+    case "deposit":
+      return "Deposit";
+    case "withdrawal":
+      return "Withdrawal";
+    default:
+      return type;
+  }
+};
+
+export default function BusinessWalletPage() {
+  const { data: walletData, isLoading, error } = useWallet();
+  const [currentInternalPage, setCurrentInternalPage] = useState(1);
+  const [currentExternalPage, setCurrentExternalPage] = useState(1);
+  const itemsPerPage = 10;
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+
+  // External transactions (real API)
+  const { 
+    data: externalTransactionsData, 
+    isLoading: isLoadingExternalTransactions 
+  } = useWalletExternalTransactions({
+    page: currentExternalPage,
+    limit: itemsPerPage,
+    sortBy: 'createdAt:DESC'
+  });
+
+  const { data: transactionDetail, isLoading: isLoadingDetail } = useWalletTransactionById(selectedTransactionId);
+
+  const totalBalance = walletData ? parseFloat(walletData.balance) : 0;
+  const currency = walletData?.currency || "VND";
+
+  const externalTransactions = externalTransactionsData?.data || [];
+  const totalExternalPages = externalTransactionsData?.meta.totalPages || 1;
+  const totalExternalItems = externalTransactionsData?.meta.totalItems || 0;
+
+  // Page-level stats (external from current page; internal from mock until API exists)
+  const stats = {
+    totalDeposits: externalTransactions
+      .filter((t) => t.direction.toUpperCase() === "DEPOSIT" && t.status.toUpperCase() === "COMPLETED")
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0),
+    totalWithdrawals: externalTransactions
+      .filter((t) => t.direction.toUpperCase() === "WITHDRAWAL" && t.status.toUpperCase() === "COMPLETED")
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0),
+    totalEarnings: mockInternalTransactions
+      .filter((t) => t.type === "transfer_in" && t.status === "completed")
+      .reduce((sum, t) => sum + t.amount, 0),
+    totalTransactions: walletData?.totalTransactions || 0,
+  };
+
+  // Internal mock pagination
+  const totalInternalPages = Math.ceil(mockInternalTransactions.length / itemsPerPage);
+  const paginatedInternalTransactions = mockInternalTransactions.slice(
+    (currentInternalPage - 1) * itemsPerPage,
+    currentInternalPage * itemsPerPage
+  );
+
+  const mapStatus = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      COMPLETED: "completed",
+      PENDING: "pending",
+      FAILED: "failed",
+      CANCELLED: "cancelled",
+    };
+    return statusMap[status.toUpperCase()] || status.toLowerCase();
+  };
+
+  const getBankName = (bankCode: string): string => {
+    const bankMap: Record<string, string> = {
+      VNP: "Vietnam Payment",
+      VNB: "Vietcombank",
+      TCB: "Techcombank",
+      BID: "BIDV",
+      ACB: "ACB",
+      VCB: "Vietcombank",
+      CTG: "Vietinbank",
+      NCB: "NCB Bank",
+      VNPAY: "VNPay",
+    };
+    return bankMap[bankCode.toUpperCase()] || bankCode || "Unknown Bank";
+  };
+
+  const mapExternalTransaction = (t: WalletExternalTransaction) => {
+    const isDeposit = t.direction.toUpperCase() === "DEPOSIT";
+    const bankCode = t.providerResponse?.vnp_BankCode || t.provider || "N/A";
+    const accountNumber = t.providerResponse?.vnp_BankTranNo
+      ? `****${String(t.providerResponse.vnp_BankTranNo).slice(-4)}`
+      : "N/A";
+    return {
+      id: t.id,
+      type: isDeposit ? "deposit" : "withdrawal",
+      amount: parseFloat(t.amount),
+      description: isDeposit ? "Bank transfer deposit" : "Withdrawal to bank account",
+      bankName: getBankName(bankCode),
+      accountNumber,
+      status: mapStatus(t.status),
+      date: t.createdAt,
+      reference: t.providerTransactionId || t.id,
+      transactionFee: 0,
+    };
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Wallet</h1>
+          <p className="text-muted-foreground mt-2">Manage your balance and transactions</p>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <p className="text-destructive font-medium">Failed to load wallet information</p>
+              <p className="text-sm text-muted-foreground mt-1">Please try refreshing the page</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Wallet</h1>
+        <p className="text-muted-foreground mt-2">Manage your balance and transactions</p>
+      </div>
+
+      <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-white">Total Balance</CardTitle>
+            <WalletIcon className="h-8 w-8 opacity-80" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="text-4xl font-bold">{formatCurrency(totalBalance)}</div>
+            {walletData?.isLocked && (
+              <Badge variant="destructive" className="bg-red-500/20 text-red-100 border-red-300">
+                Wallet Locked
+              </Badge>
+            )}
+            <div className="flex gap-3">
+              <Button className="bg-white text-blue-600 hover:bg-gray-100" size="sm" disabled={walletData?.isLocked}>
+                <Download className="mr-2 h-4 w-4" />
+                Deposit
+              </Button>
+              <Button variant="outline" className="border-white text-blue-600 hover:bg-white/10" size="sm" disabled={walletData?.isLocked}>
+                <Upload className="mr-2 h-4 w-4" />
+                Withdraw
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
+            <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalTransactions}</div>
+            <p className="text-xs text-muted-foreground">All time transactions</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">External Deposits</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(stats.totalDeposits)}</div>
+            <p className="text-xs text-muted-foreground">From bank transfers</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Internal Earnings</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(stats.totalEarnings)}</div>
+            <p className="text-xs text-muted-foreground">From bookings</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">External Withdrawals</CardTitle>
+            <Landmark className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(stats.totalWithdrawals)}</div>
+            <p className="text-xs text-muted-foreground">To bank account</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Transaction History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="internal" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="internal">
+                <ArrowLeftRight className="h-4 w-4 mr-2" />
+                Internal
+              </TabsTrigger>
+              <TabsTrigger value="external">
+                <Building2 className="h-4 w-4 mr-2" />
+                External
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="internal" className="space-y-4">
+              <div className="rounded-md border border-blue-200 bg-blue-50/50 dark:border-blue-700 dark:bg-blue-950/50 p-3 mb-4">
+                <p className="text-sm text-blue-900 dark:text-blue-200 font-medium flex items-center gap-2">
+                  <ArrowLeftRight className="h-4 w-4" />
+                  Internal transactions are transfers within the platform
+                </p>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>From/To</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead>Date & Time</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedInternalTransactions.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {getInternalTransactionIcon(t.type, t.otherPartyType)}
+                          <span className="text-sm font-medium truncate">{getTypeLabel(t.type)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[200px]"><span className="text-sm truncate block">{t.description}</span></TableCell>
+                      <TableCell className="max-w-[180px]">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {t.otherPartyType === 'business' ? (
+                            <Users className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          ) : (
+                            <ArrowLeftRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          )}
+                          <span className="text-sm text-muted-foreground truncate">{t.otherParty}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell><span className="text-sm text-muted-foreground font-mono truncate block">{t.reference}</span></TableCell>
+                      <TableCell><span className="text-sm text-muted-foreground whitespace-nowrap">{formatDateTime(t.date)}</span></TableCell>
+                      <TableCell><Badge variant={getStatusColor(t.status)}>{getStatusLabel(t.status)}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        <span className={`text-sm font-bold whitespace-nowrap ${t.type === "transfer_out" ? "text-orange-600" : "text-green-600"}`}>
+                          {getTransactionSign(t.type)}
+                          {formatCurrency(t.amount)}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="flex items-center justify_between">
+                <p className="text-sm text-muted-foreground">Showing {paginatedInternalTransactions.length} of {mockInternalTransactions.length} internal transactions</p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="external" className="space-y-4">
+              <div className="rounded-md border border-amber-200 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-950/50 p-3 mb-4">
+                <p className="text-sm text-amber-900 dark:text-amber-200 font-medium flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  External transactions are deposits from or withdrawals to your bank account
+                </p>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Bank Details</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead>Date & Time</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Fee</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoadingExternalTransactions ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  ) : externalTransactions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8">
+                        <p className="text-muted-foreground">No external transactions found</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    externalTransactions.map((t) => {
+                      const m = mapExternalTransaction(t);
+                      return (
+                        <TableRow key={t.id} className="cursor-pointer hover:bg-muted/50">
+                          <TableCell>
+                            <div className="flex items-center gap-2 min-w-0">
+                              {getExternalTransactionIcon(m.type)}
+                              <span className="text-sm font-medium truncate">{getTypeLabel(m.type)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="max-w-[200px]">
+                            <Link href={`/dashboard/business/wallet/${t.id}`} className="text-sm truncate block text-blue-600 hover:underline">{m.description}</Link>
+                          </TableCell>
+                          <TableCell className="max-w-[150px]">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-sm font-medium truncate">{m.bankName}</span>
+                                <span className="text-xs text-muted-foreground truncate">{m.accountNumber}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground font-mono truncate block">
+                              <Link href={`/dashboard/business/wallet/${t.id}`} className="hover:underline">{m.reference}</Link>
+                            </span>
+                          </TableCell>
+                          <TableCell><span className="text-sm text-muted-foreground whitespace-nowrap">{formatDateTime(m.date)}</span></TableCell>
+                          <TableCell><Badge variant={getStatusColor(m.status)}>{getStatusLabel(m.status)}</Badge></TableCell>
+                          <TableCell><span className="text-sm text-muted-foreground whitespace-nowrap">{m.transactionFee > 0 ? formatCurrency(m.transactionFee) : '-'}</span></TableCell>
+                          <TableCell className="text-right">
+                            <span className={`text-sm font-bold whitespace-nowrap ${m.type === "withdrawal" ? "text-orange-600" : "text-green-600"}`}>
+                              {getTransactionSign(m.type)}
+                              {formatCurrency(m.amount)}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Showing {externalTransactions.length} of {totalExternalItems} external transactions</p>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setCurrentExternalPage((p) => Math.max(1, p - 1))} disabled={currentExternalPage === 1 || isLoadingExternalTransactions}>Previous</Button>
+                  <span className="text-sm">Page {currentExternalPage} of {totalExternalPages || 1}</span>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentExternalPage((p) => Math.min(totalExternalPages || 1, p + 1))} disabled={currentExternalPage >= (totalExternalPages || 1) || isLoadingExternalTransactions}>Next</Button>
+                </div>
+              </div>
+
+              {/* Moved details to a dedicated page; links above */}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+

@@ -13,7 +13,8 @@ import {
   IconTag,
   IconFileText,
   IconWallet,
-} from '@tabler/icons-react';
+  IconBrandBooking,
+} from "@tabler/icons-react";
 
 import {
   Sidebar,
@@ -51,16 +52,15 @@ const businessNav = [
     url: '/dashboard/business/locations/requests',
     icon: IconFileText,
   },
+  { title: "Location Bookings", url: "/dashboard/business/location-bookings", icon: IconBrandBooking },
+  { title: "Wallet", url: "/dashboard/business/wallet", icon: IconWallet },
 ];
 
 const creatorNav = [
-  { title: 'Overview', url: '/dashboard/creator', icon: IconCalendar },
-  { title: 'My Events', url: '/dashboard/creator/events', icon: IconCalendar },
-  {
-    title: 'Event Requests',
-    url: '/dashboard/creator/request',
-    icon: IconCalendarCheck,
-  },
+  { title: "Overview", url: "/dashboard/creator", icon: IconCalendar },
+  { title: "My Events", url: "/dashboard/creator/events", icon: IconCalendar },
+  { title: "Event Requests", url: "/dashboard/creator/request", icon: IconCalendarCheck },
+  { title: "Wallet", url: "/dashboard/creator/wallet", icon: IconWallet },
 ];
 
 const navSecondary = [

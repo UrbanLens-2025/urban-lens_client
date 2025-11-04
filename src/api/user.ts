@@ -1,4 +1,4 @@
-import type { ApiResponse, BusinessOnboardingPayload, CreatorOnboardingPayload, User } from "@/types";
+import type { ApiResponse, BusinessOnboardingPayload, CreatorOnboardingPayload, PaginatedData, User, Wallet, WalletExternalTransaction, GetWalletExternalTransactionsParams } from "@/types";
 import axiosInstance from "./axios-config";
 
 export async function getUser(): Promise<User> {
