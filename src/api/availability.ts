@@ -67,6 +67,23 @@ export const createAvailability = async (payload: CreateAvailabilityPayload): Pr
   return data.data;
 };
 
+// Update weekly availability payload
+export interface UpdateWeeklyAvailabilityPayload {
+  startTime: string; // Format: "HH:mm"
+  endTime: string; // Format: "HH:mm"
+}
+
+export const updateWeeklyAvailability = async (
+  id: number,
+  payload: UpdateWeeklyAvailabilityPayload
+): Promise<WeeklyAvailabilityResponse> => {
+  const { data } = await axiosInstance.put<ApiResponse<WeeklyAvailabilityResponse>>(
+    `/v1/owner/location-availability/${id}`,
+    payload
+  );
+  return data.data;
+};
+
 export const updateAvailability = async (
   id: string, 
   payload: UpdateAvailabilityPayload

@@ -19,10 +19,14 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useWeeklyAvailabilities } from "@/hooks/availability/useWeeklyAvailabilities";
 import { useCreateWeeklyAvailability } from "@/hooks/availability/useCreateWeeklyAvailability";
 import { useDeleteAvailability } from "@/hooks/availability/useDeleteAvailability";
+import { useUpdateWeeklyAvailability } from "@/hooks/availability/useUpdateWeeklyAvailability";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { WeeklyAvailabilityResponse } from "@/api/availability";
 
 // Internal data structure for weekly availability slots
@@ -95,6 +99,7 @@ export default function AvailabilityPage({
   const { data: apiAvailability, isLoading } = useWeeklyAvailabilities(locationId);
   const { mutate: createWeeklyAvailability, isPending: isCreating } = useCreateWeeklyAvailability();
   const { mutate: deleteAvailability, isPending: isDeleting } = useDeleteAvailability(locationId);
+  const { mutate: updateWeeklyAvailability, isPending: isUpdating } = useUpdateWeeklyAvailability(locationId);
 
   // Transform API data to internal format
   const availability = useMemo(() => {
@@ -109,9 +114,12 @@ export default function AvailabilityPage({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [slotsToConfirm, setSlotsToConfirm] = useState<WeeklyAvailabilitySlot[]>([]);
   
-  // Delete dialog state
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [slotsToDelete, setSlotsToDelete] = useState<WeeklyAvailabilitySlot[]>([]);
+  // Edit/Delete dialog state
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [slotToEdit, setSlotToEdit] = useState<WeeklyAvailabilitySlot | null>(null);
+  const [editedStartHour, setEditedStartHour] = useState<number>(0);
+  const [editedEndHour, setEditedEndHour] = useState<number>(0);
+  const [editErrors, setEditErrors] = useState<{ start?: string; end?: string; overlap?: string }>({});
   
   // Track hovered block for highlighting
   const [hoveredBlock, setHoveredBlock] = useState<WeeklyAvailabilitySlot | null>(null);
@@ -127,16 +135,54 @@ export default function AvailabilityPage({
   const dragStartRef = useRef<{ day: number; hour: number } | null>(null);
   const hasMovedRef = useRef(false); // Track if mouse moved during drag
 
+  // Track resize state (resizing an existing slot)
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeSlot, setResizeSlot] = useState<WeeklyAvailabilitySlot | null>(null);
+  const [resizeEdge, setResizeEdge] = useState<"start" | "end" | null>(null);
+  const isResizingRef = useRef(false);
+  const resizeSlotRef = useRef<WeeklyAvailabilitySlot | null>(null);
+  const resizeEdgeRef = useRef<"start" | "end" | null>(null);
+  
+  // Local state for availability (for mock updates during resize)
+  const [localAvailability, setLocalAvailability] = useState<WeeklyAvailabilitySlot[]>([]);
+  
+  // Sync local availability with API data
+  useEffect(() => {
+    if (apiAvailability) {
+      setLocalAvailability(transformApiResponse(apiAvailability));
+    }
+  }, [apiAvailability]);
+  
+  // Use local availability for rendering
+  const displayAvailability = localAvailability.length > 0 ? localAvailability : availability;
+
   // Convert availability slots to a set of cell keys for quick lookup
   const availabilityCellsSet = useMemo(() => {
     const set = new Set<string>();
-    availability.forEach((slot) => {
+    displayAvailability.forEach((slot) => {
       for (let hour = slot.startHour; hour < slot.endHour; hour++) {
         set.add(`${slot.dayOfWeek}_${hour}`);
       }
     });
     return set;
-  }, [availability]);
+  }, [displayAvailability]);
+  
+  // Get the slot that contains a specific cell
+  const getSlotAtCell = (day: number, hour: number): WeeklyAvailabilitySlot | null => {
+    return displayAvailability.find(
+      (slot) => slot.dayOfWeek === day && hour >= slot.startHour && hour < slot.endHour
+    ) || null;
+  };
+  
+  // Check if a cell is on the left edge (startHour) or right edge (endHour) of a slot
+  const getEdgeAtCell = (day: number, hour: number): "start" | "end" | null => {
+    const slot = getSlotAtCell(day, hour);
+    if (!slot) return null;
+    
+    if (hour === slot.startHour) return "start";
+    if (hour === slot.endHour - 1) return "end";
+    return null;
+  };
 
   // Get cell status
   const getCellStatus = (day: number, hour: number): CellStatus => {
@@ -152,7 +198,7 @@ export default function AvailabilityPage({
   };
 
 
-  // Handle mouse down (start drag)
+  // Handle mouse down (start drag or resize)
   const handleMouseDown = (day: number, hour: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -160,7 +206,23 @@ export default function AvailabilityPage({
     const roundedHour = roundHour(hour);
     const key = `${day}_${roundedHour}`;
     
-    // Don't allow dragging from already saved cells
+    // Check if we're on an edge of an existing slot (resize mode)
+    const edge = getEdgeAtCell(day, roundedHour);
+    if (edge) {
+      const slot = getSlotAtCell(day, roundedHour);
+      if (slot) {
+        setIsResizing(true);
+        setResizeSlot(slot);
+        setResizeEdge(edge);
+        isResizingRef.current = true;
+        resizeSlotRef.current = slot;
+        resizeEdgeRef.current = edge;
+        hasMovedRef.current = false;
+        return;
+      }
+    }
+    
+    // Don't allow dragging from already saved cells (unless we're resizing)
     if (availabilityCellsSet.has(key)) {
       return;
     }
@@ -174,8 +236,72 @@ export default function AvailabilityPage({
     setSelectedCells(new Set([key]));
   };
 
-  // Handle mouse enter (during drag)
+  // Handle mouse enter (during drag or resize)
   const handleMouseEnter = (day: number, hour: number) => {
+    // Check if we're resizing
+    if (isResizingRef.current && resizeSlotRef.current && resizeEdgeRef.current) {
+      hasMovedRef.current = true;
+      const roundedHour = roundHour(hour);
+      
+      // Only allow resizing within the same day
+      if (resizeSlotRef.current.dayOfWeek !== day) {
+        return;
+      }
+      
+      // Get the current slot from local state (it may have been updated)
+      const currentSlot = localAvailability.find((s) => s.id === resizeSlotRef.current?.id);
+      if (!currentSlot) return;
+      
+      // Update the slot based on which edge is being dragged
+      let newStartHour = currentSlot.startHour;
+      let newEndHour = currentSlot.endHour;
+      
+      if (resizeEdgeRef.current === "start") {
+        // Resizing the start edge
+        newStartHour = Math.min(roundedHour, currentSlot.endHour - 1);
+        // Ensure minimum 1 hour duration
+        if (newStartHour >= currentSlot.endHour) {
+          newStartHour = currentSlot.endHour - 1;
+        }
+      } else {
+        // Resizing the end edge
+        newEndHour = Math.max(roundedHour + 1, currentSlot.startHour + 1);
+        // Ensure minimum 1 hour duration
+        if (newEndHour <= currentSlot.startHour) {
+          newEndHour = currentSlot.startHour + 1;
+        }
+      }
+      
+      // Check for overlaps with other slots (excluding the current slot being resized)
+      const otherSlots = displayAvailability.filter((s) => s.id !== currentSlot.id);
+      let hasOverlap = false;
+      
+      for (let h = newStartHour; h < newEndHour; h++) {
+        const key = `${day}_${h}`;
+        // Check if this hour is in any other slot
+        for (const otherSlot of otherSlots) {
+          if (otherSlot.dayOfWeek === day && h >= otherSlot.startHour && h < otherSlot.endHour) {
+            hasOverlap = true;
+            break;
+          }
+        }
+        if (hasOverlap) break;
+      }
+      
+      // If no overlap, update the slot
+      if (!hasOverlap) {
+        setLocalAvailability((prev) =>
+          prev.map((s) =>
+            s.id === currentSlot.id
+              ? { ...s, startHour: newStartHour, endHour: newEndHour }
+              : s
+          )
+        );
+      }
+      
+      return;
+    }
+    
     // Check if we're dragging using refs for immediate access
     if (!isDraggingRef.current || !dragStartRef.current) return;
 
@@ -276,8 +402,33 @@ export default function AvailabilityPage({
     processSelectedCellsWithSet(selectedCells);
   };
 
-  // Handle mouse up (end drag) - show confirmation dialog after a short delay
+  // Handle mouse up (end drag or resize) - show confirmation dialog after a short delay
   const handleMouseUp = useCallback(() => {
+    // Handle resize end
+    if (isResizingRef.current && resizeSlotRef.current) {
+      const finalSlot = localAvailability.find((s) => s.id === resizeSlotRef.current?.id);
+      // Use 'availability' (original API data) instead of 'displayAvailability' which may have been updated
+      const originalSlot = availability.find((s) => s.id === resizeSlotRef.current?.id);
+      
+      if (finalSlot && originalSlot) {
+        // Always open edit dialog after resize (even if no change, user can see and adjust)
+        // Set slotToEdit to the ORIGINAL slot (for ID and comparison), but edited values to the resized ones
+        setSlotToEdit(originalSlot);
+        setEditedStartHour(finalSlot.startHour);
+        setEditedEndHour(finalSlot.endHour);
+        setEditErrors({});
+        setShowEditDialog(true);
+      }
+      
+      // Reset resize state
+      setIsResizing(false);
+      isResizingRef.current = false;
+      resizeSlotRef.current = null;
+      resizeEdgeRef.current = null;
+      hasMovedRef.current = false;
+      return;
+    }
+    
     const wasDragging = isDraggingRef.current;
     const hadMoved = hasMovedRef.current;
     const currentSelectedCells = new Set(selectedCells); // Capture current state
@@ -304,12 +455,12 @@ export default function AvailabilityPage({
 
     // Reset move flag
     hasMovedRef.current = false;
-  }, [selectedCells, processSelectedCellsWithSet]);
+  }, [selectedCells, processSelectedCellsWithSet, localAvailability]);
 
   // Find the block of saved cells in the same day starting from a given hour
   const findSavedBlockInDay = (day: number, startHour: number): WeeklyAvailabilitySlot | null => {
     // Find the slot that contains this hour
-    const matchingSlot = availability.find((slot) => {
+    const matchingSlot = displayAvailability.find((slot) => {
       return slot.dayOfWeek === day && startHour >= slot.startHour && startHour < slot.endHour;
     });
 
@@ -327,21 +478,27 @@ export default function AvailabilityPage({
 
   // Handle single cell click - show dialog immediately
   const handleCellClick = (day: number, hour: number) => {
-    // If mouse moved during the interaction, it was a drag, not a click
-    // In that case, handleMouseUp will handle it
-    if (hasMovedRef.current || isDraggingRef.current) {
+    // If we were resizing, don't treat it as a click
+    if (isResizingRef.current || hasMovedRef.current || isDraggingRef.current) {
       return;
     }
 
     const roundedHour = roundHour(hour);
     const key = `${day}_${roundedHour}`;
 
-    // If clicking on a saved cell, show delete dialog
+    // If clicking on a saved cell (and not on an edge), show edit dialog
     if (availabilityCellsSet.has(key)) {
-      const block = findSavedBlockInDay(day, roundedHour);
-      if (block) {
-        setSlotsToDelete([block]);
-        setShowDeleteDialog(true);
+      const edge = getEdgeAtCell(day, roundedHour);
+      // Only show edit dialog if not clicking on an edge
+      if (!edge) {
+        const block = findSavedBlockInDay(day, roundedHour);
+        if (block) {
+          setSlotToEdit(block);
+          setEditedStartHour(block.startHour);
+          setEditedEndHour(block.endHour);
+          setEditErrors({});
+          setShowEditDialog(true);
+        }
       }
       return;
     }
@@ -399,39 +556,121 @@ export default function AvailabilityPage({
     setSlotsToConfirm([]);
   };
 
-  // Confirm delete
-  const handleConfirmDelete = () => {
-    // Delete all slots (they should all have IDs from the API)
-    const slotsWithIds = slotsToDelete.filter((slot) => slot.id !== undefined);
-    
-    if (slotsWithIds.length === 0) {
-      setShowDeleteDialog(false);
-      setSlotsToDelete([]);
+  // Validate edited times
+  const validateEditedTimes = (startHour: number, endHour: number, dayOfWeek: number, slotId?: number): { start?: string; end?: string; overlap?: string } => {
+    const errors: { start?: string; end?: string; overlap?: string } = {};
+
+    // Check minimum duration (1 hour)
+    if (startHour >= endHour) {
+      errors.end = "End time must be after start time";
+      return errors;
+    }
+
+    if (endHour - startHour < 1) {
+      errors.end = "Minimum duration is 1 hour";
+      return errors;
+    }
+
+    // Check bounds (0-23)
+    if (startHour < 0 || startHour > 23) {
+      errors.start = "Start time must be between 00:00 and 23:00";
+    }
+
+    if (endHour < 1 || endHour > 24) {
+      errors.end = "End time must be between 01:00 and 24:00";
+    }
+
+    // Check for overlaps with other slots (excluding the current slot)
+    const otherSlots = displayAvailability.filter((s) => s.id !== slotId);
+    for (let h = startHour; h < endHour; h++) {
+      for (const otherSlot of otherSlots) {
+        if (otherSlot.dayOfWeek === dayOfWeek && h >= otherSlot.startHour && h < otherSlot.endHour) {
+          errors.overlap = `Overlaps with existing availability on ${DAYS_OF_WEEK[otherSlot.dayOfWeek]} (${formatHour(otherSlot.startHour)} - ${formatHour(otherSlot.endHour)})`;
+          return errors;
+        }
+      }
+    }
+
+    return errors;
+  };
+
+  // Handle time input change
+  const handleStartTimeChange = (value: string) => {
+    const hour = parseInt(value, 10);
+    if (isNaN(hour)) {
+      return; // Allow empty input while typing
+    }
+    const clampedHour = Math.max(0, Math.min(23, hour));
+    setEditedStartHour(clampedHour);
+  };
+
+  const handleEndTimeChange = (value: string) => {
+    const hour = parseInt(value, 10);
+    if (isNaN(hour)) {
+      return; // Allow empty input while typing
+    }
+    const clampedHour = Math.max(1, Math.min(24, hour));
+    setEditedEndHour(clampedHour);
+  };
+
+  // Validate whenever times change
+  useEffect(() => {
+    if (slotToEdit && editedStartHour !== undefined && editedEndHour !== undefined) {
+      const errors = validateEditedTimes(editedStartHour, editedEndHour, slotToEdit.dayOfWeek, slotToEdit.id);
+      setEditErrors(errors);
+    }
+  }, [editedStartHour, editedEndHour, slotToEdit, displayAvailability]);
+
+  // Confirm update
+  const handleConfirmUpdate = () => {
+    if (!slotToEdit || !slotToEdit.id) return;
+
+    const errors = validateEditedTimes(editedStartHour, editedEndHour, slotToEdit.dayOfWeek, slotToEdit.id);
+    if (Object.keys(errors).length > 0) {
+      setEditErrors(errors);
       return;
     }
 
-    // Delete slots sequentially
-    const deleteSequentially = async () => {
-      for (const slot of slotsWithIds) {
-        await new Promise<void>((resolve) => {
-          deleteAvailability(slot.id!, {
-            onSuccess: () => resolve(),
-            onError: () => resolve(), // Continue even if one fails
-          });
-        });
-      }
-      // Reset state after all deletions
-      setShowDeleteDialog(false);
-      setSlotsToDelete([]);
+    const payload = {
+      startTime: `${String(editedStartHour).padStart(2, '0')}:00`,
+      endTime: `${String(editedEndHour).padStart(2, '0')}:00`,
     };
 
-    deleteSequentially();
+    updateWeeklyAvailability(
+      { id: slotToEdit.id, payload },
+      {
+        onSuccess: () => {
+          // Close dialog
+          setShowEditDialog(false);
+          setSlotToEdit(null);
+          setEditErrors({});
+        },
+      }
+    );
   };
 
-  // Cancel delete dialog
-  const handleCancelDeleteDialog = () => {
-    setShowDeleteDialog(false);
-    setSlotsToDelete([]);
+  // Confirm delete
+  const handleConfirmDelete = () => {
+    if (!slotToEdit || !slotToEdit.id) return;
+
+    deleteAvailability(slotToEdit.id, {
+      onSuccess: () => {
+        setShowEditDialog(false);
+        setSlotToEdit(null);
+        setEditErrors({});
+      },
+    });
+  };
+
+  // Cancel edit dialog
+  const handleCancelEditDialog = () => {
+    // If we were resizing, revert localAvailability back to API data
+    if (apiAvailability) {
+      setLocalAvailability(transformApiResponse(apiAvailability));
+    }
+    setShowEditDialog(false);
+    setSlotToEdit(null);
+    setEditErrors({});
   };
 
   // Check if a cell belongs to the hovered block
@@ -479,17 +718,27 @@ export default function AvailabilityPage({
     }, 100);
   };
 
+  // Check if a cell is the start or end of the hovered block
+  const isEdgeOfHoveredBlock = (day: number, hour: number): boolean => {
+    if (!hoveredBlock) return false;
+    if (hoveredBlock.dayOfWeek !== day) return false;
+    return hour === hoveredBlock.startHour || hour === hoveredBlock.endHour - 1;
+  };
+
   // Get cell class names
   const getCellClassName = (status: CellStatus, isSelected: boolean, day: number, hour: number) => {
     const isHovered = isCellInHoveredBlock(day, hour);
+    const edge = getEdgeAtCell(day, hour);
+    const isEdgeOfHovered = isEdgeOfHoveredBlock(day, hour);
     
     return cn(
-      "w-full h-full rounded border cursor-pointer transition-all flex items-center justify-center text-[8px] font-medium",
+      "w-full h-full rounded border transition-all flex items-center justify-center text-[8px] font-medium relative",
       {
-        "bg-green-500 border-green-600 border-2 text-white": status === "saved" && !isHovered,
-        "bg-green-600 border-green-700 border-2 text-white shadow-md": status === "saved" && isHovered,
+        "bg-green-500 border-green-600 border-2 text-white cursor-pointer": status === "saved" && !isEdgeOfHovered,
+        "bg-green-600 border-green-700 border-2 text-white shadow-md cursor-pointer": status === "saved" && isHovered && !isEdgeOfHovered,
+        "bg-green-600 border-green-700 border-2 text-white shadow-md cursor-col-resize": status === "saved" && isEdgeOfHovered,
         "bg-blue-400 border-blue-500 border-2 text-white": isSelected && status === "available",
-        "bg-white border-gray-300 border-2 text-gray-700 hover:opacity-80": !isSelected && status === "available",
+        "bg-white border-gray-300 border-2 text-gray-700 hover:opacity-80 cursor-grab": !isSelected && status === "available",
       }
     );
   };
@@ -518,6 +767,25 @@ export default function AvailabilityPage({
       }
     };
   }, [handleMouseUp]);
+
+  // Update document cursor during drag/resize
+  useEffect(() => {
+    if (isDragging) {
+      document.body.style.cursor = "grabbing";
+      document.body.style.userSelect = "none";
+    } else if (isResizing) {
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    } else {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isDragging, isResizing]);
 
   if (isLoading) {
     return (
@@ -557,10 +825,19 @@ export default function AvailabilityPage({
             </div>
           </div>
 
-          {/* Weekly Grid */}
-          <div className="overflow-x-auto">
-            <div className="inline-block min-w-full">
-              <div className="border-2 border-gray-300 rounded-lg bg-gray-50 p-2">
+              {/* Weekly Grid */}
+              <div className="overflow-x-auto">
+                <div className="inline-block min-w-full">
+                  <div 
+                    className={cn(
+                      "border-2 border-gray-300 rounded-lg bg-gray-50 p-2",
+                      isDragging && "cursor-grabbing select-none",
+                      isResizing && "cursor-col-resize select-none"
+                    )}
+                    style={{
+                      userSelect: (isDragging || isResizing) ? 'none' : 'auto',
+                    }}
+                  >
                 {/* Header Row - Days of Week */}
                 <div className="grid grid-cols-[95px_repeat(7,1fr)] gap-1 mb-2 border-b-2 border-gray-300 pb-2">
                   <div className="border-r-2 border-gray-300"></div>
@@ -600,11 +877,25 @@ export default function AvailabilityPage({
                           const status = getCellStatus(dayIndex, hour);
                           const key = `${dayIndex}_${hour}`;
                           const isSelected = selectedCells.has(key);
+                          const edge = getEdgeAtCell(dayIndex, hour);
+                          const isResizeEdge = edge !== null && !isResizing;
+                          const isHovered = isCellInHoveredBlock(dayIndex, hour);
+                          const isEdgeOfHovered = isEdgeOfHoveredBlock(dayIndex, hour);
+                          // Show icon only on the start/end cells of the hovered block
+                          const showResizeIcon = isHovered && isEdgeOfHovered && status === "saved";
+                          // Determine which icon to show based on which edge of the hovered block
+                          const isStartEdge = hoveredBlock && hoveredBlock.dayOfWeek === dayIndex && hour === hoveredBlock.startHour;
+                          const isEndEdge = hoveredBlock && hoveredBlock.dayOfWeek === dayIndex && hour === hoveredBlock.endHour - 1;
 
                           return (
                             <div
                               key={`${dayIndex}_${hour}`}
-                              className="h-[20px] select-none border-r border-gray-200 last:border-r-0"
+                              className={cn(
+                                "h-[20px] select-none border-r border-gray-200 last:border-r-0",
+                                !isResizeEdge && !isDragging && !isResizing && !availabilityCellsSet.has(key) && "cursor-grab",
+                                isDragging && "cursor-grabbing",
+                                isResizing && "cursor-col-resize"
+                              )}
                               onClick={() => handleCellClick(dayIndex, hour)}
                               onMouseDown={(e) => handleMouseDown(dayIndex, hour, e)}
                               onMouseEnter={() => {
@@ -613,7 +904,17 @@ export default function AvailabilityPage({
                               }}
                               onMouseLeave={handleCellHoverLeave}
                             >
-                              <div className={getCellClassName(status, isSelected, dayIndex, hour)}></div>
+                              <div className={getCellClassName(status, isSelected, dayIndex, hour)}>
+                                {showResizeIcon && (
+                                  <>
+                                    {isStartEdge ? (
+                                      <ChevronLeft className="h-3 w-3 text-white drop-shadow-md" />
+                                    ) : isEndEdge ? (
+                                      <ChevronRight className="h-3 w-3 text-white drop-shadow-md" />
+                                    ) : null}
+                                  </>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
@@ -669,44 +970,168 @@ export default function AvailabilityPage({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
+      {/* Edit/Delete Availability Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Delete Availability</DialogTitle>
+            <DialogTitle>Edit Availability</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the following time ranges?
+              Update the time range or delete this availability slot.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-4 max-h-[400px] overflow-y-auto">
-            {slotsToDelete.map((slot, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-2 bg-gray-50 rounded"
-              >
-                <div className="font-medium">
-                  {DAYS_OF_WEEK[slot.dayOfWeek]}
-                </div>
-                <div className="text-sm text-gray-600">
-                  {formatHour(slot.startHour)} - {formatHour(slot.endHour)}
+          
+          {slotToEdit && (
+            <div className="space-y-6 py-4">
+              {/* Section 1: Day Display */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">Day</Label>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-lg font-semibold">{DAYS_OF_WEEK[slotToEdit.dayOfWeek]}</p>
                 </div>
               </div>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCancelDeleteDialog} disabled={isDeleting}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
+
+              {/* Section 2: Time Inputs */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">Time Range</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start-time" className="text-sm">Start Time</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="start-time"
+                        type="number"
+                        min="0"
+                        max="23"
+                        value={editedStartHour}
+                        onChange={(e) => handleStartTimeChange(e.target.value)}
+                        onBlur={() => {
+                          if (slotToEdit) {
+                            const errors = validateEditedTimes(editedStartHour, editedEndHour, slotToEdit.dayOfWeek, slotToEdit.id);
+                            setEditErrors(errors);
+                          }
+                        }}
+                        className={cn(
+                          "text-center font-mono",
+                          editErrors.start && "border-destructive"
+                        )}
+                      />
+                      <span className="text-sm text-muted-foreground">:00</span>
+                    </div>
+                    {editErrors.start && (
+                      <p className="text-xs text-destructive">{editErrors.start}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="end-time" className="text-sm">End Time</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="end-time"
+                        type="number"
+                        min="1"
+                        max="24"
+                        value={editedEndHour}
+                        onChange={(e) => handleEndTimeChange(e.target.value)}
+                        onBlur={() => {
+                          if (slotToEdit) {
+                            const errors = validateEditedTimes(editedStartHour, editedEndHour, slotToEdit.dayOfWeek, slotToEdit.id);
+                            setEditErrors(errors);
+                          }
+                        }}
+                        className={cn(
+                          "text-center font-mono",
+                          editErrors.end && "border-destructive"
+                        )}
+                      />
+                      <span className="text-sm text-muted-foreground">:00</span>
+                    </div>
+                    {editErrors.end && (
+                      <p className="text-xs text-destructive">{editErrors.end}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Duration and Comparison */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">Summary</Label>
+                <div className="rounded-lg border p-4 space-y-3 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Duration</span>
+                    <span className="font-semibold">
+                      {editedEndHour - editedStartHour} hour{editedEndHour - editedStartHour !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="border-t pt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Current</span>
+                      <span className="font-mono text-sm">
+                        {formatHour(slotToEdit.startHour)} - {formatHour(slotToEdit.endHour)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">New</span>
+                      <span className={cn(
+                        "font-mono text-sm font-semibold",
+                        (editedStartHour !== slotToEdit.startHour || editedEndHour !== slotToEdit.endHour) && "text-primary"
+                      )}>
+                        {formatHour(editedStartHour)} - {formatHour(editedEndHour)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Error Alert */}
+              {editErrors.overlap && (
+                <Alert variant="destructive">
+                  <AlertDescription>{editErrors.overlap}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:justify-between">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting || isUpdating}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 self-start"
+            >
               {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "Delete"
+                <Trash2 className="h-4 w-4" />
               )}
             </Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={handleCancelEditDialog}
+                disabled={isDeleting || isUpdating}
+                className="flex-1 sm:flex-initial"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmUpdate}
+                disabled={Object.keys(editErrors).length > 0 || !slotToEdit || (editedStartHour === slotToEdit.startHour && editedEndHour === slotToEdit.endHour) || isDeleting || isUpdating}
+                className="flex-1 sm:flex-initial"
+              >
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Update
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
