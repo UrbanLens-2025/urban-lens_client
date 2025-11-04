@@ -654,6 +654,49 @@ export interface WalletExternalTransactionTimelineEvent {
   metadata: any;
 }
 
+export interface ReferencedEventRequest {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  eventName: string;
+  eventDescription: string;
+  expectedNumberOfParticipants: number;
+  allowTickets: boolean;
+  specialRequirements: string;
+  status: string;
+  referencedLocationBookingId: string;
+  eventValidationDocuments: {
+    documentType: string;
+    documentImageUrls: string[];
+  }[];
+}
+
+export interface CreatorProfile {
+  accountId: string;
+  displayName: string;
+  description: string;
+  email: string;
+  phoneNumber: string;
+  avatarUrl: string;
+  coverUrl: string;
+  type: string;
+  social: SocialLink[];
+}
+
+export interface UserWithCreatorProfile extends User {
+  creatorProfile?: CreatorProfile;
+}
+
+export interface ReferencedTransaction {
+  id: string;
+  amount: string;
+  currency: string;
+  type: string;
+  status: string;
+  createdAt: string;
+}
+
 export interface LocationBooking {
   id: string;
   bookingObject: string;
@@ -668,7 +711,26 @@ export interface LocationBooking {
   createdById: string;
   locationId: string;
   referencedTransactionId: string | null;
-  softLockedUntil: string;
+  softLockedUntil: string | null;
+  createdBy: User;
+  location: LocationForEvent;
+  referencedEventRequest: ReferencedEventRequest;
+}
+
+export interface LocationBookingDetail extends Omit<LocationBooking, 'createdBy'> {
+  createdBy: UserWithCreatorProfile;
+  referencedTransaction: ReferencedTransaction | null;
+}
+
+export interface GetOwnerLocationBookingsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+}
+
+export interface ProcessLocationBookingPayload {
+  status: "APPROVED" | "REJECTED";
 }
 
 interface LocationForEvent {
