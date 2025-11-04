@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useDebounce } from "use-debounce";
+import { useState } from 'react';
+import { useDebounce } from 'use-debounce';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -16,12 +16,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ArrowDown, ArrowUp, Edit, Loader2, PlusCircle } from "lucide-react";
-import { Location, LocationRequest, SortState } from "@/types";
-import { useProcessLocationRequest } from "@/hooks/admin/useProcessLocationRequest";
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowDown, ArrowUp, Edit, Loader2, PlusCircle } from 'lucide-react';
+import { Location, LocationRequest, SortState } from '@/types';
+import { useProcessLocationRequest } from '@/hooks/admin/useProcessLocationRequest';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,61 +32,87 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { useLocationAdminRequests } from "@/hooks/admin/useLocationAdminRequests";
-import Link from "next/link";
-import { useAllLocations } from "@/hooks/admin/useAllLocations";
+} from '@/components/ui/alert-dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { useLocationAdminRequests } from '@/hooks/admin/useLocationAdminRequests';
+import Link from 'next/link';
+import { useAllLocations } from '@/hooks/admin/useAllLocations';
+import StatsCard from '@/components/admin/stats-card';
+import { locationStats } from '@/constants/admin/location-stats';
+import {
+  IconCheck,
+  IconEdit,
+  IconEye,
+  IconFilter,
+  IconFlag,
+  IconPlus,
+  IconSearch,
+  IconX,
+} from '@tabler/icons-react';
+import { Badge } from '@/components/ui/badge';
+import Image from 'next/image';
+import { formatDateTime } from '@/lib/utils';
 
 export default function LocationDashboardPage() {
+  // Unified search and sort state
   const [page, setPage] = useState(1);
-  const [reqPage, setReqPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchReqTerm, setSearchReqTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-  const [debouncedSearchReqTerm] = useDebounce(searchReqTerm, 300);
-
-  const [sortReq, setSortReq] = useState<SortState>({
-    column: "createdAt",
-    direction: "DESC",
-  });
-
   const [sort, setSort] = useState<SortState>({
-    column: "createdAt",
-    direction: "DESC",
+    column: 'createdAt',
+    direction: 'DESC',
   });
-
   const sortByString = `${sort.column}:${sort.direction}`;
-  const sortReqByString = `${sortReq.column}:${sortReq.direction}`;
 
-  const { data: response, isLoading } = useLocationAdminRequests(
-    reqPage,
-    debouncedSearchReqTerm,
-    sortReqByString
+  // Data fetching
+  const { data: requestsResponse } = useLocationAdminRequests(
+    page,
+    debouncedSearchTerm,
+    sortByString
   );
+  const requests = requestsResponse?.data || [];
+  console.log('🚀 ~ LocationDashboardPage ~ requests:', requests);
+  const requestsMeta = requestsResponse?.meta;
 
-  const requests = response?.data || [];
-  const reqMeta = response?.meta;
+  const { data: locationsResponse } = useAllLocations(
+    page,
+    debouncedSearchTerm,
+    sortByString
+  );
+  const locations = locationsResponse?.data || [];
+  console.log('🚀 ~ LocationDashboardPage ~ locations:', locations);
+  const locationsMeta = locationsResponse?.meta;
 
-  const { data: allLocationsResponse, isLoading: isLoadingAll } =
-    useAllLocations(page, debouncedSearchTerm, sortByString);
-
-  const allLocations = allLocationsResponse?.data || [];
-  const allLocationsMeta = allLocationsResponse?.meta;
-
+  // Request processing
   const { mutate: processRequest, isPending } = useProcessLocationRequest();
-
   const [approvingRequest, setApprovingRequest] =
     useState<LocationRequest | null>(null);
   const [rejectingRequest, setRejectingRequest] =
     useState<LocationRequest | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
+  const [rejectReason, setRejectReason] = useState('');
+
+  // Sort
+  const handleSort = (columnName: string) => {
+    setSort((prev) => ({
+      column: columnName,
+      direction:
+        prev.column === columnName && prev.direction === 'DESC'
+          ? 'ASC'
+          : 'DESC',
+    }));
+    setPage(1);
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sort.column !== column) return null;
+    const IconComponent = sort.direction === 'ASC' ? ArrowUp : ArrowDown;
+    return <IconComponent className='ml-2 h-4 w-4' />;
+  };
 
   const handleConfirmApprove = () => {
     if (!approvingRequest) return;
-
     processRequest(
-      { id: approvingRequest.id, payload: { status: "APPROVED" } },
+      { id: approvingRequest.id, payload: { status: 'APPROVED' } },
       {
         onSuccess: () => {
           setApprovingRequest(null);
@@ -93,280 +120,335 @@ export default function LocationDashboardPage() {
       }
     );
   };
-
   const handleConfirmReject = () => {
     if (rejectingRequest) {
       processRequest(
         {
           id: rejectingRequest.id,
-          payload: { status: "REJECTED", adminNotes: rejectReason },
+          payload: { status: 'REJECTED', adminNotes: rejectReason },
         },
         {
-          onSuccess: () => setRejectingRequest(null),
+          onSuccess: () => {
+            setRejectingRequest(null);
+            setRejectReason('');
+          },
         }
       );
     }
   };
 
-  const handleSortReq = (columnName: string) => {
-    setSortReq((currentSort) => ({
-      column: columnName,
-      direction:
-        currentSort.column === columnName && currentSort.direction === "DESC"
-          ? "ASC"
-          : "DESC",
-    }));
-    setReqPage(1);
-  };
-
-  const handleSort = (columnName: string) => {
-    setSort((currentSort) => ({
-      column: columnName,
-      direction:
-        currentSort.column === columnName && currentSort.direction === "DESC"
-          ? "ASC"
-          : "DESC",
-    }));
-    setPage(1);
-  };
-
-  const SortIcon = ({ column }: { column: string }) => {
-    if (sort.column !== column) return null;
-    return sort.direction === "ASC" ? (
-      <ArrowUp className="ml-2 h-4 w-4" />
-    ) : (
-      <ArrowDown className="ml-2 h-4 w-4" />
-    );
-  };
-
-  const SortReqIcon = ({ column }: { column: string }) => {
-    if (sortReq.column !== column) return null;
-    return sortReq.direction === "ASC" ? (
-      <ArrowUp className="ml-2 h-4 w-4" />
-    ) : (
-      <ArrowDown className="ml-2 h-4 w-4" />
-    );
-  };
-
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <Link href="/admin/locations/create">
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Public Location
+    <div className='space-y-6'>
+      {/* Header */}
+      <div className='flex items-center justify-between'>
+        <h1 className='text-3xl font-bold'>Location Management</h1>
+        <Link href='/admin/locations/create'>
+          <Button className='flex items-center gap-2'>
+            <IconPlus size={24} />
+            <p>Public New Location</p>
           </Button>
         </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            All Approved Locations ({allLocationsMeta?.totalItems || 0})
-          </CardTitle>
-          <CardDescription>
-            Manage all active locations on the platform. Showing page{" "}
-            {allLocationsMeta?.currentPage} of {allLocationsMeta?.totalPages}.
-          </CardDescription>
-          <div className="pt-4">
-            <Input
-              placeholder="Search all locations..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoadingAll ? (
-            <div className="text-center p-8">
-              <Loader2 />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort("name")}>
-                      Name <SortIcon column="name" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>Business Owner</TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort("createdAt")}
-                    >
-                      Created At <SortIcon column="createdAt" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {allLocations.map((loc: Location) => (
-                  <TableRow key={loc.id}>
-                    <TableCell className="font-medium">{loc.name}</TableCell>
-                    <TableCell>{loc.business?.name || "N/A"}</TableCell>
-                    <TableCell>
-                      {new Date(loc.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/admin/locations/${loc.id}`}>View</Link>
-                      </Button>
-                      <Button asChild variant="ghost" size="icon">
-                        <Link href={`/admin/locations/${loc.id}/edit`}>
-                          <Edit className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {allLocations.length === 0 && (
+      {/* Statistics Cards */}
+      <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
+        {locationStats.map((stat: any) => (
+          <StatsCard
+            key={stat.title}
+            title={stat.title}
+            value={stat.value}
+            change={stat.change}
+            icon={stat.icon}
+            color={stat.color}
+          />
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <Tabs
+        defaultValue='all-locations'
+        className='space-y-6'
+        onValueChange={() => {
+          setPage(1);
+          setSearchTerm('');
+          setSort({ column: 'createdAt', direction: 'DESC' });
+        }}
+      >
+        <TabsList className='grid w-full grid-cols-2'>
+          <TabsTrigger value='all-locations'>All Locations</TabsTrigger>
+          <TabsTrigger value='pending-requests'>Pending Requests</TabsTrigger>
+        </TabsList>
+        {/* All Locations Tab */}
+        <TabsContent value='all-locations' className='space-y-6'>
+          <Card>
+            <CardHeader>
+              <CardTitle className='flex items-center justify-between'>
+                <span>
+                  All Approved Locations ({locationsMeta?.totalItems || 0})
+                </span>
+                <div className='flex items-center gap-2'>
+                  <Input
+                    placeholder='Search by Name'
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setPage(1);
+                    }}
+                  />
+                  <Button variant='outline' size='icon'>
+                    <IconSearch className='h-4 w-4' />
+                  </Button>
+                </div>
+              </CardTitle>
+              <CardDescription>
+                Showing page {locationsMeta?.currentPage} of{' '}
+                {locationsMeta?.totalPages}.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center h-24">
-                      No locations found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-          <div className="flex items-center justify-end space-x-2 py-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(page - 1)}
-              disabled={!allLocationsMeta || allLocationsMeta.currentPage <= 1}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(page + 1)}
-              disabled={
-                !allLocationsMeta ||
-                allLocationsMeta.currentPage >= allLocationsMeta.totalPages
-              }
-            >
-              Next
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Pending Location Requests ({requests.length})</CardTitle>
-          <CardDescription>
-            Review and approve new location submissions. Showing page{" "}
-            {reqMeta?.currentPage} of {reqMeta?.totalPages}.
-          </CardDescription>
-          <div className="pt-4">
-            <Input
-              placeholder="Search by name..."
-              value={searchReqTerm}
-              onChange={(e) => setSearchReqTerm(e.target.value)}
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading && !response ? (
-            <div className="text-center p-8">
-              <Loader2 className="animate-spin" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    Location Name <SortReqIcon column="name" />
-                  </TableHead>
-                  <TableHead>Submitted By</TableHead>
-                  <TableHead>Business Name</TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSortReq("createdAt")}
-                    >
-                      Date <SortReqIcon column="createdAt" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {requests.map((req: LocationRequest) => (
-                  <TableRow key={req.id}>
-                    <TableCell className="font-medium">{req.name}</TableCell>
-                    <TableCell>
-                      {`${req.createdBy?.firstName} ${req.createdBy?.lastName}` ||
-                        "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      {req.createdBy?.businessProfile?.name || "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(req.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/admin/locations/request/${req.id}`}>
-                          View
-                        </Link>
-                      </Button>
-
+                    <TableHead>
                       <Button
-                        size="sm"
-                        onClick={() => setApprovingRequest(req)}
-                        disabled={isPending}
-                        className="bg-green-600 hover:bg-green-700"
+                        variant='ghost'
+                        onClick={() => handleSort('name')}
                       >
-                        Approve
+                        Location <SortIcon column='name' />
                       </Button>
+                    </TableHead>
+                    <TableHead>Business Owner</TableHead>
+                    <TableHead>
                       <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setRejectingRequest(req)}
-                        disabled={isPending}
+                        variant='ghost'
+                        onClick={() => handleSort('createdAt')}
                       >
-                        Reject
+                        Created At <SortIcon column='createdAt' />
                       </Button>
-                    </TableCell>
+                    </TableHead>
+                    <TableHead className='text-right'>Action</TableHead>
                   </TableRow>
-                ))}
-                {requests.length === 0 && (
+                </TableHeader>
+                <TableBody>
+                  {locations.map((loc: Location) => (
+                    <TableRow key={loc.id}>
+                      <TableCell className='font-medium'>
+                        <div className='flex items-center gap-4'>
+                          <Image
+                            src={
+                              loc.imageUrl[0] || 'https://placehold.co/80x80'
+                            }
+                            alt={loc.name}
+                            width={80}
+                            height={80}
+                            className=' rounded-md'
+                          />
+                          <Link
+                            href={`/admin/locations/${loc.id}`}
+                            className='hover:underline'
+                          >
+                            {loc.name}
+                          </Link>
+                        </div>
+                      </TableCell>
+                      <TableCell>{loc.business?.name || 'N/A'}</TableCell>
+                      <TableCell>{formatDateTime(loc.createdAt)}</TableCell>
+                      <TableCell className='text-right'>
+                        <Button asChild variant='outline' size='sm'>
+                          <Link
+                            href={`/admin/locations/${loc.id}`}
+                            className='flex items-center gap-2'
+                          >
+                            <IconEye className='h-4 w-4' /> View
+                          </Link>
+                        </Button>
+                        <Button asChild variant='ghost'>
+                          <Link href={`/admin/locations/${loc.id}/edit`}>
+                            <IconEdit className='h-4 w-4' /> Edit
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {locations.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className='text-center h-24'>
+                        No locations found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              <div className='flex items-center justify-end space-x-2 py-4'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setPage(page - 1)}
+                  disabled={!locationsMeta || locationsMeta.currentPage <= 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setPage(page + 1)}
+                  disabled={
+                    !locationsMeta ||
+                    locationsMeta.currentPage >= locationsMeta.totalPages
+                  }
+                >
+                  Next
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        {/* Pending Requests Tab */}
+        <TabsContent value='pending-requests' className='space-y-6'>
+          <Card>
+            <CardHeader>
+              <CardTitle className='flex items-center justify-between'>
+                <span>
+                  All Pending Requests ({requestsMeta?.totalItems || 0})
+                </span>
+                <div className='flex items-center gap-2'>
+                  <Input
+                    placeholder='Search requests...'
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setPage(1);
+                    }}
+                  />
+                  <Button variant='outline' size='icon'>
+                    <IconSearch className='h-4 w-4' />
+                  </Button>
+                </div>
+              </CardTitle>
+              <CardDescription>
+                Showing page {requestsMeta?.currentPage} of{' '}
+                {requestsMeta?.totalPages}.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center h-24">
-                      No pending requests found.
-                    </TableCell>
+                    <TableHead>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('name')}
+                      >
+                        Location Name <SortIcon column='name' />
+                      </Button>
+                    </TableHead>
+                    <TableHead>Submitted By</TableHead>
+                    <TableHead>Business Name</TableHead>
+                    <TableHead>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('createdAt')}
+                      >
+                        Date <SortIcon column='createdAt' />
+                      </Button>
+                    </TableHead>
+                    <TableHead className='text-right'>Actions</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
+                </TableHeader>
+                <TableBody>
+                  {requests.map((req: LocationRequest) => (
+                    <TableRow key={req.id}>
+                      <TableCell className='font-medium'>
+                        <div className='flex items-center gap-4'>
+                          <Image
+                            src={
+                              // req.locationImageUrls[0] ||
+                              'https://placehold.co/80x80'
+                            }
+                            alt={req.name}
+                            width={80}
+                            height={80}
+                            className=' rounded-md'
+                          />
+                          <Link
+                            href={`/admin/locations/request/${req.id}`}
+                            className='hover:underline'
+                          >
+                            {req.name}
+                          </Link>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {`${req.createdBy?.firstName} ${req.createdBy?.lastName}` ||
+                          'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        {req.createdBy?.businessProfile?.name || 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(req.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className='text-right space-x-2'>
+                        <Button asChild variant='outline' size='sm'>
+                          <Link href={`/admin/locations/request/${req.id}`}>
+                            View
+                          </Link>
+                        </Button>
+                        <Button
+                          size='sm'
+                          onClick={() => setApprovingRequest(req)}
+                          disabled={isPending}
+                          className='bg-green-600 hover:bg-green-700'
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          variant='destructive'
+                          size='sm'
+                          onClick={() => setRejectingRequest(req)}
+                          disabled={isPending}
+                        >
+                          Reject
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {requests.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className='text-center h-24'>
+                        No pending requests found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              <div className='flex items-center justify-end space-x-2 py-4'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setPage(page - 1)}
+                  disabled={!requestsMeta || requestsMeta.currentPage <= 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setPage(page + 1)}
+                  disabled={
+                    !requestsMeta ||
+                    requestsMeta.currentPage >= requestsMeta.totalPages
+                  }
+                >
+                  Next
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
-          <div className="flex items-center justify-end space-x-2 py-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setReqPage(reqPage - 1)}
-              disabled={!reqMeta || reqMeta.currentPage <= 1}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setReqPage(reqPage + 1)}
-              disabled={!reqMeta || reqMeta.currentPage >= reqMeta.totalPages}
-            >
-              Next
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
+      {/* Approve Dialog */}
       <AlertDialog
         open={!!approvingRequest}
         onOpenChange={() => setApprovingRequest(null)}
@@ -385,16 +467,19 @@ export default function LocationDashboardPage() {
               onClick={handleConfirmApprove}
               disabled={isPending}
             >
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isPending && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
               Confirm Approve
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
+      {/* Reject Dialog */}
       <AlertDialog
         open={!!rejectingRequest}
-        onOpenChange={() => setRejectingRequest(null)}
+        onOpenChange={() => {
+          setRejectingRequest(null);
+          setRejectReason('');
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -407,7 +492,7 @@ export default function LocationDashboardPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Textarea
-            placeholder="Reason for rejection..."
+            placeholder='Reason for rejection...'
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
           />
@@ -417,7 +502,7 @@ export default function LocationDashboardPage() {
               onClick={handleConfirmReject}
               disabled={isPending}
             >
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isPending && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
               Confirm Reject
             </AlertDialogAction>
           </AlertDialogFooter>
