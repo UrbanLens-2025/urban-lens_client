@@ -130,25 +130,26 @@ export default function AvailabilityPage({
     // Check if we're dragging using refs for immediate access
     if (!isDraggingRef.current || !dragStartRef.current) return;
 
+    // Only allow selecting cells within the same day as the drag start
+    if (dragStartRef.current.day !== day) {
+      return;
+    }
+
     // Mark that mouse has moved (so it's a drag, not a click)
     hasMovedRef.current = true;
 
     const roundedHour = roundHour(hour);
     const newSelectedCells = new Set<string>();
 
-    // Select all cells between drag start and current position
-    const startDay = Math.min(dragStartRef.current.day, day);
-    const endDay = Math.max(dragStartRef.current.day, day);
+    // Select all cells between drag start and current position (same day only)
     const startHour = Math.min(dragStartRef.current.hour, roundedHour);
     const endHour = Math.max(dragStartRef.current.hour, roundedHour);
 
-    for (let d = startDay; d <= endDay; d++) {
-      for (let h = startHour; h <= endHour; h++) {
-        const key = `${d}_${h}`;
-        // Only allow selecting cells that aren't already saved
-        if (!availabilityCellsSet.has(key)) {
-          newSelectedCells.add(key);
-        }
+    for (let h = startHour; h <= endHour; h++) {
+      const key = `${day}_${h}`;
+      // Only allow selecting cells that aren't already saved
+      if (!availabilityCellsSet.has(key)) {
+        newSelectedCells.add(key);
       }
     }
 
@@ -440,7 +441,7 @@ export default function AvailabilityPage({
               Confirm adding the following time ranges to your weekly availability:
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-4">
+          <div className="space-y-2 py-4 max-h-[400px] overflow-y-auto">
             {slotsToConfirm.map((slot, index) => (
               <div
                 key={index}
