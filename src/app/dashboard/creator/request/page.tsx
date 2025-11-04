@@ -219,13 +219,13 @@ export default function EventRequestsPage() {
                       {request.expectedNumberOfParticipants}
                     </TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
-                    <Link href={`/dashboard/creator/request/${request.id}`}>
-                      <TableCell>
+                    <TableCell>
+                      <Link href={`/dashboard/creator/request/${request.id}`}>
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />
                         </Button>
-                      </TableCell>
-                    </Link>
+                      </Link>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

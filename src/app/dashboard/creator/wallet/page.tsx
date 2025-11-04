@@ -26,6 +26,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
 import { useWallet } from "@/hooks/user/useWallet";
 import { useWalletExternalTransactions } from "@/hooks/wallet/useWalletExternalTransactions";
 import type { WalletExternalTransaction } from "@/types";
@@ -660,7 +661,7 @@ export default function CreatorWalletPage() {
                     externalTransactions.map((transaction) => {
                       const mappedTransaction = mapExternalTransaction(transaction);
                       return (
-                        <TableRow key={transaction.id} onClick={() => { setSelectedTransactionId(transaction.id); setDetailOpen(true); }} className="cursor-pointer hover:bg-muted/50">
+                        <TableRow key={transaction.id} className="cursor-pointer hover:bg-muted/50">
                           <TableCell>
                             <div className="flex items-center gap-2 min-w-0">
                               {getExternalTransactionIcon(mappedTransaction.type)}
@@ -670,7 +671,9 @@ export default function CreatorWalletPage() {
                             </div>
                           </TableCell>
                           <TableCell className="max-w-[200px]">
-                            <span className="text-sm truncate block">{mappedTransaction.description}</span>
+                            <Link href={`/dashboard/creator/wallet/${transaction.id}`} className="text-sm truncate block text-blue-600 hover:underline">
+                              {mappedTransaction.description}
+                            </Link>
                           </TableCell>
                           <TableCell className="max-w-[150px]">
                             <div className="flex items-center gap-2 min-w-0">
@@ -687,7 +690,9 @@ export default function CreatorWalletPage() {
                           </TableCell>
                           <TableCell>
                             <span className="text-sm text-muted-foreground font-mono truncate block">
-                              {mappedTransaction.reference}
+                              <Link href={`/dashboard/creator/wallet/${transaction.id}`} className="hover:underline">
+                                {mappedTransaction.reference}
+                              </Link>
                             </span>
                           </TableCell>
                           <TableCell>
@@ -750,125 +755,7 @@ export default function CreatorWalletPage() {
                 </div>
               </div>
 
-              <Dialog open={detailOpen} onOpenChange={(o) => { setDetailOpen(o); if (!o) setSelectedTransactionId(null); }}>
-                <DialogContent className="!max-w-6xl max-h-[85vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Transaction Details</DialogTitle>
-                  </DialogHeader>
-                  {!transactionDetail || isLoadingDetail ? (
-                    <div className="flex items-center justify-center py-16">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Transaction ID</p>
-                          <p className="font-mono text-sm truncate">{transactionDetail.id}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Status</p>
-                          <Badge variant={getStatusColor(mapStatus(transactionDetail.status))}>
-                            {getStatusLabel(mapStatus(transactionDetail.status))}
-                          </Badge>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Type</p>
-                          <p className="text-sm">{transactionDetail.direction.toUpperCase() === 'DEPOSIT' ? 'Deposit' : 'Withdrawal'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Amount</p>
-                          <p className="text-sm font-semibold">{formatCurrency(parseFloat(transactionDetail.amount))}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Provider</p>
-                          <p className="text-sm">{transactionDetail.provider}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Provider Txn ID</p>
-                          <p className="text-sm font-mono truncate">{transactionDetail.providerTransactionId || '-'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Created At</p>
-                          <p className="text-sm">{formatDateTime(transactionDetail.createdAt)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Expires At</p>
-                          <p className="text-sm">{formatDateTime(transactionDetail.expiresAt)}</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Bank/Payment Info</p>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Bank</p>
-                            <p className="text-sm">{getBankName(transactionDetail.providerResponse?.vnp_BankCode || transactionDetail.provider)}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Bank Ref</p>
-                            <p className="text-sm font-mono truncate">{transactionDetail.providerResponse?.vnp_BankTranNo || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">VNPay Ref</p>
-                            <p className="text-sm font-mono truncate">{transactionDetail.providerResponse?.vnp_TxnRef || '-'}</p>
-                          </div>
-                          <div className="md:col-span-3">
-                            <p className="text-xs text-muted-foreground">Order Info</p>
-                            <p className="text-sm break-words">{transactionDetail.providerResponse?.vnp_OrderInfo || '-'}</p>
-                          </div>
-                          <div className="md:col-span-3">
-                            <p className="text-xs text-muted-foreground">Payment URL</p>
-                            <a href={transactionDetail.paymentUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline break-all">
-                              {transactionDetail.paymentUrl}
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Timeline</p>
-                        <div className="rounded-md border">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Time</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Action</TableHead>
-                                <TableHead>Actor</TableHead>
-                                <TableHead>Note</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {transactionDetail.timeline && transactionDetail.timeline.length > 0 ? (
-                                transactionDetail.timeline.map((e) => (
-                                  <TableRow key={e.id}>
-                                    <TableCell className="whitespace-nowrap">{formatDateTime(e.createdAt)}</TableCell>
-                                    <TableCell>
-                                      <Badge variant={getStatusColor(mapStatus(e.statusChangedTo))}>
-                                        {getStatusLabel(mapStatus(e.statusChangedTo))}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell className="whitespace-nowrap text-sm">{e.action}</TableCell>
-                                    <TableCell className="whitespace-nowrap text-sm">{e.actorName}</TableCell>
-                                    <TableCell className="max-w-[320px] text-sm">
-                                      <span className="block truncate" title={e.note}>{e.note}</span>
-                                    </TableCell>
-                                  </TableRow>
-                                ))
-                              ) : (
-                                <TableRow>
-                                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No timeline events</TableCell>
-                                </TableRow>
-                              )}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </DialogContent>
-              </Dialog>
+              {/* Moved details to a dedicated page; links above */}
             </TabsContent>
           </Tabs>
         </CardContent>
