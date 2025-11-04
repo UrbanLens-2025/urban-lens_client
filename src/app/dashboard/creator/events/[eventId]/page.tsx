@@ -150,7 +150,7 @@ export default function EventDetailPage({
                     Social Links
                   </p>
                   <div className="space-y-2">
-                    {event.social.map((social: any, index: number) => (
+                    {event.social.map((social, index) => (
                       <div key={index} className="flex items-center gap-2">
                         <Badge variant="outline">{social.platform}</Badge>
                         <a 

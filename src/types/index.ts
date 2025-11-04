@@ -673,10 +673,20 @@ export interface LocationBooking {
 
 interface LocationForEvent {
   id: string;
+  ownershipType: string;
   name: string;
-  addressLine: string;
+  description: string | null;
   latitude: string;
   longitude: string;
+  addressLine: string;
+  addressLevel1: string | null;
+  addressLevel2: string | null;
+  radiusMeters: number;
+  imageUrl: string[];
+  createdAt: string;
+  updatedAt: string;
+  isVisibleOnMap: boolean;
+  businessId: string | null;
 }
 
 interface EventTag {
@@ -699,7 +709,7 @@ export interface Event {
   status: string;
   locationId: string;
   location: LocationForEvent;
-  social: any[];
+  social: SocialLink[];
   refundPolicy: string | null;
   termsAndConditions: string | null;
   referencedEventRequestId: string;
