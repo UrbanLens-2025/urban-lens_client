@@ -12,6 +12,7 @@ import {
   IconSettings,
   IconTag,
   IconFileText,
+  IconWallet,
 } from "@tabler/icons-react";
 
 import {
@@ -34,6 +35,7 @@ const adminNav = [
   { title: "Locations", url: "/admin/locations", icon: IconMapPin },
   { title: "Business", url: "/admin/business", icon: IconBriefcase },
   { title: "Tags", url: "/admin/tags", icon: IconTag },
+  { title: "Wallet", url: "/admin/wallet", icon: IconWallet },
 ];
 
 const businessNav = [
@@ -48,12 +50,14 @@ const businessNav = [
     url: "/dashboard/business/locations/requests",
     icon: IconFileText,
   },
+  { title: "Wallet", url: "/dashboard/business/wallet", icon: IconWallet },
 ];
 
 const creatorNav = [
   { title: "Overview", url: "/dashboard/creator", icon: IconCalendar },
   { title: "My Events", url: "/dashboard/creator/events", icon: IconCalendar },
   { title: "Event Requests", url: "/dashboard/creator/request", icon: IconCalendarCheck },
+  { title: "Wallet", url: "/dashboard/creator/wallet", icon: IconWallet },
 ];
 
 const navSecondary = [

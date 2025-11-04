@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Wallet,
+  Wallet as WalletIcon,
   Download,
   Upload,
   TrendingUp,
@@ -32,14 +32,14 @@ import type { WalletExternalTransaction } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useWalletTransactionById } from "@/hooks/wallet/useWalletExternalTransactionById";
 
-// Mock internal transaction data (wallet-to-wallet)
+// Mock internal transaction data (wallet-to-wallet) — still mocked until internal API exists
 const mockInternalTransactions = [
   {
     id: "int_001",
     type: "transfer_out",
     amount: 25000,
     description: "Payment to vendor",
-    otherParty: "John's Catering Services",
+    otherParty: "Event Services",
     otherPartyType: "business",
     status: "completed",
     date: "2025-10-28T14:30:00",
@@ -49,132 +49,12 @@ const mockInternalTransactions = [
     id: "int_002",
     type: "transfer_in",
     amount: 45000,
-    description: "Revenue from Summer Music Festival 2025",
-    otherParty: "Event Ticket Platform",
+    description: "Venue booking revenue",
+    otherParty: "Urban Lens Platform",
     otherPartyType: "system",
     status: "completed",
     date: "2025-10-26T16:45:00",
     reference: "INT-2025-002",
-  },
-  {
-    id: "int_003",
-    type: "transfer_in",
-    amount: 120000,
-    description: "Revenue from Tech Conference: Future of AI",
-    otherParty: "Event Ticket Platform",
-    otherPartyType: "system",
-    status: "completed",
-    date: "2025-10-24T18:30:00",
-    reference: "INT-2025-003",
-  },
-  {
-    id: "int_004",
-    type: "transfer_out",
-    amount: 12000,
-    description: "Service fee payment",
-    otherParty: "Platform Services",
-    otherPartyType: "system",
-    status: "completed",
-    date: "2025-10-23T09:15:00",
-    reference: "INT-2025-004",
-  },
-  {
-    id: "int_005",
-    type: "transfer_in",
-    amount: 15000,
-    description: "Revenue from Art Exhibition Opening",
-    otherParty: "Event Ticket Platform",
-    otherPartyType: "system",
-    status: "completed",
-    date: "2025-10-22T10:15:00",
-    reference: "INT-2025-005",
-  },
-  {
-    id: "int_006",
-    type: "transfer_in",
-    amount: 8500,
-    description: "Revenue from Food & Wine Tasting Event",
-    otherParty: "Event Ticket Platform",
-    otherPartyType: "system",
-    status: "completed",
-    date: "2025-10-20T12:30:00",
-    reference: "INT-2025-006",
-  },
-];
-
-// Mock external transaction data (bank-to-wallet or wallet-to-bank)
-const mockExternalTransactions = [
-  {
-    id: "ext_001",
-    type: "deposit",
-    amount: 50000,
-    description: "Bank transfer deposit",
-    bankName: "Vietcombank",
-    accountNumber: "****1234",
-    status: "completed",
-    date: "2025-10-28T14:30:00",
-    reference: "EXT-2025-001",
-    transactionFee: 0,
-  },
-  {
-    id: "ext_002",
-    type: "withdrawal",
-    amount: 15000,
-    description: "Withdrawal to bank account",
-    bankName: "Techcombank",
-    accountNumber: "****5678",
-    status: "completed",
-    date: "2025-10-27T09:15:00",
-    reference: "EXT-2025-002",
-    transactionFee: 500,
-  },
-  {
-    id: "ext_003",
-    type: "deposit",
-    amount: 100000,
-    description: "Bank transfer deposit",
-    bankName: "BIDV",
-    accountNumber: "****9012",
-    status: "completed",
-    date: "2025-10-25T11:20:00",
-    reference: "EXT-2025-003",
-    transactionFee: 0,
-  },
-  {
-    id: "ext_004",
-    type: "withdrawal",
-    amount: 30000,
-    description: "Withdrawal to bank account",
-    bankName: "Vietcombank",
-    accountNumber: "****1234",
-    status: "pending",
-    date: "2025-10-23T13:00:00",
-    reference: "EXT-2025-004",
-    transactionFee: 500,
-  },
-  {
-    id: "ext_005",
-    type: "deposit",
-    amount: 25000,
-    description: "Bank transfer deposit",
-    bankName: "ACB",
-    accountNumber: "****3456",
-    status: "completed",
-    date: "2025-10-21T15:45:00",
-    reference: "EXT-2025-005",
-    transactionFee: 0,
-  },
-  {
-    id: "ext_006",
-    type: "withdrawal",
-    amount: 50000,
-    description: "Withdrawal to bank account",
-    bankName: "Techcombank",
-    accountNumber: "****5678",
-    status: "failed",
-    date: "2025-10-19T08:00:00",
-    reference: "EXT-2025-006",
-    transactionFee: 0,
   },
 ];
 
@@ -231,7 +111,7 @@ const getTypeLabel = (type: string) => {
   }
 };
 
-export default function CreatorWalletPage() {
+export default function BusinessWalletPage() {
   const { data: walletData, isLoading, error } = useWallet();
   const [currentInternalPage, setCurrentInternalPage] = useState(1);
   const [currentExternalPage, setCurrentExternalPage] = useState(1);
@@ -239,7 +119,7 @@ export default function CreatorWalletPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
 
-  // Fetch external transactions
+  // External transactions (real API)
   const { 
     data: externalTransactionsData, 
     isLoading: isLoadingExternalTransactions 
@@ -251,90 +131,78 @@ export default function CreatorWalletPage() {
 
   const { data: transactionDetail, isLoading: isLoadingDetail } = useWalletTransactionById(selectedTransactionId);
 
-  // Use real wallet balance from API
   const totalBalance = walletData ? parseFloat(walletData.balance) : 0;
   const currency = walletData?.currency || "VND";
 
-  // Map API external transactions to display format
   const externalTransactions = externalTransactionsData?.data || [];
   const totalExternalPages = externalTransactionsData?.meta.totalPages || 1;
   const totalExternalItems = externalTransactionsData?.meta.totalItems || 0;
 
-  // Calculate statistics from real external transactions
-  // Note: These stats are calculated from the current page only
-  // For accurate totals across all transactions, we would need an aggregated stats endpoint
+  // Page-level stats (external from current page; internal from mock until API exists)
   const stats = {
     totalDeposits: externalTransactions
-      .filter(t => t.direction.toUpperCase() === "DEPOSIT" && t.status.toUpperCase() === "COMPLETED")
+      .filter((t) => t.direction.toUpperCase() === "DEPOSIT" && t.status.toUpperCase() === "COMPLETED")
       .reduce((sum, t) => sum + parseFloat(t.amount), 0),
     totalWithdrawals: externalTransactions
-      .filter(t => t.direction.toUpperCase() === "WITHDRAWAL" && t.status.toUpperCase() === "COMPLETED")
+      .filter((t) => t.direction.toUpperCase() === "WITHDRAWAL" && t.status.toUpperCase() === "COMPLETED")
       .reduce((sum, t) => sum + parseFloat(t.amount), 0),
     totalEarnings: mockInternalTransactions
-      .filter(t => t.type === "transfer_in" && t.status === "completed")
+      .filter((t) => t.type === "transfer_in" && t.status === "completed")
       .reduce((sum, t) => sum + t.amount, 0),
     totalTransactions: walletData?.totalTransactions || 0,
   };
 
-  // Pagination for internal transactions
+  // Internal mock pagination
   const totalInternalPages = Math.ceil(mockInternalTransactions.length / itemsPerPage);
   const paginatedInternalTransactions = mockInternalTransactions.slice(
     (currentInternalPage - 1) * itemsPerPage,
     currentInternalPage * itemsPerPage
   );
 
-  // Helper function to map API transaction to display format
-  const mapExternalTransaction = (transaction: WalletExternalTransaction) => {
-    const isDeposit = transaction.direction.toUpperCase() === "DEPOSIT";
-    const bankCode = transaction.providerResponse?.vnp_BankCode || transaction.provider || "N/A";
-    const bankName = getBankName(bankCode);
-    // Extract last 4 digits from bank transaction number for display
-    const bankTranNo = transaction.providerResponse?.vnp_BankTranNo;
-    const accountNumber = bankTranNo 
-      ? `****${String(bankTranNo).slice(-4)}` 
-      : "N/A";
-    
-    return {
-      id: transaction.id,
-      type: isDeposit ? "deposit" : "withdrawal",
-      amount: parseFloat(transaction.amount),
-      description: isDeposit ? "Bank transfer deposit" : "Withdrawal to bank account",
-      bankName: bankName,
-      accountNumber: accountNumber,
-      status: mapStatus(transaction.status),
-      date: transaction.createdAt,
-      reference: transaction.providerTransactionId || transaction.id,
-      transactionFee: 0, // API doesn't provide fee, default to 0
-    };
-  };
-
-  // Helper to map status from API to display format
   const mapStatus = (status: string): string => {
     const statusMap: Record<string, string> = {
-      "COMPLETED": "completed",
-      "PENDING": "pending",
-      "FAILED": "failed",
-      "CANCELLED": "cancelled",
+      COMPLETED: "completed",
+      PENDING: "pending",
+      FAILED: "failed",
+      CANCELLED: "cancelled",
     };
     return statusMap[status.toUpperCase()] || status.toLowerCase();
   };
 
-  // Helper to get bank name from bank code
   const getBankName = (bankCode: string): string => {
     const bankMap: Record<string, string> = {
-      "VNP": "Vietnam Payment",
-      "VNB": "Vietcombank",
-      "TCB": "Techcombank",
-      "BID": "BIDV",
-      "ACB": "ACB",
-      "VCB": "Vietcombank",
-      "CTG": "Vietinbank",
-      "NCB": "NCB Bank",
-      "VNPAY": "VNPay",
+      VNP: "Vietnam Payment",
+      VNB: "Vietcombank",
+      TCB: "Techcombank",
+      BID: "BIDV",
+      ACB: "ACB",
+      VCB: "Vietcombank",
+      CTG: "Vietinbank",
+      NCB: "NCB Bank",
+      VNPAY: "VNPay",
     };
     return bankMap[bankCode.toUpperCase()] || bankCode || "Unknown Bank";
   };
 
+  const mapExternalTransaction = (t: WalletExternalTransaction) => {
+    const isDeposit = t.direction.toUpperCase() === "DEPOSIT";
+    const bankCode = t.providerResponse?.vnp_BankCode || t.provider || "N/A";
+    const accountNumber = t.providerResponse?.vnp_BankTranNo
+      ? `****${String(t.providerResponse.vnp_BankTranNo).slice(-4)}`
+      : "N/A";
+    return {
+      id: t.id,
+      type: isDeposit ? "deposit" : "withdrawal",
+      amount: parseFloat(t.amount),
+      description: isDeposit ? "Bank transfer deposit" : "Withdrawal to bank account",
+      bankName: getBankName(bankCode),
+      accountNumber,
+      status: mapStatus(t.status),
+      date: t.createdAt,
+      reference: t.providerTransactionId || t.id,
+      transactionFee: 0,
+    };
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -357,17 +225,13 @@ export default function CreatorWalletPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Wallet</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your balance and transactions
-          </p>
+          <p className="text-muted-foreground mt-2">Manage your balance and transactions</p>
         </div>
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <p className="text-destructive font-medium">Failed to load wallet information</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Please try refreshing the page
-              </p>
+              <p className="text-sm text-muted-foreground mt-1">Please try refreshing the page</p>
             </div>
           </CardContent>
         </Card>
@@ -387,47 +251,32 @@ export default function CreatorWalletPage() {
 
   return (
     <div className="space-y-6">
-      {/* Title Section */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Wallet</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage your balance and transactions
-        </p>
+        <p className="text-muted-foreground mt-2">Manage your balance and transactions</p>
       </div>
 
-      {/* Balance Card */}
       <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-white">Total Balance</CardTitle>
-            <Wallet className="h-8 w-8 opacity-80" />
+            <WalletIcon className="h-8 w-8 opacity-80" />
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="text-4xl font-bold">
-              {formatCurrency(totalBalance)}
-            </div>
+            <div className="text-4xl font-bold">{formatCurrency(totalBalance)}</div>
             {walletData?.isLocked && (
               <Badge variant="destructive" className="bg-red-500/20 text-red-100 border-red-300">
                 Wallet Locked
               </Badge>
             )}
             <div className="flex gap-3">
-              <Button 
-                className="bg-white text-blue-600 hover:bg-gray-100"
-                size="sm"
-                disabled={walletData?.isLocked}
-              >
+              <Button className="bg-white text-blue-600 hover:bg-gray-100" size="sm" disabled={walletData?.isLocked}>
                 <Download className="mr-2 h-4 w-4" />
                 Deposit
               </Button>
-              <Button 
-                variant="outline" 
-                className="border-white text-blue-600 hover:bg-white/10"
-                size="sm"
-                disabled={walletData?.isLocked}
-              >
+              <Button variant="outline" className="border-white text-blue-600 hover:bg-white/10" size="sm" disabled={walletData?.isLocked}>
                 <Upload className="mr-2 h-4 w-4" />
                 Withdraw
               </Button>
@@ -436,7 +285,6 @@ export default function CreatorWalletPage() {
         </CardContent>
       </Card>
 
-      {/* Statistics */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -444,12 +292,8 @@ export default function CreatorWalletPage() {
             <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.totalTransactions}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              All time transactions
-            </p>
+            <div className="text-2xl font-bold">{stats.totalTransactions}</div>
+            <p className="text-xs text-muted-foreground">All time transactions</p>
           </CardContent>
         </Card>
 
@@ -459,12 +303,8 @@ export default function CreatorWalletPage() {
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(stats.totalDeposits)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              From bank transfers
-            </p>
+            <div className="text-2xl font-bold">{formatCurrency(stats.totalDeposits)}</div>
+            <p className="text-xs text-muted-foreground">From bank transfers</p>
           </CardContent>
         </Card>
 
@@ -474,12 +314,8 @@ export default function CreatorWalletPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(stats.totalEarnings)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              From event tickets
-            </p>
+            <div className="text-2xl font-bold">{formatCurrency(stats.totalEarnings)}</div>
+            <p className="text-xs text-muted-foreground">From bookings</p>
           </CardContent>
         </Card>
 
@@ -489,17 +325,12 @@ export default function CreatorWalletPage() {
             <Landmark className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(stats.totalWithdrawals)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              To bank account
-            </p>
+            <div className="text-2xl font-bold">{formatCurrency(stats.totalWithdrawals)}</div>
+            <p className="text-xs text-muted-foreground">To bank account</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Transactions Table with Tabs */}
       <Card>
         <CardHeader>
           <CardTitle>Transaction History</CardTitle>
@@ -517,12 +348,11 @@ export default function CreatorWalletPage() {
               </TabsTrigger>
             </TabsList>
 
-            {/* Internal Transactions Tab */}
             <TabsContent value="internal" className="space-y-4">
               <div className="rounded-md border border-blue-200 bg-blue-50/50 dark:border-blue-700 dark:bg-blue-950/50 p-3 mb-4">
                 <p className="text-sm text-blue-900 dark:text-blue-200 font-medium flex items-center gap-2">
                   <ArrowLeftRight className="h-4 w-4" />
-                  Internal transactions are transfers between wallets within the platform
+                  Internal transactions are transfers within the platform
                 </p>
               </div>
               <Table>
@@ -538,91 +368,43 @@ export default function CreatorWalletPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedInternalTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
+                  {paginatedInternalTransactions.map((t) => (
+                    <TableRow key={t.id}>
                       <TableCell>
                         <div className="flex items-center gap-2 min-w-0">
-                          {getInternalTransactionIcon(transaction.type, transaction.otherPartyType)}
-                          <span className="text-sm font-medium truncate">
-                            {getTypeLabel(transaction.type)}
-                          </span>
+                          {getInternalTransactionIcon(t.type, t.otherPartyType)}
+                          <span className="text-sm font-medium truncate">{getTypeLabel(t.type)}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-[200px]">
-                        <span className="text-sm truncate block">{transaction.description}</span>
-                      </TableCell>
+                      <TableCell className="max-w-[200px]"><span className="text-sm truncate block">{t.description}</span></TableCell>
                       <TableCell className="max-w-[180px]">
                         <div className="flex items-center gap-2 min-w-0">
-                          {transaction.otherPartyType === 'business' ? (
+                          {t.otherPartyType === 'business' ? (
                             <Users className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                           ) : (
                             <ArrowLeftRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                           )}
-                          <span className="text-sm text-muted-foreground truncate">
-                            {transaction.otherParty}
-                          </span>
+                          <span className="text-sm text-muted-foreground truncate">{t.otherParty}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground font-mono truncate block">
-                          {transaction.reference}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">
-                          {formatDateTime(transaction.date)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusColor(transaction.status)}>
-                          {getStatusLabel(transaction.status)}
-                        </Badge>
-                      </TableCell>
+                      <TableCell><span className="text-sm text-muted-foreground font-mono truncate block">{t.reference}</span></TableCell>
+                      <TableCell><span className="text-sm text-muted-foreground whitespace-nowrap">{formatDateTime(t.date)}</span></TableCell>
+                      <TableCell><Badge variant={getStatusColor(t.status)}>{getStatusLabel(t.status)}</Badge></TableCell>
                       <TableCell className="text-right">
-                        <span 
-                          className={`text-sm font-bold whitespace-nowrap ${
-                            transaction.type === "transfer_out"
-                              ? "text-orange-600" 
-                              : "text-green-600"
-                          }`}
-                        >
-                          {getTransactionSign(transaction.type)}
-                          {formatCurrency(transaction.amount)}
+                        <span className={`text-sm font-bold whitespace-nowrap ${t.type === "transfer_out" ? "text-orange-600" : "text-green-600"}`}>
+                          {getTransactionSign(t.type)}
+                          {formatCurrency(t.amount)}
                         </span>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Showing {paginatedInternalTransactions.length} of {mockInternalTransactions.length} internal transactions
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentInternalPage((p) => Math.max(1, p - 1))}
-                    disabled={currentInternalPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm">
-                    Page {currentInternalPage} of {totalInternalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentInternalPage((p) => Math.min(totalInternalPages, p + 1))}
-                    disabled={currentInternalPage === totalInternalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
+              <div className="flex items-center justify_between">
+                <p className="text-sm text-muted-foreground">Showing {paginatedInternalTransactions.length} of {mockInternalTransactions.length} internal transactions</p>
               </div>
             </TabsContent>
 
-            {/* External Transactions Tab */}
             <TabsContent value="external" className="space-y-4">
               <div className="rounded-md border border-amber-200 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-950/50 p-3 mb-4">
                 <p className="text-sm text-amber-900 dark:text-amber-200 font-medium flex items-center gap-2">
@@ -657,64 +439,34 @@ export default function CreatorWalletPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    externalTransactions.map((transaction) => {
-                      const mappedTransaction = mapExternalTransaction(transaction);
+                    externalTransactions.map((t) => {
+                      const m = mapExternalTransaction(t);
                       return (
-                        <TableRow key={transaction.id} onClick={() => { setSelectedTransactionId(transaction.id); setDetailOpen(true); }} className="cursor-pointer hover:bg-muted/50">
+                        <TableRow key={t.id} onClick={() => { setSelectedTransactionId(t.id); setDetailOpen(true); }} className="cursor-pointer hover:bg-muted/50">
                           <TableCell>
                             <div className="flex items-center gap-2 min-w-0">
-                              {getExternalTransactionIcon(mappedTransaction.type)}
-                              <span className="text-sm font-medium truncate">
-                                {getTypeLabel(mappedTransaction.type)}
-                              </span>
+                              {getExternalTransactionIcon(m.type)}
+                              <span className="text-sm font-medium truncate">{getTypeLabel(m.type)}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="max-w-[200px]">
-                            <span className="text-sm truncate block">{mappedTransaction.description}</span>
-                          </TableCell>
+                          <TableCell className="max-w-[200px]"><span className="text-sm truncate block">{m.description}</span></TableCell>
                           <TableCell className="max-w-[150px]">
                             <div className="flex items-center gap-2 min-w-0">
                               <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                               <div className="flex flex-col min-w-0">
-                                <span className="text-sm font-medium truncate">
-                                  {mappedTransaction.bankName}
-                                </span>
-                                <span className="text-xs text-muted-foreground truncate">
-                                  {mappedTransaction.accountNumber}
-                                </span>
+                                <span className="text-sm font-medium truncate">{m.bankName}</span>
+                                <span className="text-xs text-muted-foreground truncate">{m.accountNumber}</span>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground font-mono truncate block">
-                              {mappedTransaction.reference}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground whitespace-nowrap">
-                              {formatDateTime(mappedTransaction.date)}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={getStatusColor(mappedTransaction.status)}>
-                              {getStatusLabel(mappedTransaction.status)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground whitespace-nowrap">
-                              {mappedTransaction.transactionFee > 0 ? formatCurrency(mappedTransaction.transactionFee) : '-'}
-                            </span>
-                          </TableCell>
+                          <TableCell><span className="text-sm text-muted-foreground font-mono truncate block">{m.reference}</span></TableCell>
+                          <TableCell><span className="text-sm text-muted-foreground whitespace-nowrap">{formatDateTime(m.date)}</span></TableCell>
+                          <TableCell><Badge variant={getStatusColor(m.status)}>{getStatusLabel(m.status)}</Badge></TableCell>
+                          <TableCell><span className="text-sm text-muted-foreground whitespace-nowrap">{m.transactionFee > 0 ? formatCurrency(m.transactionFee) : '-'}</span></TableCell>
                           <TableCell className="text-right">
-                            <span 
-                              className={`text-sm font-bold whitespace-nowrap ${
-                                mappedTransaction.type === "withdrawal"
-                                  ? "text-orange-600" 
-                                  : "text-green-600"
-                              }`}
-                            >
-                              {getTransactionSign(mappedTransaction.type)}
-                              {formatCurrency(mappedTransaction.amount)}
+                            <span className={`text-sm font-bold whitespace-nowrap ${m.type === "withdrawal" ? "text-orange-600" : "text-green-600"}`}>
+                              {getTransactionSign(m.type)}
+                              {formatCurrency(m.amount)}
                             </span>
                           </TableCell>
                         </TableRow>
@@ -723,30 +475,13 @@ export default function CreatorWalletPage() {
                   )}
                 </TableBody>
               </Table>
+
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Showing {externalTransactions.length} of {totalExternalItems} external transactions
-                </p>
+                <p className="text-sm text-muted-foreground">Showing {externalTransactions.length} of {totalExternalItems} external transactions</p>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentExternalPage((p) => Math.max(1, p - 1))}
-                    disabled={currentExternalPage === 1 || isLoadingExternalTransactions}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm">
-                    Page {currentExternalPage} of {totalExternalPages || 1}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentExternalPage((p) => Math.min(totalExternalPages || 1, p + 1))}
-                    disabled={currentExternalPage >= (totalExternalPages || 1) || isLoadingExternalTransactions}
-                  >
-                    Next
-                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentExternalPage((p) => Math.max(1, p - 1))} disabled={currentExternalPage === 1 || isLoadingExternalTransactions}>Previous</Button>
+                  <span className="text-sm">Page {currentExternalPage} of {totalExternalPages || 1}</span>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentExternalPage((p) => Math.min(totalExternalPages || 1, p + 1))} disabled={currentExternalPage >= (totalExternalPages || 1) || isLoadingExternalTransactions}>Next</Button>
                 </div>
               </div>
 
@@ -768,9 +503,7 @@ export default function CreatorWalletPage() {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Status</p>
-                          <Badge variant={getStatusColor(mapStatus(transactionDetail.status))}>
-                            {getStatusLabel(mapStatus(transactionDetail.status))}
-                          </Badge>
+                          <Badge variant={getStatusColor(mapStatus(transactionDetail.status))}>{getStatusLabel(mapStatus(transactionDetail.status))}</Badge>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Type</p>
@@ -819,9 +552,7 @@ export default function CreatorWalletPage() {
                           </div>
                           <div className="md:col-span-3">
                             <p className="text-xs text-muted-foreground">Payment URL</p>
-                            <a href={transactionDetail.paymentUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline break-all">
-                              {transactionDetail.paymentUrl}
-                            </a>
+                            <a href={transactionDetail.paymentUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline break-all">{transactionDetail.paymentUrl}</a>
                           </div>
                         </div>
                       </div>
@@ -845,15 +576,11 @@ export default function CreatorWalletPage() {
                                   <TableRow key={e.id}>
                                     <TableCell className="whitespace-nowrap">{formatDateTime(e.createdAt)}</TableCell>
                                     <TableCell>
-                                      <Badge variant={getStatusColor(mapStatus(e.statusChangedTo))}>
-                                        {getStatusLabel(mapStatus(e.statusChangedTo))}
-                                      </Badge>
+                                      <Badge variant={getStatusColor(mapStatus(e.statusChangedTo))}>{getStatusLabel(mapStatus(e.statusChangedTo))}</Badge>
                                     </TableCell>
                                     <TableCell className="whitespace-nowrap text-sm">{e.action}</TableCell>
                                     <TableCell className="whitespace-nowrap text-sm">{e.actorName}</TableCell>
-                                    <TableCell className="max-w-[320px] text-sm">
-                                      <span className="block truncate" title={e.note}>{e.note}</span>
-                                    </TableCell>
+                                    <TableCell className="max-w-[320px] text-sm"><span className="block truncate" title={e.note}>{e.note}</span></TableCell>
                                   </TableRow>
                                 ))
                               ) : (
@@ -876,3 +603,5 @@ export default function CreatorWalletPage() {
     </div>
   );
 }
+
+

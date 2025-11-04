@@ -588,3 +588,67 @@ export interface GetEventRequestsParams {
   sortBy?: string;
   search?: string;
 }
+
+export interface Wallet {
+  id: string;
+  ownedBy: string;
+  walletType: string;
+  balance: string;
+  currency: string;
+  totalTransactions: number;
+  isLocked: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ProviderResponse {
+  vnp_Amount: number;
+  vnp_TxnRef: string;
+  vnp_PayDate: number;
+  vnp_TmnCode: string;
+  vnp_BankCode: string;
+  vnp_CardType: string | null;
+  vnp_OrderInfo: string;
+  vnp_BankTranNo: string;
+  vnp_SecureHash: string;
+  vnp_ResponseCode: number;
+  vnp_TransactionNo: number;
+  vnp_TransactionStatus: number;
+}
+
+export interface WalletExternalTransaction {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  walletId: string;
+  provider: string;
+  providerTransactionId: string;
+  direction: string;
+  amount: string; 
+  currency: string;
+  paymentUrl: string;
+  expiresAt: string;
+  providerResponse: ProviderResponse;
+  status: string;
+  createdById: string;
+  timeline: WalletExternalTransactionTimelineEvent[];
+}
+
+export interface GetWalletExternalTransactionsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+}
+
+export interface WalletExternalTransactionTimelineEvent {
+  id: string;
+  createdAt: string;
+  transactionId: string;
+  statusChangedTo: string;
+  action: string;
+  actorType: string;
+  actorId: string | null;
+  actorName: string;
+  note: string;
+  metadata: any;
+}
