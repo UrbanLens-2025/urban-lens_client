@@ -74,7 +74,6 @@ export const payForEventBooking = async (eventRequestId: string): Promise<EventR
   return data.data;
 };
 
-// Get booked dates for location
 export interface BookedDatesResponse {
   dates: Array<{
     startDateTime: string;
