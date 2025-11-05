@@ -25,6 +25,7 @@ import {
   Phone,
   Edit,
   Send,
+  Ticket,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -134,6 +135,12 @@ export default function EventDetailPage({
               )}
             </Button>
           )}
+          <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
+            <Button variant="default">
+              <Ticket className="h-4 w-4 mr-2" />
+              Create Ticket
+            </Button>
+          </Link>
           <Link href={`/dashboard/creator/events/${eventId}/edit`}>
             <Button variant="outline">
               <Edit className="h-4 w-4 mr-2" />

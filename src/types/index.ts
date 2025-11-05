@@ -810,3 +810,39 @@ export interface EventTagResponse {
   eventId: string;
   tagId: number;
 }
+
+export interface CreateTicketPayload {
+  displayName: string;
+  description: string;
+  price: number;
+  currency: string;
+  imageUrl: string | null;
+  isActive: boolean;
+  tos: string | null;
+  totalQuantityAvailable: number;
+  saleStartDate: string;
+  saleEndDate: string;
+  minQuantityPerOrder: number;
+  maxQuantityPerOrder: number;
+}
+
+export interface Ticket {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  displayName: string;
+  description: string;
+  price: number;
+  currency: string;
+  imageUrl: string | null;
+  isActive: boolean;
+  tos: string | null;
+  totalQuantityAvailable: number;
+  quantityReserved: number;
+  saleStartDate: string;
+  saleEndDate: string;
+  minQuantityPerOrder: number;
+  maxQuantityPerOrder: number;
+  eventId: string;
+}
