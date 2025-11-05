@@ -1,5 +1,5 @@
 "use client";
-import { useTags } from "@/hooks/tags/useTags";
+import { useAllTags } from "@/hooks/tags/useAllTags";
 import { Tag } from "@/types";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,8 @@ interface TagMultiSelectProps {
 }
 
 export function TagMultiSelect({ selectedTagIds, onSelectionChange }: TagMultiSelectProps) {
-  const { data: tagsResponse } = useTags();
-  const allTags = tagsResponse?.data || [];
+  const { data: allTags } = useAllTags();
+  const tags = allTags || [];
 
   const handleSelect = (tagId: number) => {
     const newSelection = selectedTagIds.includes(tagId)
@@ -36,7 +36,7 @@ export function TagMultiSelect({ selectedTagIds, onSelectionChange }: TagMultiSe
           <CommandList>
             <CommandEmpty>No tags found.</CommandEmpty>
             <CommandGroup>
-              {allTags.map((tag: Tag) => (
+              {tags.map((tag: Tag) => (
                 <CommandItem key={tag.id} onSelect={() => handleSelect(tag.id)}>
                    <Check className={cn("mr-2 h-4 w-4", selectedTagIds.includes(tag.id) ? "opacity-100" : "opacity-0")} />
                    {tag.displayName}

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axiosInstance from "./axios-config";
-import type { ApiResponse, PaginatedData, EventRequest, GetEventRequestsParams, CreateEventRequestPayload, GetBookableLocationsParams, BookableLocation, GetEventsParams, Event, UpdateEventPayload } from "@/types";
+import type { ApiResponse, PaginatedData, EventRequest, GetEventRequestsParams, CreateEventRequestPayload, GetBookableLocationsParams, BookableLocation, GetEventsParams, Event, UpdateEventPayload, AddEventTagsPayload, RemoveEventTagsPayload, EventTagResponse } from "@/types";
 
 export const getEventRequests = async ({
   page = 1,
@@ -142,4 +142,25 @@ export const publishEvent = async (eventId: string): Promise<Event> => {
     {}
   );
   return data.data;
+};
+
+export const addEventTags = async (
+  eventId: string,
+  payload: AddEventTagsPayload
+): Promise<EventTagResponse[]> => {
+  const { data } = await axiosInstance.post<ApiResponse<EventTagResponse[]>>(
+    `/v1/creator/events/${eventId}/tags`,
+    payload
+  );
+  return data.data;
+};
+
+export const removeEventTags = async (
+  eventId: string,
+  payload: RemoveEventTagsPayload
+): Promise<void> => {
+  await axiosInstance.delete<ApiResponse<void>>(
+    `/v1/creator/events/${eventId}/tags`,
+    { data: payload }
+  );
 };

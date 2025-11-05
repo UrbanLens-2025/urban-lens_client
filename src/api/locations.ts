@@ -146,9 +146,10 @@ export const removeTagsFromLocationRequest = async (
   return data;
 };
 
-export const getAllTags = async (): Promise<PaginatedData<Tag>> => {
+export const getAllTags = async (params?: { page?: number; limit?: number }): Promise<PaginatedData<Tag>> => {
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Tag>>>(
-    "/v1/public/tag"
+    "/v1/public/tag",
+    { params: params || { page: 1, limit: 1000 } } // Use high limit to get all tags
   );
   return data.data;
 };

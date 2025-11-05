@@ -1,12 +1,17 @@
 "use client";
 
-import { use, useEffect } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEventById } from "@/hooks/events/useEventById";
-import { useUpdateEvent } from "@/hooks/events/useUpdateEvent";
+import { useAddEventTags, useRemoveEventTags } from "@/hooks/events/useEventTags";
+import { updateEvent } from "@/api/events";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAllTags } from "@/hooks/tags/useAllTags";
+import { Tag } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,8 +38,14 @@ import {
   Globe,
   Star,
   ImageIcon,
+  Tag as TagIcon,
+  X,
+  Search,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import type { UpdateEventPayload } from "@/types";
+import { cn } from "@/lib/utils";
 
 const updateEventSchema = z.object({
   displayName: z
@@ -93,6 +104,8 @@ const popularPlatforms = [
   "Other",
 ];
 
+const INITIAL_DISPLAY_COUNT = 5;
+
 export default function EditEventPage({
   params,
 }: {
@@ -100,9 +113,23 @@ export default function EditEventPage({
 }) {
   const { eventId } = use(params);
   const router = useRouter();
-  const updateEvent = useUpdateEvent();
+  const queryClient = useQueryClient();
+  const addEventTags = useAddEventTags();
+  const removeEventTags = useRemoveEventTags();
 
   const { data: event, isLoading, isError } = useEventById(eventId);
+  const { data: allTags, isLoading: isLoadingTags } = useAllTags();
+
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [searchTerms, setSearchTerms] = useState<Record<string, string>>({});
+  // Track pending tag changes (will be applied on form submit)
+  const [pendingTagIds, setPendingTagIds] = useState<number[] | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const tags = allTags || [];
+  const currentTagIds = event?.tags?.map((et) => et.tagId) || [];
+  // Use pending tags if available, otherwise use current tags from event
+  const displayedTagIds = pendingTagIds !== null ? pendingTagIds : currentTagIds;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<UpdateEventForm>({
@@ -131,6 +158,8 @@ export default function EditEventPage({
         termsAndConditions: event.termsAndConditions || null,
         social: event.social || [],
       });
+      // Reset pending tags when event loads
+      setPendingTagIds(null);
     }
   }, [event, form]);
 
@@ -159,17 +188,59 @@ export default function EditEventPage({
   };
 
   const onSubmit = async (data: UpdateEventForm) => {
-    const payload: UpdateEventPayload = {
-      displayName: data.displayName,
-      description: data.description,
-      avatarUrl: data.avatarUrl || null,
-      coverUrl: data.coverUrl || null,
-      refundPolicy: data.refundPolicy || null,
-      termsAndConditions: data.termsAndConditions || null,
-      social: data.social || [],
-    };
+    setIsSubmitting(true);
+    try {
+      // Step 1: Update event details
+      const payload: UpdateEventPayload = {
+        displayName: data.displayName,
+        description: data.description,
+        avatarUrl: data.avatarUrl || null,
+        coverUrl: data.coverUrl || null,
+        refundPolicy: data.refundPolicy || null,
+        termsAndConditions: data.termsAndConditions || null,
+        social: data.social || [],
+      };
 
-    updateEvent.mutate({ eventId, payload });
+      // Call API directly to avoid hook's auto-navigation
+      const updatedEvent = await updateEvent(eventId, payload);
+      
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ['eventDetail'] });
+      queryClient.invalidateQueries({ queryKey: ['myEvents'] });
+      queryClient.setQueryData(['eventDetail', updatedEvent.id], updatedEvent);
+
+      // Step 2: Apply tag changes if there are pending changes
+      if (pendingTagIds !== null) {
+        const tagsToAdd = pendingTagIds.filter(id => !currentTagIds.includes(id));
+        const tagsToRemove = currentTagIds.filter(id => !pendingTagIds.includes(id));
+
+        // Remove tags first
+        if (tagsToRemove.length > 0) {
+          await removeEventTags.mutateAsync({
+            eventId,
+            payload: { tagIds: tagsToRemove },
+          });
+        }
+
+        // Then add new tags
+        if (tagsToAdd.length > 0) {
+          await addEventTags.mutateAsync({
+            eventId,
+            payload: { tagIds: tagsToAdd },
+          });
+        }
+      }
+
+      // Step 3: Show success message and navigate after all updates are complete
+      toast.success("Event updated successfully!");
+      router.push(`/dashboard/creator/events/${eventId}`);
+      router.refresh();
+    } catch (error: any) {
+      // Error handling
+      toast.error(error?.message || "Failed to update event. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) {
@@ -198,7 +269,7 @@ export default function EditEventPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
+          <Button type="button" variant="outline" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
@@ -259,6 +330,259 @@ export default function EditEventPage({
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          {/* Tags Management */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <TagIcon className="h-4 w-4" />
+                Event Tags
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoadingTags ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  {/* Selected Tags */}
+                  {displayedTagIds.length > 0 && (
+                    <div className="pb-2 border-b">
+                      <FormLabel className="mb-2 text-sm font-medium">Current Tags</FormLabel>
+                      <div className="flex flex-wrap gap-1.5">
+                        {displayedTagIds.map((tagId) => {
+                          const tag = tags.find((t: Tag) => t.id === tagId);
+                          if (!tag) return null;
+                          return (
+                            <Badge
+                              key={tagId}
+                              style={{
+                                backgroundColor: tag.color,
+                                color: "#fff",
+                              }}
+                              className="pl-1.5 pr-1 py-0.5 flex items-center gap-1 text-xs"
+                            >
+                              <span className="text-xs">{tag.icon}</span>
+                              <span className="text-xs">{tag.displayName}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  // Update pending tags instead of calling API
+                                  const newTagIds = displayedTagIds.filter(id => id !== tagId);
+                                  setPendingTagIds(newTagIds);
+                                }}
+                                disabled={isSubmitting}
+                                className="ml-1 rounded-full hover:bg-white/20 p-0.5 disabled:opacity-50"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tag Selection by Group - Show ALL groups from database */}
+                  {(() => {
+                    // Group ALL tags by groupName (no filtering)
+                    const groupedTags = tags.reduce(
+                      (acc: Record<string, Tag[]>, tag: Tag) => {
+                        const group = tag.groupName || "Others";
+                        if (!acc[group]) {
+                          acc[group] = [];
+                        }
+                        acc[group].push(tag);
+                        return acc;
+                      },
+                      {}
+                    );
+
+                    // Format group name from database (e.g., "EVENT_TYPE" -> "Event Type")
+                    const getGroupLabel = (group: string) => {
+                      if (group === "Others") {
+                        return "Others";
+                      }
+                      // Convert SNAKE_CASE or UPPERCASE to Title Case
+                      return group
+                        .split("_")
+                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                        .join(" ");
+                    };
+
+                    const getFilteredTags = (tags: Tag[], groupName: string) => {
+                      const searchTerm =
+                        searchTerms[groupName]?.toLowerCase() || "";
+                      return tags.filter((tag: Tag) =>
+                        tag.displayName.toLowerCase().includes(searchTerm)
+                      );
+                    };
+
+                    const getDisplayedTags = (tags: Tag[], groupName: string) => {
+                      const filtered = getFilteredTags(tags, groupName);
+                      const isExpanded = expandedGroups[groupName];
+                      return isExpanded
+                        ? filtered
+                        : filtered.slice(0, INITIAL_DISPLAY_COUNT);
+                    };
+
+                    const handleAddTag = (tagId: number) => {
+                      if (!displayedTagIds.includes(tagId)) {
+                        // Update pending tags instead of calling API
+                        const newTagIds = [...displayedTagIds, tagId];
+                        setPendingTagIds(newTagIds);
+                      }
+                    };
+
+                    return (
+                      <div className="space-y-3">
+                        {Object.entries(groupedTags)
+                          .sort(([a], [b]) => {
+                            // Sort "Others" to the end
+                            if (a === "Others") return 1;
+                            if (b === "Others") return -1;
+                            return a.localeCompare(b);
+                          })
+                          .map(([groupName, tags]) => {
+                            const filteredTags = getFilteredTags(tags, groupName);
+                            const displayedTags = getDisplayedTags(
+                              tags,
+                              groupName
+                            );
+                            const hasMore =
+                              filteredTags.length > INITIAL_DISPLAY_COUNT;
+                            const isExpanded = expandedGroups[groupName];
+                            const isGroupExpanded = expandedGroups[`group_${groupName}`] ?? true;
+
+                            return (
+                              <div key={groupName} className="border rounded-lg p-3 space-y-2 bg-muted/30">
+                                <div className="flex items-center justify-between gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setExpandedGroups((prev) => ({
+                                        ...prev,
+                                        [`group_${groupName}`]: !prev[`group_${groupName}`],
+                                      }))
+                                    }
+                                    className="flex items-center gap-2 flex-1 text-left hover:text-primary transition-colors"
+                                  >
+                                    {isGroupExpanded ? (
+                                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                    <h3 className="text-sm font-semibold">
+                                      {getGroupLabel(groupName)}
+                                      <span className="text-xs text-muted-foreground font-normal ml-2">
+                                        ({filteredTags.length})
+                                      </span>
+                                    </h3>
+                                  </button>
+                                  {isGroupExpanded && (
+                                    <div className="relative w-40">
+                                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                      <Input
+                                        type="text"
+                                        placeholder="Search..."
+                                        value={searchTerms[groupName] || ""}
+                                        onChange={(e) =>
+                                          setSearchTerms((prev) => ({
+                                            ...prev,
+                                            [groupName]: e.target.value,
+                                          }))
+                                        }
+                                        className="pl-7 h-8 text-xs"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {isGroupExpanded && (
+                                  <>
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                      {displayedTags.map((tag: Tag) => {
+                                        const isSelected = displayedTagIds.includes(
+                                          tag.id
+                                        );
+                                        return (
+                                          <Badge
+                                            key={tag.id}
+                                            variant={isSelected ? "default" : "outline"}
+                                            style={
+                                              isSelected
+                                                ? {
+                                                    backgroundColor: tag.color,
+                                                    color: "#fff",
+                                                    borderColor: tag.color,
+                                                  }
+                                                : {
+                                                    borderColor: tag.color,
+                                                    color: tag.color,
+                                                  }
+                                            }
+                                            className={cn(
+                                              "cursor-pointer transition-all hover:shadow-sm px-2 py-0.5 text-xs",
+                                              isSelected &&
+                                                "ring-1 ring-offset-1 ring-primary",
+                                              !isSelected && "hover:bg-muted"
+                                            )}
+                                            onClick={() => handleAddTag(tag.id)}
+                                          >
+                                            <span className="mr-1">{tag.icon}</span>
+                                            {tag.displayName}
+                                          </Badge>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {hasMore && (
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() =>
+                                          setExpandedGroups((prev) => ({
+                                            ...prev,
+                                            [groupName]: !prev[groupName],
+                                          }))
+                                        }
+                                        className="w-full h-7 text-xs"
+                                      >
+                                        {isExpanded ? (
+                                          <>
+                                            <ChevronUp className="mr-1 h-3 w-3" />
+                                            Show Less
+                                          </>
+                                        ) : (
+                                          <>
+                                            <ChevronDown className="mr-1 h-3 w-3" />
+                                            View More ({filteredTags.length - INITIAL_DISPLAY_COUNT} more)
+                                          </>
+                                        )}
+                                      </Button>
+                                    )}
+
+                                    {filteredTags.length === 0 &&
+                                      searchTerms[groupName] && (
+                                        <p className="text-xs text-muted-foreground text-center py-2">
+                                          No tags found for "{searchTerms[groupName]}"
+                                        </p>
+                                      )}
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -517,15 +841,15 @@ export default function EditEventPage({
               type="button"
               variant="outline"
               onClick={() => router.back()}
-              disabled={updateEvent.isPending}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={updateEvent.isPending || !form.formState.isValid}
+              disabled={isSubmitting || !form.formState.isValid}
             >
-              {updateEvent.isPending ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...

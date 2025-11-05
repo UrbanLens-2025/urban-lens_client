@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { CreateEventRequestForm } from "../page";
-import { useTags } from "@/hooks/tags/useTags";
+import { useAllTags } from "@/hooks/tags/useAllTags";
 import { Tag } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,76 +18,23 @@ interface Step2TagsSelectionProps {
 const ALLOWED_TAG_GROUPS = ["EVENT_TYPE", "THEME", "AESTHETIC", "ACTIVITY"];
 const INITIAL_DISPLAY_COUNT = 5;
 
-// Mock tags for testing (will be replaced by API data when available)
-const MOCK_TAGS: Tag[] = [
-  // EVENT_TYPE (10 tags)
-  { id: 1, groupName: "EVENT_TYPE", displayName: "Conference", color: "#3B82F6", icon: "🎤", isSelectable: true },
-  { id: 2, groupName: "EVENT_TYPE", displayName: "Workshop", color: "#8B5CF6", icon: "🛠️", isSelectable: true },
-  { id: 3, groupName: "EVENT_TYPE", displayName: "Concert", color: "#EC4899", icon: "🎵", isSelectable: true },
-  { id: 4, groupName: "EVENT_TYPE", displayName: "Festival", color: "#F59E0B", icon: "🎪", isSelectable: true },
-  { id: 5, groupName: "EVENT_TYPE", displayName: "Exhibition", color: "#10B981", icon: "🖼️", isSelectable: true },
-  { id: 6, groupName: "EVENT_TYPE", displayName: "Networking", color: "#6366F1", icon: "🤝", isSelectable: true },
-  { id: 7, groupName: "EVENT_TYPE", displayName: "Seminar", color: "#14B8A6", icon: "📚", isSelectable: true },
-  { id: 8, groupName: "EVENT_TYPE", displayName: "Party", color: "#F43F5E", icon: "🎉", isSelectable: true },
-  { id: 9, groupName: "EVENT_TYPE", displayName: "Sports", color: "#EF4444", icon: "⚽", isSelectable: true },
-  { id: 10, groupName: "EVENT_TYPE", displayName: "Charity", color: "#06B6D4", icon: "❤️", isSelectable: true },
-  
-  // THEME (10 tags)
-  { id: 11, groupName: "THEME", displayName: "Tech & Innovation", color: "#3B82F6", icon: "💻", isSelectable: true },
-  { id: 12, groupName: "THEME", displayName: "Arts & Culture", color: "#8B5CF6", icon: "🎨", isSelectable: true },
-  { id: 13, groupName: "THEME", displayName: "Food & Beverage", color: "#F59E0B", icon: "🍕", isSelectable: true },
-  { id: 14, groupName: "THEME", displayName: "Music & Dance", color: "#EC4899", icon: "🎶", isSelectable: true },
-  { id: 15, groupName: "THEME", displayName: "Business & Finance", color: "#10B981", icon: "💼", isSelectable: true },
-  { id: 16, groupName: "THEME", displayName: "Health & Wellness", color: "#14B8A6", icon: "🧘", isSelectable: true },
-  { id: 17, groupName: "THEME", displayName: "Education", color: "#6366F1", icon: "📖", isSelectable: true },
-  { id: 18, groupName: "THEME", displayName: "Fashion", color: "#F43F5E", icon: "👗", isSelectable: true },
-  { id: 19, groupName: "THEME", displayName: "Gaming", color: "#8B5CF6", icon: "🎮", isSelectable: true },
-  { id: 20, groupName: "THEME", displayName: "Environmental", color: "#10B981", icon: "🌱", isSelectable: true },
-  
-  // AESTHETIC (10 tags)
-  { id: 21, groupName: "AESTHETIC", displayName: "Modern", color: "#64748B", icon: "✨", isSelectable: true },
-  { id: 22, groupName: "AESTHETIC", displayName: "Vintage", color: "#92400E", icon: "📻", isSelectable: true },
-  { id: 23, groupName: "AESTHETIC", displayName: "Minimalist", color: "#71717A", icon: "⚪", isSelectable: true },
-  { id: 24, groupName: "AESTHETIC", displayName: "Colorful", color: "#EC4899", icon: "🌈", isSelectable: true },
-  { id: 25, groupName: "AESTHETIC", displayName: "Elegant", color: "#6366F1", icon: "💎", isSelectable: true },
-  { id: 26, groupName: "AESTHETIC", displayName: "Rustic", color: "#92400E", icon: "🪵", isSelectable: true },
-  { id: 27, groupName: "AESTHETIC", displayName: "Urban", color: "#475569", icon: "🏙️", isSelectable: true },
-  { id: 28, groupName: "AESTHETIC", displayName: "Tropical", color: "#10B981", icon: "🌴", isSelectable: true },
-  { id: 29, groupName: "AESTHETIC", displayName: "Futuristic", color: "#06B6D4", icon: "🚀", isSelectable: true },
-  { id: 30, groupName: "AESTHETIC", displayName: "Bohemian", color: "#D97706", icon: "🌺", isSelectable: true },
-  
-  // ACTIVITY (10 tags)
-  { id: 31, groupName: "ACTIVITY", displayName: "Dining", color: "#F59E0B", icon: "🍽️", isSelectable: true },
-  { id: 32, groupName: "ACTIVITY", displayName: "Dancing", color: "#EC4899", icon: "💃", isSelectable: true },
-  { id: 33, groupName: "ACTIVITY", displayName: "Networking", color: "#3B82F6", icon: "👥", isSelectable: true },
-  { id: 34, groupName: "ACTIVITY", displayName: "Learning", color: "#6366F1", icon: "🎓", isSelectable: true },
-  { id: 35, groupName: "ACTIVITY", displayName: "Shopping", color: "#F43F5E", icon: "🛍️", isSelectable: true },
-  { id: 36, groupName: "ACTIVITY", displayName: "Gaming", color: "#8B5CF6", icon: "🕹️", isSelectable: true },
-  { id: 37, groupName: "ACTIVITY", displayName: "Live Performance", color: "#EC4899", icon: "🎭", isSelectable: true },
-  { id: 38, groupName: "ACTIVITY", displayName: "Outdoor Activities", color: "#10B981", icon: "🏕️", isSelectable: true },
-  { id: 39, groupName: "ACTIVITY", displayName: "Photography", color: "#06B6D4", icon: "📷", isSelectable: true },
-  { id: 40, groupName: "ACTIVITY", displayName: "Socializing", color: "#F59E0B", icon: "💬", isSelectable: true },
-];
-
 export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
-  const { data: tagsResponse, isLoading } = useTags();
+  const { data: allTags, isLoading } = useAllTags();
   const selectedTagIds = form.watch("tagIds") || [];
   
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [searchTerms, setSearchTerms] = useState<Record<string, string>>({});
-
-  // Use API tags if available, otherwise use mock tags
-  const apiTags = tagsResponse?.data || [];
-  const allTags = apiTags.length > 0 ? apiTags : MOCK_TAGS;
   
-  // Filter tags by allowed groups
-  const filteredTags = allTags.filter(
-    (tag: Tag) => tag.groupName && ALLOWED_TAG_GROUPS.includes(tag.groupName)
+  const tags = allTags || [];
+  
+  // Include all tags - those in allowed groups AND those with null groupName
+  const filteredTags = tags.filter(
+    (tag: Tag) => !tag.groupName || ALLOWED_TAG_GROUPS.includes(tag.groupName)
   );
 
-  // Group tags by groupName
+  // Group tags by groupName, assigning null groupName to "Others"
   const groupedTags = filteredTags.reduce((acc: Record<string, Tag[]>, tag: Tag) => {
-    const group = tag.groupName || "OTHER";
+    const group = tag.groupName || "Others";
     if (!acc[group]) {
       acc[group] = [];
     }
@@ -95,9 +42,10 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
     return acc;
   }, {});
 
-  const toggleTag = (tagId: number, groupName: string) => {
+  const toggleTag = (tagId: number, groupName: string | null) => {
+    const normalizedGroupName = groupName || "Others";
     // EVENT_TYPE only allows one selection
-    if (groupName === "EVENT_TYPE") {
+    if (normalizedGroupName === "EVENT_TYPE") {
       // If clicking the same tag, deselect it
       if (selectedTagIds.includes(tagId)) {
         const newSelection = selectedTagIds.filter((id: number) => id !== tagId);
@@ -109,7 +57,7 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
         form.setValue("tagIds", [...newSelection, tagId], { shouldValidate: true });
       }
     } else {
-      // Multiple selection for other groups
+      // Multiple selection for other groups (including Others)
       const newSelection = selectedTagIds.includes(tagId)
         ? selectedTagIds.filter((id: number) => id !== tagId)
         : [...selectedTagIds, tagId];
@@ -121,19 +69,26 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
     setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }));
   };
 
+  // Format group name from database (e.g., "EVENT_TYPE" -> "Event Type")
   const getGroupLabel = (group: string) => {
-    switch (group) {
-      case "EVENT_TYPE":
-        return "Event Type (Select One)";
-      case "THEME":
-        return "Theme (Multiple Selection)";
-      case "AESTHETIC":
-        return "Aesthetic (Multiple Selection)";
-      case "ACTIVITY":
-        return "Activity (Multiple Selection)";
-      default:
-        return group;
+    if (group === "Others") {
+      return "Others (Multiple Selection)";
     }
+    // Convert SNAKE_CASE or UPPERCASE to Title Case
+    const formattedGroup = group
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+    
+    // Check if this group only allows one selection (based on first tag in group)
+    const groupTags = groupedTags[group] || [];
+    const firstTag = groupTags[0];
+    // If group is EVENT_TYPE, allow only one selection (this could be determined from tag properties in future)
+    const isSingleSelection = group === "EVENT_TYPE";
+    
+    return isSingleSelection 
+      ? `${formattedGroup} (Select One)`
+      : `${formattedGroup} (Multiple Selection)`;
   };
 
   const getFilteredTags = (tags: Tag[], groupName: string) => {
@@ -167,7 +122,7 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
         {selectedTagIds.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
             {selectedTagIds.map((id: number) => {
-              const tag = allTags.find((t: Tag) => t.id === id);
+              const tag = tags.find((t: Tag) => t.id === id);
               if (!tag) return null;
               return (
                 <Badge
@@ -178,7 +133,7 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
                   <span className="text-xs">{tag.icon}</span>
                   <span className="text-xs">{tag.displayName}</span>
                   <button
-                    onClick={() => toggleTag(id, tag.groupName || "")}
+                    onClick={() => toggleTag(id, tag.groupName)}
                     className="ml-1 rounded-full hover:bg-white/20 p-0.5"
                   >
                     <X className="h-3 w-3" />
@@ -236,7 +191,7 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
                         "cursor-pointer transition-all hover:shadow-md px-3 py-1.5",
                         isSelected && "ring-2 ring-offset-2 ring-primary"
                       )}
-                      onClick={() => toggleTag(tag.id, groupName)}
+                      onClick={() => toggleTag(tag.id, tag.groupName)}
                     >
                       <span className="mr-1">{tag.icon}</span>
                       {tag.displayName}
@@ -276,9 +231,9 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
         })}
       </div>
 
-      {filteredTags.length === 0 && !isLoading && (
+      {tags.length === 0 && !isLoading && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">No tags available</p>
+          <p className="text-muted-foreground">No tags available. Please contact support to add tags.</p>
         </div>
       )}
     </div>

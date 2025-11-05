@@ -19,7 +19,7 @@ export function useUpdateEvent() {
       queryClient.invalidateQueries({ queryKey: ['eventDetail'] });
       queryClient.invalidateQueries({ queryKey: ['myEvents'] });
       queryClient.setQueryData(['eventDetail', data.id], data);
-      router.push(`/dashboard/creator/events/${data.id}`);
+      router.push('/dashboard/creator/events');
       router.refresh();
     },
     onError: (err: Error) => {

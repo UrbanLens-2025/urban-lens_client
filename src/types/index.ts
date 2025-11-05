@@ -794,3 +794,19 @@ export interface UpdateEventPayload {
   termsAndConditions: string | null;
   social: SocialLink[];
 }
+
+export interface AddEventTagsPayload {
+  tagIds: number[];
+}
+
+export interface RemoveEventTagsPayload {
+  tagIds: number[];
+}
+
+export interface EventTagResponse {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  eventId: string;
+  tagId: number;
+}

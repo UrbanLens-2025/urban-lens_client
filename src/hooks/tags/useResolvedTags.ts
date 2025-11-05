@@ -1,18 +1,18 @@
 "use client";
 
 import { useMemo } from "react";
-import { useTags } from "@/hooks/tags/useTags";
-import { PaginatedData, Tag } from "@/types";
+import { useAllTags } from "@/hooks/tags/useAllTags";
+import { Tag } from "@/types";
 
 export function useResolvedTags(tagIds: number[] | undefined) {
-  const { data: allTagsResponse, isLoading: isLoadingTags } = useTags();
+  const { data: allTags, isLoading: isLoadingTags } = useAllTags();
 
   const tagsMap = useMemo(() => {
     const map = new Map<number, Tag>();
-    const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];
-    allTags.forEach((tag) => map.set(tag.id, tag));
+    const tags = allTags || [];
+    tags.forEach((tag) => map.set(tag.id, tag));
     return map;
-  }, [allTagsResponse]);
+  }, [allTags]);
 
   const resolvedTags = useMemo(() => {
     if (!tagIds || tagsMap.size === 0) {
