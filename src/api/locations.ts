@@ -3,6 +3,7 @@ import axiosInstance from "./axios-config";
 import type {
   ApiResponse,
   CreateLocationPayload,
+  CreateLocationBookingConfigPayload,
   GetRequestsParams,
   GetOwnerLocationBookingsParams,
   Location,
@@ -13,6 +14,7 @@ import type {
   PaginatedData,
   ProcessLocationBookingPayload,
   Tag,
+  UpdateLocationBookingConfigPayload,
   UpdateLocationPayload,
 } from "@/types";
 
@@ -227,4 +229,33 @@ export const getLocationBookingConfig = async (
     `/v1/creator/location-booking-config/${locationId}`
   );
   return data.data;
+};
+
+export const getOwnerLocationBookingConfig = async (
+  locationId: string
+): Promise<LocationBookingConfig> => {
+  const { data } = await axiosInstance.get<ApiResponse<LocationBookingConfig>>(
+    `/v1/owner/location-booking-config/${locationId}`
+  );
+  return data.data;
+};
+
+export const createLocationBookingConfig = async (
+  payload: CreateLocationBookingConfigPayload
+): Promise<LocationBookingConfig> => {
+  const { data } = await axiosInstance.post<ApiResponse<LocationBookingConfig>>(
+    `/v1/owner/location-booking-config`,
+    payload
+  );
+  return data.data;
+};
+
+export const updateLocationBookingConfig = async (
+  locationId: string,
+  payload: UpdateLocationBookingConfigPayload
+): Promise<void> => {
+  await axiosInstance.put<ApiResponse<void>>(
+    `/v1/owner/location-booking-config/${locationId}`,
+    payload
+  );
 };

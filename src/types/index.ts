@@ -551,6 +551,25 @@ export interface LocationBookingConfig {
   updatedAt?: string;
 }
 
+export interface CreateLocationBookingConfigPayload {
+  locationId: string;
+  allowBooking: boolean;
+  baseBookingPrice: number;
+  currency: string;
+  minBookingDurationMinutes: number;
+  maxBookingDurationMinutes: number;
+  minGapBetweenBookingsMinutes: number;
+}
+
+export interface UpdateLocationBookingConfigPayload {
+  allowBooking: boolean;
+  baseBookingPrice: number;
+  currency: string;
+  minBookingDurationMinutes: number;
+  maxBookingDurationMinutes: number;
+  minGapBetweenBookingsMinutes: number;
+}
+
 export interface BookableLocation {
   id: string;
   name: string;

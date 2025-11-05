@@ -19,6 +19,7 @@ import {
   Tag,
   Rocket,
   Ticket,
+  DollarSign,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
@@ -137,6 +138,14 @@ export default function LocationDetailsPage({
             <Button variant="outline">
               <CalendarDays className="mr-2 h-4 w-4" />
               Manage Availability
+            </Button>
+          </Link>
+          <Link
+            href={`/dashboard/business/locations/${location.id}/booking-config`}
+          >
+            <Button variant="outline">
+              <DollarSign className="mr-2 h-4 w-4" />
+              Booking Config
             </Button>
           </Link>
           <Link href={`/dashboard/business/locations/${location.id}/edit`}>
