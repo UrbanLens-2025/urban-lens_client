@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axiosInstance from "./axios-config";
-import type { ApiResponse, PaginatedData, EventRequest, GetEventRequestsParams, CreateEventRequestPayload, GetBookableLocationsParams, BookableLocation, GetEventsParams, Event, UpdateEventPayload, AddEventTagsPayload, RemoveEventTagsPayload, EventTagResponse, CreateTicketPayload, Ticket } from "@/types";
+import type { ApiResponse, PaginatedData, EventRequest, GetEventRequestsParams, CreateEventRequestPayload, GetBookableLocationsParams, BookableLocation, GetEventsParams, Event, UpdateEventPayload, AddEventTagsPayload, RemoveEventTagsPayload, EventTagResponse, CreateTicketPayload, UpdateTicketPayload, Ticket } from "@/types";
 
 export const getEventRequests = async ({
   page = 1,
@@ -171,6 +171,27 @@ export const createTicket = async (
 ): Promise<Ticket> => {
   const { data } = await axiosInstance.post<ApiResponse<Ticket>>(
     `/v1/creator/events/${eventId}/tickets`,
+    payload
+  );
+  return data.data;
+};
+
+export const getEventTickets = async (
+  eventId: string
+): Promise<Ticket[]> => {
+  const { data } = await axiosInstance.get<ApiResponse<Ticket[]>>(
+    `/v1/creator/events/${eventId}/tickets`
+  );
+  return data.data;
+};
+
+export const updateTicket = async (
+  eventId: string,
+  ticketId: string,
+  payload: UpdateTicketPayload
+): Promise<Ticket> => {
+  const { data } = await axiosInstance.put<ApiResponse<Ticket>>(
+    `/v1/creator/events/${eventId}/tickets/${ticketId}`,
     payload
   );
   return data.data;

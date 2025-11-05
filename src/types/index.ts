@@ -826,14 +826,30 @@ export interface CreateTicketPayload {
   maxQuantityPerOrder: number;
 }
 
+export interface UpdateTicketPayload {
+  displayName: string;
+  description: string;
+  price: number;
+  currency: string;
+  imageUrl: string | null;
+  isActive: boolean;
+  tos: string | null;
+  totalQuantityAvailable: number;
+  saleStartDate: string;
+  saleEndDate: string;
+  minQuantityPerOrder: number;
+  maxQuantityPerOrder: number;
+}
+
 export interface Ticket {
   id: string;
   createdAt: string;
   updatedAt: string;
   createdById: string;
+  createdBy?: User;
   displayName: string;
   description: string;
-  price: number;
+  price: string;
   currency: string;
   imageUrl: string | null;
   isActive: boolean;
@@ -845,4 +861,5 @@ export interface Ticket {
   minQuantityPerOrder: number;
   maxQuantityPerOrder: number;
   eventId: string;
+  event?: Event;
 }

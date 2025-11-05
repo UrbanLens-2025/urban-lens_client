@@ -5,6 +5,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useEventById } from "@/hooks/events/useEventById";
 import { usePublishEvent } from "@/hooks/events/usePublishEvent";
+import { useEventTickets } from "@/hooks/events/useEventTickets";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,12 @@ import {
   Edit,
   Send,
   Ticket,
+  DollarSign,
+  Hash,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -54,6 +61,7 @@ export default function EventDetailPage({
   const [currentImageSrc, setCurrentImageSrc] = useState("");
 
   const { data: event, isLoading, isError } = useEventById(eventId);
+  const { data: tickets, isLoading: isLoadingTickets } = useEventTickets(eventId);
   const publishEvent = usePublishEvent();
 
   const handlePublish = () => {
@@ -220,6 +228,183 @@ export default function EventDetailPage({
 
               {event.termsAndConditions && (
                 <InfoRow label="Terms and Conditions" value={event.termsAndConditions} icon={FileText} />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tickets */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Ticket className="h-5 w-5" />
+                  Tickets
+                </div>
+                <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
+                  <Button variant="outline" size="sm">
+                    <Ticket className="h-4 w-4 mr-2" />
+                    Create Ticket
+                  </Button>
+                </Link>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingTickets ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : !tickets || tickets.length === 0 ? (
+                <div className="text-center py-8">
+                  <Ticket className="h-12 w-12 mx-auto text-muted-foreground mb-3 opacity-50" />
+                  <p className="text-sm text-muted-foreground mb-4">
+                    No tickets created yet
+                  </p>
+                  <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
+                    <Button variant="default" size="sm">
+                      <Ticket className="h-4 w-4 mr-2" />
+                      Create Your First Ticket
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {tickets.map((ticket) => {
+                    const formatCurrency = (price: string, currency: string) => {
+                      const numPrice = parseFloat(price);
+                      return new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: currency,
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2,
+                      }).format(numPrice);
+                    };
+
+                    const formatDate = (dateString: string) => {
+                      return new Date(dateString).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      });
+                    };
+
+                    const availableQuantity = ticket.totalQuantityAvailable - ticket.quantityReserved;
+                    const isSaleActive = new Date(ticket.saleStartDate) <= new Date() && 
+                                       new Date(ticket.saleEndDate) >= new Date();
+
+                    return (
+                      <div
+                        key={ticket.id}
+                        className="border rounded-lg p-4 space-y-3 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-semibold text-lg">{ticket.displayName}</h3>
+                              {ticket.isActive ? (
+                                <Badge variant="default" className="flex items-center gap-1">
+                                  <CheckCircle className="h-3 w-3" />
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="flex items-center gap-1">
+                                  <XCircle className="h-3 w-3" />
+                                  Inactive
+                                </Badge>
+                              )}
+                              {isSaleActive && ticket.isActive ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                                  On Sale
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-300">
+                                  Not On Sale
+                                </Badge>
+                              )}
+                            </div>
+                            {ticket.description && (
+                              <p className="text-sm text-muted-foreground mb-3">
+                                {ticket.description}
+                              </p>
+                            )}
+                          </div>
+                          {ticket.imageUrl && (
+                            <img
+                              src={ticket.imageUrl}
+                              alt={ticket.displayName}
+                              className="h-20 w-20 object-cover rounded-md border ml-4"
+                            />
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Price</p>
+                              <p className="text-sm font-medium">
+                                {formatCurrency(ticket.price, ticket.currency)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Hash className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Available</p>
+                              <p className="text-sm font-medium">
+                                {availableQuantity} / {ticket.totalQuantityAvailable}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Per Order</p>
+                              <p className="text-sm font-medium">
+                                {ticket.minQuantityPerOrder} - {ticket.maxQuantityPerOrder}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Reserved</p>
+                              <p className="text-sm font-medium">{ticket.quantityReserved}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 border-t space-y-2">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              <span>Sale Start: {formatDate(ticket.saleStartDate)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              <span>Sale End: {formatDate(ticket.saleEndDate)}</span>
+                            </div>
+                          </div>
+                          {ticket.tos && (
+                            <div className="text-xs text-muted-foreground">
+                              <p className="font-medium mb-1">Terms:</p>
+                              <p className="line-clamp-2">{ticket.tos}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="pt-2 border-t">
+                          <Link href={`/dashboard/creator/events/${eventId}/tickets/${ticket.id}/edit`}>
+                            <Button variant="outline" size="sm" className="w-full">
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit Ticket
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </CardContent>
           </Card>
