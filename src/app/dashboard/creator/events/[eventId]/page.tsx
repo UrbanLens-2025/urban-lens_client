@@ -267,10 +267,17 @@ export default function EventDetailPage({
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {tickets.map((ticket) => {
                     const formatCurrency = (price: string, currency: string) => {
                       const numPrice = parseFloat(price);
+                      if (currency === "VND") {
+                        return new Intl.NumberFormat('vi-VN', {
+                          style: 'currency',
+                          currency: 'VND',
+                          minimumFractionDigits: 0,
+                        }).format(numPrice);
+                      }
                       return new Intl.NumberFormat('en-US', {
                         style: 'currency',
                         currency: currency,
@@ -292,114 +299,137 @@ export default function EventDetailPage({
                     const availableQuantity = ticket.totalQuantityAvailable - ticket.quantityReserved;
                     const isSaleActive = new Date(ticket.saleStartDate) <= new Date() && 
                                        new Date(ticket.saleEndDate) >= new Date();
+                    const availabilityPercentage = (availableQuantity / ticket.totalQuantityAvailable) * 100;
 
                     return (
                       <div
                         key={ticket.id}
-                        className="border rounded-lg p-4 space-y-3 hover:bg-muted/50 transition-colors"
+                        className="group relative border-2 rounded-xl overflow-hidden bg-white hover:shadow-lg transition-all duration-300 hover:border-primary/50"
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3 className="font-semibold text-lg">{ticket.displayName}</h3>
-                              {ticket.isActive ? (
-                                <Badge variant="default" className="flex items-center gap-1">
-                                  <CheckCircle className="h-3 w-3" />
-                                  Active
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="flex items-center gap-1">
-                                  <XCircle className="h-3 w-3" />
-                                  Inactive
-                                </Badge>
-                              )}
-                              {isSaleActive && ticket.isActive ? (
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                                  On Sale
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-300">
-                                  Not On Sale
-                                </Badge>
-                              )}
-                            </div>
+                        {/* Status Badge - Top Right */}
+                        <div className="absolute top-3 right-3 z-10 flex flex-col gap-2">
+                          {ticket.isActive ? (
+                            <Badge className="bg-green-500 hover:bg-green-600 text-white border-0 shadow-md">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-gray-400 text-white border-0">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Inactive
+                            </Badge>
+                          )}
+                          {!isSaleActive && ticket.isActive && (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
+                              Not On Sale
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Ticket Image */}
+                        {ticket.imageUrl && (
+                          <div className="relative h-48 overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5">
+                            <img
+                              src={ticket.imageUrl}
+                              alt={ticket.displayName}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                          </div>
+                        )}
+
+                        {/* Ticket Content */}
+                        <div className="p-5 space-y-4">
+                          {/* Ticket Name */}
+                          <div>
+                            <h3 className="font-bold text-xl text-gray-900 mb-2 line-clamp-1">
+                              {ticket.displayName}
+                            </h3>
                             {ticket.description && (
-                              <p className="text-sm text-muted-foreground mb-3">
+                              <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
                                 {ticket.description}
                               </p>
                             )}
                           </div>
-                          {ticket.imageUrl && (
-                            <img
-                              src={ticket.imageUrl}
-                              alt={ticket.displayName}
-                              className="h-20 w-20 object-cover rounded-md border ml-4"
-                            />
-                          )}
-                        </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-xs text-muted-foreground">Price</p>
-                              <p className="text-sm font-medium">
-                                {formatCurrency(ticket.price, ticket.currency)}
-                              </p>
-                            </div>
+                          {/* Price - Prominent Display */}
+                          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-4 border border-primary/20">
+                            <p className="text-xs text-gray-600 mb-1 font-medium">Ticket Price</p>
+                            <p className="text-3xl font-bold text-primary">
+                              {formatCurrency(ticket.price, ticket.currency)}
+                            </p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Hash className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-xs text-muted-foreground">Available</p>
-                              <p className="text-sm font-medium">
+
+                          {/* Key Information */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600 flex items-center gap-2">
+                                <Hash className="h-4 w-4" />
+                                Available
+                              </span>
+                              <span className="font-semibold text-gray-900">
                                 {availableQuantity} / {ticket.totalQuantityAvailable}
-                              </p>
+                              </span>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-xs text-muted-foreground">Per Order</p>
-                              <p className="text-sm font-medium">
-                                {ticket.minQuantityPerOrder} - {ticket.maxQuantityPerOrder}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-xs text-muted-foreground">Reserved</p>
-                              <p className="text-sm font-medium">{ticket.quantityReserved}</p>
-                            </div>
-                          </div>
-                        </div>
 
-                        <div className="pt-3 border-t space-y-2">
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-3 w-3" />
-                              <span>Sale Start: {formatDate(ticket.saleStartDate)}</span>
+                            {/* Availability Progress Bar */}
+                            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                              <div
+                                className={`h-full transition-all ${
+                                  availabilityPercentage > 50
+                                    ? "bg-green-500"
+                                    : availabilityPercentage > 20
+                                    ? "bg-yellow-500"
+                                    : "bg-red-500"
+                                }`}
+                                style={{ width: `${availabilityPercentage}%` }}
+                              />
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-3 w-3" />
-                              <span>Sale End: {formatDate(ticket.saleEndDate)}</span>
+
+                            <div className="flex items-center justify-between text-sm pt-1">
+                              <span className="text-gray-600 flex items-center gap-2">
+                                <Users className="h-4 w-4" />
+                                Per Order
+                              </span>
+                              <span className="font-semibold text-gray-900">
+                                {ticket.minQuantityPerOrder} - {ticket.maxQuantityPerOrder}
+                              </span>
                             </div>
                           </div>
+
+                          {/* Sale Period */}
+                          <div className="pt-3 border-t border-gray-200 space-y-2">
+                            <div className="flex items-start gap-2 text-xs text-gray-600">
+                              <Calendar className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-700 mb-1">Sale Period</p>
+                                <p className="leading-relaxed">
+                                  <span className="block">Start: {formatDate(ticket.saleStartDate)}</span>
+                                  <span className="block">End: {formatDate(ticket.saleEndDate)}</span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Terms */}
                           {ticket.tos && (
-                            <div className="text-xs text-muted-foreground">
-                              <p className="font-medium mb-1">Terms:</p>
-                              <p className="line-clamp-2">{ticket.tos}</p>
+                            <div className="pt-2 border-t border-gray-200">
+                              <p className="text-xs text-gray-600 line-clamp-2">
+                                <span className="font-medium">Terms: </span>
+                                {ticket.tos}
+                              </p>
                             </div>
                           )}
-                        </div>
-                        <div className="pt-2 border-t">
-                          <Link href={`/dashboard/creator/events/${eventId}/tickets/${ticket.id}/edit`}>
-                            <Button variant="outline" size="sm" className="w-full">
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit Ticket
-                            </Button>
-                          </Link>
+
+                          {/* Action Button */}
+                          <div className="pt-3 border-t border-gray-200">
+                            <Link href={`/dashboard/creator/events/${eventId}/tickets/${ticket.id}/edit`}>
+                              <Button variant="outline" size="sm" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Edit Ticket
+                              </Button>
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     );
