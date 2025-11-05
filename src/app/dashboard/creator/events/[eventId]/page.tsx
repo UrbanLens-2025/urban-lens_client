@@ -4,6 +4,7 @@ import type React from "react";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useEventById } from "@/hooks/events/useEventById";
+import { usePublishEvent } from "@/hooks/events/usePublishEvent";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import {
   Calendar,
   Phone,
   Edit,
+  Send,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -51,6 +53,13 @@ export default function EventDetailPage({
   const [currentImageSrc, setCurrentImageSrc] = useState("");
 
   const { data: event, isLoading, isError } = useEventById(eventId);
+  const publishEvent = usePublishEvent();
+
+  const handlePublish = () => {
+    if (event && event.status === "DRAFT") {
+      publishEvent.mutate(eventId);
+    }
+  };
 
   const formatDateTime = (iso: string) => new Date(iso).toLocaleString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -105,12 +114,33 @@ export default function EventDetailPage({
           </div>
           <Badge variant={statusVariant(event.status)}>{event.status}</Badge>
         </div>
-        <Link href={`/dashboard/creator/events/${eventId}/edit`}>
-          <Button variant="default">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Event
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          {event.status === "DRAFT" && (
+            <Button
+              variant="default"
+              onClick={handlePublish}
+              disabled={publishEvent.isPending}
+            >
+              {publishEvent.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Publishing...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Publish Event
+                </>
+              )}
+            </Button>
+          )}
+          <Link href={`/dashboard/creator/events/${eventId}/edit`}>
+            <Button variant="outline">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Event
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Grid Content */}

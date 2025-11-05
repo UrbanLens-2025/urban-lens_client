@@ -51,14 +51,16 @@ const updateEventSchema = z.object({
       z.literal(""),
       z.null(),
     ])
-    .transform((val) => (val === "" ? null : val)),
+    .nullable()
+    .transform((val) => (val === "" || !val ? null : val)),
   coverUrl: z
     .union([
       z.string().url("Invalid URL"),
       z.literal(""),
       z.null(),
     ])
-    .transform((val) => (val === "" ? null : val)),
+    .nullable()
+    .transform((val) => (val === "" || !val ? null : val)),
   refundPolicy: z
     .string()
     .nullable()
@@ -75,7 +77,6 @@ const updateEventSchema = z.object({
         isMain: z.boolean(),
       })
     )
-    .optional()
     .default([]),
 });
 
@@ -103,8 +104,9 @@ export default function EditEventPage({
 
   const { data: event, isLoading, isError } = useEventById(eventId);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<UpdateEventForm>({
-    resolver: zodResolver(updateEventSchema),
+    resolver: zodResolver(updateEventSchema) as any,
     mode: "onChange",
     defaultValues: {
       displayName: "",

@@ -135,3 +135,11 @@ export const updateEvent = async (
   );
   return data.data;
 };
+
+export const publishEvent = async (eventId: string): Promise<Event> => {
+  const { data } = await axiosInstance.post<ApiResponse<Event>>(
+    `/v1/creator/events/${eventId}/publish`,
+    {}
+  );
+  return data.data;
+};
