@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axiosInstance from "./axios-config";
-import type { ApiResponse, PaginatedData, EventRequest, GetEventRequestsParams, CreateEventRequestPayload, GetBookableLocationsParams, BookableLocation, GetEventsParams, Event } from "@/types";
+import type { ApiResponse, PaginatedData, EventRequest, GetEventRequestsParams, CreateEventRequestPayload, GetBookableLocationsParams, BookableLocation, GetEventsParams, Event, UpdateEventPayload } from "@/types";
 
 export const getEventRequests = async ({
   page = 1,
@@ -122,6 +122,17 @@ export const getMyEvents = async ({
 export const getEventById = async (eventId: string): Promise<Event> => {
   const { data } = await axiosInstance.get<ApiResponse<Event>>(
     `/v1/creator/events/${eventId}`
+  );
+  return data.data;
+};
+
+export const updateEvent = async (
+  eventId: string,
+  payload: UpdateEventPayload
+): Promise<Event> => {
+  const { data } = await axiosInstance.put<ApiResponse<Event>>(
+    `/v1/creator/events/${eventId}`,
+    payload
   );
   return data.data;
 };

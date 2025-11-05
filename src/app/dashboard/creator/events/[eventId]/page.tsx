@@ -22,6 +22,7 @@ import {
   FileText,
   Calendar,
   Phone,
+  Edit,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -104,6 +105,12 @@ export default function EventDetailPage({
           </div>
           <Badge variant={statusVariant(event.status)}>{event.status}</Badge>
         </div>
+        <Link href={`/dashboard/creator/events/${eventId}/edit`}>
+          <Button variant="default">
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Event
+          </Button>
+        </Link>
       </div>
 
       {/* Grid Content */}
