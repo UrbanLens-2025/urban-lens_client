@@ -15,7 +15,6 @@ interface Step2TagsSelectionProps {
   form: UseFormReturn<CreateEventRequestForm>;
 }
 
-const ALLOWED_TAG_GROUPS = ["EVENT_TYPE", "THEME", "AESTHETIC", "ACTIVITY"];
 const INITIAL_DISPLAY_COUNT = 5;
 
 export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
@@ -27,13 +26,8 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
   
   const tags = allTags || [];
   
-  // Include all tags - those in allowed groups AND those with null groupName
-  const filteredTags = tags.filter(
-    (tag: Tag) => !tag.groupName || ALLOWED_TAG_GROUPS.includes(tag.groupName)
-  );
-
-  // Group tags by groupName, assigning null groupName to "Others"
-  const groupedTags = filteredTags.reduce((acc: Record<string, Tag[]>, tag: Tag) => {
+  // Group ALL tags by groupName (no filtering - show all tags from database)
+  const groupedTags = tags.reduce((acc: Record<string, Tag[]>, tag: Tag) => {
     const group = tag.groupName || "Others";
     if (!acc[group]) {
       acc[group] = [];
@@ -72,7 +66,7 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
   // Format group name from database (e.g., "EVENT_TYPE" -> "Event Type")
   const getGroupLabel = (group: string) => {
     if (group === "Others") {
-      return "Others (Multiple Selection)";
+      return "Others";
     }
     // Convert SNAKE_CASE or UPPERCASE to Title Case
     const formattedGroup = group
@@ -80,15 +74,12 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
     
-    // Check if this group only allows one selection (based on first tag in group)
-    const groupTags = groupedTags[group] || [];
-    const firstTag = groupTags[0];
-    // If group is EVENT_TYPE, allow only one selection (this could be determined from tag properties in future)
+    // EVENT_TYPE only allows one selection, others allow multiple
     const isSingleSelection = group === "EVENT_TYPE";
     
     return isSingleSelection 
       ? `${formattedGroup} (Select One)`
-      : `${formattedGroup} (Multiple Selection)`;
+      : formattedGroup;
   };
 
   const getFilteredTags = (tags: Tag[], groupName: string) => {
@@ -151,84 +142,123 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
         </div>
       )}
 
-      <div className="space-y-6">
-        {Object.entries(groupedTags).map(([groupName, tags]) => {
-          const filteredTags = getFilteredTags(tags, groupName);
-          const displayedTags = getDisplayedTags(tags, groupName);
-          const hasMore = filteredTags.length > INITIAL_DISPLAY_COUNT;
-          const isExpanded = expandedGroups[groupName];
+      <div className="space-y-3">
+        {Object.entries(groupedTags)
+          .sort(([a], [b]) => {
+            // Sort "Others" to the end
+            if (a === "Others") return 1;
+            if (b === "Others") return -1;
+            return a.localeCompare(b);
+          })
+          .map(([groupName, tags]) => {
+            const filteredTags = getFilteredTags(tags, groupName);
+            const displayedTags = getDisplayedTags(tags, groupName);
+            const hasMore = filteredTags.length > INITIAL_DISPLAY_COUNT;
+            const isExpanded = expandedGroups[groupName];
+            const isGroupExpanded = expandedGroups[`group_${groupName}`] ?? true;
 
-          return (
-            <div key={groupName} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">{getGroupLabel(groupName)}</h3>
-                <div className="relative w-64">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search..."
-                    value={searchTerms[groupName] || ""}
-                    onChange={(e) =>
-                      setSearchTerms(prev => ({ ...prev, [groupName]: e.target.value }))
+            return (
+              <div key={groupName} className="border rounded-lg p-3 space-y-2 bg-muted/30">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedGroups((prev) => ({
+                        ...prev,
+                        [`group_${groupName}`]: !prev[`group_${groupName}`],
+                      }))
                     }
-                    className="pl-8 h-9"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {displayedTags.map((tag: Tag) => {
-                  const isSelected = selectedTagIds.includes(tag.id);
-                  return (
-                    <Badge
-                      key={tag.id}
-                      variant={isSelected ? "default" : "outline"}
-                      style={
-                        isSelected
-                          ? { backgroundColor: tag.color, color: "#fff", borderColor: tag.color }
-                          : { borderColor: tag.color, color: tag.color }
-                      }
-                      className={cn(
-                        "cursor-pointer transition-all hover:shadow-md px-3 py-1.5",
-                        isSelected && "ring-2 ring-offset-2 ring-primary"
-                      )}
-                      onClick={() => toggleTag(tag.id, tag.groupName)}
-                    >
-                      <span className="mr-1">{tag.icon}</span>
-                      {tag.displayName}
-                    </Badge>
-                  );
-                })}
-              </div>
-
-              {hasMore && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleExpanded(groupName)}
-                  className="w-full"
-                >
-                  {isExpanded ? (
-                    <>
-                      <ChevronUp className="mr-2 h-4 w-4" />
-                      Show Less
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="mr-2 h-4 w-4" />
-                      View More ({filteredTags.length - INITIAL_DISPLAY_COUNT} more)
-                    </>
+                    className="flex items-center gap-2 flex-1 text-left hover:text-primary transition-colors"
+                  >
+                    {isGroupExpanded ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <h3 className="text-sm font-semibold">
+                      {getGroupLabel(groupName)}
+                      <span className="text-xs text-muted-foreground font-normal ml-2">
+                        ({filteredTags.length})
+                      </span>
+                    </h3>
+                  </button>
+                  {isGroupExpanded && (
+                    <div className="relative w-40">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        placeholder="Search..."
+                        value={searchTerms[groupName] || ""}
+                        onChange={(e) =>
+                          setSearchTerms(prev => ({ ...prev, [groupName]: e.target.value }))
+                        }
+                        className="pl-7 h-8 text-xs"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
                   )}
-                </Button>
-              )}
+                </div>
 
-              {filteredTags.length === 0 && searchTerms[groupName] && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No tags found for "{searchTerms[groupName]}"
-                </p>
-              )}
-            </div>
-          );
-        })}
+                {isGroupExpanded && (
+                  <>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {displayedTags.map((tag: Tag) => {
+                        const isSelected = selectedTagIds.includes(tag.id);
+                        return (
+                          <Badge
+                            key={tag.id}
+                            variant={isSelected ? "default" : "outline"}
+                            style={
+                              isSelected
+                                ? { backgroundColor: tag.color, color: "#fff", borderColor: tag.color }
+                                : { borderColor: tag.color, color: tag.color }
+                            }
+                            className={cn(
+                              "cursor-pointer transition-all hover:shadow-sm px-2 py-0.5 text-xs",
+                              isSelected && "ring-1 ring-offset-1 ring-primary",
+                              !isSelected && "hover:bg-muted"
+                            )}
+                            onClick={() => toggleTag(tag.id, tag.groupName)}
+                          >
+                            <span className="mr-1">{tag.icon}</span>
+                            {tag.displayName}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+
+                    {hasMore && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleExpanded(groupName)}
+                        className="w-full h-7 text-xs"
+                      >
+                        {isExpanded ? (
+                          <>
+                            <ChevronUp className="mr-1 h-3 w-3" />
+                            Show Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="mr-1 h-3 w-3" />
+                            View More ({filteredTags.length - INITIAL_DISPLAY_COUNT} more)
+                          </>
+                        )}
+                      </Button>
+                    )}
+
+                    {filteredTags.length === 0 && searchTerms[groupName] && (
+                      <p className="text-xs text-muted-foreground text-center py-2">
+                        No tags found for "{searchTerms[groupName]}"
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
       </div>
 
       {tags.length === 0 && !isLoading && (

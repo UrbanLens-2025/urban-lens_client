@@ -547,6 +547,8 @@ export interface LocationBookingConfig {
   minBookingDurationMinutes: number;
   maxBookingDurationMinutes: number;
   minGapBetweenBookingsMinutes: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface BookableLocation {

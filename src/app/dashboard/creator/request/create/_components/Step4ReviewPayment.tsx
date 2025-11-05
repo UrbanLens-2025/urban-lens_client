@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { useResolvedTags } from "@/hooks/tags/useResolvedTags";
+import { useLocationBookingConfig } from "@/hooks/locations/useLocationBookingConfig";
 import { DisplayTags } from "@/components/shared/DisplayTags";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Globe, Star } from "lucide-react";
+import { Loader2, Globe, Star, DollarSign, Calendar } from "lucide-react";
 import { CreateEventRequestForm } from "../page";
 import Link from "next/link";
 
@@ -24,6 +25,56 @@ export function Step4ReviewPayment({
 }: Step4ReviewPaymentProps) {
   const formValues = form.getValues();
   const { resolvedTags: tags } = useResolvedTags(formValues.tagIds);
+  const { data: bookingConfig, isLoading: isLoadingConfig } = useLocationBookingConfig(
+    formValues.locationId
+  );
+
+  // Calculate booking cost based on selected time slots
+  const calculateBookingCost = () => {
+    if (!bookingConfig || !formValues.dateRanges || formValues.dateRanges.length === 0) {
+      return { totalMinutes: 0, totalCost: 0, currency: "VND" };
+    }
+
+    let totalMinutes = 0;
+    formValues.dateRanges.forEach((range: { startDateTime: Date; endDateTime: Date }) => {
+      const duration = (range.endDateTime.getTime() - range.startDateTime.getTime()) / (1000 * 60);
+      totalMinutes += duration;
+    });
+
+    const basePrice = parseFloat(bookingConfig.baseBookingPrice);
+    // Base price is for minBookingDurationMinutes, calculate proportional cost
+    // Each time slot is charged based on its duration relative to the minimum duration
+    let totalCost = 0;
+    formValues.dateRanges.forEach((range: { startDateTime: Date; endDateTime: Date }) => {
+      const slotMinutes = (range.endDateTime.getTime() - range.startDateTime.getTime()) / (1000 * 60);
+      // Calculate cost for this slot: basePrice * (slotDuration / minDuration)
+      const slotCost = basePrice * (slotMinutes / bookingConfig.minBookingDurationMinutes);
+      totalCost += slotCost;
+    });
+
+    return {
+      totalMinutes: Math.round(totalMinutes),
+      totalCost: Math.round(totalCost),
+      currency: bookingConfig.currency,
+    };
+  };
+
+  const { totalMinutes, totalCost, currency } = calculateBookingCost();
+
+  const formatCurrency = (amount: number, currency: string) => {
+    if (currency === "VND") {
+      return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        minimumFractionDigits: 0,
+      }).format(amount);
+    }
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
 
   const getVenueTypeLabel = (type: string) => {
     switch (type) {
@@ -202,28 +253,92 @@ export function Step4ReviewPayment({
       {/* Payment Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>Payment Summary</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Payment Summary
+          </CardTitle>
           <CardDescription>
             Payment will be processed after your event request is approved
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Event Request Fee</span>
-              <span className="font-medium">To be determined</span>
+          {isLoadingConfig ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Venue Booking Fee</span>
-              <span className="font-medium">To be determined</span>
-            </div>
-            <div className="border-t pt-2 mt-2">
-              <div className="flex justify-between">
-                <span className="font-semibold">Estimated Total</span>
-                <span className="font-semibold">To be determined</span>
+          ) : bookingConfig && formValues.dateRanges && formValues.dateRanges.length > 0 ? (
+            <div className="space-y-4">
+              {/* Booking Details */}
+              <div className="bg-muted/30 rounded-lg p-4 space-y-3 border">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                  <Calendar className="h-4 w-4" />
+                  <span className="font-medium">Booking Details</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Total Duration</p>
+                    <p className="font-semibold">{totalMinutes} minutes</p>
+                    <p className="text-xs text-muted-foreground">
+                      ({formValues.dateRanges.length} time slot{formValues.dateRanges.length !== 1 ? 's' : ''})
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Base Price</p>
+                    <p className="font-semibold">
+                      {formatCurrency(parseFloat(bookingConfig.baseBookingPrice), bookingConfig.currency)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      per {bookingConfig.minBookingDurationMinutes} min
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cost Breakdown */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Venue Booking Fee
+                  </span>
+                  <span className="font-semibold text-lg">
+                    {formatCurrency(totalCost, currency)}
+                  </span>
+                </div>
+                
+                {bookingConfig && (
+                  <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
+                    <p>• Min booking duration: {bookingConfig.minBookingDurationMinutes} minutes</p>
+                    <p>• Max booking duration: {bookingConfig.maxBookingDurationMinutes} minutes</p>
+                    <p>• Min gap between bookings: {bookingConfig.minGapBetweenBookingsMinutes} minutes</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Total */}
+              <div className="border-t pt-4 mt-4">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-base">Estimated Total</span>
+                  <span className="font-bold text-2xl text-primary">
+                    {formatCurrency(totalCost, currency)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1 text-right">
+                  Final amount may vary based on approval
+                </p>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              {!formValues.locationId ? (
+                <p className="text-sm">Please select a venue to view booking costs</p>
+              ) : !formValues.dateRanges || formValues.dateRanges.length === 0 ? (
+                <p className="text-sm">Please select event time slots to calculate booking costs</p>
+              ) : (
+                <p className="text-sm">Unable to load booking configuration</p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

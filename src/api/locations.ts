@@ -8,6 +8,7 @@ import type {
   Location,
   LocationBooking,
   LocationBookingDetail,
+  LocationBookingConfig,
   LocationRequest,
   PaginatedData,
   ProcessLocationBookingPayload,
@@ -215,6 +216,15 @@ export const processLocationBooking = async ({
   const { data } = await axiosInstance.post<ApiResponse<LocationBookingDetail>>(
     `/v1/owner/location-bookings/process/${locationBookingId}`,
     payload
+  );
+  return data.data;
+};
+
+export const getLocationBookingConfig = async (
+  locationId: string
+): Promise<LocationBookingConfig> => {
+  const { data } = await axiosInstance.get<ApiResponse<LocationBookingConfig>>(
+    `/v1/creator/location-booking-config/${locationId}`
   );
   return data.data;
 };
