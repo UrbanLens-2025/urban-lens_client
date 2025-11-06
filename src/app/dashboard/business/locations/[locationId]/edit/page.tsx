@@ -211,6 +211,7 @@ export default function EditLocationPage({
                       <TagMultiSelect
                         selectedTagIds={field.value}
                         onSelectionChange={field.onChange}
+                        filterByGroup="LOCATION_TYPE"
                       />
                     </FormControl>
                     <FormMessage />

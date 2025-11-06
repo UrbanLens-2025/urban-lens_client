@@ -180,6 +180,7 @@ export default function CreatePublicLocationPage() {
                         <TagMultiSelect
                           selectedTagIds={field.value}
                           onSelectionChange={field.onChange}
+                          filterByGroup="LOCATION_TYPE"
                         />
                         <FormMessage />
                       </FormItem>

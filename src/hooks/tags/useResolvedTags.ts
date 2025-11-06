@@ -20,8 +20,7 @@ export function useResolvedTags(tagIds: number[] | undefined) {
     }
     return tagIds
       .map(id => tagsMap.get(id))
-      .filter((tag): tag is Tag => !!tag)
-      .map(tag => ({ tag: tag }));
+      .filter((tag): tag is Tag => !!tag);
   
   }, [tagIds, tagsMap]);
 

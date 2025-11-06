@@ -24,9 +24,10 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [searchTerms, setSearchTerms] = useState<Record<string, string>>({});
   
-  const tags = allTags || [];
+  // Filter to only show EVENT_TYPE tags for events
+  const tags = (allTags || []).filter((tag) => tag.groupName === "EVENT_TYPE");
   
-  // Group ALL tags by groupName (no filtering - show all tags from database)
+  // Group tags by groupName
   const groupedTags = tags.reduce((acc: Record<string, Tag[]>, tag: Tag) => {
     const group = tag.groupName || "Others";
     if (!acc[group]) {

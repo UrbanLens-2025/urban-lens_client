@@ -126,7 +126,8 @@ export default function EditEventPage({
   const [pendingTagIds, setPendingTagIds] = useState<number[] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const tags = allTags || [];
+  // Filter to only show EVENT_TYPE tags for events
+  const tags = (allTags || []).filter((tag) => tag.groupName === "EVENT_TYPE");
   // Tags are now direct Tag objects, so use tag.id instead of tag.tagId
   const currentTagIds = event?.tags?.map((tag) => tag.id) || [];
   // Use pending tags if available, otherwise use current tags from event

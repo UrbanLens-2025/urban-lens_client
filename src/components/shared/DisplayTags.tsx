@@ -19,17 +19,29 @@ export function DisplayTags({
   tags = [],
   maxCount = 5,
 }: DisplayTagsProps) {
+  // Filter out any tags without IDs and ensure uniqueness
+  const validTags = tags.filter((tag) => tag?.id != null);
+  const uniqueTags = validTags.reduce((acc, tag) => {
+    if (!acc.find((t) => t.id === tag.id)) {
+      acc.push(tag);
+    }
+    return acc;
+  }, [] as Tag[]);
 
-  const visibleTags = tags.slice(0, maxCount);
-  const hiddenTags = tags.slice(maxCount);
+  const visibleTags = uniqueTags.slice(0, maxCount);
+  const hiddenTags = uniqueTags.slice(maxCount);
   const hiddenCount = hiddenTags.length;
+
+  if (uniqueTags.length === 0) {
+    return null;
+  }
 
   return (
     <TooltipProvider>
       <div className="flex flex-wrap gap-2">
-        {visibleTags.map((tag) => (
+        {visibleTags.map((tag, index) => (
           <Badge
-            key={tag.id}
+            key={`tag-${tag.id}-${index}`}
             variant="secondary"
             style={{ backgroundColor: tag.color, color: "#fff" }}
           >
@@ -46,9 +58,9 @@ export function DisplayTags({
             </TooltipTrigger>
             <TooltipContent side="top" align="center" className="max-w-xs">
               <div className="flex flex-wrap gap-2">
-                {hiddenTags.map((tag) => (
+                {hiddenTags.map((tag, index) => (
                   <Badge
-                    key={tag.id}
+                    key={`hidden-tag-${tag.id}-${index}`}
                     variant="secondary"
                     style={{ backgroundColor: tag.color, color: "#fff" }}
                   >

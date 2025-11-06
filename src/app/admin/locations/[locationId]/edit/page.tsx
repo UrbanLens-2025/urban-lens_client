@@ -79,7 +79,8 @@ export default function EditLocationPage({
 
   const selectedTagIds = form.watch("tagIds") || [];
   
-  const tagsFromDb: Tag[] = allTags || [];
+  // Filter to only show LOCATION_TYPE tags for locations
+  const tagsFromDb: Tag[] = (allTags || []).filter((tag) => tag.groupName === "LOCATION_TYPE");
   const groupedTags = tagsFromDb.reduce((acc: Record<string, Tag[]>, tag: Tag) => {
     const group = tag.groupName || "Others";
     if (!acc[group]) acc[group] = [];
@@ -87,17 +88,25 @@ export default function EditLocationPage({
     return acc;
   }, {} as Record<string, Tag[]>);
 
+  // Check if at least one LOCATION_TYPE tag is selected
+  const locationTypeTagIds = (allTags || [])
+    .filter((tag) => tag.groupName === "LOCATION_TYPE")
+    .map((tag) => tag.id);
+  const hasLocationType = selectedTagIds.some((id) => locationTypeTagIds.includes(id));
+
   const toggleTag = (tagId: number, groupName: string | null) => {
     const group = groupName || "Others";
-    if (group === "EVENT_TYPE") {
+    // LOCATION_TYPE: single selection (required)
+    if (group === "LOCATION_TYPE") {
       if (selectedTagIds.includes(tagId)) {
         form.setValue("tagIds", selectedTagIds.filter((id) => id !== tagId), { shouldValidate: true });
       } else {
-        const eventTypeTags = groupedTags["EVENT_TYPE"]?.map((t) => t.id) || [];
-        const newSelection = selectedTagIds.filter((id) => !eventTypeTags.includes(id));
+        const locationTypeTags = groupedTags["LOCATION_TYPE"]?.map((t) => t.id) || [];
+        const newSelection = selectedTagIds.filter((id) => !locationTypeTags.includes(id));
         form.setValue("tagIds", [...newSelection, tagId], { shouldValidate: true });
       }
     } else {
+      // Other groups: multiple selection (shouldn't happen since we filter to LOCATION_TYPE only)
       const newSelection = selectedTagIds.includes(tagId)
         ? selectedTagIds.filter((id) => id !== tagId)
         : [...selectedTagIds, tagId];
@@ -110,7 +119,7 @@ export default function EditLocationPage({
     return group
       .split("_")
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(" ") + (group === "EVENT_TYPE" ? " (Select One)" : "");
+      .join(" ") + (group === "LOCATION_TYPE" ? " (Select One)" : "");
   };
 
   const INITIAL_DISPLAY_COUNT = 5;
@@ -138,6 +147,16 @@ export default function EditLocationPage({
   }, [location, form]);
 
   const onSubmit = async (values: FormValues) => {
+    // Validate LOCATION_TYPE requirement
+    if (!hasLocationType) {
+      form.setError("tagIds", {
+        type: "manual",
+        message: "At least one location type is required. Please select a location type.",
+      });
+      await form.trigger("tagIds", { shouldFocus: true });
+      return;
+    }
+    
     try {
       const { name, description, imageUrl, isVisibleOnMap, tagIds } = values;
 
@@ -305,8 +324,16 @@ export default function EditLocationPage({
                             const hasMore = filtered.length > INITIAL_DISPLAY_COUNT;
                             const isGroupExpanded = expandedGroups[`group_${groupName}`] ?? true;
                             const isExpandedList = expandedGroups[groupName];
+                            const isLocationType = groupName === "LOCATION_TYPE";
+                            const hasError = isLocationType && !hasLocationType && form.formState.errors.tagIds;
                             return (
-                              <div key={groupName} className="border rounded-lg p-3 space-y-2 bg-muted/30">
+                              <div 
+                                key={groupName} 
+                                className={cn(
+                                  "border rounded-lg p-3 space-y-2 bg-muted/30",
+                                  hasError && "bg-destructive/5 border-destructive border-2 shadow-md"
+                                )}
+                              >
                                 <div className="flex items-center justify-between gap-2">
                                   <button
                                     type="button"

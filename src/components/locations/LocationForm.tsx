@@ -201,7 +201,8 @@ export default function LocationForm({
   const [searchTerms, setSearchTerms] = useState<Record<string, string>>({});
   const selectedTagIds = watchedValues.tagIds || [];
 
-  const tagsFromDb: Tag[] = allTags || [];
+  // Filter to only show LOCATION_TYPE tags for locations
+  const tagsFromDb: Tag[] = (allTags || []).filter((tag) => tag.groupName === "LOCATION_TYPE");
   const groupedTags = tagsFromDb.reduce((acc: Record<string, Tag[]>, tag: Tag) => {
     const group = tag.groupName || "Others";
     if (!acc[group]) acc[group] = [];
@@ -211,15 +212,17 @@ export default function LocationForm({
 
   const toggleTag = (tagId: number, groupName: string | null) => {
     const group = groupName || "Others";
-    if (group === "EVENT_TYPE") {
+    // LOCATION_TYPE: single selection (required)
+    if (group === "LOCATION_TYPE") {
       if (selectedTagIds.includes(tagId)) {
         form.setValue("tagIds", selectedTagIds.filter((id) => id !== tagId), { shouldValidate: true });
       } else {
-        const eventTypeTags = groupedTags["EVENT_TYPE"]?.map((t) => t.id) || [];
-        const newSelection = selectedTagIds.filter((id) => !eventTypeTags.includes(id));
+        const locationTypeTags = groupedTags["LOCATION_TYPE"]?.map((t) => t.id) || [];
+        const newSelection = selectedTagIds.filter((id) => !locationTypeTags.includes(id));
         form.setValue("tagIds", [...newSelection, tagId], { shouldValidate: true });
       }
     } else {
+      // Other groups: multiple selection (shouldn't happen since we filter to LOCATION_TYPE only)
       const newSelection = selectedTagIds.includes(tagId)
         ? selectedTagIds.filter((id) => id !== tagId)
         : [...selectedTagIds, tagId];
@@ -232,7 +235,7 @@ export default function LocationForm({
     return group
       .split("_")
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(" ") + (group === "EVENT_TYPE" ? " (Select One)" : "");
+      .join(" ") + (group === "LOCATION_TYPE" ? " (Select One)" : "");
   };
 
   const INITIAL_DISPLAY_COUNT = 5;
@@ -246,9 +249,27 @@ export default function LocationForm({
     return isExpanded ? filtered : filtered.slice(0, INITIAL_DISPLAY_COUNT);
   };
 
+  // Check if at least one LOCATION_TYPE tag is selected
+  const locationTypeTagIds = (allTags || [])
+    .filter((tag) => tag.groupName === "LOCATION_TYPE")
+    .map((tag) => tag.id);
+  const hasLocationType = selectedTagIds.some((id) => locationTypeTagIds.includes(id));
+
   const handleNextStep = async () => {
     const fields = steps[currentStep].fields;
     if (fields) {
+      // Additional validation for LOCATION_TYPE in step 1
+      if (currentStep === 0 && fields.includes("tagIds")) {
+        if (!hasLocationType) {
+          form.setError("tagIds", {
+            type: "manual",
+            message: "At least one location type is required. Please select a location type.",
+          });
+          await form.trigger("tagIds", { shouldFocus: true });
+          return;
+        }
+      }
+      
       const output = await form.trigger(fields, { shouldFocus: true });
       if (!output) return;
     }
@@ -257,6 +278,16 @@ export default function LocationForm({
   const handlePrevStep = () => setCurrentStep((prev) => prev - 1);
 
   async function onSubmit(values: FormValues) {
+    // Validate LOCATION_TYPE requirement
+    if (!hasLocationType) {
+      form.setError("tagIds", {
+        type: "manual",
+        message: "At least one location type is required. Please select a location type.",
+      });
+      await form.trigger("tagIds", { shouldFocus: true });
+      return;
+    }
+    
     try {
       const { documentImageUrls, tagIds: newTagIds, ...rest } = values;
       const payload = {
@@ -446,9 +477,13 @@ export default function LocationForm({
                     </FormItem>
                   )}
                 />
-                <FormItem>
-                  <FormLabel>Tags</FormLabel>
-                  {isLoadingTags ? (
+                <FormField
+                  name="tagIds"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tags</FormLabel>
+                      {isLoadingTags ? (
                     <div className="flex items-center justify-center py-6">
                       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                     </div>
@@ -466,8 +501,16 @@ export default function LocationForm({
                           const hasMore = filtered.length > INITIAL_DISPLAY_COUNT;
                           const isGroupExpanded = expandedGroups[`group_${groupName}`] ?? true;
                           const isExpandedList = expandedGroups[groupName];
+                          const isLocationType = groupName === "LOCATION_TYPE";
+                          const hasError = isLocationType && !hasLocationType && form.formState.errors.tagIds;
                           return (
-                            <div key={groupName} className="border rounded-lg p-3 space-y-2 bg-muted/30">
+                            <div 
+                              key={groupName} 
+                              className={cn(
+                                "border rounded-lg p-3 space-y-2 bg-muted/30",
+                                hasError && "bg-destructive/5 border-destructive border-2 shadow-md"
+                              )}
+                            >
                               <div className="flex items-center justify-between gap-2">
                                 <button
                                   type="button"
@@ -563,12 +606,14 @@ export default function LocationForm({
                           );
                         })}
                     </div>
+                      )}
+                      <FormDescription>
+                        Select tags that best describe your location (e.g., Indoor, Outdoor, Parking Available)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  <FormDescription>
-                    Select tags that best describe your location (e.g., Indoor, Outdoor, Parking Available)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+                />
                 {tags.length > 0 && (
                   <div className="p-3 bg-muted/50 rounded-md">
                     <p className="text-sm font-medium mb-2">Selected Tags:</p>

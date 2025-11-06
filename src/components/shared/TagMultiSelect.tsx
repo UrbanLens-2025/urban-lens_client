@@ -10,11 +10,15 @@ import { cn } from "@/lib/utils";
 interface TagMultiSelectProps {
   selectedTagIds: number[];
   onSelectionChange: (ids: number[]) => void;
+  filterByGroup?: string; // Optional filter by groupName (e.g., "LOCATION_TYPE", "EVENT_TYPE")
 }
 
-export function TagMultiSelect({ selectedTagIds, onSelectionChange }: TagMultiSelectProps) {
+export function TagMultiSelect({ selectedTagIds, onSelectionChange, filterByGroup }: TagMultiSelectProps) {
   const { data: allTags } = useAllTags();
-  const tags = allTags || [];
+  // Filter tags by group if specified
+  const tags = filterByGroup 
+    ? (allTags || []).filter((tag) => tag.groupName === filterByGroup)
+    : (allTags || []);
 
   const handleSelect = (tagId: number) => {
     const newSelection = selectedTagIds.includes(tagId)
