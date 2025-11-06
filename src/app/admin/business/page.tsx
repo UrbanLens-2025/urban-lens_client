@@ -24,7 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { BusinessProfile, BusinessStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
@@ -39,6 +39,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 
 export default function AdminBusinessPage() {
   const [page, setPage] = useState(1);
@@ -46,7 +47,7 @@ export default function AdminBusinessPage() {
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [statusTab, setStatusTab] = useState<BusinessStatus>('PENDING');
 
-  const { data: response, isLoading } = useBusinessAccounts({
+  const { data: response, isLoading, isFetching } = useBusinessAccounts({
     page,
     search: debouncedSearchTerm,
     status: statusTab,
@@ -98,14 +99,54 @@ export default function AdminBusinessPage() {
     );
   };
 
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['businessAccounts'] });
+  };
+
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getStatusBadge = (status: BusinessStatus) => {
+    const map: Record<BusinessStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' } > = {
+      PENDING: { label: 'Pending', variant: 'secondary' },
+      APPROVED: { label: 'Approved', variant: 'default' },
+      REJECTED: { label: 'Rejected', variant: 'destructive' },
+    } as const;
+    const s = map[status];
+    return <Badge variant={s.variant}>{s.label}</Badge>;
+  };
+
   return (
     <div className='space-y-8'>
       <Card>
         <CardHeader>
-          <CardTitle>Manage Business Registrations</CardTitle>
-          <CardDescription>
-            Approve or reject new business accounts.
-          </CardDescription>
+          <div className='flex items-center justify-between gap-3'>
+            <div>
+              <CardTitle>Manage Business Registrations</CardTitle>
+              <CardDescription>
+                Approve or reject new business accounts.
+              </CardDescription>
+            </div>
+            <Button variant='outline' onClick={refresh} disabled={isFetching}>
+              {isFetching ? (
+                <>
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' /> Refreshing
+                </>
+              ) : (
+                <>
+                  <RefreshCw className='mr-2 h-4 w-4' /> Refresh
+                </>
+              )}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs
@@ -123,7 +164,7 @@ export default function AdminBusinessPage() {
               </TabsList>
               <div className='w-full max-w-sm'>
                 <Input
-                  placeholder='Search by name...'
+                  placeholder='Search by name or email...'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -132,8 +173,13 @@ export default function AdminBusinessPage() {
 
             <div className='mt-4'>
               {isLoading ? (
-                <div className='text-center p-8'>
-                  <Loader2 className='animate-spin' />
+                <div className='p-6'>
+                  <div className='animate-pulse space-y-3'>
+                    <div className='h-8 w-1/3 bg-muted rounded' />
+                    <div className='h-10 w-full bg-muted rounded' />
+                    <div className='h-10 w-full bg-muted rounded' />
+                    <div className='h-10 w-2/3 bg-muted rounded' />
+                  </div>
                 </div>
               ) : (
                 <Table>
@@ -142,17 +188,23 @@ export default function AdminBusinessPage() {
                       <TableHead>Business Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Category</TableHead>
+                      <TableHead>Submitted</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead className='text-right'>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {businesses.map((biz: BusinessProfile) => (
-                      <TableRow key={biz.accountId}>
+                      <TableRow key={biz.accountId} className='hover:bg-muted/40'>
                         <TableCell className='font-medium'>
                           {biz.name}
                         </TableCell>
                         <TableCell>{biz.email}</TableCell>
-                        <TableCell>{biz.category}</TableCell>
+                        <TableCell>
+                          <Badge variant='secondary'>{biz.category}</Badge>
+                        </TableCell>
+                        <TableCell>{formatDateTime((biz as any).createdAt)}</TableCell>
+                        <TableCell>{getStatusBadge((biz as any).status || statusTab)}</TableCell>
                         <TableCell className='text-right space-x-2'>
                           {statusTab === 'PENDING' && (
                             <>
@@ -184,8 +236,8 @@ export default function AdminBusinessPage() {
                     ))}
                     {businesses.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={4} className='text-center h-24'>
-                          No accounts found.
+                        <TableCell colSpan={6} className='text-center h-24 text-muted-foreground'>
+                          No accounts found. Try adjusting filters or search.
                         </TableCell>
                       </TableRow>
                     )}
@@ -262,6 +314,9 @@ export default function AdminBusinessPage() {
         >
           Previous
         </Button>
+        <span className='text-sm text-muted-foreground'>
+          Page {meta?.currentPage || 1} of {meta?.totalPages || 1}
+        </span>
         <Button
           variant='outline'
           size='sm'
