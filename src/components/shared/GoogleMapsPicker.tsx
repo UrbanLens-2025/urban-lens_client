@@ -1,16 +1,50 @@
 "use client";
 
-import { Map, AdvancedMarker } from "@vis.gl/react-google-maps";
-import { useMemo } from "react";
+import { Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
+import { useMemo, useEffect, useRef } from "react";
 
 interface GoogleMapsPickerProps {
   onPositionChange: (latLng: { lat: number; lng: number }) => void;
   position: { lat: string | number; lng: string | number } | null;
+  radiusMeters?: number;
+  center?: { lat: number; lng: number } | null;
+}
+
+function MapController({ center, zoom, radiusMeters }: { center: { lat: number; lng: number } | null; zoom?: number; radiusMeters?: number }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (map && center) {
+      map.setCenter(center);
+      if (zoom !== undefined) {
+        map.setZoom(zoom);
+      }
+    }
+  }, [map, center, zoom]);
+  
+  // Adjust zoom when radius changes to keep circle visible
+  useEffect(() => {
+    if (map && radiusMeters && radiusMeters > 0) {
+      const calculateZoom = (radius: number) => {
+        if (radius <= 10) return 17;
+        if (radius <= 25) return 16;
+        if (radius <= 50) return 15;
+        if (radius <= 100) return 14;
+        return 13;
+      };
+      const newZoom = calculateZoom(radiusMeters);
+      map.setZoom(newZoom);
+    }
+  }, [map, radiusMeters]);
+  
+  return null;
 }
 
 export function GoogleMapsPicker({
   onPositionChange,
   position,
+  radiusMeters,
+  center,
 }: GoogleMapsPickerProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -28,18 +62,31 @@ export function GoogleMapsPicker({
     return null;
   }, [position]);
 
+  // Calculate zoom level based on radius to show the circle properly
+  const calculateZoom = (radiusMeters: number) => {
+    if (!radiusMeters || radiusMeters <= 0) return 15;
+    // Rough calculation: smaller radius = higher zoom
+    if (radiusMeters <= 10) return 17;
+    if (radiusMeters <= 25) return 16;
+    if (radiusMeters <= 50) return 15;
+    if (radiusMeters <= 100) return 14;
+    return 13;
+  };
+
+  const mapCenter = numericPosition || defaultCenter;
+  const shouldCenter = center || numericPosition;
+  const zoomLevel = radiusMeters ? calculateZoom(radiusMeters) : 15;
+
   if (!apiKey) {
     return <div>Google Maps API Key is missing.</div>;
   }
 
-  const mapCenter = numericPosition || defaultCenter;
-
   return (
     <Map
       defaultCenter={mapCenter}
-      defaultZoom={13}
+      defaultZoom={15}
       gestureHandling={"greedy"}
-      disableDefaultUI={true}
+      disableDefaultUI={false}
       mapId="your-map-id"
       onClick={(e) => {
         if (e.detail.latLng) {
@@ -47,7 +94,49 @@ export function GoogleMapsPicker({
         }
       }}
     >
-      {position && <AdvancedMarker position={numericPosition} />}
+      <MapController center={shouldCenter} zoom={zoomLevel} radiusMeters={radiusMeters} />
+      {numericPosition && <AdvancedMarker position={numericPosition} />}
+      {numericPosition && radiusMeters && radiusMeters > 0 && (
+        <CircleOverlay center={numericPosition} radius={radiusMeters} />
+      )}
     </Map>
   );
+}
+
+function CircleOverlay({ center, radius }: { center: { lat: number; lng: number }; radius: number }) {
+  const map = useMap();
+  const circleRef = useRef<google.maps.Circle | null>(null);
+
+  useEffect(() => {
+    if (!map) return;
+    if (!circleRef.current) {
+      circleRef.current = new google.maps.Circle({
+        map,
+        center,
+        radius,
+        strokeColor: "#3b82f6",
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: "#3b82f6",
+        fillOpacity: 0.15,
+      });
+    } else {
+      circleRef.current.setCenter(center);
+      circleRef.current.setRadius(radius);
+    }
+    return () => {
+      // Do not remove circle on unmount of props change; only cleanup when component unmounts
+    };
+  }, [map, center, radius]);
+
+  useEffect(() => {
+    return () => {
+      if (circleRef.current) {
+        circleRef.current.setMap(null);
+        circleRef.current = null;
+      }
+    };
+  }, []);
+
+  return null;
 }

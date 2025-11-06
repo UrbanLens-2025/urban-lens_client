@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import {
   FormField,
@@ -26,9 +27,11 @@ const findAddressComponent = (
 
 export function LocationAddressPicker() {
   const form = useFormContext();
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
 
   const watchedLatitude = form.watch("latitude");
   const watchedLongitude = form.watch("longitude");
+  const watchedRadius = form.watch("radiusMeters") || 1;
   const markerPosition =
     watchedLatitude && watchedLongitude
       ? { lat: watchedLatitude, lng: watchedLongitude }
@@ -53,11 +56,15 @@ export function LocationAddressPicker() {
     form.setValue("addressLine", streetAddress || address);
     form.setValue("addressLevel1", district);
     form.setValue("addressLevel2", province);
+    
+    // Auto-center map when address is selected
+    setMapCenter({ lat, lng });
   };
 
   const handlePositionChange = async (latLng: { lat: number; lng: number }) => {
     form.setValue("latitude", latLng.lat, { shouldValidate: true });
     form.setValue("longitude", latLng.lng, { shouldValidate: true });
+    setMapCenter(latLng);
     try {
       const results = await getGeocode({ location: latLng });
       if (results && results[0]) {
@@ -72,6 +79,13 @@ export function LocationAddressPicker() {
       toast.error("Could not fetch address.");
     }
   };
+
+  // Reset map center when position changes from form
+  useEffect(() => {
+    if (watchedLatitude && watchedLongitude) {
+      setMapCenter({ lat: watchedLatitude, lng: watchedLongitude });
+    }
+  }, [watchedLatitude, watchedLongitude]);
 
   return (
     <div className="space-y-6">
@@ -88,10 +102,12 @@ export function LocationAddressPicker() {
           </FormItem>
         )}
       />
-      <div className="h-80 rounded-lg overflow-hidden border">
+      <div className="h-80 rounded-lg overflow-hidden border relative">
         <GoogleMapsPicker
           position={markerPosition}
           onPositionChange={handlePositionChange}
+          radiusMeters={watchedRadius}
+          center={mapCenter}
         />
       </div>
       <div className="space-y-4 animate-in fade-in-50">
