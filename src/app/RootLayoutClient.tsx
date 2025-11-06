@@ -18,6 +18,7 @@ import { ModeSwitcher } from '@/components/shared/ModeSwitcher';
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
   useOnboardingCheck();
 
   React.useEffect(() => {
@@ -26,7 +27,13 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, user, router]);
 
-  if (isLoading) {
+  // While determining auth or redirect target, show an app-level splash to avoid layout flash
+  const requiresOnboarding = !!user && (user.role === 'BUSINESS_OWNER' || user.role === 'EVENT_CREATOR') && !user.hasOnboarded;
+  const isPendingAfterOnboard = !!user && user.hasOnboarded && user.businessProfile?.status === 'PENDING';
+  const redirectingToOnboarding = !isLoading && requiresOnboarding && !pathname.startsWith('/onboarding');
+  const redirectingToPending = !isLoading && isPendingAfterOnboard && pathname !== '/onboarding/pending';
+
+  if (isLoading || redirectingToOnboarding || redirectingToPending) {
     return (
       <div className='flex h-screen items-center justify-center'>
         <Loader2 className='size-6 animate-spin text-muted-foreground' />

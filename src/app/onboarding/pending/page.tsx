@@ -5,14 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUser } from "@/hooks/user/useUser";
 import { IconLogout } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, MailCheck } from "lucide-react";
+import { Loader2, MailCheck, Clock, RefreshCw, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 
 export default function PendingPage() {
   const { user, isLoading } = useUser();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (isLoading) {
@@ -43,22 +45,81 @@ export default function PendingPage() {
     router.push("/login");
   };
 
+  const refresh = async () => {
+    setIsRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ["user"] });
+    setIsRefreshing(false);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Button className="fixed top-4 right-16 z-50" onClick={logout}>
-        <IconLogout />
-        Log out
-      </Button>
-      <Card className="w-full max-w-md text-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="fixed top-4 right-16 z-50 flex gap-2">
+        <Button variant="outline" onClick={refresh} disabled={isRefreshing}>
+          {isRefreshing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Refreshing
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+            </>
+          )}
+        </Button>
+        <Button onClick={logout}>
+          <IconLogout />
+          Log out
+        </Button>
+      </div>
+      <Card className="w-full max-w-xl text-center p-6">
         <CardHeader>
-          <MailCheck className="mx-auto h-16 w-16 text-green-500" />
-          <CardTitle className="mt-4 text-2xl">Application Submitted</CardTitle>
+          <div className="mx-auto mb-3 flex items-center justify-center h-16 w-16 rounded-full bg-green-50">
+            <MailCheck className="h-10 w-10 text-green-600" />
+          </div>
+          <CardTitle className="mt-2 text-2xl">Application Submitted</CardTitle>
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <Badge variant="secondary" className="text-xs">
+              <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Status: Pending Review
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-600">
-            Thank you! Your business profile has been submitted and is currently
-            under review. We will notify you once it has been approved.
-          </p>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Thank you! Your business profile has been submitted and is currently under review.
+              We’ll notify you via email once it’s approved.
+            </p>
+
+            <div className="mx-auto w-full max-w-md rounded-md border bg-muted/30 p-3 text-left">
+              <div className="flex items-start gap-3">
+                <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">What happens next?</p>
+                  <ul className="mt-1 list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                    <li>Our team reviews your submission.</li>
+                    <li>We may contact you if additional info is required.</li>
+                    <li>You’ll receive an email once a decision is made.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 justify-center mt-2">
+              <Button variant="outline" onClick={refresh} disabled={isRefreshing}>
+                {isRefreshing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Checking status...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" /> Check Status
+                  </>
+                )}
+              </Button>
+              <a href="mailto:support@urbanlens.app" className="inline-flex">
+                <Button variant="ghost">Contact Support</Button>
+              </a>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
