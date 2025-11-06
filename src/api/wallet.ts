@@ -1,5 +1,5 @@
 import axiosInstance from "./axios-config";
-import { ApiResponse, GetWalletExternalTransactionsParams, PaginatedData, Wallet, WalletExternalTransaction } from "@/types";
+import { ApiResponse, CreateExternalDepositPayload, GetWalletExternalTransactionsParams, PaginatedData, Wallet, WalletExternalTransaction } from "@/types";
 
 
 export const getWalletInfo = async (): Promise<Wallet> => {
@@ -27,6 +27,16 @@ export const getWalletExternalTransactions = async ({
 export const getWalletExternalTransactionById = async (transactionId: string): Promise<WalletExternalTransaction> => {
     const { data } = await axiosInstance.get<ApiResponse<WalletExternalTransaction>>(
         `/v1/private/wallet/transactions/external/${transactionId}`
+    );
+    return data.data;
+};
+
+export const createExternalDeposit = async (
+    payload: CreateExternalDepositPayload
+): Promise<WalletExternalTransaction> => {
+    const { data } = await axiosInstance.post<ApiResponse<WalletExternalTransaction>>(
+        '/v1/private/wallet/external/deposit',
+        payload
     );
     return data.data;
 };

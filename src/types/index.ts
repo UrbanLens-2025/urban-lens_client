@@ -675,6 +675,13 @@ export interface WalletExternalTransactionTimelineEvent {
   metadata: any;
 }
 
+export interface CreateExternalDepositPayload {
+  amount: number;
+  currency: string; // e.g., "VND"
+  returnUrl: string;
+  afterAction: string; // e.g., "NONE"
+}
+
 export interface ReferencedEventRequest {
   id: string;
   createdAt: string;

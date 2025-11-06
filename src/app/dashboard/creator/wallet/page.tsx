@@ -415,14 +415,16 @@ export default function CreatorWalletPage() {
               </Badge>
             )}
             <div className="flex gap-3">
-              <Button 
-                className="bg-white text-blue-600 hover:bg-gray-100"
-                size="sm"
-                disabled={walletData?.isLocked}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Deposit
-              </Button>
+              <Link href="/dashboard/creator/wallet/deposit">
+                <Button 
+                  className="bg-white text-blue-600 hover:bg-gray-100"
+                  size="sm"
+                  disabled={walletData?.isLocked}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Deposit
+                </Button>
+              </Link>
               <Button 
                 variant="outline" 
                 className="border-white text-blue-600 hover:bg-white/10"
