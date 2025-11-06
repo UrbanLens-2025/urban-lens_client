@@ -787,13 +787,6 @@ interface LocationForEvent {
   businessId: string | null;
 }
 
-interface EventTag {
-  id: number;
-  eventId: string;
-  tagId: number;
-  tag: Tag;
-}
-
 export interface Event {
   id: string;
   createdAt: string;
@@ -811,7 +804,7 @@ export interface Event {
   refundPolicy: string | null;
   termsAndConditions: string | null;
   referencedEventRequestId: string;
-  tags: EventTag[];
+  tags: Tag[];
 }
 
 export interface GetEventsParams {

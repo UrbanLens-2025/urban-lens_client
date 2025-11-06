@@ -176,19 +176,19 @@ export default function EventDetailPage({
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground mb-2">Tags</p>
                   <div className="flex flex-wrap gap-2">
-                    {event.tags.map((eventTag) => (
+                    {event.tags.map((tag) => (
                       <Badge 
-                        key={eventTag.id} 
+                        key={tag.id} 
                         variant="secondary"
                         style={{ 
-                          backgroundColor: `${eventTag.tag.color}20`,
-                          borderColor: eventTag.tag.color,
-                          color: eventTag.tag.color
+                          backgroundColor: `${tag.color}20`,
+                          borderColor: tag.color,
+                          color: tag.color
                         }}
                         className="flex items-center gap-1"
                       >
-                        <span>{eventTag.tag.icon}</span>
-                        <span>{eventTag.tag.displayName}</span>
+                        <span>{tag.icon}</span>
+                        <span>{tag.displayName}</span>
                       </Badge>
                     ))}
                   </div>

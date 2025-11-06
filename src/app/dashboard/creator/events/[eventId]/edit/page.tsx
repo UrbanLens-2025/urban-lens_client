@@ -127,7 +127,8 @@ export default function EditEventPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const tags = allTags || [];
-  const currentTagIds = event?.tags?.map((et) => et.tagId) || [];
+  // Tags are now direct Tag objects, so use tag.id instead of tag.tagId
+  const currentTagIds = event?.tags?.map((tag) => tag.id) || [];
   // Use pending tags if available, otherwise use current tags from event
   const displayedTagIds = pendingTagIds !== null ? pendingTagIds : currentTagIds;
 

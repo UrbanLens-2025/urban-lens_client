@@ -8,10 +8,9 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 import { useLocationRequestByIdForAdmin } from '@/hooks/admin/useLocationRequestByIdForAdmin';
-import { useTags } from '@/hooks/tags/useTags';
 import { useProcessLocationRequest } from '@/hooks/admin/useProcessLocationRequest';
 
-import { LocationRequest, PaginatedData, Tag } from '@/types';
+import { LocationRequest, Tag } from '@/types';
 
 import {
   Loader2,
@@ -90,28 +89,13 @@ export default function AdminLocationRequestDetailsPage({
     isLoading: isLoadingRequest,
     isError,
   } = useLocationRequestByIdForAdmin(requestId);
-  const { data: allTagsResponse, isLoading: isLoadingTags } = useTags();
   const { mutate: processRequest, isPending: isProcessing } =
     useProcessLocationRequest();
 
-  const isLoading = isLoadingRequest || isLoadingTags;
+  const isLoading = isLoadingRequest;
 
-  const tagsMap = useMemo(() => {
-    const map = new Map<number, Tag>();
-    const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];
-    allTags.forEach((tag) => map.set(tag.id, tag));
-    return map;
-  }, [allTagsResponse]);
-
-  const tags = useMemo(() => {
-    if (!request?.tags || !tagsMap) {
-      return [];
-    }
-    return request.tags
-      .map((tagLink) => tagsMap.get(tagLink.tagId))
-      .filter((tag): tag is Tag => !!tag)
-      .map((tag) => ({ tag: tag }));
-  }, [request?.tags, tagsMap]);
+  // Tags are now direct Tag objects from the API
+  const tags = request?.tags || [];
 
   const handleImageClick = (src: string, alt: string) => {
     setCurrentImageSrc(src);
