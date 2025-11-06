@@ -682,6 +682,21 @@ export interface CreateExternalDepositPayload {
   afterAction: string; // e.g., "NONE"
 }
 
+export interface WalletTransaction {
+  id: string;
+  amount: string;
+  currency: string;
+  type: string; // e.g., TO_ESCROW, FROM_ESCROW
+  status: string; // e.g., COMPLETED
+  createdAt: string;
+}
+
+export interface GetWalletTransactionsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string; // e.g., createdAt:DESC
+}
+
 export interface ReferencedEventRequest {
   id: string;
   createdAt: string;

@@ -29,170 +29,22 @@ import { useState } from "react";
 import Link from "next/link";
 import { useWallet } from "@/hooks/user/useWallet";
 import { useWalletExternalTransactions } from "@/hooks/wallet/useWalletExternalTransactions";
-import type { WalletExternalTransaction } from "@/types";
+import type { WalletExternalTransaction, WalletTransaction } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useWalletTransactionById } from "@/hooks/wallet/useWalletExternalTransactionById";
+import { useWalletTransactions } from "@/hooks/wallet/useWalletTransactions";
 
-// Mock internal transaction data (wallet-to-wallet)
-const mockInternalTransactions = [
-  {
-    id: "int_001",
-    type: "transfer_out",
-    amount: 25000,
-    description: "Payment to vendor",
-    otherParty: "John's Catering Services",
-    otherPartyType: "business",
-    status: "completed",
-    date: "2025-10-28T14:30:00",
-    reference: "INT-2025-001",
-  },
-  {
-    id: "int_002",
-    type: "transfer_in",
-    amount: 45000,
-    description: "Revenue from Summer Music Festival 2025",
-    otherParty: "Event Ticket Platform",
-    otherPartyType: "system",
-    status: "completed",
-    date: "2025-10-26T16:45:00",
-    reference: "INT-2025-002",
-  },
-  {
-    id: "int_003",
-    type: "transfer_in",
-    amount: 120000,
-    description: "Revenue from Tech Conference: Future of AI",
-    otherParty: "Event Ticket Platform",
-    otherPartyType: "system",
-    status: "completed",
-    date: "2025-10-24T18:30:00",
-    reference: "INT-2025-003",
-  },
-  {
-    id: "int_004",
-    type: "transfer_out",
-    amount: 12000,
-    description: "Service fee payment",
-    otherParty: "Platform Services",
-    otherPartyType: "system",
-    status: "completed",
-    date: "2025-10-23T09:15:00",
-    reference: "INT-2025-004",
-  },
-  {
-    id: "int_005",
-    type: "transfer_in",
-    amount: 15000,
-    description: "Revenue from Art Exhibition Opening",
-    otherParty: "Event Ticket Platform",
-    otherPartyType: "system",
-    status: "completed",
-    date: "2025-10-22T10:15:00",
-    reference: "INT-2025-005",
-  },
-  {
-    id: "int_006",
-    type: "transfer_in",
-    amount: 8500,
-    description: "Revenue from Food & Wine Tasting Event",
-    otherParty: "Event Ticket Platform",
-    otherPartyType: "system",
-    status: "completed",
-    date: "2025-10-20T12:30:00",
-    reference: "INT-2025-006",
-  },
-];
-
-// Mock external transaction data (bank-to-wallet or wallet-to-bank)
-const mockExternalTransactions = [
-  {
-    id: "ext_001",
-    type: "deposit",
-    amount: 50000,
-    description: "Bank transfer deposit",
-    bankName: "Vietcombank",
-    accountNumber: "****1234",
-    status: "completed",
-    date: "2025-10-28T14:30:00",
-    reference: "EXT-2025-001",
-    transactionFee: 0,
-  },
-  {
-    id: "ext_002",
-    type: "withdrawal",
-    amount: 15000,
-    description: "Withdrawal to bank account",
-    bankName: "Techcombank",
-    accountNumber: "****5678",
-    status: "completed",
-    date: "2025-10-27T09:15:00",
-    reference: "EXT-2025-002",
-    transactionFee: 500,
-  },
-  {
-    id: "ext_003",
-    type: "deposit",
-    amount: 100000,
-    description: "Bank transfer deposit",
-    bankName: "BIDV",
-    accountNumber: "****9012",
-    status: "completed",
-    date: "2025-10-25T11:20:00",
-    reference: "EXT-2025-003",
-    transactionFee: 0,
-  },
-  {
-    id: "ext_004",
-    type: "withdrawal",
-    amount: 30000,
-    description: "Withdrawal to bank account",
-    bankName: "Vietcombank",
-    accountNumber: "****1234",
-    status: "pending",
-    date: "2025-10-23T13:00:00",
-    reference: "EXT-2025-004",
-    transactionFee: 500,
-  },
-  {
-    id: "ext_005",
-    type: "deposit",
-    amount: 25000,
-    description: "Bank transfer deposit",
-    bankName: "ACB",
-    accountNumber: "****3456",
-    status: "completed",
-    date: "2025-10-21T15:45:00",
-    reference: "EXT-2025-005",
-    transactionFee: 0,
-  },
-  {
-    id: "ext_006",
-    type: "withdrawal",
-    amount: 50000,
-    description: "Withdrawal to bank account",
-    bankName: "Techcombank",
-    accountNumber: "****5678",
-    status: "failed",
-    date: "2025-10-19T08:00:00",
-    reference: "EXT-2025-006",
-    transactionFee: 0,
-  },
-];
-
-const getInternalTransactionIcon = (type: string, otherPartyType: string) => {
-  if (otherPartyType === "system") {
-    return <ArrowLeftRight className="h-4 w-4 text-blue-600" />;
-  }
-  if (type === "transfer_in") {
-    return <ArrowDownLeft className="h-4 w-4 text-green-600" />;
-  }
-  return <ArrowUpRight className="h-4 w-4 text-orange-600" />;
+// Helper mappers
+const getInternalTransactionIcon = (mappedType: string) => {
+  if (mappedType === "transfer_in") return <ArrowDownLeft className="h-4 w-4 text-green-600" />;
+  if (mappedType === "transfer_out") return <ArrowUpRight className="h-4 w-4 text-orange-600" />;
+  return <ArrowLeftRight className="h-4 w-4 text-blue-600" />;
 };
 
 const getExternalTransactionIcon = (type: string) => {
   if (type === "deposit") {
     return <Building2 className="h-4 w-4 text-green-600" />;
-  }
+    }
   return <Landmark className="h-4 w-4 text-orange-600" />;
 };
 
@@ -232,6 +84,14 @@ const getTypeLabel = (type: string) => {
   }
 };
 
+// Map backend internal type to UI type
+function mapInternalType(type: string): "transfer_in" | "transfer_out" | "transfer" {
+  const t = (type || "").toUpperCase();
+  if (t.includes("FROM_ESCROW") || t === "FROM_ESCROW") return "transfer_in";
+  if (t.includes("TO_ESCROW") || t === "TO_ESCROW") return "transfer_out";
+  return "transfer";
+}
+
 export default function CreatorWalletPage() {
   const { data: walletData, isLoading, error } = useWallet();
   const [currentInternalPage, setCurrentInternalPage] = useState(1);
@@ -240,7 +100,7 @@ export default function CreatorWalletPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
 
-  // Fetch external transactions
+  // External transactions
   const { 
     data: externalTransactionsData, 
     isLoading: isLoadingExternalTransactions 
@@ -250,20 +110,33 @@ export default function CreatorWalletPage() {
     sortBy: 'createdAt:DESC'
   });
 
+  // Internal transactions
+  const {
+    data: internalTransactionsData,
+    isLoading: isLoadingInternalTransactions,
+  } = useWalletTransactions({
+    page: currentInternalPage,
+    limit: itemsPerPage,
+    sortBy: 'createdAt:DESC',
+  });
+
   const { data: transactionDetail, isLoading: isLoadingDetail } = useWalletTransactionById(selectedTransactionId);
 
   // Use real wallet balance from API
   const totalBalance = walletData ? parseFloat(walletData.balance) : 0;
   const currency = walletData?.currency || "VND";
 
-  // Map API external transactions to display format
+  // External
   const externalTransactions = externalTransactionsData?.data || [];
   const totalExternalPages = externalTransactionsData?.meta.totalPages || 1;
   const totalExternalItems = externalTransactionsData?.meta.totalItems || 0;
 
-  // Calculate statistics from real external transactions
-  // Note: These stats are calculated from the current page only
-  // For accurate totals across all transactions, we would need an aggregated stats endpoint
+  // Internal
+  const internalTransactions = internalTransactionsData?.data || [];
+  const totalInternalPages = internalTransactionsData?.meta.totalPages || 1;
+  const totalInternalItems = internalTransactionsData?.meta.totalItems || 0;
+
+  // Stats (external-based and mock for earnings)
   const stats = {
     totalDeposits: externalTransactions
       .filter(t => t.direction.toUpperCase() === "DEPOSIT" && t.status.toUpperCase() === "COMPLETED")
@@ -271,45 +144,31 @@ export default function CreatorWalletPage() {
     totalWithdrawals: externalTransactions
       .filter(t => t.direction.toUpperCase() === "WITHDRAWAL" && t.status.toUpperCase() === "COMPLETED")
       .reduce((sum, t) => sum + parseFloat(t.amount), 0),
-    totalEarnings: mockInternalTransactions
-      .filter(t => t.type === "transfer_in" && t.status === "completed")
-      .reduce((sum, t) => sum + t.amount, 0),
+    totalEarnings: 0,
     totalTransactions: walletData?.totalTransactions || 0,
   };
 
-  // Pagination for internal transactions
-  const totalInternalPages = Math.ceil(mockInternalTransactions.length / itemsPerPage);
-  const paginatedInternalTransactions = mockInternalTransactions.slice(
-    (currentInternalPage - 1) * itemsPerPage,
-    currentInternalPage * itemsPerPage
-  );
-
-  // Helper function to map API transaction to display format
+  // External mapping
   const mapExternalTransaction = (transaction: WalletExternalTransaction) => {
     const isDeposit = transaction.direction.toUpperCase() === "DEPOSIT";
     const bankCode = transaction.providerResponse?.vnp_BankCode || transaction.provider || "N/A";
     const bankName = getBankName(bankCode);
-    // Extract last 4 digits from bank transaction number for display
     const bankTranNo = transaction.providerResponse?.vnp_BankTranNo;
-    const accountNumber = bankTranNo 
-      ? `****${String(bankTranNo).slice(-4)}` 
-      : "N/A";
-    
+    const accountNumber = bankTranNo ? `****${String(bankTranNo).slice(-4)}` : "N/A";
     return {
       id: transaction.id,
       type: isDeposit ? "deposit" : "withdrawal",
       amount: parseFloat(transaction.amount),
       description: isDeposit ? "Bank transfer deposit" : "Withdrawal to bank account",
-      bankName: bankName,
-      accountNumber: accountNumber,
+      bankName,
+      accountNumber,
       status: mapStatus(transaction.status),
       date: transaction.createdAt,
       reference: transaction.providerTransactionId || transaction.id,
-      transactionFee: 0, // API doesn't provide fee, default to 0
+      transactionFee: 0,
     };
   };
 
-  // Helper to map status from API to display format
   const mapStatus = (status: string): string => {
     const statusMap: Record<string, string> = {
       "COMPLETED": "completed",
@@ -320,7 +179,6 @@ export default function CreatorWalletPage() {
     return statusMap[status.toUpperCase()] || status.toLowerCase();
   };
 
-  // Helper to get bank name from bank code
   const getBankName = (bankCode: string): string => {
     const bankMap: Record<string, string> = {
       "VNP": "Vietnam Payment",
@@ -335,7 +193,6 @@ export default function CreatorWalletPage() {
     };
     return bankMap[bankCode.toUpperCase()] || bankCode || "Unknown Bank";
   };
-
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -478,7 +335,7 @@ export default function CreatorWalletPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(stats.totalEarnings)}
+              {formatCurrency(0)}
             </div>
             <p className="text-xs text-muted-foreground">
               From event tickets
@@ -525,7 +382,7 @@ export default function CreatorWalletPage() {
               <div className="rounded-md border border-blue-200 bg-blue-50/50 dark:border-blue-700 dark:bg-blue-950/50 p-3 mb-4">
                 <p className="text-sm text-blue-900 dark:text-blue-200 font-medium flex items-center gap-2">
                   <ArrowLeftRight className="h-4 w-4" />
-                  Internal transactions are transfers between wallets within the platform
+                  Internal transactions represent money movements within the platform (e.g., to/from escrow)
                 </p>
               </div>
               <Table>
@@ -541,72 +398,89 @@ export default function CreatorWalletPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedInternalTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2 min-w-0">
-                          {getInternalTransactionIcon(transaction.type, transaction.otherPartyType)}
-                          <span className="text-sm font-medium truncate">
-                            {getTypeLabel(transaction.type)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[200px]">
-                        <span className="text-sm truncate block">{transaction.description}</span>
-                      </TableCell>
-                      <TableCell className="max-w-[180px]">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {transaction.otherPartyType === 'business' ? (
-                            <Users className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                          ) : (
-                            <ArrowLeftRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                          )}
-                          <span className="text-sm text-muted-foreground truncate">
-                            {transaction.otherParty}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground font-mono truncate block">
-                          {transaction.reference}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">
-                          {formatDateTime(transaction.date)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusColor(transaction.status)}>
-                          {getStatusLabel(transaction.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span 
-                          className={`text-sm font-bold whitespace-nowrap ${
-                            transaction.type === "transfer_out"
-                              ? "text-orange-600" 
-                              : "text-green-600"
-                          }`}
-                        >
-                          {getTransactionSign(transaction.type)}
-                          {formatCurrency(transaction.amount)}
-                        </span>
+                  {isLoadingInternalTransactions ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : internalTransactions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <p className="text-muted-foreground">No internal transactions found</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    internalTransactions.map((t: WalletTransaction) => {
+                      const mappedType = mapInternalType(t.type);
+                      const icon = getInternalTransactionIcon(mappedType);
+                      const description = mappedType === 'transfer_out' ? 'Transfer to escrow' : mappedType === 'transfer_in' ? 'Transfer from escrow' : 'Transfer';
+                      const statusText = mapStatus(t.status);
+                      const amountNumber = parseFloat(t.amount);
+                      return (
+                        <TableRow key={t.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2 min-w-0">
+                              {icon}
+                              <span className="text-sm font-medium truncate">
+                                {getTypeLabel(mappedType)}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="max-w-[200px]">
+                            <span className="text-sm truncate block">{description}</span>
+                          </TableCell>
+                          <TableCell className="max-w-[180px]">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <ArrowLeftRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                              <span className="text-sm text-muted-foreground truncate">Escrow</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground font-mono truncate block">
+                              <Link href={`/dashboard/creator/wallet/${t.id}`} className="hover:underline">
+                                {t.id}
+                              </Link>
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground whitespace-nowrap">
+                              {formatDateTime(t.createdAt)}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getStatusColor(statusText)}>
+                              {getStatusLabel(statusText)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span 
+                              className={`text-sm font-bold whitespace-nowrap ${
+                                mappedType === "transfer_out"
+                                  ? "text-orange-600" 
+                                  : "text-green-600"
+                              }`}
+                            >
+                              {getTransactionSign(mappedType)}
+                              {formatCurrency(amountNumber)}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
                 </TableBody>
               </Table>
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Showing {paginatedInternalTransactions.length} of {mockInternalTransactions.length} internal transactions
+                  Showing {internalTransactions.length} of {totalInternalItems} internal transactions
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentInternalPage((p) => Math.max(1, p - 1))}
-                    disabled={currentInternalPage === 1}
+                    disabled={currentInternalPage === 1 || isLoadingInternalTransactions}
                   >
                     Previous
                   </Button>
@@ -617,7 +491,7 @@ export default function CreatorWalletPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentInternalPage((p) => Math.min(totalInternalPages, p + 1))}
-                    disabled={currentInternalPage === totalInternalPages}
+                    disabled={currentInternalPage >= totalInternalPages || isLoadingInternalTransactions}
                   >
                     Next
                   </Button>
