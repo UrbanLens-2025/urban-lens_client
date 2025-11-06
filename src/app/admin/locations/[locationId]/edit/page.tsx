@@ -132,9 +132,7 @@ export default function EditLocationPage({
         description: location.description,
         imageUrl: location.imageUrl || [],
         isVisibleOnMap: location.isVisibleOnMap ?? false,
-        tagIds: (location.tags || [])
-          .map((t) => t.tag?.id)
-          .filter((id): id is number => id !== undefined),
+        tagIds: (location.tags || []).map((t) => t.id),
       });
     }
   }, [location, form]);

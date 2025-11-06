@@ -189,11 +189,7 @@ export interface Location {
   isVisibleOnMap: boolean;
   businessId: string | null;
   business: BusinessInLocation | null;
-  tags: {
-    id: number;
-    tagId: number;
-    tag: Tag;
-  }[];
+  tags: Tag[];
 }
 
 interface ProcessedByAdmin {
@@ -217,11 +213,7 @@ export interface LocationRequest {
   adminNotes: string | null;
   createdBy: User;
   processedBy: ProcessedByAdmin | null;
-  tags: {
-    id: number;
-    tagId: number;
-    tag: Tag;
-  }[];
+  tags: Tag[];
   latitude: number;
   longitude: number;
   radiusMeters: number;
@@ -581,6 +573,7 @@ export interface BookableLocation {
   isVisibleOnMap: boolean;
   businessId: string;
   bookingConfig: LocationBookingConfig;
+  tags?: Tag[];
 }
 
 export interface GetBookableLocationsParams {

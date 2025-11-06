@@ -16,6 +16,7 @@ import {
   Calendar
 } from "lucide-react";
 import Image from "next/image";
+import type { Tag } from "@/types";
 
 interface LocationDetails {
   id: string;
@@ -33,13 +34,7 @@ interface LocationDetails {
     avatar?: string;
     category: string;
   };
-  tags: Array<{
-    tag: {
-      displayName: string;
-      color: string;
-      icon: string;
-    };
-  }>;
+  tags: Tag[];
   analytics?: {
     totalCheckIns: number;
     totalReviews: number;
@@ -99,13 +94,13 @@ export function LocationDetailsPanel({ location, onBookNow }: LocationDetailsPan
           {/* Tags */}
           {location.tags && location.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {location.tags.map((tagObj, index) => (
+              {location.tags.map((tag, index) => (
                 <Badge
-                  key={index}
-                  style={{ backgroundColor: tagObj.tag.color, color: "#fff" }}
+                  key={tag.id || index}
+                  style={{ backgroundColor: tag.color, color: "#fff" }}
                 >
-                  <span className="mr-1">{tagObj.tag.icon}</span>
-                  {tagObj.tag.displayName}
+                  <span className="mr-1">{tag.icon}</span>
+                  {tag.displayName}
                 </Badge>
               ))}
             </div>

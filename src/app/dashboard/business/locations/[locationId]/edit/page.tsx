@@ -90,7 +90,7 @@ export default function EditLocationPage({
         description: location.description,
         imageUrl: location.imageUrl || [],
         isVisibleOnMap: location.isVisibleOnMap ?? false,
-        tagIds: location.tags.map((t) => t.tag.id),
+        tagIds: location.tags.map((t) => t.id),
       });
     }
   }, [location, form]);
@@ -113,7 +113,7 @@ export default function EditLocationPage({
         tagIds: newTagIds,
       };
 
-      const originalTagIds = location?.tags.map((t) => t.tag.id) || [];
+      const originalTagIds = location?.tags.map((t) => t.id) || [];
       const tagsToAdd = newTagIds.filter((id) => !originalTagIds.includes(id));
       const tagsToRemove = originalTagIds.filter(
         (id) => !newTagIds.includes(id)

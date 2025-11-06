@@ -10,7 +10,7 @@ import {
 import type { Tag } from "@/types";
 
 interface DisplayTagsProps {
-  tags?: { tag: Tag }[];
+  tags?: Tag[];
   maxCount?: number;
   emptyText?: string;
 }
@@ -27,7 +27,7 @@ export function DisplayTags({
   return (
     <TooltipProvider>
       <div className="flex flex-wrap gap-2">
-        {visibleTags.map(({ tag }) => (
+        {visibleTags.map((tag) => (
           <Badge
             key={tag.id}
             variant="secondary"
@@ -46,7 +46,7 @@ export function DisplayTags({
             </TooltipTrigger>
             <TooltipContent side="top" align="center" className="max-w-xs">
               <div className="flex flex-wrap gap-2">
-                {hiddenTags.map(({ tag }) => (
+                {hiddenTags.map((tag) => (
                   <Badge
                     key={tag.id}
                     variant="secondary"

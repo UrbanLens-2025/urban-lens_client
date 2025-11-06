@@ -98,9 +98,6 @@ export default function AdminLocationDetailsPage({
     lng: Number(location.longitude),
   };
 
-  // Chuẩn hóa tags (vì data trả về có dạng location.tags[].tag)
-  const tagList = location.tags?.map((t) => t.tag).filter(Boolean) ?? [];
-
   return (
     <div className='space-y-8'>
       {/* Back Button and Location Name */}
@@ -200,7 +197,7 @@ export default function AdminLocationDetailsPage({
             </CardContent>
           </Card>
           {/* Tags */}
-          {tagList.length > 0 && (
+          {location.tags && location.tags.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className='flex items-center gap-2'>
