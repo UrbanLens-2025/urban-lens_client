@@ -957,3 +957,8 @@ export interface GetEventAttendanceParams {
   limit?: number;
   sortBy?: string;
 }
+
+export interface ConfirmAttendancePayload {
+  eventAttendanceId: string;
+  checkingInAccountId: string;
+}

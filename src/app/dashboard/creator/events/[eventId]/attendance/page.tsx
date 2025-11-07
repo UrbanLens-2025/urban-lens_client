@@ -25,8 +25,10 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  QrCode,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { format } from "date-fns";
 
 export default function EventAttendancePage({
@@ -140,6 +142,12 @@ export default function EventAttendancePage({
             </p>
           </div>
         </div>
+        <Link href={`/dashboard/creator/events/${eventId}/attendance/scan`}>
+          <Button variant="default" size="lg">
+            <QrCode className="h-4 w-4 mr-2" />
+            Scan QR Code
+          </Button>
+        </Link>
       </div>
 
       {/* Summary Cards */}
