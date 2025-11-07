@@ -47,7 +47,19 @@ const updateTicketSchema = z.object({
     .max(1024, "Description must not exceed 1024 characters"),
   price: z
     .number()
-    .min(0, "Price must be 0 or greater"),
+    .min(0, "Price must be 0 or greater")
+    .refine((val) => {
+      // Convert to string to check for leading zeros
+      const priceStr = val.toString();
+      // Allow 0, decimals starting with 0 (like 0.5), or numbers without leading zeros
+      // Reject numbers like 01, 02, 0123, etc. (but allow 0, 0.5, 10, etc.)
+      if (val === 0) return true; // Allow zero
+      // Check if it starts with "0" followed by a digit (not decimal point)
+      if (/^0[0-9]/.test(priceStr)) return false;
+      return true;
+    }, {
+      message: "Price cannot start with 0 (except for 0 or decimals like 0.5)",
+    }),
   currency: z
     .string()
     .min(1, "Currency is required"),
@@ -323,8 +335,46 @@ export default function EditTicketPage({
                           step="0.01"
                           min="0"
                           placeholder="0.00"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            let value = e.target.value;
+                            
+                            // Handle empty input
+                            if (value === "" || value === "-") {
+                              field.onChange(0);
+                              return;
+                            }
+
+                            // Remove leading zeros that are followed by digits (not decimal point)
+                            // Allow: 0, 0.5, 0.99, 10, 100, etc.
+                            // Reject: 01, 02, 0123, etc.
+                            if (/^0+[1-9]/.test(value)) {
+                              // Remove all leading zeros
+                              value = value.replace(/^0+/, "");
+                              // Update the input value
+                              e.target.value = value;
+                            }
+
+                            // Handle negative values (shouldn't happen with min="0" but just in case)
+                            if (value.startsWith("-")) {
+                              value = value.replace("-", "");
+                            }
+
+                            const numValue = parseFloat(value);
+                            if (!isNaN(numValue) && numValue >= 0) {
+                              field.onChange(numValue);
+                            } else if (value === "" || value === "0") {
+                              field.onChange(0);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            field.onBlur();
+                            // Ensure the displayed value matches the stored value
+                            const currentValue = field.value ?? 0;
+                            if (e.target.value !== currentValue.toString()) {
+                              e.target.value = currentValue.toString();
+                            }
+                          }}
                           className="h-11"
                         />
                       </FormControl>

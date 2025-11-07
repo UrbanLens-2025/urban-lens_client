@@ -1,25 +1,22 @@
 "use client";
 
 import type React from "react";
-import { use, useMemo, useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 
 // --- Hooks ---
 import { useEventRequestById } from "@/hooks/events/useEventRequestById";
-import { useTags } from "@/hooks/tags/useTags"; // Vẫn cần hook này (nếu `BookableLocation` có `tags`)
 
 // --- Types ---
-import { EventRequest, PaginatedData, Tag, BookableLocation } from "@/types";
+import { EventRequest } from "@/types";
 
 // --- UI Components ---
-import { Loader2, ArrowLeft, Calendar, MapPin, User, FileText, ImageIcon, Layers, Zap, Users, Building, Ticket, CreditCard, Phone, Wallet } from "lucide-react";
+import { Loader2, ArrowLeft, Calendar, MapPin, User, FileText, ImageIcon, Layers, Users, Building, Ticket, CreditCard, Phone, Wallet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ImageViewer } from "@/components/shared/ImageViewer";
-import { DisplayTags } from "@/components/shared/DisplayTags";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
 import { usePayForEventBooking } from "@/hooks/events/usePayForEventBooking";
 
@@ -57,13 +54,12 @@ export default function EventRequestDetailsPage({
 
   // 3. Gọi hook phụ để lấy chi tiết Location (tên, địa chỉ, v.v.)
   const { data: location, isLoading: isLoadingLocation } = useBookableLocationById(locationId);
-  
-  const { data: allTagsResponse, isLoading: isLoadingTags } = useTags();
 
   // Payment hook
   const { mutate: payForBooking, isPending: isPaying } = usePayForEventBooking();
 
-  const isLoading = isLoadingRequest || isLoadingLocation || isLoadingTags;
+  // Only wait for request and location, tags are optional
+  const isLoading = isLoadingRequest || (locationId && isLoadingLocation);
   
   // Check if payment is needed
   const needsPayment = request?.status?.toUpperCase() === "PROCESSED";
@@ -91,41 +87,58 @@ export default function EventRequestDetailsPage({
     }
   };
 
-  // Xử lý Tags (nếu `location` có `tags`)
-//   const tagsMap = useMemo(() => {
-//       const map = new Map<number, Tag>();
-//       const allTags = (allTagsResponse as PaginatedData<Tag>)?.data || [];
-//       allTags.forEach((tag) => map.set(tag.id, tag));
-//       return map;
-//     }, [allTagsResponse]);
-  
-//     const tags = useMemo(() => {
-//       if (!request?.tags || !tagsMap) {
-//         return [];
-//       }
-//       return request.tags
-//         .map((tagLink) => tagsMap.get(tagLink.tagId))
-//         .filter((tag): tag is Tag => !!tag)
-//         .map((tag) => ({ tag: tag }));
-//     }, [request?.tags, tagsMap]);
-
-
   const handleImageClick = (src: string) => {
     setCurrentImageSrc(src);
     setIsImageViewerOpen(true);
   };
 
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
-  if (isError || !request || !location) {
-    return <div className="text-center py-20 text-red-500">Error loading details.</div>;
+  
+  if (isError || !request) {
+    return (
+      <div className="text-center py-20">
+        <div className="text-red-500 font-medium">Error loading event request details.</div>
+        <Button variant="outline" onClick={() => router.back()} className="mt-4">
+          Go Back
+        </Button>
+      </div>
+    );
+  }
+  
+  // Location might not be available if locationId is missing
+  if (!locationId) {
+    return (
+      <div className="text-center py-20">
+        <div className="text-muted-foreground">Location information not available.</div>
+        <Button variant="outline" onClick={() => router.back()} className="mt-4">
+          Go Back
+        </Button>
+      </div>
+    );
+  }
+  
+  if (!location && !isLoadingLocation) {
+    return (
+      <div className="text-center py-20">
+        <div className="text-muted-foreground">Unable to load location details.</div>
+        <Button variant="outline" onClick={() => router.back()} className="mt-4">
+          Go Back
+        </Button>
+      </div>
+    );
   }
 
-//   const position = {
-//     lat: location.latitude,
-//     lng: location.longitude,
-//   };
+  // At this point, location should be available if locationId exists
+  // But TypeScript doesn't know that, so we assert it's defined
+  if (!location) {
+    return null; // This shouldn't happen due to early returns, but TypeScript needs this
+  }
 
   return (
     <div className="space-y-8 p-6">
@@ -162,7 +175,11 @@ export default function EventRequestDetailsPage({
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex items-center gap-2"><CreditCard className="h-4 w-4"/>Amount</CardTitle></CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(request.referencedLocationBooking.amountToPay, location.bookingConfig.currency)}</div>
+                <div className="text-2xl font-bold">
+                  {location?.bookingConfig 
+                    ? formatCurrency(request.referencedLocationBooking?.amountToPay || "0", location.bookingConfig.currency)
+                    : "N/A"}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -173,31 +190,44 @@ export default function EventRequestDetailsPage({
               <InfoRow label="Expected Attendees" value={request.expectedNumberOfParticipants} icon={Users} />
               <InfoRow label="Allow Ticketing" value={request.allowTickets ? "Yes" : "No"} icon={Ticket} />
               <InfoRow label="Special Requirements" value={request.specialRequirements} />
-              <div>
-                <p className="text-sm font-semibold text-muted-foreground mb-2">Requested Time Slots</p>
-                <div className="flex flex-wrap gap-2">
-                  {request.referencedLocationBooking.dates.map((d, i) => (
-                    <Badge key={i} variant="secondary" className="whitespace-nowrap">
-                      {formatDateTime(d.startDateTime)} - {formatDateTime(d.endDateTime)}
-                    </Badge>
-                  ))}
+              {request.referencedLocationBooking?.dates && request.referencedLocationBooking.dates.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground mb-2">Requested Time Slots</p>
+                  <div className="flex flex-wrap gap-2">
+                    {request.referencedLocationBooking.dates.map((d, i) => (
+                      <Badge key={i} variant="secondary" className="whitespace-nowrap">
+                        {formatDateTime(d.startDateTime)} - {formatDateTime(d.endDateTime)}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Building /> Venue Details</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <InfoRow label="Venue Name" value={location.name} />
-              <InfoRow label="Venue Address" value={location.addressLine} />
-              <InfoRow label="Booking Status" value={<Badge variant={statusVariant(request.referencedLocationBooking.status)}>{request.referencedLocationBooking.status}</Badge>} />
-              <InfoRow label="Amount to Pay" value={formatCurrency(request.referencedLocationBooking.amountToPay, location.bookingConfig.currency)} />
-              {request.referencedLocationBooking.referencedTransactionId && (
-                <InfoRow label="Transaction" value={<span className="font-mono text-sm">{request.referencedLocationBooking.referencedTransactionId}</span>} />
               )}
             </CardContent>
           </Card>
+          
+          {location && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Building /> Venue Details</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <InfoRow label="Venue Name" value={location.name} />
+                <InfoRow label="Venue Address" value={location.addressLine} />
+              {request.referencedLocationBooking && (
+                <>
+                  <InfoRow label="Booking Status" value={<Badge variant={statusVariant(request.referencedLocationBooking.status)}>{request.referencedLocationBooking.status}</Badge>} />
+                  {location?.bookingConfig && (
+                    <InfoRow 
+                      label="Amount to Pay" 
+                      value={formatCurrency(request.referencedLocationBooking.amountToPay || "0", location.bookingConfig.currency)} 
+                    />
+                  )}
+                </>
+              )}
+                {request.referencedLocationBooking?.referencedTransactionId && (
+                  <InfoRow label="Transaction" value={<span className="font-mono text-sm">{request.referencedLocationBooking.referencedTransactionId}</span>} />
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {request.eventValidationDocuments && request.eventValidationDocuments.length > 0 && (
             <Card>
@@ -233,12 +263,14 @@ export default function EventRequestDetailsPage({
                   <p className="text-sm text-amber-900 dark:text-amber-200">
                     Your event request has been processed. Please complete payment to confirm your booking.
                   </p>
-                  <div className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
-                    <p className="text-xs text-muted-foreground mb-1">Amount to Pay</p>
-                    <p className="text-2xl font-bold text-amber-900 dark:text-amber-200">
-                      {formatCurrency(request.referencedLocationBooking.amountToPay, location.bookingConfig.currency)}
-                    </p>
-                  </div>
+                  {location?.bookingConfig && (
+                    <div className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <p className="text-xs text-muted-foreground mb-1">Amount to Pay</p>
+                      <p className="text-2xl font-bold text-amber-900 dark:text-amber-200">
+                        {formatCurrency(request.referencedLocationBooking?.amountToPay || "0", location.bookingConfig.currency)}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <Button 
                   onClick={handlePayNow} 
@@ -265,46 +297,67 @@ export default function EventRequestDetailsPage({
             </Card>
           )}
 
-          <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><User /> Requester</CardTitle></CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <img src={request.createdBy?.avatarUrl || "/default-avatar.svg"} alt="avatar" className="h-10 w-10 rounded-full object-cover border" />
-                <div>
-                  <div className="font-medium">{request.createdBy?.firstName} {request.createdBy?.lastName}</div>
-                  <div className="text-xs text-muted-foreground">{request.createdBy?.email}</div>
+          {/* Requester Info - Show if available from API (may not be in type definition) */}
+          {(request as any).createdBy && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><User /> Requester</CardTitle></CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={(request as any).createdBy?.avatarUrl || "/default-avatar.svg"} 
+                    alt="avatar" 
+                    className="h-10 w-10 rounded-full object-cover border" 
+                  />
+                  <div>
+                    <div className="font-medium">
+                      {(request as any).createdBy?.firstName || ""} {(request as any).createdBy?.lastName || ""}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{(request as any).createdBy?.email || ""}</div>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2"><Phone className="h-3 w-3" /> {request.createdBy?.phoneNumber}</div>
-              </div>
-            </CardContent>
-          </Card>
+                {(request as any).createdBy?.phoneNumber && (
+                  <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-3 w-3" /> 
+                      {(request as any).createdBy.phoneNumber}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-          <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><ImageIcon /> Location Images</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-              {location.imageUrl.slice(0, 4).map((url, index) => ( // Chỉ hiển thị 4 ảnh
-                <img
-                  key={index}
-                  src={url || "/placeholder.svg"}
-                  alt={`Location ${index + 1}`}
-                  onClick={() => handleImageClick(url)}
-                  className="w-full h-32 object-cover rounded-md border cursor-pointer"
-                />
-              ))}
-            </CardContent>
-          </Card>
+          {location && location.imageUrl && location.imageUrl.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><ImageIcon /> Location Images</CardTitle></CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                {location.imageUrl.slice(0, 4).map((url, index) => (
+                  <img
+                    key={index}
+                    src={url || "/placeholder.svg"}
+                    alt={`Location ${index + 1}`}
+                    onClick={() => handleImageClick(url)}
+                    className="w-full h-32 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity"
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          )}
           
-          <Card className="sticky top-6">
-            <CardHeader><CardTitle className="flex items-center gap-2"><MapPin /> Location Map</CardTitle></CardHeader>
-            <CardContent className="h-80 rounded-lg overflow-hidden">
-              {/* <GoogleMapsPicker 
-                position={position}
-                onPositionChange={() => {}} // Chế độ chỉ xem
-              /> */}
-            </CardContent>
-          </Card>
+          {location && (location as any).latitude && (location as any).longitude && (
+            <Card className="sticky top-6">
+              <CardHeader><CardTitle className="flex items-center gap-2"><MapPin /> Location Map</CardTitle></CardHeader>
+              <CardContent className="h-80 rounded-lg overflow-hidden">
+                <GoogleMapsPicker 
+                  position={{
+                    lat: Number((location as any).latitude),
+                    lng: Number((location as any).longitude),
+                  }}
+                  onPositionChange={() => {}} // Read-only mode
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
       
