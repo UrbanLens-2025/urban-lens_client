@@ -92,42 +92,22 @@ const formSchema = z
       .optional(),
 
     // Step 2 fields (step 3 after tags)
-    venueType: z.enum(["business", "public", "custom"]),
+    venueType: z.literal("business"),
     locationId: z.string().uuid("Invalid location ID").optional(),
-    customVenueDetails: customVenueDetailsSchema.optional(),
     dateRanges: z.array(
       z.object({
         startDateTime: z.date(),
         endDateTime: z.date(),
       })
     ).min(1, "Select at least one time slot for your event"),
-    publicVenueTermsAccepted: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
-    // Conditional validation: locationId required for business/public venues
-    if ((data.venueType === "business" || data.venueType === "public") && !data.locationId) {
+    // Conditional validation: locationId required
+    if (!data.locationId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Please select a location",
         path: ["locationId"],
-      });
-    }
-
-    // Conditional validation: customVenueDetails required for custom venues
-    if (data.venueType === "custom" && !data.customVenueDetails) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Please provide custom venue details",
-        path: ["customVenueDetails"],
-      });
-    }
-
-    // Conditional validation: terms accepted required for public venues
-    if (data.venueType === "public" && !data.publicVenueTermsAccepted) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "You must agree to the terms of usage",
-        path: ["publicVenueTermsAccepted"],
       });
     }
 
@@ -174,9 +154,7 @@ export default function CreateEventRequestPage() {
       social: [],
       venueType: "business",
       locationId: undefined,
-      customVenueDetails: undefined,
       dateRanges: [],
-      publicVenueTermsAccepted: false,
     },
   });
 
@@ -198,11 +176,8 @@ export default function CreateEventRequestPage() {
         break;
       case 3:
         fieldsToValidate = [
-          "venueType",
           "locationId",
-          "customVenueDetails",
           "dateRanges",
-          "publicVenueTermsAccepted",
         ];
         break;
       case 4:
@@ -281,8 +256,7 @@ export default function CreateEventRequestPage() {
     }
 
     const values = form.getValues();
-    const { dateRanges, customVenueDetails, publicVenueTermsAccepted, ...rest } =
-      values;
+    const { dateRanges, ...rest } = values;
 
     // For custom venues, we still need a locationId - this might need backend handling
     // For now, we'll submit what we have and let the backend decide
@@ -297,8 +271,6 @@ export default function CreateEventRequestPage() {
     };
 
     // Remove optional fields that shouldn't be in payload
-    delete (payload as any).customVenueDetails;
-    delete (payload as any).publicVenueTermsAccepted;
     delete (payload as any).venueType;
 
     createEvent.mutate(payload);
@@ -344,11 +316,8 @@ export default function CreateEventRequestPage() {
         break;
       case 3:
         fieldsToCheck = [
-          "venueType",
           "locationId",
-          "customVenueDetails",
           "dateRanges",
-          "publicVenueTermsAccepted",
         ];
         break;
     }

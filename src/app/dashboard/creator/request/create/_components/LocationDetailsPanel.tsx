@@ -13,7 +13,10 @@ import {
   Star, 
   Users, 
   MessageSquare,
-  Calendar
+  Calendar,
+  DollarSign,
+  Clock,
+  Info
 } from "lucide-react";
 import Image from "next/image";
 import type { Tag } from "@/types";
@@ -39,6 +42,14 @@ interface LocationDetails {
     totalCheckIns: number;
     totalReviews: number;
     averageRating: number;
+  };
+  bookingConfig?: {
+    baseBookingPrice: string | number;
+    currency: string;
+    minBookingDurationMinutes: number;
+    maxBookingDurationMinutes: number;
+    minGapBetweenBookingsMinutes: number;
+    allowBooking: boolean;
   };
 }
 
@@ -122,46 +133,48 @@ export function LocationDetailsPanel({ location, onBookNow }: LocationDetailsPan
 
           <Separator />
 
-          {/* Business Info */}
-          <div className="space-y-3">
-            <h4 className="font-semibold flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Hosted by {location.business.name}
-            </h4>
-            <div className="space-y-2 text-sm">
-              {location.business.phone && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  <span>{location.business.phone}</span>
+          {/* Booking Information */}
+          {location.bookingConfig && location.bookingConfig.allowBooking && (
+            <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+              <h4 className="font-semibold flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                Booking Information
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                {location.bookingConfig.baseBookingPrice && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <DollarSign className="h-4 w-4" />
+                      <span>Base Price</span>
+                    </div>
+                    <p className="font-semibold text-lg text-green-600">
+                      {typeof location.bookingConfig.baseBookingPrice === "string"
+                        ? parseFloat(location.bookingConfig.baseBookingPrice).toLocaleString("vi-VN")
+                        : location.bookingConfig.baseBookingPrice.toLocaleString("vi-VN")}{" "}
+                      {location.bookingConfig.currency || "VND"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">per hour</p>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>Duration Range</span>
+                  </div>
+                  <p className="font-semibold">
+                    {Math.floor(location.bookingConfig.minBookingDurationMinutes / 60)}h{" "}
+                    {location.bookingConfig.minBookingDurationMinutes % 60}m -{" "}
+                    {Math.floor(location.bookingConfig.maxBookingDurationMinutes / 60)}h{" "}
+                    {location.bookingConfig.maxBookingDurationMinutes % 60}m
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Min gap: {location.bookingConfig.minGapBetweenBookingsMinutes}m
+                  </p>
                 </div>
-              )}
-              {location.business.email && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Mail className="h-4 w-4" />
-                  <span>{location.business.email}</span>
-                </div>
-              )}
-              {location.business.website && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Globe className="h-4 w-4" />
-                  <a
-                    href={location.business.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    Visit Website
-                  </a>
-                </div>
-              )}
-              <Badge variant="outline">{location.business.category}</Badge>
+              </div>
             </div>
-          </div>
+          )}
 
-          <Button onClick={onBookNow} className="w-full" size="lg">
-            <Calendar className="mr-2 h-4 w-4" />
-            Book This Venue
-          </Button>
         </CardContent>
       </Card>
     </div>
