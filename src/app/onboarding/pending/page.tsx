@@ -5,16 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUser } from "@/hooks/user/useUser";
 import { IconLogout } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, MailCheck, Clock, RefreshCw, ShieldCheck } from "lucide-react";
+import { Loader2, MailCheck, Clock, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 
 export default function PendingPage() {
   const { user, isLoading } = useUser();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (isLoading) {
@@ -45,26 +44,9 @@ export default function PendingPage() {
     router.push("/login");
   };
 
-  const refresh = async () => {
-    setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ["user"] });
-    setIsRefreshing(false);
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="fixed top-4 right-16 z-50 flex gap-2">
-        <Button variant="outline" onClick={refresh} disabled={isRefreshing}>
-          {isRefreshing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Refreshing
-            </>
-          ) : (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-            </>
-          )}
-        </Button>
         <Button onClick={logout}>
           <IconLogout />
           Log out
@@ -104,17 +86,6 @@ export default function PendingPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 justify-center mt-2">
-              <Button variant="outline" onClick={refresh} disabled={isRefreshing}>
-                {isRefreshing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Checking status...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" /> Check Status
-                  </>
-                )}
-              </Button>
               <a href="mailto:support@urbanlens.app" className="inline-flex">
                 <Button variant="ghost">Contact Support</Button>
               </a>

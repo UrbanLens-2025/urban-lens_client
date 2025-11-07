@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useDebounce } from 'use-debounce';
 import { useBusinessAccounts } from '@/hooks/admin/useBusinessAccounts';
 import { useProcessBusinessAccount } from '@/hooks/admin/useProcessBusinessAccount';
@@ -206,31 +207,15 @@ export default function AdminBusinessPage() {
                         <TableCell>{formatDateTime((biz as any).createdAt)}</TableCell>
                         <TableCell>{getStatusBadge((biz as any).status || statusTab)}</TableCell>
                         <TableCell className='text-right space-x-2'>
-                          {statusTab === 'PENDING' && (
-                            <>
-                              <Button
-                                size='sm'
-                                onClick={() => setApprovingBusiness(biz)}
-                                disabled={isPending}
-                                className='bg-green-600 hover:bg-green-700'
-                              >
-                                Approve
-                              </Button>
-                              <Button
-                                variant='destructive'
-                                size='sm'
-                                onClick={() => setRejectingBusiness(biz)}
-                                disabled={isPending}
-                              >
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                          {statusTab !== 'PENDING' && (
-                            <Button variant='outline' size='sm'>
-                              View
-                            </Button>
-                          )}
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            asChild
+                          >
+                            <Link href={`/admin/business/${biz.accountId}`}>
+                              View Details
+                            </Link>
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
