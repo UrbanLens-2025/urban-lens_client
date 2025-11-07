@@ -34,9 +34,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { LocationAddressPicker } from "../shared/LocationAddressPicker";
 import { SingleFileUpload } from "../shared/SingleFileUpload";
+import { FileUpload } from "../shared/FileUpload";
+import { AcceptedBusinessLicenseTypes } from "@/types";
 
 const businessCategories = [
   "FOOD",
@@ -48,6 +50,15 @@ const businessCategories = [
   "TECHNOLOGY",
   "OTHER",
 ] as const;
+
+const licenseSchema = z.object({
+  licenseType: z.nativeEnum(AcceptedBusinessLicenseTypes, {
+    errorMap: () => ({ message: "Please select a license type." }),
+  }),
+  documentImageUrls: z
+    .array(z.string().url("Invalid image URL"))
+    .min(1, "At least one document image is required."),
+});
 
 const businessSchema = z.object({
   name: z.string().min(2, "Business name is required."),
@@ -63,9 +74,9 @@ const businessSchema = z.object({
     .string()
     .url("Please upload an avatar.")
     .min(1, "Please upload an avatar."),
-  licenseNumber: z.string().min(1, "License number is required."),
-  licenseExpirationDate: z.string().min(1, "Expiration date is required."),
-  licenseType: z.string().min(1, "License type is required."),
+  licenses: z
+    .array(licenseSchema)
+    .min(1, "At least one license is required."),
   website: z.string().url("Must be a valid URL."),
   category: z.enum(businessCategories, {
     message: "Please select a category.",
@@ -92,23 +103,21 @@ export function BusinessOnboardingForm() {
       email: "",
       phone: "",
       avatar: "",
-      licenseNumber: "",
-      licenseExpirationDate: "",
-      licenseType: "",
+      licenses: [],
       website: "",
+      category: undefined,
     },
   });
 
   function onSubmit(values: FormValues) {
-    const { ...payload } = values;
-    submit(payload);
+    submit(values);
   }
 
   const stepFields: Record<number, (keyof FormValues)[]> = {
     1: ["name", "description", "category", "website", "avatar"],
     2: ["email", "phone"],
     3: ["addressLine", "addressLevel1", "addressLevel2"],
-    4: ["licenseType", "licenseNumber", "licenseExpirationDate"],
+    4: ["licenses"],
   };
 
   const handleNext = async () => {
@@ -125,6 +134,40 @@ export function BusinessOnboardingForm() {
   const showError = (name: keyof FormValues) => {
     const state = form.getFieldState(name);
     return state.invalid && (state.isTouched || form.formState.isSubmitted);
+  };
+
+  const licenses = form.watch("licenses");
+
+  const addLicense = () => {
+    const currentLicenses = form.getValues("licenses") || [];
+    form.setValue("licenses", [
+      ...currentLicenses,
+      {
+        licenseType: AcceptedBusinessLicenseTypes.BUSINESS_LICENSE,
+        documentImageUrls: [],
+      },
+    ]);
+  };
+
+  const removeLicense = (index: number) => {
+    const currentLicenses = form.getValues("licenses") || [];
+    form.setValue(
+      "licenses",
+      currentLicenses.filter((_, i) => i !== index)
+    );
+  };
+
+  const getLicenseTypeLabel = (type: AcceptedBusinessLicenseTypes) => {
+    switch (type) {
+      case AcceptedBusinessLicenseTypes.BUSINESS_LICENSE:
+        return "Business License";
+      case AcceptedBusinessLicenseTypes.OPERATING_PERMIT:
+        return "Operating Permit";
+      case AcceptedBusinessLicenseTypes.TAX_IDENTIFICATION:
+        return "Tax Identification";
+      default:
+        return type;
+    }
   };
 
   return (
@@ -286,48 +329,119 @@ export function BusinessOnboardingForm() {
 
             {step === 4 && (
               <>
-                <h3 className="font-semibold text-lg pt-2">License Information</h3>
-                <FormField
-                  name="licenseType"
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>License Type</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Business Registration" {...field} />
-                      </FormControl>
-                      {showError("licenseType") && <FormMessage />}
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    name="licenseNumber"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>License Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., 0123456789" {...field} />
-                        </FormControl>
-                        {showError("licenseNumber") && <FormMessage />}
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="licenseExpirationDate"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Expiration Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        {showError("licenseExpirationDate") && <FormMessage />}
-                      </FormItem>
-                    )}
-                  />
+                <div className="flex items-center justify-between pt-2">
+                  <h3 className="font-semibold text-lg">License Information</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addLicense}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add License
+                  </Button>
                 </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Add one or more licenses. Each license requires at least one document image.
+                </p>
+
+                {licenses && licenses.length > 0 ? (
+                  <div className="space-y-6">
+                    {licenses.map((license, index) => (
+                      <Card key={index} className="relative">
+                        <CardContent className="pt-6">
+                          <div className="flex items-start justify-between mb-4">
+                            <h4 className="font-medium">
+                              License {index + 1}
+                            </h4>
+                            {licenses.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeLicense(index)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Remove
+                              </Button>
+                            )}
+                          </div>
+
+                          <div className="space-y-4">
+                            <FormField
+                              control={form.control}
+                              name={`licenses.${index}.licenseType`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>License Type</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    value={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select license type" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {Object.values(AcceptedBusinessLicenseTypes).map((type) => (
+                                        <SelectItem key={type} value={type}>
+                                          {getLicenseTypeLabel(type)}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name={`licenses.${index}.documentImageUrls`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Document Images</FormLabel>
+                                  <FormControl>
+                                    <FileUpload
+                                      value={field.value || []}
+                                      onChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    Upload images of your {getLicenseTypeLabel(license.licenseType).toLowerCase()}. You can upload multiple images.
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      No licenses added yet. Click "Add License" to get started.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addLicense}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Your First License
+                    </Button>
+                  </div>
+                )}
+
+                {form.formState.errors.licenses && (
+                  <p className="text-sm font-medium text-destructive mt-2">
+                    {form.formState.errors.licenses.message}
+                  </p>
+                )}
               </>
             )}
 

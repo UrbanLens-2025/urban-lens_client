@@ -107,6 +107,17 @@ export interface BusinessProfile {
   phone: string;
 }
 
+export enum AcceptedBusinessLicenseTypes {
+  BUSINESS_LICENSE = "BUSINESS_LICENSE",
+  OPERATING_PERMIT = "OPERATING_PERMIT",
+  TAX_IDENTIFICATION = "TAX_IDENTIFICATION",
+}
+
+export interface BusinessLicense {
+  licenseType: AcceptedBusinessLicenseTypes;
+  documentImageUrls: string[];
+}
+
 export interface BusinessOnboardingPayload {
   name: string;
   description: string;
@@ -116,9 +127,7 @@ export interface BusinessOnboardingPayload {
   email: string;
   phone: string;
   avatar: string;
-  licenseNumber: string;
-  licenseExpirationDate: string;
-  licenseType: string;
+  licenses: BusinessLicense[];
   website: string;
   category: BusinessCategory;
 }
