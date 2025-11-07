@@ -290,6 +290,7 @@ export default function CreateEventRequestPage() {
             form={form}
             onSubmit={handleSubmit}
             isSubmitting={createEvent.isPending}
+            onEditStep={setCurrentStep}
           />
         );
       default:
