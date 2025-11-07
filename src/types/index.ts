@@ -892,3 +892,68 @@ export interface Ticket {
   eventId: string;
   event?: Event;
 }
+
+export interface TicketSnapshot {
+  id: string;
+  tos: string | null;
+  price: string;
+  eventId: string;
+  currency: string;
+  imageUrl: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  description: string;
+  displayName: string;
+  saleEndDate: string;
+  saleStartDate: string;
+  totalQuantity: number;
+  quantityReserved: number;
+  maxQuantityPerOrder: number;
+  minQuantityPerOrder: number;
+  totalQuantityAvailable: number;
+}
+
+export interface OrderDetail {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  quantity: number;
+  unitPrice: string;
+  currency: string;
+  subTotal: number;
+  ticketId: string;
+  orderId: string;
+  ticketSnapshot: TicketSnapshot;
+  ticket: Ticket;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  totalPaymentAmount: string;
+  currency: string;
+  status: string;
+  referencedTransactionId: string | null;
+  createdBy: User;
+  orderDetails: OrderDetail[];
+}
+
+export interface EventAttendance {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  orderId: string;
+  status: string;
+  order: Order;
+}
+
+export interface GetEventAttendanceParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+}

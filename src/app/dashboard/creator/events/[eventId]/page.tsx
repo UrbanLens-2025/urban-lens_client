@@ -11,14 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ImageViewer } from "@/components/shared/ImageViewer";
 import { DisplayTags } from "@/components/shared/DisplayTags";
-import { 
-  Loader2, 
-  ArrowLeft, 
-  MapPin, 
-  User, 
-  ImageIcon, 
-  Layers, 
-  Users, 
+import {
+  Loader2,
+  ArrowLeft,
+  MapPin,
+  User,
+  ImageIcon,
+  Layers,
+  Users,
   Tag as TagIcon,
   Globe,
   FileText,
@@ -33,6 +33,7 @@ import {
   CheckCircle,
   XCircle,
   Pencil,
+  UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -143,6 +144,12 @@ export default function EventDetailPage({
               )}
             </Button>
           )}
+          <Link href={`/dashboard/creator/events/${eventId}/attendance`}>
+            <Button variant="default">
+              <UserCheck className="h-4 w-4 mr-2" />
+              View Attendance
+            </Button>
+          </Link>
           <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
             <Button variant="default">
               <Ticket className="h-4 w-4 mr-2" />
