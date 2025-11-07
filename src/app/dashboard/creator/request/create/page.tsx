@@ -5,10 +5,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "sonner";
 import { useCreateEventRequest } from "@/hooks/events/useCreateEventRequest";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import { StepIndicator } from "./_components/StepIndicator";
 import { Step1BasicInfo } from "./_components/Step1BasicInfo";
 import { Step2TagsSelection } from "./_components/Step2TagsSelection";
@@ -153,6 +156,7 @@ export type CreateEventRequestForm = z.infer<typeof formSchema>;
 
 export default function CreateEventRequestPage() {
   const [currentStep, setCurrentStep] = useState(1);
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
   const createEvent = useCreateEventRequest();
 
   const form = useForm<CreateEventRequestForm>({
@@ -203,23 +207,70 @@ export default function CreateEventRequestPage() {
         break;
       case 4:
         // Validate entire form
-        return form.trigger();
+        const isValid = await form.trigger();
+        if (!isValid) {
+          const errors = form.formState.errors;
+          const errorMessages = Object.entries(errors)
+            .map(([field, error]) => `${field}: ${error.message}`)
+            .join(", ");
+          toast.error("Please fix all validation errors before submitting", {
+            description: errorMessages.substring(0, 150) + (errorMessages.length > 150 ? "..." : ""),
+          });
+        }
+        return isValid;
     }
 
     const result = await form.trigger(fieldsToValidate);
+    
+    // Show error toast with specific field errors
+    if (!result) {
+      const errors = form.formState.errors;
+      const errorFields = fieldsToValidate.filter(field => errors[field]);
+      
+      if (errorFields.length > 0) {
+        const errorMessages = errorFields
+          .map(field => {
+            const error = errors[field];
+            return error?.message || `${field} is invalid`;
+          })
+          .join(", ");
+        
+        toast.error(`Please fix the following errors to continue:`, {
+          description: errorMessages.substring(0, 150) + (errorMessages.length > 150 ? "..." : ""),
+        });
+
+        // Scroll to first error field
+        const firstErrorField = errorFields[0];
+        setTimeout(() => {
+          const element = document.querySelector(`[name="${firstErrorField}"]`);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 100);
+      }
+    }
+    
     return result;
   };
 
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
     if (isValid && currentStep < 4) {
+      setShowValidationErrors(false);
       setCurrentStep(currentStep + 1);
+      // Scroll to top of page when moving to next step
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (!isValid) {
+      setShowValidationErrors(true);
     }
   };
 
   const handlePrevious = () => {
     if (currentStep > 1) {
+      setShowValidationErrors(false);
       setCurrentStep(currentStep - 1);
+      // Scroll to top of page when moving to previous step
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -274,6 +325,45 @@ export default function CreateEventRequestPage() {
     }
   };
 
+  const getStepErrorFields = (step: number): string[] => {
+    const errors = form.formState.errors;
+    let fieldsToCheck: (keyof CreateEventRequestForm)[] = [];
+
+    switch (step) {
+      case 1:
+        fieldsToCheck = [
+          "eventName",
+          "eventDescription",
+          "expectedNumberOfParticipants",
+          "specialRequirements",
+          "eventValidationDocuments",
+        ];
+        break;
+      case 2:
+        fieldsToCheck = ["tagIds"];
+        break;
+      case 3:
+        fieldsToCheck = [
+          "venueType",
+          "locationId",
+          "customVenueDetails",
+          "dateRanges",
+          "publicVenueTermsAccepted",
+        ];
+        break;
+    }
+
+    return fieldsToCheck
+      .filter((field) => errors[field])
+      .map((field) => {
+        const fieldName = field
+          .replace(/([A-Z])/g, " $1")
+          .replace(/^./, (str) => str.toUpperCase())
+          .trim();
+        return fieldName;
+      });
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-8 px-4">
       <div>
@@ -284,6 +374,17 @@ export default function CreateEventRequestPage() {
       </div>
 
       <StepIndicator currentStep={currentStep} />
+
+      {showValidationErrors && currentStep !== 4 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Validation Error</AlertTitle>
+          <AlertDescription>
+            Please fix the following fields to continue:{" "}
+            <strong>{getStepErrorFields(currentStep).join(", ")}</strong>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Form {...form}>
         <Card>
