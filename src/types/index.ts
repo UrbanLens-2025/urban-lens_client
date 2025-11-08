@@ -265,7 +265,9 @@ export interface GetRequestsParams {
   limit?: number;
   search?: string;
   status?: LocationStatus;
-  sortBy?: string;
+  sortBy?: string | string[];
+  searchBy?: string[];
+  filterVisibleOnMap?: "true" | "false";
 }
 
 export interface ProcessRequestPayload {

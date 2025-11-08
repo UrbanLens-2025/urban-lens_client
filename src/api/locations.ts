@@ -22,6 +22,9 @@ export const getMyLocations = async ({
   page = 1,
   limit = 10,
   search,
+  searchBy,
+  sortBy,
+  filterVisibleOnMap,
 }: GetRequestsParams): Promise<PaginatedData<Location>> => {
   const params: any = {
     page,
@@ -30,7 +33,20 @@ export const getMyLocations = async ({
 
   if (search) {
     params.search = search;
-    params.searchBy = ["name"];
+  }
+
+  if (searchBy?.length) {
+    params.searchBy = searchBy;
+  } else if (search) {
+    params.searchBy = ["name", "addressLine"];
+  }
+
+  if (sortBy) {
+    params.sortBy = sortBy;
+  }
+
+  if (filterVisibleOnMap) {
+    params["filter.isVisibleOnMap"] = filterVisibleOnMap;
   }
 
   const response = await axiosInstance.get<
