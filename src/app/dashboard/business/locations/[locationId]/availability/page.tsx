@@ -436,6 +436,7 @@ export default function AvailabilityPage({
   };
 
   const hasSelection = selectedCells.size > 0;
+  const clearSelection = useCallback(() => setSelectedCells(new Set()), []);
 
   // Handle mouse up (end drag or resize) - show confirmation dialog after a short delay
   const handleMouseUp = useCallback(() => {
@@ -832,16 +833,16 @@ export default function AvailabilityPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => router.back()}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <span>Back to location</span>
-      </div>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => router.back()}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span>Back to location</span>
+        </div>
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -904,11 +905,21 @@ export default function AvailabilityPage({
                 Empty slot
               </div>
             </div>
-            {hasSelection && (
-              <Badge variant="secondary" className="bg-primary/10 text-primary">
-                {selectedCells.size} cell{selectedCells.size === 1 ? "" : "s"} selected
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {hasSelection && (
+                <Badge variant="secondary" className="bg-primary/10 text-primary">
+                  {selectedCells.size} cell{selectedCells.size === 1 ? "" : "s"} selected
+                </Badge>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearSelection}
+                disabled={!hasSelection}
+              >
+                Clear selection
+              </Button>
+            </div>
           </div>
 
           {/* Weekly Grid */}
