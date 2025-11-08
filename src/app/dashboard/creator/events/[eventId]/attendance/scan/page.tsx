@@ -661,7 +661,7 @@ export default function QRScanPage({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            For testing on localhost without a camera, you can manually enter the QR code data:
+            You can manually enter the QR code data:
           </p>
           <div className="space-y-3">
             <div>
