@@ -319,7 +319,7 @@ export default function MyLocationsPage() {
               <Table>
                 <TableHeader className="bg-muted/40">
                   <TableRow className="border-b border-border/60">
-                    <TableHead className="w-[360px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <TableHead className="w-[420px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Location
                     </TableHead>
                     <TableHead className="w-[280px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -344,13 +344,27 @@ export default function MyLocationsPage() {
                     >
                       <TableCell className="align-top">
                         <div className="flex items-start gap-3">
-                          <div className="flex-1 space-y-1">
+                          <div className="h-14 w-20 overflow-hidden rounded-lg border border-border/50 bg-muted">
+                            {location.imageUrl?.[0] ? (
+                              <img
+                                src={location.imageUrl[0]}
+                                alt={location.name}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
+                                No image
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-2">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-base font-semibold leading-tight">
                                 {location.name}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                               <span>
                                 Updated {new Date(location.updatedAt).toLocaleDateString()}
                               </span>
