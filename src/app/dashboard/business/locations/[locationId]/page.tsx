@@ -175,30 +175,6 @@ export default function LocationDetailsPage({
                 </span>
               </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              <Button
-                asChild
-                variant="secondary"
-                className="bg-white text-slate-900 hover:bg-slate-100 shadow-sm"
-              >
-                <Link href={`/dashboard/business/locations/${location.id}/edit`}>
-                  <FilePenLine className="mr-2 h-4 w-4" />
-                  Edit Location
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="secondary"
-                className="bg-white text-slate-900 hover:bg-slate-100 shadow-sm"
-              >
-                <Link
-                  href={`/dashboard/business/locations/${location.id}/booking-config`}
-                >
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  Booking Config
-                </Link>
-              </Button>
-            </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -240,6 +216,17 @@ export default function LocationDetailsPage({
               >
                 <DollarSign className="mr-2 h-4 w-4" />
                 Booking Config
+              </Button>
+            </Link>
+            <Link
+              href={`/dashboard/business/locations/${location.id}/edit`}
+            >
+              <Button
+                variant="secondary"
+                className="bg-white text-slate-900 hover:bg-slate-100 shadow-sm"
+              >
+                <FilePenLine className="mr-2 h-4 w-4" />
+                Edit Location
               </Button>
             </Link>
           </div>
