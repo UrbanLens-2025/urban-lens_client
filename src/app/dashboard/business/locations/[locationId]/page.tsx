@@ -20,6 +20,7 @@ import {
   Rocket,
   Ticket,
   DollarSign,
+  Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
@@ -27,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useMemo, useState } from "react";
 import { DisplayTags } from "@/components/shared/DisplayTags";
 import type React from "react";
 import { ImageViewer } from "@/components/shared/ImageViewer";
@@ -56,10 +57,12 @@ function InfoRow({
 }
 
 function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-US", {
+  return new Date(dateString).toLocaleString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
 
@@ -74,6 +77,16 @@ export default function LocationDetailsPage({
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState("");
   const [currentImageAlt, setCurrentImageAlt] = useState("");
+
+  const heroImage = useMemo(
+    () => location?.imageUrl?.[0] ?? "",
+    [location?.imageUrl]
+  );
+
+  const totalCheckIns = useMemo(() => {
+    const parsed = Number(location?.totalCheckIns ?? "0");
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }, [location?.totalCheckIns]);
 
   const handleImageClick = (src: string, alt: string) => {
     setCurrentImageSrc(src);
@@ -104,71 +117,209 @@ export default function LocationDetailsPage({
   return (
     <div className="space-y-8 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only">Back</span>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{location.name}</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {location.ownershipType === "OWNED_BY_BUSINESS"
-                ? "Business Owned"
-                : "User Owned"}
-            </p>
+      <div className="flex items-center gap-3">
+        <Button variant="outline" size="icon" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" />
+          <span className="sr-only">Back</span>
+        </Button>
+        <p className="text-sm text-muted-foreground">Back to locations</p>
+      </div>
+
+      <section className="relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white shadow-lg">
+        {heroImage && (
+          <div className="absolute inset-0">
+            <img
+              src={heroImage}
+              alt={location.name}
+              className="h-full w-full object-cover opacity-70"
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/60 to-black/20" />
+          </div>
+        )}
+
+        <div className="relative flex flex-col gap-8 p-6 sm:p-8 lg:p-10">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-4 max-w-3xl">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge variant="secondary" className="bg-white/35 backdrop-blur">
+                  {location.isVisibleOnMap ? (
+                    <span className="flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      Visible on map
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <EyeOff className="h-4 w-4" />
+                      Hidden from map
+                    </span>
+                  )}
+                </Badge>
+                <Badge variant="secondary" className="bg-white/35 backdrop-blur">
+                  Created {formatDate(location.createdAt)}
+                </Badge>
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+                  {location.name}
+                </h1>
+                <p className="mt-3 max-w-xl text-base text-white/80 sm:text-lg">
+                  {location.description || "No description provided for this location."}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-sm text-white/80">
+                <MapPin className="h-4 w-4" />
+                <span>{location.addressLine}</span>
+                <span>•</span>
+                <span>
+                  {location.addressLevel2}, {location.addressLevel1}
+                </span>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <Button
+                asChild
+                variant="secondary"
+                className="bg-white text-slate-900 hover:bg-slate-100 shadow-sm"
+              >
+                <Link href={`/dashboard/business/locations/${location.id}/edit`}>
+                  <FilePenLine className="mr-2 h-4 w-4" />
+                  Edit Location
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="secondary"
+                className="bg-white text-slate-900 hover:bg-slate-100 shadow-sm"
+              >
+                <Link
+                  href={`/dashboard/business/locations/${location.id}/booking-config`}
+                >
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  Booking Config
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Link href={`/dashboard/business/locations/${location.id}/vouchers`}>
+              <Button
+                variant="secondary"
+                className="bg-white text-slate-900 hover:bg-slate-100 shadow-sm"
+              >
+                <Ticket className="mr-2 h-4 w-4" />
+                Manage Vouchers
+              </Button>
+            </Link>
+            <Link href={`/dashboard/business/locations/${location.id}/missions`}>
+              <Button
+                variant="secondary"
+                className="bg-white text-slate-900 hover:bg-slate-100 shadow-sm"
+              >
+                <Rocket className="mr-2 h-4 w-4" />
+                Manage Missions
+              </Button>
+            </Link>
+            <Link
+              href={`/dashboard/business/locations/${location.id}/availability`}
+            >
+              <Button
+                variant="secondary"
+                className="bg-white text-slate-900 hover:bg-slate-100 shadow-sm"
+              >
+                <CalendarDays className="mr-2 h-4 w-4" />
+                Manage Availability
+              </Button>
+            </Link>
+            <Link
+              href={`/dashboard/business/locations/${location.id}/booking-config`}
+            >
+              <Button
+                variant="secondary"
+                className="bg-white text-slate-900 hover:bg-slate-100 shadow-sm"
+              >
+                <DollarSign className="mr-2 h-4 w-4" />
+                Booking Config
+              </Button>
+            </Link>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Link href={`/dashboard/business/locations/${location.id}/vouchers`}>
-            <Button variant="outline">
-              <Ticket className="mr-2 h-4 w-4" />
-              Manage Vouchers
-            </Button>
-          </Link>
-          <Link href={`/dashboard/business/locations/${location.id}/missions`}>
-            <Button variant="outline">
-              <Rocket className="mr-2 h-4 w-4" />
-              Manage Missions
-            </Button>
-          </Link>
-          <Link
-            href={`/dashboard/business/locations/${location.id}/availability`}
-          >
-            <Button variant="outline">
-              <CalendarDays className="mr-2 h-4 w-4" />
-              Manage Availability
-            </Button>
-          </Link>
-          <Link
-            href={`/dashboard/business/locations/${location.id}/booking-config`}
-          >
-            <Button variant="outline">
-              <DollarSign className="mr-2 h-4 w-4" />
-              Booking Config
-            </Button>
-          </Link>
-          <Link href={`/dashboard/business/locations/${location.id}/edit`}>
-            <Button>
-              <FilePenLine className="mr-2 h-4 w-4" />
-              Edit Location
-            </Button>
-          </Link>
-        </div>
+      </section>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total check-ins
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-3">
+            <Users className="h-5 w-5 text-primary" />
+            <p className="text-2xl font-semibold">{totalCheckIns.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Visibility status
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-3">
+            {location.isVisibleOnMap ? (
+              <>
+                <Eye className="h-5 w-5 text-emerald-500" />
+                <p className="text-lg font-semibold text-emerald-600">
+                  Visible on map
+                </p>
+              </>
+            ) : (
+              <>
+                <EyeOff className="h-5 w-5 text-muted-foreground" />
+                <p className="text-lg font-semibold text-muted-foreground">
+                  Hidden from map
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Service radius
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-3">
+            <MapPin className="h-5 w-5 text-primary" />
+            <p className="text-lg font-semibold">{location.radiusMeters} m</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Last updated
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-3">
+            <Calendar className="h-5 w-5 text-primary" />
+            <p className="text-lg font-semibold">
+              {formatDate(location.updatedAt)}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* LEFT COLUMN: DETAILS */}
         <div className="space-y-6">
           {/* Basic Information */}
-          <Card>
+          <Card className="border-border/60 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Layers className="h-5 w-5" />
                 Basic Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <InfoRow
                 label="Description"
                 value={location.description || "No description"}
@@ -202,7 +353,7 @@ export default function LocationDetailsPage({
 
           {/* Tags */}
           {location.tags && location.tags.length > 0 && (
-            <Card>
+            <Card className="border-border/60 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Tag className="h-5 w-5" />
@@ -210,14 +361,14 @@ export default function LocationDetailsPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <DisplayTags tags={location.tags} maxCount={10} />
+                <DisplayTags tags={location.tags} maxCount={12} />
               </CardContent>
             </Card>
           )}
 
           {/* Business Information */}
           {location.business && (
-            <Card>
+            <Card className="border-border/60 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building className="h-5 w-5" />
@@ -336,7 +487,7 @@ export default function LocationDetailsPage({
         {/* RIGHT COLUMN: ADDRESS, MAP, AND STATS */}
         <div className="space-y-6">
           {/* Address Information */}
-          <Card>
+          <Card className="border-border/60 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
@@ -363,40 +514,8 @@ export default function LocationDetailsPage({
           </Card>
 
           {/* Quick Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Layers className="h-5 w-5" />
-                Quick Stats
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Check-ins</span>
-                <span className="font-semibold">
-                  {location.totalCheckIns || "0"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">
-                  Service Radius
-                </span>
-                <span className="font-semibold">{location.radiusMeters}m</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Ownership</span>
-                <Badge variant="outline" className="text-xs">
-                  {location.ownershipType === "OWNED_BY_BUSINESS"
-                    ? "Business"
-                    : "User"}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Location Images */}
           {location.imageUrl && location.imageUrl.length > 0 && (
-            <Card>
+            <Card className="border-border/60 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ImageIcon className="h-5 w-5" />
@@ -404,7 +523,7 @@ export default function LocationDetailsPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                   {location.imageUrl.map((url, index) => (
                     <div key={index} className="flex flex-col gap-2">
                       <img
@@ -426,7 +545,7 @@ export default function LocationDetailsPage({
           )}
 
           {/* Map */}
-          <Card className="sticky top-6">
+          <Card className="border-border/60 shadow-sm sticky top-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
