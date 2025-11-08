@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useMemo, useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,8 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { Loader2, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Layers } from "lucide-react";
 import { useWeeklyAvailabilities } from "@/hooks/availability/useWeeklyAvailabilities";
 import { useCreateWeeklyAvailability } from "@/hooks/availability/useCreateWeeklyAvailability";
 import { useDeleteAvailability } from "@/hooks/availability/useDeleteAvailability";
@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { WeeklyAvailabilityResponse } from "@/api/availability";
+import { Badge } from "@/components/ui/badge";
 
 // Internal data structure for weekly availability slots
 interface WeeklyAvailabilitySlot {
@@ -64,7 +65,7 @@ const transformApiResponse = (apiData: WeeklyAvailabilityResponse[]): WeeklyAvai
     // Parse time strings like "11:00" to hour numbers
     const startHour = parseInt(item.startTime.split(":")[0], 10);
     const endHour = parseInt(item.endTime.split(":")[0], 10);
-    
+
     return {
       id: item.id,
       dayOfWeek: DAY_OF_WEEK_MAP[item.dayOfWeek],
@@ -94,6 +95,7 @@ export default function AvailabilityPage({
   params: Promise<{ locationId: string }>;
 }) {
   const { locationId } = use(params);
+  const router = useRouter();
 
   // Fetch weekly availability from API
   const { data: apiAvailability, isLoading } = useWeeklyAvailabilities(locationId);
@@ -113,18 +115,18 @@ export default function AvailabilityPage({
   // Dialog state
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [slotsToConfirm, setSlotsToConfirm] = useState<WeeklyAvailabilitySlot[]>([]);
-  
+
   // Edit/Delete dialog state
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [slotToEdit, setSlotToEdit] = useState<WeeklyAvailabilitySlot | null>(null);
   const [editedStartHour, setEditedStartHour] = useState<number>(0);
   const [editedEndHour, setEditedEndHour] = useState<number>(0);
   const [editErrors, setEditErrors] = useState<{ start?: string; end?: string; overlap?: string }>({});
-  
+
   // Track hovered block for highlighting
   const [hoveredBlock, setHoveredBlock] = useState<WeeklyAvailabilitySlot | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Track if we should show dialog after selection
   const selectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -142,19 +144,50 @@ export default function AvailabilityPage({
   const isResizingRef = useRef(false);
   const resizeSlotRef = useRef<WeeklyAvailabilitySlot | null>(null);
   const resizeEdgeRef = useRef<"start" | "end" | null>(null);
-  
+
   // Local state for availability (for mock updates during resize)
   const [localAvailability, setLocalAvailability] = useState<WeeklyAvailabilitySlot[]>([]);
-  
+
   // Sync local availability with API data
   useEffect(() => {
     if (apiAvailability) {
       setLocalAvailability(transformApiResponse(apiAvailability));
     }
   }, [apiAvailability]);
-  
+
   // Use local availability for rendering
   const displayAvailability = localAvailability.length > 0 ? localAvailability : availability;
+
+  const weeklyStats = useMemo(() => {
+    if (displayAvailability.length === 0) {
+      return {
+        totalHours: 0,
+        activeDays: 0,
+        slotCount: 0,
+        longestBlock: 0,
+      };
+    }
+
+    const activeDaysSet = new Set<number>();
+    let totalHours = 0;
+    let longestBlock = 0;
+
+    displayAvailability.forEach((slot) => {
+      activeDaysSet.add(slot.dayOfWeek);
+      const duration = slot.endHour - slot.startHour;
+      totalHours += duration;
+      if (duration > longestBlock) {
+        longestBlock = duration;
+      }
+    });
+
+    return {
+      totalHours,
+      activeDays: activeDaysSet.size,
+      slotCount: displayAvailability.length,
+      longestBlock,
+    };
+  }, [displayAvailability]);
 
   // Convert availability slots to a set of cell keys for quick lookup
   const availabilityCellsSet = useMemo(() => {
@@ -166,19 +199,19 @@ export default function AvailabilityPage({
     });
     return set;
   }, [displayAvailability]);
-  
+
   // Get the slot that contains a specific cell
   const getSlotAtCell = (day: number, hour: number): WeeklyAvailabilitySlot | null => {
     return displayAvailability.find(
       (slot) => slot.dayOfWeek === day && hour >= slot.startHour && hour < slot.endHour
     ) || null;
   };
-  
+
   // Check if a cell is on the left edge (startHour) or right edge (endHour) of a slot
   const getEdgeAtCell = (day: number, hour: number): "start" | "end" | null => {
     const slot = getSlotAtCell(day, hour);
     if (!slot) return null;
-    
+
     if (hour === slot.startHour) return "start";
     if (hour === slot.endHour - 1) return "end";
     return null;
@@ -187,7 +220,7 @@ export default function AvailabilityPage({
   // Get cell status
   const getCellStatus = (day: number, hour: number): CellStatus => {
     const key = `${day}_${hour}`;
-    
+
     if (availabilityCellsSet.has(key)) return "saved";
     return "available";
   };
@@ -202,10 +235,10 @@ export default function AvailabilityPage({
   const handleMouseDown = (day: number, hour: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const roundedHour = roundHour(hour);
     const key = `${day}_${roundedHour}`;
-    
+
     // Check if we're on an edge of an existing slot (resize mode)
     const edge = getEdgeAtCell(day, roundedHour);
     if (edge) {
@@ -221,12 +254,12 @@ export default function AvailabilityPage({
         return;
       }
     }
-    
+
     // Don't allow dragging from already saved cells (unless we're resizing)
     if (availabilityCellsSet.has(key)) {
       return;
     }
-    
+
     const dragStartValue = { day, hour: roundedHour };
     setIsDragging(true);
     setDragStart(dragStartValue);
@@ -242,20 +275,20 @@ export default function AvailabilityPage({
     if (isResizingRef.current && resizeSlotRef.current && resizeEdgeRef.current) {
       hasMovedRef.current = true;
       const roundedHour = roundHour(hour);
-      
+
       // Only allow resizing within the same day
       if (resizeSlotRef.current.dayOfWeek !== day) {
         return;
       }
-      
+
       // Get the current slot from local state (it may have been updated)
       const currentSlot = localAvailability.find((s) => s.id === resizeSlotRef.current?.id);
       if (!currentSlot) return;
-      
+
       // Update the slot based on which edge is being dragged
       let newStartHour = currentSlot.startHour;
       let newEndHour = currentSlot.endHour;
-      
+
       if (resizeEdgeRef.current === "start") {
         // Resizing the start edge
         newStartHour = Math.min(roundedHour, currentSlot.endHour - 1);
@@ -271,11 +304,11 @@ export default function AvailabilityPage({
           newEndHour = currentSlot.startHour + 1;
         }
       }
-      
+
       // Check for overlaps with other slots (excluding the current slot being resized)
       const otherSlots = displayAvailability.filter((s) => s.id !== currentSlot.id);
       let hasOverlap = false;
-      
+
       for (let h = newStartHour; h < newEndHour; h++) {
         const key = `${day}_${h}`;
         // Check if this hour is in any other slot
@@ -287,7 +320,7 @@ export default function AvailabilityPage({
         }
         if (hasOverlap) break;
       }
-      
+
       // If no overlap, update the slot
       if (!hasOverlap) {
         setLocalAvailability((prev) =>
@@ -298,10 +331,10 @@ export default function AvailabilityPage({
           )
         );
       }
-      
+
       return;
     }
-    
+
     // Check if we're dragging using refs for immediate access
     if (!isDraggingRef.current || !dragStartRef.current) return;
 
@@ -368,7 +401,7 @@ export default function AvailabilityPage({
     const newSlots: WeeklyAvailabilitySlot[] = [];
     slotsByDay.forEach((hours, day) => {
       if (hours.length === 0) return;
-      
+
       hours.sort((a, b) => a - b);
 
       let startHour = hours[0];
@@ -402,6 +435,8 @@ export default function AvailabilityPage({
     processSelectedCellsWithSet(selectedCells);
   };
 
+  const hasSelection = selectedCells.size > 0;
+
   // Handle mouse up (end drag or resize) - show confirmation dialog after a short delay
   const handleMouseUp = useCallback(() => {
     // Handle resize end
@@ -409,7 +444,7 @@ export default function AvailabilityPage({
       const finalSlot = localAvailability.find((s) => s.id === resizeSlotRef.current?.id);
       // Use 'availability' (original API data) instead of 'displayAvailability' which may have been updated
       const originalSlot = availability.find((s) => s.id === resizeSlotRef.current?.id);
-      
+
       if (finalSlot && originalSlot) {
         // Always open edit dialog after resize (even if no change, user can see and adjust)
         // Set slotToEdit to the ORIGINAL slot (for ID and comparison), but edited values to the resized ones
@@ -419,7 +454,7 @@ export default function AvailabilityPage({
         setEditErrors({});
         setShowEditDialog(true);
       }
-      
+
       // Reset resize state
       setIsResizing(false);
       isResizingRef.current = false;
@@ -428,11 +463,11 @@ export default function AvailabilityPage({
       hasMovedRef.current = false;
       return;
     }
-    
+
     const wasDragging = isDraggingRef.current;
     const hadMoved = hasMovedRef.current;
     const currentSelectedCells = new Set(selectedCells); // Capture current state
-    
+
     setIsDragging(false);
     setDragStart(null);
     isDraggingRef.current = false;
@@ -446,7 +481,7 @@ export default function AvailabilityPage({
       if (selectionTimeoutRef.current) {
         clearTimeout(selectionTimeoutRef.current);
       }
-      
+
       // Show dialog after a short delay to allow for smooth interaction
       selectionTimeoutRef.current = setTimeout(() => {
         processSelectedCellsWithSet(currentSelectedCells);
@@ -539,7 +574,7 @@ export default function AvailabilityPage({
           });
         });
       }
-      
+
       // Reset state after all creations
       setSelectedCells(new Set());
       setShowConfirmDialog(false);
@@ -692,7 +727,7 @@ export default function AvailabilityPage({
     }
 
     const key = `${day}_${hour}`;
-    
+
     // Only show hover effect for saved cells
     if (availabilityCellsSet.has(key)) {
       const block = findSavedBlockInDay(day, hour);
@@ -710,7 +745,7 @@ export default function AvailabilityPage({
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
-    
+
     // Small delay to allow mouse to move to adjacent cells in the same block
     hoverTimeoutRef.current = setTimeout(() => {
       setHoveredBlock(null);
@@ -730,7 +765,7 @@ export default function AvailabilityPage({
     const isHovered = isCellInHoveredBlock(day, hour);
     const edge = getEdgeAtCell(day, hour);
     const isEdgeOfHovered = isEdgeOfHoveredBlock(day, hour);
-    
+
     return cn(
       "w-full h-full rounded border transition-all flex items-center justify-center text-[8px] font-medium relative",
       {
@@ -748,7 +783,7 @@ export default function AvailabilityPage({
     const formatSingleHour = (h: number): string => {
       return `${String(h).padStart(2, '0')}:00`;
     };
-    
+
     const nextHour = (hour + 1) % 24;
     return `${formatSingleHour(hour)} - ${formatSingleHour(nextHour)}`;
   };
@@ -797,54 +832,105 @@ export default function AvailabilityPage({
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => router.back()}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <span>Back to location</span>
+      </div>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex-1">
               <CardTitle>Manage Weekly Availability</CardTitle>
               <CardDescription>
-                Set your recurring weekly availability. Click or drag to select time slots. A confirmation dialog will appear to add the selected time ranges.
+                Click or drag to select hours for each day. Confirm changes before they go live.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Legend */}
-          <div className="flex items-center justify-center gap-6 text-xs pb-2 border-b">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-green-500 border border-green-600"></div>
-              <span>Available</span>
+        <CardContent className="space-y-6">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+              <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
+                <span>Total weekly hours</span>
+                <Clock className="h-4 w-4 text-primary" />
+              </div>
+              <p className="mt-2 text-2xl font-semibold">
+                {weeklyStats.totalHours}
+                <span className="ml-1 text-sm font-normal text-muted-foreground">hrs</span>
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-blue-400 border border-blue-500"></div>
-              <span>Selected</span>
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+              <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
+                <span>Active days</span>
+                <CalendarDays className="h-4 w-4 text-primary" />
+              </div>
+              <p className="mt-2 text-2xl font-semibold">
+                {weeklyStats.activeDays}
+                <span className="ml-1 text-sm font-normal text-muted-foreground">days</span>
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-white border border-gray-200"></div>
-              <span>Empty</span>
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+              <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
+                <span>Availability blocks</span>
+                <Layers className="h-4 w-4 text-primary" />
+              </div>
+              <div className="mt-2 flex items-baseline gap-3">
+                <p className="text-2xl font-semibold">{weeklyStats.slotCount}</p>
+                <span className="text-xs text-muted-foreground">
+                  longest block {weeklyStats.longestBlock || 0} hr{weeklyStats.longestBlock === 1 ? "" : "s"}
+                </span>
+              </div>
             </div>
           </div>
 
-              {/* Weekly Grid */}
-              <div className="overflow-x-auto">
-                <div className="inline-block min-w-full">
-                  <div 
-                    className={cn(
-                      "border-2 border-gray-300 rounded-lg bg-gray-50 p-2",
-                      isDragging && "cursor-grabbing select-none",
-                      isResizing && "cursor-col-resize select-none"
-                    )}
-                    style={{
-                      userSelect: (isDragging || isResizing) ? 'none' : 'auto',
-                    }}
-                  >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-4 rounded-lg border border-dashed border-border/60 bg-muted/20 px-4 py-3 text-xs font-medium text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded bg-green-500 ring-1 ring-green-600" />
+                Saved availability
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded bg-blue-400 ring-1 ring-blue-500" />
+                Currently selected
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded bg-background ring-1 ring-border" />
+                Empty slot
+              </div>
+            </div>
+            {hasSelection && (
+              <Badge variant="secondary" className="bg-primary/10 text-primary">
+                {selectedCells.size} cell{selectedCells.size === 1 ? "" : "s"} selected
+              </Badge>
+            )}
+          </div>
+
+          {/* Weekly Grid */}
+          <div className="overflow-x-auto">
+            <div className="inline-block min-w-full">
+              <div
+                className={cn(
+                  "rounded-xl border border-border/60 bg-muted/10 p-3 shadow-sm",
+                  isDragging && "cursor-grabbing select-none",
+                  isResizing && "cursor-col-resize select-none"
+                )}
+                style={{
+                  userSelect: (isDragging || isResizing) ? 'none' : 'auto',
+                }}
+              >
                 {/* Header Row - Days of Week */}
-                <div className="grid grid-cols-[95px_repeat(7,1fr)] gap-1 mb-2 border-b-2 border-gray-300 pb-2">
-                  <div className="border-r-2 border-gray-300"></div>
+                <div className="mb-2 grid grid-cols-[95px_repeat(7,1fr)] gap-1 border-b border-border/60 pb-2">
+                  <div className="border-r border-border/60" />
                   {DAYS_OF_WEEK.map((day, index) => (
                     <div
                       key={index}
-                      className="text-center font-semibold text-sm py-2 border-r border-gray-200 last:border-r-0"
+                      className="py-2 text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground"
                     >
                       {day.slice(0, 3)}
                     </div>
@@ -859,8 +945,8 @@ export default function AvailabilityPage({
                       <div
                         key={hour}
                         className={cn(
-                          "grid grid-cols-[95px_repeat(7,1fr)] gap-1",
-                          isNightTime && "bg-gray-100/50"
+                          "grid grid-cols-[95px_repeat(7,1fr)] gap-1 rounded-md px-0.5 py-0.5",
+                          isNightTime && "bg-muted/40"
                         )}
                         onMouseUp={(e) => {
                           e.stopPropagation();
@@ -868,7 +954,7 @@ export default function AvailabilityPage({
                         }}
                       >
                         {/* Time Label */}
-                        <div className="flex items-center justify-center pr-2 text-xs font-medium text-gray-600 border-r-2 border-gray-300">
+                        <div className="flex items-center justify-center pr-2 text-xs font-medium text-muted-foreground">
                           {formatHourRange(hour)}
                         </div>
 
@@ -891,7 +977,7 @@ export default function AvailabilityPage({
                             <div
                               key={`${dayIndex}_${hour}`}
                               className={cn(
-                                "h-[20px] select-none border-r border-gray-200 last:border-r-0",
+                                "h-[20px] select-none",
                                 !isResizeEdge && !isDragging && !isResizing && !availabilityCellsSet.has(key) && "cursor-grab",
                                 isDragging && "cursor-grabbing",
                                 isResizing && "cursor-col-resize"
@@ -979,7 +1065,7 @@ export default function AvailabilityPage({
               Update the time range or delete this availability slot.
             </DialogDescription>
           </DialogHeader>
-          
+
           {slotToEdit && (
             <div className="space-y-6 py-4">
               {/* Section 1: Day Display */}
