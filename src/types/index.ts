@@ -488,6 +488,51 @@ export interface UpdateLocationVoucherPayload {
   endDate: string;
 }
 
+export type AnnouncementStatus = "DRAFT" | "SCHEDULED" | "PUBLISHED" | "ARCHIVED";
+
+export interface Announcement {
+  id: string;
+  locationId: string;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  imageUrl?: string | null;
+  isHidden: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: User | null;
+  audience?: string[] | null;
+  location?: Location | null;
+}
+
+export interface GetAnnouncementsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+  locationId?: string;
+}
+
+export interface CreateAnnouncementPayload {
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  imageUrl?: string | null;
+  isHidden: boolean;
+  locationId: string;
+}
+
+export interface UpdateAnnouncementPayload {
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  imageUrl?: string | null;
+  isHidden: boolean;
+}
+
 export interface EventRequest {
   id: string;
   createdAt: string;
