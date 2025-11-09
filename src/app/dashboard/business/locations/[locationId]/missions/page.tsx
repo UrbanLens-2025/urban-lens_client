@@ -1,10 +1,11 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocationMissions } from "@/hooks/missions/useLocationMissions";
 import { LocationMission, SortState } from "@/types";
+import { format } from "date-fns";
 
 import {
   Card,
@@ -32,6 +33,10 @@ import {
   ArrowUp,
   ArrowDown,
   Eye,
+  Target,
+  Trophy,
+  CalendarDays,
+  Sparkles,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -124,14 +129,81 @@ export default function ManageMissionsPage({
   const missions = response?.data || [];
   const meta = response?.meta;
 
-  const getStatus = (startDate: string, endDate: string) => {
+  const getStatusBadge = (startDate: string, endDate: string) => {
     const now = new Date();
-    if (new Date(startDate) > now)
-      return <Badge variant="outline">Scheduled</Badge>;
-    if (new Date(endDate) < now)
-      return <Badge variant="secondary">Completed</Badge>;
-    return <Badge className="bg-green-600">Active</Badge>;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (start > now) {
+      return (
+        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+          Scheduled
+        </Badge>
+      );
+    }
+
+    if (end < now) {
+      return (
+        <Badge variant="secondary" className="bg-muted text-muted-foreground">
+          Completed
+        </Badge>
+      );
+    }
+
+    return <Badge className="bg-emerald-500/90 text-white">Active</Badge>;
   };
+
+  const formatDateRange = (startDate: string, endDate: string) => {
+    try {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      return `${format(start, "MMM d, yyyy")} → ${format(end, "MMM d, yyyy")}`;
+    } catch {
+      return `${startDate} → ${endDate}`;
+    }
+  };
+
+  const missionMetricLabel = (metric: string | null | undefined) => {
+    if (!metric) return "Metric";
+    return metric
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
+  const missionStats = useMemo(() => {
+    if (!missions.length) {
+      return {
+        total: 0,
+        active: 0,
+        scheduled: 0,
+        completed: 0,
+        totalReward: 0,
+      };
+    }
+
+    const now = new Date();
+    let active = 0;
+    let scheduled = 0;
+    let completed = 0;
+    const totalReward = missions.reduce((sum, mission) => sum + (mission.reward ?? 0), 0);
+
+    missions.forEach((mission) => {
+      const start = new Date(mission.startDate);
+      const end = new Date(mission.endDate);
+      if (start > now) scheduled += 1;
+      else if (end < now) completed += 1;
+      else active += 1;
+    });
+
+    return {
+      total: meta?.totalItems ?? missions.length,
+      active,
+      scheduled,
+      completed,
+      totalReward,
+    };
+  }, [missions, meta]);
 
   const handleSort = (columnName: string) => {
     setSort((currentSort) => ({
@@ -165,37 +237,98 @@ export default function ManageMissionsPage({
   return (
     <div className="space-y-8">
       {/* --- Header --- */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <Button variant="outline" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only">Back</span>
           </Button>
-          <h1 className="text-3xl font-bold">Manage Missions</h1>
+          <span>Back to location</span>
         </div>
-        <Link
-          href={`/dashboard/business/locations/${locationId}/missions/create`}
-        >
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" /> Create New Mission
+        <div className="flex flex-1 items-start justify-between gap-4 md:items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Manage Missions</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Create challenges and track engagement for this location.
+            </p>
+          </div>
+          <Button asChild>
+            <Link href={`/dashboard/business/locations/${locationId}/missions/create`}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create mission
+            </Link>
           </Button>
-        </Link>
+        </div>
       </div>
 
-      {/* --- Bảng Danh sách --- */}
-      <Card>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardDescription>Total missions</CardDescription>
+            <CardTitle className="flex items-center justify-between text-2xl font-semibold">
+              {missionStats.total.toLocaleString()}
+              <Sparkles className="h-4 w-4 text-primary" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs text-muted-foreground">
+            Across all time
+          </CardContent>
+        </Card>
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardDescription>Active missions</CardDescription>
+            <CardTitle className="flex items-center justify-between text-2xl font-semibold">
+              {missionStats.active.toLocaleString()}
+              <Target className="h-4 w-4 text-emerald-500" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs text-muted-foreground">
+            Currently visible to creators
+          </CardContent>
+        </Card>
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardDescription>Scheduled / Completed</CardDescription>
+            <CardTitle className="text-2xl font-semibold">
+              {missionStats.scheduled}/{missionStats.completed}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs text-muted-foreground">
+            Upcoming and past performance
+          </CardContent>
+        </Card>
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardDescription>Total rewards</CardDescription>
+            <CardTitle className="flex items-center justify-between text-2xl font-semibold">
+              {missionStats.totalReward.toLocaleString()} pts
+              <Trophy className="h-4 w-4 text-amber-500" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs text-muted-foreground">
+            Sum of all mission rewards
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* --- Missions Table --- */}
+      <Card className="border-border/60 shadow-sm">
         <CardHeader>
-          <CardTitle>All Missions ({meta?.totalItems || 0})</CardTitle>
-          <CardDescription>
-            Create and manage challenges for this location. Showing page{" "}
-            {meta?.currentPage} of {meta?.totalPages}.
-          </CardDescription>
-          <div className="pt-4">
-            <Input
-              placeholder="Search missions by title..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle className="text-xl font-semibold">
+                Missions ({meta?.totalItems || 0})
+              </CardTitle>
+              <CardDescription>
+                Showing page {meta?.currentPage} of {meta?.totalPages}.
+              </CardDescription>
+            </div>
+            <div className="w-full md:w-72">
+              <Input
+                placeholder="Search missions by title..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -208,67 +341,83 @@ export default function ManageMissionsPage({
               Failed to load missions.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => handleSort("title")}>
-                      Title <SortIcon column="title" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>Metric</TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort("target")}
-                    >
-                      Target <SortIcon column="target" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort("reward")}
-                    >
-                      Reward <SortIcon column="reward" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {missions.length > 0 ? (
-                  missions.map((mission) => (
-                    <TableRow key={mission.id}>
-                      <TableCell className="font-medium">
-                        {mission.title}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {mission.metric}
-                      </TableCell>
-                      <TableCell>{mission.target}</TableCell>
-                      <TableCell>{mission.reward} pts</TableCell>
-                      <TableCell>
-                        {getStatus(mission.startDate, mission.endDate)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <MissionActions 
-                          mission={mission} 
-                          onDeleteClick={() => setMissionToDelete(mission)}
-                        />
+            <div className="overflow-hidden rounded-lg border border-border/60">
+              <Table>
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead className="min-w-[220px]">
+                      <Button variant="ghost" className="px-0" onClick={() => handleSort("title")}>
+                        Title <SortIcon column="title" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead>
+                      <Button variant="ghost" className="px-0" onClick={() => handleSort("target")}>
+                        Target <SortIcon column="target" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" className="px-0" onClick={() => handleSort("reward")}>
+                        Reward <SortIcon column="reward" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {missions.length > 0 ? (
+                    missions.map((mission) => (
+                      <TableRow key={mission.id} className="hover:bg-muted/20">
+                        <TableCell className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">{mission.title}</span>
+                            <Badge variant="outline" className="text-[10px]">
+                              {mission.metric}
+                            </Badge>
+                          </div>
+                          {mission.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">
+                              {mission.description}
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground space-y-1">
+                          <div>{missionMetricLabel(mission.metric)}</div>
+                          <div>{formatDateRange(mission.startDate, mission.endDate)}</div>
+                        </TableCell>
+                        <TableCell className="font-medium">{mission.target}</TableCell>
+                        <TableCell className="font-medium">{mission.reward} pts</TableCell>
+                        <TableCell>{getStatusBadge(mission.startDate, mission.endDate)}</TableCell>
+                        <TableCell className="text-right">
+                          <MissionActions
+                            mission={mission}
+                            onDeleteClick={() => setMissionToDelete(mission)}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-32">
+                        <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+                          <div className="text-base font-semibold">No missions yet</div>
+                          <p className="text-sm text-muted-foreground max-w-sm">
+                            Launch a mission to engage creators with challenges and rewards for this location.
+                          </p>
+                          <Button asChild size="sm">
+                            <Link href={`/dashboard/business/locations/${locationId}/missions/create`}>
+                              <PlusCircle className="mr-2 h-4 w-4" />
+                              Create your first mission
+                            </Link>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      No missions found for this location.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
