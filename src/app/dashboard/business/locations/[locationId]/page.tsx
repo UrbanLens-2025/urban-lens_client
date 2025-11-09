@@ -21,6 +21,7 @@ import {
   Ticket,
   DollarSign,
   Users,
+  Megaphone,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
@@ -216,6 +217,17 @@ export default function LocationDetailsPage({
               >
                 <DollarSign className="mr-2 h-4 w-4" />
                 Booking Config
+              </Button>
+            </Link>
+            <Link
+              href={`/dashboard/business/locations/${location.id}/announcements`}
+            >
+              <Button
+                variant="secondary"
+                className="bg-white text-slate-900 hover:bg-slate-100 shadow-sm"
+              >
+                <Megaphone className="mr-2 h-4 w-4" />
+                Manage Announcements
               </Button>
             </Link>
             <Link

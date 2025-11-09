@@ -6,6 +6,10 @@ import type {
   GetAnnouncementsParams,
   PaginatedData,
   UpdateAnnouncementPayload,
+  CreatorAnnouncement,
+  CreateCreatorAnnouncementPayload,
+  GetCreatorAnnouncementsParams,
+  UpdateCreatorAnnouncementPayload,
 } from "@/types";
 
 export const getAnnouncements = async (
@@ -64,4 +68,64 @@ export const updateAnnouncement = async (
 
 export const deleteAnnouncement = async (announcementId: string): Promise<void> => {
   await axiosInstance.delete<ApiResponse<void>>(`/v1/owner/announcements/${announcementId}`);
+};
+
+export const getCreatorAnnouncements = async (
+  params: GetCreatorAnnouncementsParams
+): Promise<PaginatedData<CreatorAnnouncement>> => {
+  const queryParams: Record<string, unknown> = {
+    page: params.page ?? 1,
+    limit: params.limit ?? 10,
+    sortBy: params.sortBy ?? "startDate:DESC",
+    eventId: params.eventId,
+  };
+
+  if (params.search) {
+    queryParams.search = params.search;
+    queryParams.searchBy = ["title", "description"];
+  }
+
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<CreatorAnnouncement>>>(
+    "/v1/creator/announcements",
+    { params: queryParams }
+  );
+
+  return data.data;
+};
+
+export const getCreatorAnnouncementById = async (
+  announcementId: string
+): Promise<CreatorAnnouncement> => {
+  const { data } = await axiosInstance.get<ApiResponse<CreatorAnnouncement>>(
+    `/v1/creator/announcements/${announcementId}`
+  );
+
+  return data.data;
+};
+
+export const createCreatorAnnouncement = async (
+  payload: CreateCreatorAnnouncementPayload
+): Promise<CreatorAnnouncement> => {
+  const { data } = await axiosInstance.post<ApiResponse<CreatorAnnouncement>>(
+    "/v1/creator/announcements",
+    payload
+  );
+
+  return data.data;
+};
+
+export const updateCreatorAnnouncement = async (
+  announcementId: string,
+  payload: UpdateCreatorAnnouncementPayload
+): Promise<CreatorAnnouncement> => {
+  const { data } = await axiosInstance.put<ApiResponse<CreatorAnnouncement>>(
+    `/v1/creator/announcements/${announcementId}`,
+    payload
+  );
+
+  return data.data;
+};
+
+export const deleteCreatorAnnouncement = async (announcementId: string): Promise<void> => {
+  await axiosInstance.delete<ApiResponse<void>>(`/v1/creator/announcements/${announcementId}`);
 };

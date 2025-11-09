@@ -1018,3 +1018,43 @@ export interface ConfirmAttendancePayload {
   eventAttendanceId: string;
   checkingInAccountId: string;
 }
+
+export interface CreatorAnnouncement {
+  id: string;
+  eventId: string;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  imageUrl?: string | null;
+  isHidden: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetCreatorAnnouncementsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+  eventId?: string;
+}
+
+export interface CreateCreatorAnnouncementPayload {
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  imageUrl?: string | null;
+  isHidden: boolean;
+  eventId: string;
+}
+
+export interface UpdateCreatorAnnouncementPayload {
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  imageUrl?: string | null;
+  isHidden: boolean;
+}
