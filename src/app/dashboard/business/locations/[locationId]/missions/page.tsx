@@ -236,14 +236,14 @@ export default function ManageMissionsPage({
 
   return (
     <div className="space-y-8">
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <Button variant="outline" size="icon" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <span>Back to location</span>
+      </div>
       {/* --- Header --- */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <span>Back to location</span>
-        </div>
         <div className="flex flex-1 items-start justify-between gap-4 md:items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Manage Missions</h1>
@@ -446,7 +446,7 @@ export default function ManageMissionsPage({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure you want to delete this mission?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the mission: 
+              This will permanently delete the mission:
               <strong className="ml-1">&quot;{missionToDelete?.title}&quot;</strong>.
               This action cannot be undone.
             </AlertDialogDescription>
@@ -454,7 +454,7 @@ export default function ManageMissionsPage({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={onConfirmDelete} disabled={isDeleting} >
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Yes, Delete Mission
             </AlertDialogAction>
           </AlertDialogFooter>
