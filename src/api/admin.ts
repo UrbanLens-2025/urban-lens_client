@@ -16,6 +16,7 @@ import type {
   Tag,
   CreateTagPayload,
   UpdateTagPayload,
+  Wallet,
 } from "@/types";
 
 export const getLocationRequestsForAdmin = async ({
@@ -201,6 +202,20 @@ export const updateTag = async (
   const { data } = await axiosInstance.put<ApiResponse<Tag>>(
     `/v1/admin/tag/${tagId}`,
     payload
+  );
+  return data.data;
+};
+
+export const getEscrowWallet = async (): Promise<Wallet> => {
+  const { data } = await axiosInstance.get<ApiResponse<Wallet>>(
+    "/v1/admin/wallet/escrow"
+  );
+  return data.data;
+};
+
+export const getSystemWallet = async (): Promise<Wallet> => {
+  const { data } = await axiosInstance.get<ApiResponse<Wallet>>(
+    "/v1/admin/wallet/system"
   );
   return data.data;
 };

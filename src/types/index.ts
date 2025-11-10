@@ -662,7 +662,7 @@ export interface GetEventRequestsParams {
 
 export interface Wallet {
   id: string;
-  ownedBy: string;
+  ownedBy: string | null;
   walletType: string;
   balance: string;
   currency: string;
