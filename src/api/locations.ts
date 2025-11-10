@@ -202,10 +202,14 @@ export const getOwnerLocationBookings = async ({
   limit = 20,
   sortBy = "createdAt:ASC",
   search,
+  status,
 }: GetOwnerLocationBookingsParams): Promise<PaginatedData<LocationBooking>> => {
   const params: any = { page, limit, sortBy };
   if (search) {
     params.search = search;
+  }
+  if (status && status !== "ALL") {
+    params["filter.status"] = status;
   }
 
   const { data } = await axiosInstance.get<

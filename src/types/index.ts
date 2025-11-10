@@ -819,6 +819,7 @@ export interface GetOwnerLocationBookingsParams {
   limit?: number;
   sortBy?: string;
   search?: string;
+  status?: string;
 }
 
 export interface ProcessLocationBookingPayload {

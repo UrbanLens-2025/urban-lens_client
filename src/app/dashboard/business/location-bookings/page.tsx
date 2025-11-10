@@ -13,6 +13,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   CalendarDays,
   Search,
   Loader2,
@@ -24,6 +31,8 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  Filter,
+  ArrowUpDown,
 } from "lucide-react";
 import { useState } from "react";
 import { useDebounce } from "use-debounce";
@@ -104,13 +113,16 @@ const formatDateRange = (dates: { startDateTime: string; endDateTime: string }[]
 export default function LocationBookingsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [sortBy, setSortBy] = useState<string>("createdAt:DESC");
   const [debouncedSearchTerm] = useDebounce(search, 300);
 
   const { data: bookingsData, isLoading } = useOwnerLocationBookings({
     page,
     limit: 20,
     search: debouncedSearchTerm || undefined,
-    sortBy: "createdAt:DESC",
+    sortBy,
+    status: statusFilter,
   });
 
   const bookings = bookingsData?.data || [];
@@ -189,19 +201,86 @@ export default function LocationBookingsPage() {
 
       {/* Bookings Table */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
             <CardTitle>All Bookings</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+              <div className="relative sm:w-[260px]">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search bookings..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8 w-64"
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="pl-8"
                 />
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start gap-2 text-muted-foreground hover:text-foreground sm:w-auto"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("ALL");
+                  setSortBy("createdAt:DESC");
+                  setPage(1);
+                }}
+              >
+                <ArrowUpDown className="h-4 w-4" />
+                Reset filters
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Filter className="h-4 w-4" /> Filters
+              </div>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="sm:w-[220px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All statuses</SelectItem>
+                  <SelectItem value="AWAITING_BUSINESS_PROCESSING">
+                    Awaiting Processing
+                  </SelectItem>
+                  <SelectItem value="PAYMENT_RECEIVED">Payment Received</SelectItem>
+                  <SelectItem value="SOFT_LOCKED">Soft Locked</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={sortBy}
+                onValueChange={(value) => {
+                  setSortBy(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="sm:w-[240px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="createdAt:DESC">Newest first</SelectItem>
+                  <SelectItem value="createdAt:ASC">Oldest first</SelectItem>
+                  <SelectItem value="amountToPay:DESC">Amount high → low</SelectItem>
+                  <SelectItem value="amountToPay:ASC">Amount low → high</SelectItem>
+                  <SelectItem value="status:ASC">Status A → Z</SelectItem>
+                  <SelectItem value="status:DESC">Status Z → A</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Showing {bookings.length} of {meta?.totalItems ?? bookings.length} bookings
             </div>
           </div>
         </CardHeader>
