@@ -692,17 +692,31 @@ export interface WalletExternalTransaction {
   createdAt: string;
   updatedAt: string;
   walletId: string;
-  provider: string;
-  providerTransactionId: string;
+  provider: string | null;
+  providerTransactionId: string | null;
   direction: string;
   amount: string;
   currency: string;
-  paymentUrl: string;
-  expiresAt: string;
-  providerResponse: ProviderResponse;
+  paymentUrl: string | null;
+  expiresAt: string | null;
+  providerResponse: ProviderResponse | null;
   status: string;
   createdById: string;
-  timeline: WalletExternalTransactionTimelineEvent[];
+  createdBy?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    role: string;
+    avatarUrl: string | null;
+    coverUrl: string | null;
+    hasOnboarded: boolean;
+  };
+  withdrawBankName?: string | null;
+  withdrawBankAccountNumber?: string | null;
+  withdrawBankAccountName?: string | null;
+  timeline?: WalletExternalTransactionTimelineEvent[];
 }
 
 export interface GetWalletExternalTransactionsParams {
@@ -729,6 +743,14 @@ export interface CreateExternalDepositPayload {
   currency: string; // e.g., "VND"
   returnUrl: string;
   afterAction: string; // e.g., "NONE"
+}
+
+export interface CreateExternalWithdrawPayload {
+  amountToWithdraw: number;
+  currency: string; // e.g., "VND"
+  withdrawBankName: string;
+  withdrawBankAccountNumber: string;
+  withdrawBankAccountName: string;
 }
 
 export interface WalletTransaction {

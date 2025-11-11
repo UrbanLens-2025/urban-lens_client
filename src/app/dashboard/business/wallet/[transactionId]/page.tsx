@@ -3,11 +3,21 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useWalletExternalTransactionById } from "@/hooks/wallet/useWalletExternalTransactionById";
 import { useWalletInternalTransactionById } from "@/hooks/wallet/useWalletInternalTransactionById";
+import { useCancelWithdrawTransaction } from "@/hooks/wallet/useCancelWithdrawTransaction";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, ArrowLeft, Copy, ExternalLink, CheckCircle2, Clock, XCircle, AlertCircle, Building2, CreditCard, Calendar, DollarSign, Hash, FileText, History, User, Activity } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2, ArrowLeft, Copy, ExternalLink, CheckCircle2, Clock, XCircle, AlertCircle, Building2, CreditCard, Calendar, DollarSign, Hash, FileText, History, User, Activity, X } from "lucide-react";
+import { useState } from "react";
 
 function mapStatus(status: string): string {
   const statusMap: Record<string, string> = {
@@ -101,13 +111,25 @@ export default function BusinessWalletTransactionDetailPage() {
   const searchParams = useSearchParams();
   const transactionId = params?.transactionId || "";
   const transactionType = searchParams.get('type') || 'external'; // default to external for backward compatibility
-  
+
   // Use the appropriate hook based on transaction type
   const externalTransaction = useWalletExternalTransactionById(transactionType === 'external' ? transactionId : null);
   const internalTransaction = useWalletInternalTransactionById(transactionType === 'internal' ? transactionId : null);
-  
+  const cancelWithdraw = useCancelWithdrawTransaction();
+
   const transaction = transactionType === 'internal' ? internalTransaction.data : externalTransaction.data;
   const isLoading = transactionType === 'internal' ? internalTransaction.isLoading : externalTransaction.isLoading;
+
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+
+  const isWithdraw = transaction && 'direction' in transaction && transaction.direction?.toUpperCase() === 'WITHDRAW';
+  const isPending = transaction && 'status' in transaction && transaction.status?.toUpperCase() === 'PENDING';
+  const canCancel = isWithdraw && isPending;
+
+  const handleCancel = () => {
+    cancelWithdraw.mutate(transactionId);
+    setCancelDialogOpen(false);
+  };
 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
@@ -176,14 +198,35 @@ export default function BusinessWalletTransactionDetailPage() {
                         </span>
                       </div>
                     </div>
-                    {transaction.paymentUrl && transaction.status !== 'COMPLETED' && (
-                      <Button asChild className="bg-blue-600 hover:bg-blue-700">
-                        <a href={transaction.paymentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2">
-                          <ExternalLink className="h-4 w-4" />
-                          Complete Payment
-                        </a>
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {transaction.paymentUrl && transaction.status !== 'COMPLETED' && (
+                        <Button asChild className="bg-blue-600 hover:bg-blue-700">
+                          <a href={transaction.paymentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2">
+                            <ExternalLink className="h-4 w-4" />
+                            Complete Payment
+                          </a>
+                        </Button>
+                      )}
+                      {canCancel && (
+                        <Button
+                          variant="destructive"
+                          onClick={() => setCancelDialogOpen(true)}
+                          disabled={cancelWithdraw.isPending}
+                        >
+                          {cancelWithdraw.isPending ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Cancelling...
+                            </>
+                          ) : (
+                            <>
+                              <X className="h-4 w-4 mr-2" />
+                              Cancel Withdrawal
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -427,7 +470,7 @@ export default function BusinessWalletTransactionDetailPage() {
                             <div className="rounded-full bg-primary/10 p-2">
                               {getActionIcon(e.action)}
                             </div>
-                            {index < transaction.timeline.length - 1 && (
+                            {transaction.timeline && index < transaction.timeline.length - 1 && (
                               <div className="w-0.5 h-full bg-border mt-2" />
                             )}
                           </div>
@@ -493,6 +536,44 @@ export default function BusinessWalletTransactionDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Cancel Withdrawal Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Withdrawal Transaction</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this withdrawal transaction? This will move it to CANCELLED status and unlock the funds in your wallet.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCancelDialogOpen(false)}
+              disabled={cancelWithdraw.isPending}
+            >
+              No, Keep It
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancel}
+              disabled={cancelWithdraw.isPending}
+            >
+              {cancelWithdraw.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                <>
+                  <X className="mr-2 h-4 w-4" />
+                  Yes, Cancel Withdrawal
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

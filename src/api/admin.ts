@@ -17,6 +17,8 @@ import type {
   CreateTagPayload,
   UpdateTagPayload,
   Wallet,
+  WalletExternalTransaction,
+  GetWalletExternalTransactionsParams,
 } from "@/types";
 
 export const getLocationRequestsForAdmin = async ({
@@ -216,6 +218,69 @@ export const getEscrowWallet = async (): Promise<Wallet> => {
 export const getSystemWallet = async (): Promise<Wallet> => {
   const { data } = await axiosInstance.get<ApiResponse<Wallet>>(
     "/v1/admin/wallet/system"
+  );
+  return data.data;
+};
+
+export const getAdminExternalTransactions = async ({
+  page = 1,
+  limit = 20,
+  sortBy = 'createdAt:DESC',
+}: GetWalletExternalTransactionsParams): Promise<PaginatedData<WalletExternalTransaction>> => {
+  const params: any = { page, limit, sortBy };
+
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<WalletExternalTransaction>>>(
+    '/v1/admin/wallet/transactions/external/search',
+    { params }
+  );
+  return data.data;
+};
+
+export const getAdminExternalTransactionById = async (
+  transactionId: string
+): Promise<WalletExternalTransaction> => {
+  const { data } = await axiosInstance.get<ApiResponse<WalletExternalTransaction>>(
+    `/v1/admin/wallet/transactions/external/${transactionId}`
+  );
+  return data.data;
+};
+
+export const startProcessingWithdrawTransaction = async (
+  transactionId: string
+): Promise<WalletExternalTransaction> => {
+  const { data } = await axiosInstance.post<ApiResponse<WalletExternalTransaction>>(
+    `/v1/admin/wallet/transactions/external/${transactionId}/start-processing`
+  );
+  return data.data;
+};
+
+export const completeProcessingWithdrawTransaction = async (
+  transactionId: string
+): Promise<WalletExternalTransaction> => {
+  const { data } = await axiosInstance.post<ApiResponse<WalletExternalTransaction>>(
+    `/v1/admin/wallet/transactions/external/${transactionId}/complete-processing`
+  );
+  return data.data;
+};
+
+export const markTransferFailed = async (
+  transactionId: string,
+  failureReason: string
+): Promise<WalletExternalTransaction> => {
+  const { data } = await axiosInstance.post<ApiResponse<WalletExternalTransaction>>(
+    `/v1/admin/wallet/transactions/external/${transactionId}/mark-transfer-failed`,
+    { failureReason }
+  );
+  return data.data;
+};
+
+export const rejectWithdrawTransaction = async (
+  transactionId: string,
+  rejectionReason: string
+): Promise<WalletExternalTransaction> => {
+  const { data } = await axiosInstance.post<ApiResponse<WalletExternalTransaction>>(
+    `/v1/admin/wallet/transactions/external/${transactionId}/reject`,
+    { rejectionReason }
   );
   return data.data;
 };

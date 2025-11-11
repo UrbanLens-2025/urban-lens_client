@@ -282,14 +282,16 @@ export default function CreatorWalletPage() {
                   Deposit
                 </Button>
               </Link>
-              <Button 
-                className="bg-white text-blue-600 hover:bg-gray-100"
-                size="sm"
-                disabled={walletData?.isLocked}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Withdraw
-              </Button>
+              <Link href="/dashboard/creator/wallet/withdraw">
+                <Button 
+                  className="bg-white text-blue-600 hover:bg-gray-100"
+                  size="sm"
+                  disabled={walletData?.isLocked}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Withdraw
+                </Button>
+              </Link>
             </div>
           </div>
         </CardContent>

@@ -7,6 +7,7 @@ import { useAdminWallets } from "@/hooks/admin/useAdminWallets";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 
 const formatCurrency = (amount: string, currency: string = "VND") => {
   const num = parseFloat(amount);
@@ -173,10 +174,15 @@ export default function AdminWalletPage() {
             Monitor and manage system wallets
           </p>
         </div>
-        <Button onClick={handleRefresh} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/wallet/transactions">View Transactions</Link>
+          </Button>
+          <Button onClick={handleRefresh} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Error State */}
