@@ -283,8 +283,7 @@ export default function CreatorWalletPage() {
                 </Button>
               </Link>
               <Button 
-                variant="outline" 
-                className="border-white text-blue-600 hover:bg-white/10"
+                className="bg-white text-blue-600 hover:bg-gray-100"
                 size="sm"
                 disabled={walletData?.isLocked}
               >

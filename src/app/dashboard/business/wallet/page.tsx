@@ -277,7 +277,7 @@ export default function BusinessWalletPage() {
                 <Download className="mr-2 h-4 w-4" />
                 Deposit
               </Button>
-              <Button variant="outline" className="border-white text-blue-600 hover:bg-white/10" size="sm" disabled={walletData?.isLocked}>
+              <Button className="bg-white text-blue-600 hover:bg-gray-100" size="sm" disabled={walletData?.isLocked}>
                 <Upload className="mr-2 h-4 w-4" />
                 Withdraw
               </Button>
