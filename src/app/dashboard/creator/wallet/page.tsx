@@ -31,7 +31,7 @@ import { useWallet } from "@/hooks/user/useWallet";
 import { useWalletExternalTransactions } from "@/hooks/wallet/useWalletExternalTransactions";
 import type { WalletExternalTransaction, WalletTransaction } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useWalletTransactionById } from "@/hooks/wallet/useWalletExternalTransactionById";
+import { useWalletExternalTransactionById } from "@/hooks/wallet/useWalletExternalTransactionById";
 import { useWalletTransactions } from "@/hooks/wallet/useWalletTransactions";
 
 // Helper mappers
@@ -120,7 +120,7 @@ export default function CreatorWalletPage() {
     sortBy: 'createdAt:DESC',
   });
 
-  const { data: transactionDetail, isLoading: isLoadingDetail } = useWalletTransactionById(selectedTransactionId);
+  const { data: transactionDetail, isLoading: isLoadingDetail } = useWalletExternalTransactionById(selectedTransactionId);
 
   // Use real wallet balance from API
   const totalBalance = walletData ? parseFloat(walletData.balance) : 0;
@@ -435,9 +435,9 @@ export default function CreatorWalletPage() {
                               <span className="text-sm text-muted-foreground truncate">Escrow</span>
                             </div>
                           </TableCell>
-                          <TableCell>
+                            <TableCell>
                             <span className="text-sm text-muted-foreground font-mono truncate block">
-                              <Link href={`/dashboard/creator/wallet/${t.id}`} className="hover:underline">
+                              <Link href={`/dashboard/creator/wallet/${t.id}?type=internal`} className="hover:underline">
                                 {t.id}
                               </Link>
                             </span>
@@ -546,7 +546,7 @@ export default function CreatorWalletPage() {
                             </div>
                           </TableCell>
                           <TableCell className="max-w-[200px]">
-                            <Link href={`/dashboard/creator/wallet/${transaction.id}`} className="text-sm truncate block text-blue-600 hover:underline">
+                            <Link href={`/dashboard/creator/wallet/${transaction.id}?type=external`} className="text-sm truncate block text-blue-600 hover:underline">
                               {mappedTransaction.description}
                             </Link>
                           </TableCell>
@@ -565,7 +565,7 @@ export default function CreatorWalletPage() {
                           </TableCell>
                           <TableCell>
                             <span className="text-sm text-muted-foreground font-mono truncate block">
-                              <Link href={`/dashboard/creator/wallet/${transaction.id}`} className="hover:underline">
+                              <Link href={`/dashboard/creator/wallet/${transaction.id}?type=external`} className="hover:underline">
                                 {mappedTransaction.reference}
                               </Link>
                             </span>

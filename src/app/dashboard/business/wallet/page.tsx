@@ -29,44 +29,27 @@ import { useState } from "react";
 import Link from "next/link";
 import { useWallet } from "@/hooks/user/useWallet";
 import { useWalletExternalTransactions } from "@/hooks/wallet/useWalletExternalTransactions";
-import type { WalletExternalTransaction } from "@/types";
+import { useWalletTransactions } from "@/hooks/wallet/useWalletTransactions";
+import type { WalletExternalTransaction, WalletTransaction } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useWalletTransactionById } from "@/hooks/wallet/useWalletExternalTransactionById";
+import { useWalletExternalTransactionById } from "@/hooks/wallet/useWalletExternalTransactionById";
 
-// Mock internal transaction data (wallet-to-wallet) — still mocked until internal API exists
-const mockInternalTransactions = [
-  {
-    id: "int_001",
-    type: "transfer_out",
-    amount: 25000,
-    description: "Payment to vendor",
-    otherParty: "Event Services",
-    otherPartyType: "business",
-    status: "completed",
-    date: "2025-10-28T14:30:00",
-    reference: "INT-2025-001",
-  },
-  {
-    id: "int_002",
-    type: "transfer_in",
-    amount: 45000,
-    description: "Venue booking revenue",
-    otherParty: "Urban Lens Platform",
-    otherPartyType: "system",
-    status: "completed",
-    date: "2025-10-26T16:45:00",
-    reference: "INT-2025-002",
-  },
-];
+const mapInternalType = (type: string): "transfer_in" | "transfer_out" | "transfer" => {
+  const t = (type || "").toUpperCase();
+  if (t.includes("FROM_ESCROW") || t === "FROM_ESCROW") return "transfer_in";
+  if (t.includes("TO_ESCROW") || t === "TO_ESCROW") return "transfer_out";
+  return "transfer";
+};
 
-const getInternalTransactionIcon = (type: string, otherPartyType: string) => {
-  if (otherPartyType === "system") {
-    return <ArrowLeftRight className="h-4 w-4 text-blue-600" />;
-  }
-  if (type === "transfer_in") {
+const getInternalTransactionIcon = (type: string) => {
+  const mappedType = mapInternalType(type);
+  if (mappedType === "transfer_in") {
     return <ArrowDownLeft className="h-4 w-4 text-green-600" />;
   }
-  return <ArrowUpRight className="h-4 w-4 text-orange-600" />;
+  if (mappedType === "transfer_out") {
+    return <ArrowUpRight className="h-4 w-4 text-orange-600" />;
+  }
+  return <ArrowLeftRight className="h-4 w-4 text-blue-600" />;
 };
 
 const getExternalTransactionIcon = (type: string) => {
@@ -120,7 +103,7 @@ export default function BusinessWalletPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
 
-  // External transactions (real API)
+  // External transactions
   const { 
     data: externalTransactionsData, 
     isLoading: isLoadingExternalTransactions 
@@ -130,16 +113,32 @@ export default function BusinessWalletPage() {
     sortBy: 'createdAt:DESC'
   });
 
-  const { data: transactionDetail, isLoading: isLoadingDetail } = useWalletTransactionById(selectedTransactionId);
+  // Internal transactions
+  const {
+    data: internalTransactionsData,
+    isLoading: isLoadingInternalTransactions,
+  } = useWalletTransactions({
+    page: currentInternalPage,
+    limit: itemsPerPage,
+    sortBy: 'createdAt:DESC',
+  });
+
+  const { data: transactionDetail, isLoading: isLoadingDetail } = useWalletExternalTransactionById(selectedTransactionId);
 
   const totalBalance = walletData ? parseFloat(walletData.balance) : 0;
   const currency = walletData?.currency || "VND";
 
+  // External
   const externalTransactions = externalTransactionsData?.data || [];
   const totalExternalPages = externalTransactionsData?.meta.totalPages || 1;
   const totalExternalItems = externalTransactionsData?.meta.totalItems || 0;
 
-  // Page-level stats (external from current page; internal from mock until API exists)
+  // Internal
+  const internalTransactions = internalTransactionsData?.data || [];
+  const totalInternalPages = internalTransactionsData?.meta.totalPages || 1;
+  const totalInternalItems = internalTransactionsData?.meta.totalItems || 0;
+
+  // Stats calculated from real data
   const stats = {
     totalDeposits: externalTransactions
       .filter((t) => t.direction.toUpperCase() === "DEPOSIT" && t.status.toUpperCase() === "COMPLETED")
@@ -147,18 +146,14 @@ export default function BusinessWalletPage() {
     totalWithdrawals: externalTransactions
       .filter((t) => t.direction.toUpperCase() === "WITHDRAWAL" && t.status.toUpperCase() === "COMPLETED")
       .reduce((sum, t) => sum + parseFloat(t.amount), 0),
-    totalEarnings: mockInternalTransactions
-      .filter((t) => t.type === "transfer_in" && t.status === "completed")
-      .reduce((sum, t) => sum + t.amount, 0),
+    totalEarnings: internalTransactions
+      .filter((t) => {
+        const mappedType = mapInternalType(t.type);
+        return mappedType === "transfer_in" && t.status.toUpperCase() === "COMPLETED";
+      })
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0),
     totalTransactions: walletData?.totalTransactions || 0,
   };
-
-  // Internal mock pagination
-  const totalInternalPages = Math.ceil(mockInternalTransactions.length / itemsPerPage);
-  const paginatedInternalTransactions = mockInternalTransactions.slice(
-    (currentInternalPage - 1) * itemsPerPage,
-    currentInternalPage * itemsPerPage
-  );
 
   const mapStatus = (status: string): string => {
     const statusMap: Record<string, string> = {
@@ -273,10 +268,12 @@ export default function BusinessWalletPage() {
               </Badge>
             )}
             <div className="flex gap-3">
-              <Button className="bg-white text-blue-600 hover:bg-gray-100" size="sm" disabled={walletData?.isLocked}>
-                <Download className="mr-2 h-4 w-4" />
-                Deposit
-              </Button>
+              <Link href="/dashboard/business/wallet/deposit">
+                <Button className="bg-white text-blue-600 hover:bg-gray-100" size="sm" disabled={walletData?.isLocked}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Deposit
+                </Button>
+              </Link>
               <Button className="bg-white text-blue-600 hover:bg-gray-100" size="sm" disabled={walletData?.isLocked}>
                 <Upload className="mr-2 h-4 w-4" />
                 Withdraw
@@ -369,40 +366,104 @@ export default function BusinessWalletPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedInternalTransactions.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2 min-w-0">
-                          {getInternalTransactionIcon(t.type, t.otherPartyType)}
-                          <span className="text-sm font-medium truncate">{getTypeLabel(t.type)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[200px]"><span className="text-sm truncate block">{t.description}</span></TableCell>
-                      <TableCell className="max-w-[180px]">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {t.otherPartyType === 'business' ? (
-                            <Users className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                          ) : (
-                            <ArrowLeftRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                          )}
-                          <span className="text-sm text-muted-foreground truncate">{t.otherParty}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell><span className="text-sm text-muted-foreground font-mono truncate block">{t.reference}</span></TableCell>
-                      <TableCell><span className="text-sm text-muted-foreground whitespace-nowrap">{formatDateTime(t.date)}</span></TableCell>
-                      <TableCell><Badge variant={getStatusColor(t.status)}>{getStatusLabel(t.status)}</Badge></TableCell>
-                      <TableCell className="text-right">
-                        <span className={`text-sm font-bold whitespace-nowrap ${t.type === "transfer_out" ? "text-orange-600" : "text-green-600"}`}>
-                          {getTransactionSign(t.type)}
-                          {formatCurrency(t.amount)}
-                        </span>
+                  {isLoadingInternalTransactions ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : internalTransactions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <p className="text-muted-foreground">No internal transactions found</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    internalTransactions.map((t: WalletTransaction) => {
+                      const mappedType = mapInternalType(t.type);
+                      const icon = getInternalTransactionIcon(t.type);
+                      const description = mappedType === 'transfer_out' ? 'Transfer to escrow' : mappedType === 'transfer_in' ? 'Transfer from escrow' : 'Transfer';
+                      const statusText = mapStatus(t.status);
+                      const amountNumber = parseFloat(t.amount);
+                      return (
+                        <TableRow key={t.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2 min-w-0">
+                              {icon}
+                              <span className="text-sm font-medium truncate">
+                                {getTypeLabel(mappedType)}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="max-w-[200px]">
+                            <span className="text-sm truncate block">{description}</span>
+                          </TableCell>
+                          <TableCell className="max-w-[180px]">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <ArrowLeftRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                              <span className="text-sm text-muted-foreground truncate">Escrow</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground font-mono truncate block">
+                              <Link href={`/dashboard/business/wallet/${t.id}?type=internal`} className="hover:underline">
+                                {t.id}
+                              </Link>
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground whitespace-nowrap">
+                              {formatDateTime(t.createdAt)}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getStatusColor(statusText)}>
+                              {getStatusLabel(statusText)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span 
+                              className={`text-sm font-bold whitespace-nowrap ${
+                                mappedType === "transfer_out"
+                                  ? "text-orange-600" 
+                                  : "text-green-600"
+                              }`}
+                            >
+                              {getTransactionSign(mappedType)}
+                              {formatCurrency(amountNumber)}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
                 </TableBody>
               </Table>
-              <div className="flex items-center justify_between">
-                <p className="text-sm text-muted-foreground">Showing {paginatedInternalTransactions.length} of {mockInternalTransactions.length} internal transactions</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Showing {internalTransactions.length} of {totalInternalItems} internal transactions
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentInternalPage((p) => Math.max(1, p - 1))}
+                    disabled={currentInternalPage === 1 || isLoadingInternalTransactions}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm">
+                    Page {currentInternalPage} of {totalInternalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentInternalPage((p) => Math.min(totalInternalPages, p + 1))}
+                    disabled={currentInternalPage >= totalInternalPages || isLoadingInternalTransactions}
+                  >
+                    Next
+                  </Button>
+                </div>
               </div>
             </TabsContent>
 
@@ -451,7 +512,7 @@ export default function BusinessWalletPage() {
                             </div>
                           </TableCell>
                           <TableCell className="max-w-[200px]">
-                            <Link href={`/dashboard/business/wallet/${t.id}`} className="text-sm truncate block text-blue-600 hover:underline">{m.description}</Link>
+                            <Link href={`/dashboard/business/wallet/${t.id}?type=external`} className="text-sm truncate block text-blue-600 hover:underline">{m.description}</Link>
                           </TableCell>
                           <TableCell className="max-w-[150px]">
                             <div className="flex items-center gap-2 min-w-0">
@@ -464,7 +525,7 @@ export default function BusinessWalletPage() {
                           </TableCell>
                           <TableCell>
                             <span className="text-sm text-muted-foreground font-mono truncate block">
-                              <Link href={`/dashboard/business/wallet/${t.id}`} className="hover:underline">{m.reference}</Link>
+                              <Link href={`/dashboard/business/wallet/${t.id}?type=external`} className="hover:underline">{m.reference}</Link>
                             </span>
                           </TableCell>
                           <TableCell><span className="text-sm text-muted-foreground whitespace-nowrap">{formatDateTime(m.date)}</span></TableCell>
