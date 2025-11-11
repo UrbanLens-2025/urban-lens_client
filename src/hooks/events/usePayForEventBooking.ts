@@ -22,7 +22,7 @@ export function usePayForEventBooking() {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['walletTransactions'] });
 
-      router.push(`/dashboard/creator/request/${data.id}`);
+      router.push('/dashboard/creator/request');
       router.refresh();
     },
     onError: (err: Error) => {
