@@ -2,6 +2,7 @@
 
 import { getLocationRequests, getMyLocations } from "@/api/locations";
 import { useQuery } from "@tanstack/react-query";
+import { LocationStatus } from "@/types";
 
 interface UseMyLocationsOptions {
   searchBy?: string[];
@@ -38,14 +39,24 @@ export function useMyLocations(
   });
 }
 
-export function useLocationRequests(page: number, sortBy: string) {
+export function useLocationRequests(
+  page: number,
+  sortBy: string,
+  options?: {
+    search?: string;
+    status?: LocationStatus | "all";
+    searchBy?: string[];
+  }
+) {
   return useQuery({
-    queryKey: ["locationRequests", page, sortBy],
+    queryKey: ["locationRequests", page, sortBy, options?.search, options?.status],
     queryFn: () =>
       getLocationRequests({
         page,
-        status: "APPROVED",
+        status: options?.status && options.status !== "all" ? options.status : undefined,
         sortBy,
+        search: options?.search,
+        searchBy: options?.searchBy,
       }),
     placeholderData: (previousData) => previousData,
   });

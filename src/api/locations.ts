@@ -62,6 +62,8 @@ export const getLocationRequests = async ({
   limit = 10,
   status,
   sortBy,
+  search,
+  searchBy,
 }: GetRequestsParams): Promise<PaginatedData<LocationRequest>> => {
   const params: any = {
     page,
@@ -69,11 +71,22 @@ export const getLocationRequests = async ({
   };
 
   if (status) {
-    params["filter.status"] = `$not:${status}`;
+    // Use $eq: for direct status filtering (matching admin API pattern)
+    params["filter.status"] = `$eq:${status}`;
   }
 
   if (sortBy) {
     params.sortBy = sortBy;
+  }
+
+  if (search) {
+    params.search = search;
+  }
+
+  if (searchBy?.length) {
+    params.searchBy = searchBy;
+  } else if (search) {
+    params.searchBy = ["name", "description", "addressLine"];
   }
 
   const { data } = await axiosInstance.get<

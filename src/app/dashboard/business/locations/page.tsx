@@ -294,10 +294,13 @@ export default function MyLocationsPage() {
 
   // Requests state
   const [requestsPage, setRequestsPage] = useState(1);
+  const [requestsSearchTerm, setRequestsSearchTerm] = useState("");
+  const [requestsStatusFilter, setRequestsStatusFilter] = useState<LocationStatus | "all">("all");
   const [requestsSort, setRequestsSort] = useState<SortState>({
     column: "createdAt",
     direction: "DESC",
   });
+  const [debouncedRequestsSearch] = useDebounce(requestsSearchTerm, 300);
   const requestsSortByString = `${requestsSort.column}:${requestsSort.direction}`;
 
   const filterVisibleOnMap =
@@ -315,7 +318,11 @@ export default function MyLocationsPage() {
     });
 
   const { data: requestsResponse, isLoading: isLoadingRequests } =
-    useLocationRequests(requestsPage, requestsSortByString);
+    useLocationRequests(requestsPage, requestsSortByString, {
+      search: debouncedRequestsSearch,
+      status: requestsStatusFilter === "all" ? undefined : requestsStatusFilter,
+      searchBy: ["name", "description", "addressLine"],
+    });
 
   const activeLocations: Location[] = activeLocationsResponse?.data || [];
   const activeMeta = activeLocationsResponse?.meta;
@@ -749,17 +756,105 @@ export default function MyLocationsPage() {
 
             <TabsContent value="requests" className="space-y-3 mt-0">
               <div className="space-y-3">
-                <div>
-                  <CardTitle className="text-lg font-semibold">
-                    Location Requests ({requestsMeta?.totalItems || 0})
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Track and manage your location submission requests.
-                  </CardDescription>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Filter className="h-3.5 w-3.5" /> Filters
+                    </div>
+                    <Select
+                      value={requestsStatusFilter}
+                      onValueChange={(value: LocationStatus | "all") => {
+                        setRequestsStatusFilter(value);
+                        setRequestsPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 sm:w-[180px]">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="AWAITING_ADMIN_REVIEW">Pending Review</SelectItem>
+                        <SelectItem value="NEEDS_MORE_INFO">Needs More Info</SelectItem>
+                        <SelectItem value="APPROVED">Approved</SelectItem>
+                        <SelectItem value="REJECTED">Rejected</SelectItem>
+                        <SelectItem value="CANCELLED_BY_BUSINESS">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={requestsSortByString}
+                      onValueChange={(value) => {
+                        const [column, direction] = value.split(":");
+                        setRequestsSort({
+                          column: column as string,
+                          direction: direction as "ASC" | "DESC",
+                        });
+                        setRequestsPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 sm:w-[180px]">
+                        <SelectValue placeholder="Sort" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="createdAt:DESC">Newest first</SelectItem>
+                        <SelectItem value="createdAt:ASC">Oldest first</SelectItem>
+                        <SelectItem value="name:ASC">Name A → Z</SelectItem>
+                        <SelectItem value="name:DESC">Name Z → A</SelectItem>
+                        <SelectItem value="status:ASC">Status A → Z</SelectItem>
+                        <SelectItem value="status:DESC">Status Z → A</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="Search requests..."
+                      value={requestsSearchTerm}
+                      onChange={(e) => {
+                        setRequestsSearchTerm(e.target.value);
+                        setRequestsPage(1);
+                      }}
+                      className="h-8 sm:w-[240px]"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setRequestsSearchTerm("");
+                        setRequestsStatusFilter("all");
+                        setRequestsSort({
+                          column: "createdAt",
+                          direction: "DESC",
+                        });
+                        setRequestsPage(1);
+                      }}
+                    >
+                      <ArrowUpDown className="h-3.5 w-3.5" />
+                      Reset
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Showing {locationRequests.length} of {requestsMeta?.totalItems ?? locationRequests.length} requests
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-lg border border-border/60">
+              {locationRequests.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted py-8 text-center">
+                  <div className="text-lg font-semibold">
+                    No requests found for your filters
+                  </div>
+                  <p className="mt-1.5 max-w-md text-xs text-muted-foreground">
+                    Try adjusting your filters or submit a new location request to get started.
+                  </p>
+                  <Button asChild size="sm" className="mt-4">
+                    <Link href="/dashboard/business/locations/create">
+                      <PlusCircle className="mr-2 h-3.5 w-3.5" />
+                      Submit a location
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-lg border border-border/60">
                 <Table>
                   <TableHeader className="bg-muted/40">
                     <TableRow className="border-b border-border/60">
@@ -788,70 +883,53 @@ export default function MyLocationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {locationRequests.length > 0 ? (
-                      locationRequests.map((request) => (
-                        <TableRow
-                          key={request.id}
-                          className="border-b border-border/40 transition-colors hover:bg-muted/30"
-                        >
-                          <TableCell className="font-medium text-sm py-2.5">
-                            {request.name}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground py-2.5 line-clamp-2">
+                    {locationRequests.map((request) => (
+                      <TableRow
+                        key={request.id}
+                        className="border-b border-border/40 transition-colors hover:bg-muted/30"
+                      >
+                        <TableCell className="font-medium text-sm py-2.5">
+                          {request.name}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground py-2.5">
+                          <div className="line-clamp-2 max-w-[300px]">
                             {request.description}
-                          </TableCell>
-                          <TableCell className="text-xs py-2.5">
-                            {new Date(request.createdAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="py-2.5">
-                            <Badge
-                              className={cn("text-xs", {
-                                "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400":
-                                  request.status === "AUTO_VALIDATING",
-                                "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400":
-                                  request.status === "AWAITING_ADMIN_REVIEW" ||
-                                  request.status === "NEEDS_MORE_INFO",
-                                "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400":
-                                  request.status === "APPROVED",
-                                "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400":
-                                  request.status === "REJECTED",
-                                "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400":
-                                  request.status === "CANCELLED_BY_BUSINESS",
-                              })}
-                            >
-                              {request.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right py-2.5">
-                            <RequestActions
-                              requestId={request.id}
-                              status={request.status}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-20 text-center">
-                          <div className="flex flex-col items-center justify-center py-6">
-                            <FileText className="h-10 w-10 text-muted-foreground mb-3" />
-                            <div className="text-base font-semibold">No requests found</div>
-                            <p className="text-xs text-muted-foreground mt-1.5">
-                              Submit a new location to get started.
-                            </p>
-                            <Button asChild size="sm" className="mt-3">
-                              <Link href="/dashboard/business/locations/create">
-                                <PlusCircle className="mr-2 h-3.5 w-3.5" />
-                                Submit New Location
-                              </Link>
-                            </Button>
                           </div>
                         </TableCell>
+                        <TableCell className="text-xs py-2.5">
+                          {new Date(request.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="py-2.5">
+                          <Badge
+                            className={cn("text-xs", {
+                              "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400":
+                                request.status === "AUTO_VALIDATING",
+                              "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400":
+                                request.status === "AWAITING_ADMIN_REVIEW" ||
+                                request.status === "NEEDS_MORE_INFO",
+                              "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400":
+                                request.status === "APPROVED",
+                              "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400":
+                                request.status === "REJECTED",
+                              "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400":
+                                request.status === "CANCELLED_BY_BUSINESS",
+                            })}
+                          >
+                            {request.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right py-2.5">
+                          <RequestActions
+                            requestId={request.id}
+                            status={request.status}
+                          />
+                        </TableCell>
                       </TableRow>
-                    )}
+                    ))}
                   </TableBody>
                 </Table>
-              </div>
+                </div>
+              )}
 
               <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-xs text-muted-foreground">
