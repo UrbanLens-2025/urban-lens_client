@@ -28,6 +28,7 @@ function mapStatus(status: string): string {
     READY_FOR_PAYMENT: "ready",
     PROCESSING: "processing",
     TRANSFER_FAILED: "failed",
+    TRANSFERRED: "transferred",
   };
   return statusMap[status?.toUpperCase()] || status?.toLowerCase() || "pending";
 }
@@ -58,6 +59,7 @@ function getStatusLabel(status: string) {
     cancelled: "Cancelled",
     ready: "Ready for Payment",
     processing: "Processing",
+    transferred: "Transferred",
   };
   return labelMap[normalizedStatus] || status.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ');
 }
@@ -74,6 +76,59 @@ function getStatusIcon(status: string) {
       return <Clock className="h-4 w-4" />;
     default:
       return <AlertCircle className="h-4 w-4" />;
+  }
+}
+
+function getStatusColorClasses(status: string) {
+  const normalizedStatus = mapStatus(status);
+  switch (normalizedStatus) {
+    case "completed":
+    case "transferred":
+      return {
+        iconBg: "bg-green-100 dark:bg-green-900/30",
+        iconBorder: "border-green-300 dark:border-green-700",
+        iconText: "text-green-600 dark:text-green-400",
+        connector: "bg-green-200 dark:bg-green-800",
+        cardBg: "bg-green-50/50 dark:bg-green-950/20",
+        cardBorder: "border-green-200 dark:border-green-800",
+      };
+    case "failed":
+      return {
+        iconBg: "bg-red-100 dark:bg-red-900/30",
+        iconBorder: "border-red-300 dark:border-red-700",
+        iconText: "text-red-600 dark:text-red-400",
+        connector: "bg-red-200 dark:bg-red-800",
+        cardBg: "bg-red-50/50 dark:bg-red-950/20",
+        cardBorder: "border-red-200 dark:border-red-800",
+      };
+    case "ready":
+    case "processing":
+      return {
+        iconBg: "bg-blue-100 dark:bg-blue-900/30",
+        iconBorder: "border-blue-300 dark:border-blue-700",
+        iconText: "text-blue-600 dark:text-blue-400",
+        connector: "bg-blue-200 dark:bg-blue-800",
+        cardBg: "bg-blue-50/50 dark:bg-blue-950/20",
+        cardBorder: "border-blue-200 dark:border-blue-800",
+      };
+    case "pending":
+      return {
+        iconBg: "bg-amber-100 dark:bg-amber-900/30",
+        iconBorder: "border-amber-300 dark:border-amber-700",
+        iconText: "text-amber-600 dark:text-amber-400",
+        connector: "bg-amber-200 dark:bg-amber-800",
+        cardBg: "bg-amber-50/50 dark:bg-amber-950/20",
+        cardBorder: "border-amber-200 dark:border-amber-800",
+      };
+    default:
+      return {
+        iconBg: "bg-gray-100 dark:bg-gray-800",
+        iconBorder: "border-gray-300 dark:border-gray-700",
+        iconText: "text-gray-600 dark:text-gray-400",
+        connector: "bg-gray-200 dark:bg-gray-700",
+        cardBg: "bg-gray-50/50 dark:bg-gray-950/20",
+        cardBorder: "border-gray-200 dark:border-gray-800",
+      };
   }
 }
 
@@ -154,29 +209,29 @@ export default function BusinessWalletTransactionDetailPage() {
   };
 
   return (
-    <div className="space-y-6 pb-8 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-6">
-        <div className="space-y-1 flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent break-words">
+    <div className="space-y-4 pb-6 overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b pb-4">
+        <div className="space-y-0.5 flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent break-words">
             Transaction Details
           </h1>
-          <p className="text-sm text-muted-foreground break-words">
+          <p className="text-xs text-muted-foreground break-words">
             {transactionType === 'internal' ? 'Internal transaction information' : 'External transaction information'}
           </p>
         </div>
-        <Button variant="outline" onClick={() => router.back()} className="shadow-sm shrink-0">
+        <Button variant="outline" onClick={() => router.back()} className="shadow-sm shrink-0" size="sm">
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
       </div>
 
-      <Card className="shadow-lg border-2">
-        <CardHeader className="border-b bg-muted/30">
-          <CardTitle className="text-xl font-semibold flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
+      <Card className="shadow-md border">
+        <CardHeader className="border-b bg-muted/20 py-3">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" />
             Overview
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent className="pt-4">
           {isLoading || !transaction ? (
             <div className="flex items-center justify-center py-20">
               <div className="flex flex-col items-center gap-3">
@@ -186,22 +241,22 @@ export default function BusinessWalletTransactionDetailPage() {
             </div>
           ) : 'direction' in transaction ? (
             // External transaction
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Amount and Status Card */}
-              <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/30 dark:via-indigo-950/30 dark:to-purple-950/30 border-2 border-blue-200/50 dark:border-blue-800/50 shadow-md">
-                <CardContent className="pt-6 pb-6">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                    <div className="space-y-3 flex-1 min-w-0">
+              <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/30 dark:via-indigo-950/30 dark:to-purple-950/30 border border-blue-200/50 dark:border-blue-800/50 shadow-sm">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="space-y-2 flex-1 min-w-0">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Transaction Amount</p>
-                      <p className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent break-words">
+                      <p className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent break-words">
                         {formatCurrency(parseFloat(transaction.amount), transaction.currency)}
                       </p>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <Badge variant={getStatusColor(mapStatus(transaction.status))} className="gap-1.5 px-3 py-1 text-xs font-medium shadow-sm">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant={getStatusColor(mapStatus(transaction.status))} className="gap-1 px-2 py-0.5 text-xs font-medium">
                           {getStatusIcon(transaction.status)}
                           {getStatusLabel(transaction.status)}
                         </Badge>
-                        <Badge variant="outline" className="gap-1.5 px-3 py-1 text-xs">
+                        <Badge variant="outline" className="gap-1 px-2 py-0.5 text-xs">
                           {transaction.direction?.toUpperCase() === 'DEPOSIT' ? (
                             <>
                               <ArrowDownLeft className="h-3 w-3 text-green-600" />
@@ -216,11 +271,11 @@ export default function BusinessWalletTransactionDetailPage() {
                         </Badge>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap shrink-0">
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
                       {transaction.paymentUrl && transaction.status !== 'COMPLETED' && (
-                        <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all">
-                          <a href={transaction.paymentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2">
-                            <ExternalLink className="h-4 w-4" />
+                        <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all" size="sm">
+                          <a href={transaction.paymentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5">
+                            <ExternalLink className="h-3.5 w-3.5" />
                             <span className="hidden sm:inline">Complete Payment</span>
                             <span className="sm:hidden">Pay</span>
                           </a>
@@ -231,19 +286,20 @@ export default function BusinessWalletTransactionDetailPage() {
                           variant="destructive"
                           onClick={() => setCancelDialogOpen(true)}
                           disabled={cancelWithdraw.isPending}
-                          className="shadow-md hover:shadow-lg transition-all"
+                          className="shadow-sm hover:shadow-md transition-all"
+                          size="sm"
                         >
                           {cancelWithdraw.isPending ? (
                             <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                               <span className="hidden sm:inline">Cancelling...</span>
                               <span className="sm:hidden">...</span>
                             </>
                           ) : (
                             <>
-                              <X className="h-4 w-4 mr-2" />
-                              <span className="hidden sm:inline">Cancel Withdrawal</span>
-                              <span className="sm:hidden">Cancel</span>
+                              <X className="h-3.5 w-3.5 mr-1.5" />
+                              <span className="hidden sm:inline">Cancel</span>
+                              <span className="sm:hidden">X</span>
                             </>
                           )}
                         </Button>
@@ -255,76 +311,76 @@ export default function BusinessWalletTransactionDetailPage() {
 
               {/* Transaction Details */}
               <Card className="shadow-sm border">
-                <CardHeader className="border-b bg-muted/20">
-                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                    <Hash className="h-5 w-5 text-primary" />
+                <CardHeader className="border-b bg-muted/20 py-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                    <Hash className="h-4 w-4 text-primary" />
                     Transaction Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-5">
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Transaction ID</p>
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Transaction ID</p>
                         <div className="flex items-center gap-2">
-                          <p className="font-mono text-sm font-medium flex-1 break-all">{transaction.id}</p>
+                          <p className="font-mono text-xs font-medium flex-1 break-all">{transaction.id}</p>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 hover:bg-muted"
+                            className="h-7 w-7 p-0 hover:bg-muted"
                             onClick={() => copyToClipboard(transaction.id)}
                             title="Copy Transaction ID"
                           >
-                            <Copy className="h-4 w-4" />
+                            <Copy className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Provider</p>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Provider</p>
                         <div className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-muted-foreground" />
-                          <p className="text-sm font-medium">{transaction.provider || '-'}</p>
+                          <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />
+                          <p className="text-xs font-medium">{transaction.provider || '-'}</p>
                         </div>
                       </div>
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Provider Transaction ID</p>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Provider Transaction ID</p>
                         <div className="flex items-center gap-2">
-                          <p className="font-mono text-sm font-medium flex-1 break-all">{transaction.providerTransactionId || '-'}</p>
+                          <p className="font-mono text-xs font-medium flex-1 break-all">{transaction.providerTransactionId || '-'}</p>
                           {transaction.providerTransactionId && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 hover:bg-muted"
+                              className="h-7 w-7 p-0 hover:bg-muted"
                               onClick={() => copyToClipboard(transaction.providerTransactionId!)}
                               title="Copy Provider Transaction ID"
                             >
-                              <Copy className="h-4 w-4" />
+                              <Copy className="h-3.5 w-3.5" />
                             </Button>
                           )}
                         </div>
                       </div>
                     </div>
-                    <div className="space-y-5">
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Created At</p>
+                    <div className="space-y-3">
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Created At</p>
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <p className="text-sm font-medium">{formatDateTime(transaction.createdAt)}</p>
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          <p className="text-xs font-medium">{formatDateTime(transaction.createdAt)}</p>
                         </div>
                       </div>
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Updated At</p>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Updated At</p>
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <p className="text-sm font-medium">{formatDateTime(transaction.updatedAt)}</p>
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          <p className="text-xs font-medium">{formatDateTime(transaction.updatedAt)}</p>
                         </div>
                       </div>
                       {transaction.expiresAt && (
-                        <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Expires At</p>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Expires At</p>
                           <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <p className="text-sm font-medium">{formatDateTime(transaction.expiresAt)}</p>
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                            <p className="text-xs font-medium">{formatDateTime(transaction.expiresAt)}</p>
                           </div>
                         </div>
                       )}
@@ -336,100 +392,100 @@ export default function BusinessWalletTransactionDetailPage() {
               {/* Payment Information */}
               {transaction.providerResponse && (
                 <Card className="shadow-sm border">
-                  <CardHeader className="border-b bg-muted/20">
-                    <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                      <Building2 className="h-5 w-5 text-primary" />
+                  <CardHeader className="border-b bg-muted/20 py-3">
+                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                      <Building2 className="h-4 w-4 text-primary" />
                       Payment Information
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Bank</p>
-                          <p className="text-sm font-medium">{getBankName(transaction.providerResponse.vnp_BankCode || transaction.provider || '')}</p>
+                  <CardContent className="pt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Bank</p>
+                          <p className="text-xs font-medium">{getBankName(transaction.providerResponse.vnp_BankCode || transaction.provider || '')}</p>
                         </div>
-                        <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Bank Transaction Number</p>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Bank Transaction Number</p>
                           <div className="flex items-center gap-2">
-                            <p className="font-mono text-sm font-medium flex-1 break-all">{transaction.providerResponse.vnp_BankTranNo || '-'}</p>
+                            <p className="font-mono text-xs font-medium flex-1 break-all">{transaction.providerResponse.vnp_BankTranNo || '-'}</p>
                             {transaction.providerResponse.vnp_BankTranNo && (
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0 hover:bg-muted"
+                                className="h-7 w-7 p-0 hover:bg-muted"
                                 onClick={() => copyToClipboard(transaction.providerResponse!.vnp_BankTranNo!)}
                                 title="Copy Bank Transaction Number"
                               >
-                                <Copy className="h-4 w-4" />
+                                <Copy className="h-3.5 w-3.5" />
                               </Button>
                             )}
                           </div>
                         </div>
-                        <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">VNPay Transaction Reference</p>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">VNPay Transaction Reference</p>
                           <div className="flex items-center gap-2">
-                            <p className="font-mono text-sm font-medium flex-1 break-all">{transaction.providerResponse.vnp_TxnRef || '-'}</p>
+                            <p className="font-mono text-xs font-medium flex-1 break-all">{transaction.providerResponse.vnp_TxnRef || '-'}</p>
                             {transaction.providerResponse.vnp_TxnRef && (
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0 hover:bg-muted"
+                                className="h-7 w-7 p-0 hover:bg-muted"
                                 onClick={() => copyToClipboard(transaction.providerResponse!.vnp_TxnRef!)}
                                 title="Copy VNPay Transaction Reference"
                               >
-                                <Copy className="h-4 w-4" />
+                                <Copy className="h-3.5 w-3.5" />
                               </Button>
                             )}
                           </div>
                         </div>
-                        <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">VNPay Transaction Number</p>
-                          <p className="font-mono text-sm font-medium">{transaction.providerResponse.vnp_TransactionNo || '-'}</p>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">VNPay Transaction Number</p>
+                          <p className="font-mono text-xs font-medium">{transaction.providerResponse.vnp_TransactionNo || '-'}</p>
                         </div>
                       </div>
-                      <div className="space-y-4">
-                        <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Order Information</p>
-                          <p className="text-sm font-medium break-words">{transaction.providerResponse.vnp_OrderInfo || '-'}</p>
+                      <div className="space-y-3">
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Order Information</p>
+                          <p className="text-xs font-medium break-words">{transaction.providerResponse.vnp_OrderInfo || '-'}</p>
                         </div>
-                        <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Payment Date</p>
-                          <p className="text-sm font-medium">
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Payment Date</p>
+                          <p className="text-xs font-medium">
                             {transaction.providerResponse.vnp_PayDate 
                               ? new Date(transaction.providerResponse.vnp_PayDate.toString().replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6')).toLocaleString()
                               : '-'
                             }
                           </p>
                         </div>
-                        <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Response Code</p>
-                          <Badge variant={transaction.providerResponse.vnp_ResponseCode === 0 ? "default" : "destructive"} className="font-medium">
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Response Code</p>
+                          <Badge variant={transaction.providerResponse.vnp_ResponseCode === 0 ? "default" : "destructive"} className="text-xs font-medium">
                             {transaction.providerResponse.vnp_ResponseCode}
                           </Badge>
                         </div>
-                        <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Transaction Status</p>
-                          <Badge variant={transaction.providerResponse.vnp_TransactionStatus === 0 ? "default" : "destructive"} className="font-medium">
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Transaction Status</p>
+                          <Badge variant={transaction.providerResponse.vnp_TransactionStatus === 0 ? "default" : "destructive"} className="text-xs font-medium">
                             {transaction.providerResponse.vnp_TransactionStatus === 0 ? 'Success' : 'Failed'}
                           </Badge>
                         </div>
                       </div>
                     </div>
                     {transaction.paymentUrl && (
-                      <div className="mt-6 pt-6 border-t">
-                        <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Payment URL</p>
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 bg-muted/50 rounded-lg border border-border/50">
+                      <div className="mt-4 pt-4 border-t">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Payment URL</p>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border/50">
                           <p className="font-mono text-xs flex-1 break-all font-medium min-w-0">{transaction.paymentUrl}</p>
                           <div className="flex items-center gap-2 shrink-0">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 hover:bg-muted shrink-0"
+                              className="h-7 w-7 p-0 hover:bg-muted shrink-0"
                               onClick={() => copyToClipboard(transaction.paymentUrl!)}
                               title="Copy Payment URL"
                             >
-                              <Copy className="h-4 w-4" />
+                              <Copy className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               variant="outline"
@@ -453,25 +509,25 @@ export default function BusinessWalletTransactionDetailPage() {
               {/* Withdrawal Bank Info (if available) */}
               {((transaction as any).withdrawBankName || (transaction as any).withdrawBankAccountNumber) && (
                 <Card className="shadow-sm border">
-                  <CardHeader className="border-b bg-muted/20">
-                    <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                      <Building2 className="h-5 w-5 text-primary" />
+                  <CardHeader className="border-b bg-muted/20 py-3">
+                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                      <Building2 className="h-4 w-4 text-primary" />
                       Withdrawal Bank Information
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50 min-w-0">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Bank Name</p>
-                        <p className="text-sm font-medium break-words">{(transaction as any).withdrawBankName || '-'}</p>
+                  <CardContent className="pt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50 min-w-0">
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Bank Name</p>
+                        <p className="text-xs font-medium break-words">{(transaction as any).withdrawBankName || '-'}</p>
                       </div>
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50 min-w-0">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Account Number</p>
-                        <p className="font-mono text-sm font-medium break-all">{(transaction as any).withdrawBankAccountNumber || '-'}</p>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50 min-w-0">
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Account Number</p>
+                        <p className="font-mono text-xs font-medium break-all">{(transaction as any).withdrawBankAccountNumber || '-'}</p>
                       </div>
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50 min-w-0 sm:col-span-2 md:col-span-1">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Account Name</p>
-                        <p className="text-sm font-medium break-words">{(transaction as any).withdrawBankAccountName || '-'}</p>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50 min-w-0 sm:col-span-2 md:col-span-1">
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Account Name</p>
+                        <p className="text-xs font-medium break-words">{(transaction as any).withdrawBankAccountName || '-'}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -480,62 +536,65 @@ export default function BusinessWalletTransactionDetailPage() {
 
               {/* Timeline */}
               <Card className="shadow-sm border">
-                <CardHeader className="border-b bg-muted/20">
-                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                    <History className="h-5 w-5 text-primary" />
+                <CardHeader className="border-b bg-muted/20 py-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                    <History className="h-4 w-4 text-primary" />
                     Transaction Timeline
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
+                <CardContent className="pt-4">
                   {transaction.timeline && transaction.timeline.length > 0 ? (
-                    <div className="space-y-6">
-                      {transaction.timeline.map((e, index) => (
-                        <div key={e.id} className="flex gap-4 relative">
-                          <div className="flex flex-col items-center">
-                            <div className="rounded-full bg-primary/10 dark:bg-primary/20 p-3 border-2 border-primary/20 shadow-sm">
-                              <div className="text-primary">
-                                {getActionIcon(e.action)}
-                              </div>
-                            </div>
-                            {transaction.timeline && index < transaction.timeline.length - 1 && (
-                              <div className="w-0.5 h-full bg-gradient-to-b from-border via-border to-transparent mt-2 min-h-[60px]" />
-                            )}
-                          </div>
-                          <div className="flex-1 pb-6">
-                            <div className="p-4 rounded-lg bg-muted/30 border border-border/50 shadow-sm">
-                              <div className="flex items-start justify-between gap-4 mb-3">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                    <Badge variant={getStatusColor(mapStatus(e.statusChangedTo))} className="gap-1.5 px-2.5 py-1 text-xs font-medium">
-                                      {getStatusIcon(e.statusChangedTo)}
-                                      {getStatusLabel(e.statusChangedTo)}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground font-medium">{formatDateTime(e.createdAt)}</span>
-                                  </div>
-                                  <p className="text-sm font-semibold mt-1">{e.action.replace(/_/g, ' ')}</p>
+                    <div className="space-y-4">
+                      {transaction.timeline.map((e, index) => {
+                        const statusColors = getStatusColorClasses(e.statusChangedTo);
+                        const isLast = index === (transaction.timeline?.length ?? 0) - 1;
+                        return (
+                          <div key={e.id} className="flex gap-3 relative">
+                            <div className="flex flex-col items-center">
+                              <div className={`rounded-full ${statusColors.iconBg} p-2 border-2 ${statusColors.iconBorder} shadow-sm transition-all`}>
+                                <div className={statusColors.iconText}>
+                                  {getActionIcon(e.action)}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                                {getActorIcon(e.actorType)}
-                                <span className="font-medium">{e.actorName}</span>
-                                {e.actorType && (
-                                  <Badge variant="outline" className="text-xs font-medium">
-                                    {e.actorType.replace(/_/g, ' ')}
-                                  </Badge>
-                                )}
-                              </div>
-                              {e.note && (
-                                <p className="text-sm text-muted-foreground mt-2 pt-2 border-t border-border/50">{e.note}</p>
+                              {!isLast && (
+                                <div className={`w-0.5 h-full ${statusColors.connector} mt-1.5 min-h-[50px]`} />
                               )}
                             </div>
+                            <div className="flex-1 pb-4">
+                              <div className={`p-3 rounded-lg ${statusColors.cardBg} border ${statusColors.cardBorder} shadow-sm transition-all hover:shadow-md`}>
+                                <div className="flex items-start justify-between gap-3 mb-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                      <Badge variant={getStatusColor(mapStatus(e.statusChangedTo))} className="gap-1 px-2 py-0.5 text-xs font-medium">
+                                        {getStatusIcon(e.statusChangedTo)}
+                                        {getStatusLabel(e.statusChangedTo)}
+                                      </Badge>
+                                      <span className="text-xs text-muted-foreground font-medium">{formatDateTime(e.createdAt)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1.5">
+                                  {getActorIcon(e.actorType)}
+                                  <span className="font-medium">{e.actorName}</span>
+                                  {e.actorType && (
+                                    <Badge variant="outline" className="text-xs font-medium">
+                                      {e.actorType.replace(/_/g, ' ')}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {e.note && (
+                                  <p className="text-xs text-muted-foreground mt-1.5 pt-1.5 border-t border-border/50">{e.note}</p>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
-                    <div className="text-center py-12">
-                      <History className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                      <p className="text-sm text-muted-foreground font-medium">No timeline events</p>
+                    <div className="text-center py-8">
+                      <History className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
+                      <p className="text-xs text-muted-foreground font-medium">No timeline events</p>
                     </div>
                   )}
                 </CardContent>
@@ -543,15 +602,15 @@ export default function BusinessWalletTransactionDetailPage() {
             </div>
           ) : (
             // Internal transaction - show basic info
-            <div className="space-y-6">
-              <Card className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/30 dark:via-emerald-950/30 dark:to-teal-950/30 border-2 border-green-200/50 dark:border-green-800/50 shadow-md">
-                <CardContent className="pt-6 pb-6">
-                  <div className="space-y-3 min-w-0">
+            <div className="space-y-4">
+              <Card className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/30 dark:via-emerald-950/30 dark:to-teal-950/30 border border-green-200/50 dark:border-green-800/50 shadow-sm">
+                <CardContent className="pt-4 pb-4">
+                  <div className="space-y-2 min-w-0">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Transaction Amount</p>
-                    <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent break-words">
+                    <p className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent break-words">
                       {formatCurrency(parseFloat(transaction.amount), transaction.currency)}
                     </p>
-                    <Badge variant={getStatusColor(mapStatus(transaction.status))} className="gap-1.5 px-3 py-1 text-xs font-medium shadow-sm w-fit">
+                    <Badge variant={getStatusColor(mapStatus(transaction.status))} className="gap-1 px-2 py-0.5 text-xs font-medium w-fit">
                       {getStatusIcon(transaction.status)}
                       {getStatusLabel(transaction.status)}
                     </Badge>
@@ -559,36 +618,36 @@ export default function BusinessWalletTransactionDetailPage() {
                 </CardContent>
               </Card>
               <Card className="shadow-sm border">
-                <CardHeader className="border-b bg-muted/20">
-                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                    <Hash className="h-5 w-5 text-primary" />
+                <CardHeader className="border-b bg-muted/20 py-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                    <Hash className="h-4 w-4 text-primary" />
                     Transaction Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-5">
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Transaction ID</p>
-                        <p className="font-mono text-sm font-medium break-all">{transaction.id}</p>
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Transaction ID</p>
+                        <p className="font-mono text-xs font-medium break-all">{transaction.id}</p>
                       </div>
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Type</p>
-                        <p className="text-sm font-medium">{transaction.type}</p>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Type</p>
+                        <p className="text-xs font-medium">{transaction.type}</p>
                       </div>
                     </div>
-                    <div className="space-y-5">
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Status</p>
-                        <Badge variant={getStatusColor(mapStatus(transaction.status))} className="font-medium">
+                    <div className="space-y-3">
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Status</p>
+                        <Badge variant={getStatusColor(mapStatus(transaction.status))} className="text-xs font-medium">
                           {getStatusLabel(mapStatus(transaction.status))}
                         </Badge>
                       </div>
-                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Created At</p>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Created At</p>
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <p className="text-sm font-medium">{formatDateTime(transaction.createdAt)}</p>
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          <p className="text-xs font-medium">{formatDateTime(transaction.createdAt)}</p>
                         </div>
                       </div>
                     </div>
