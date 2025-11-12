@@ -108,12 +108,6 @@ export default function MissionDetailsPage({
           <Button variant="outline" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{mission.title}</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Viewing mission details
-            </p>
-          </div>
           {isActive && <Badge className="bg-green-600">Active</Badge>}
           {isScheduled && <Badge variant="outline">Scheduled</Badge>}
           {isExpired && <Badge variant="secondary">Completed</Badge>}

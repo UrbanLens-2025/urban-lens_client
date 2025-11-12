@@ -149,13 +149,7 @@ export default function MyLocationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div className="space-y-1.5">
-          <h1 className="text-3xl font-bold">My Locations</h1>
-          <p className="text-muted-foreground">
-            Manage your active locations and track submissions.
-          </p>
-        </div>
+      <div className="flex justify-end">
         <Link href="/dashboard/business/locations/create">
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" /> Submit New Location

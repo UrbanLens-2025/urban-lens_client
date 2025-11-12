@@ -112,10 +112,6 @@ export default function LocationRequestDetailsPage({
           <Button variant="outline" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{request.name}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{request.type}</p>
-          </div>
           <Badge
             className={cn({
               "bg-yellow-100 text-yellow-800":

@@ -103,7 +103,6 @@ export default function BusinessWalletWithdrawPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-2xl font-semibold tracking-tight">Withdraw from Wallet</h1>
         </div>
       </div>
 

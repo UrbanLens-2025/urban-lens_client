@@ -90,7 +90,6 @@ export default function CreateMissionPage({
         <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-3xl font-bold">Create New Mission</h1>
       </div>
 
       <Form {...form}>

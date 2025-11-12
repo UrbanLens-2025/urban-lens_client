@@ -169,12 +169,6 @@ export default function LocationBookingConfigPage({
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only">Back</span>
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Booking Configuration</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {location?.name || "Location"}
-            </p>
-          </div>
         </div>
       </div>
 

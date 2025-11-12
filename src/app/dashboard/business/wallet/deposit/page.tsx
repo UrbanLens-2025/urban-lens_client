@@ -71,7 +71,6 @@ export default function BusinessWalletDepositPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-2xl font-semibold tracking-tight">Deposit to Wallet</h1>
         </div>
       </div>
 

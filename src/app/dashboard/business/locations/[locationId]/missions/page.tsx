@@ -245,12 +245,6 @@ export default function ManageMissionsPage({
       {/* --- Header --- */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-1 items-start justify-between gap-4 md:items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Manage Missions</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Create challenges and track engagement for this location.
-            </p>
-          </div>
           <Button asChild>
             <Link href={`/dashboard/business/locations/${locationId}/missions/create`}>
               <PlusCircle className="mr-2 h-4 w-4" />

@@ -223,15 +223,6 @@ export default function LocationBookingDetailPage({
           <Button variant="outline" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">
-              {booking.referencedEventRequest.eventName}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Booking ID:{" "}
-              <span className="font-mono">{booking.id.substring(0, 8)}...</span>
-            </p>
-          </div>
           {getStatusBadge(booking.status)}
         </div>
       </div>

@@ -220,10 +220,6 @@ export default function BusinessWalletPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Wallet</h1>
-          <p className="text-muted-foreground mt-2">Manage your balance and transactions</p>
-        </div>
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -248,14 +244,6 @@ export default function BusinessWalletPage() {
 
   return (
     <div className="space-y-6 pb-8 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-6">
-        <div className="space-y-1 flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent break-words">
-            Wallet
-          </h1>
-          <p className="text-sm text-muted-foreground break-words">Manage your balance and transactions</p>
-        </div>
-      </div>
 
       <Card className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl border-0">
         <CardHeader className="border-b border-white/20">

@@ -35,13 +35,7 @@ function StatCard({ title, value, change, icon: Icon }: any) {
 export default function BusinessDashboardPage() {
   return (
     <div className="space-y-8 pb-8 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-6">
-        <div className="space-y-1 flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent break-words">
-            Business Dashboard
-          </h1>
-          <p className="text-sm text-muted-foreground break-words">Overview of your business performance and locations</p>
-        </div>
+      <div className="flex justify-end">
         <Link href="/dashboard/business/locations/create" className="shrink-0">
           <Button className="shadow-md hover:shadow-lg transition-all">
             <PlusCircle className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Add New Location</span><span className="sm:hidden">Add Location</span>

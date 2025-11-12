@@ -260,12 +260,7 @@ export default function ManageVouchersPage({
       </div>
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Manage Vouchers</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Launch rewards and track redemption incentives for this location.
-          </p>
-        </div>
+        <div className="flex-1"></div>
         <Button asChild>
           <Link href={`/dashboard/business/locations/${locationId}/vouchers/create`}>
             <PlusCircle className="mr-2 h-4 w-4" />

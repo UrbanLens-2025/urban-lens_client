@@ -114,12 +114,9 @@ export default function VoucherDetailsPage({
           <Button variant="outline" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{voucher.title}</h1>
-            <Badge variant="outline" className="mt-1">
-              {voucher.voucherCode}
-            </Badge>
-          </div>
+          <Badge variant="outline">
+            {voucher.voucherCode}
+          </Badge>
           {isActive && <Badge className="bg-green-600">Active</Badge>}
           {isScheduled && <Badge variant="outline">Scheduled</Badge>}
           {isExpired && <Badge variant="secondary">Expired</Badge>}

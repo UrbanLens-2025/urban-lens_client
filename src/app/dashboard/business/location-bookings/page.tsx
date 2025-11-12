@@ -143,12 +143,6 @@ export default function LocationBookingsPage() {
 
   return (
     <div className="space-y-8 p-6">
-      <div>
-        <h1 className="text-3xl font-bold">Location Bookings</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage and view all location bookings for your business
-        </p>
-      </div>
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

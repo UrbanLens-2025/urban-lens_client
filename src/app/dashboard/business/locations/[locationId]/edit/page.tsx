@@ -184,9 +184,6 @@ export default function EditLocationPage({
             <Badge variant="secondary" className="w-fit bg-primary/10 text-primary">
               Editing location
             </Badge>
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-              {location.name}
-            </h1>
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4" />
               <span>{location.addressLine}</span>

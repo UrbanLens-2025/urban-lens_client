@@ -193,12 +193,8 @@ export default function EditMissionPage({
         <div className="flex flex-1 flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight">{mission.title || "Edit mission"}</h1>
               {missionStatus.badge}
             </div>
-            <p className="text-sm text-muted-foreground">
-              Refine challenge details, update timing, and refresh visuals for this mission.
-            </p>
             <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Target className="h-3.5 w-3.5" />

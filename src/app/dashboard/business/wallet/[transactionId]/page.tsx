@@ -210,15 +210,7 @@ export default function BusinessWalletTransactionDetailPage() {
 
   return (
     <div className="space-y-4 pb-6 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b pb-4">
-        <div className="space-y-0.5 flex-1 min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent break-words">
-            Transaction Details
-          </h1>
-          <p className="text-xs text-muted-foreground break-words">
-            {transactionType === 'internal' ? 'Internal transaction information' : 'External transaction information'}
-          </p>
-        </div>
+      <div className="flex justify-end">
         <Button variant="outline" onClick={() => router.back()} className="shadow-sm shrink-0" size="sm">
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
