@@ -24,6 +24,7 @@ import {
   ArrowLeftRight,
   Landmark,
   Loader2,
+  History,
 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
@@ -246,36 +247,42 @@ export default function BusinessWalletPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Wallet</h1>
-        <p className="text-muted-foreground mt-2">Manage your balance and transactions</p>
+    <div className="space-y-6 pb-8 overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-6">
+        <div className="space-y-1 flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent break-words">
+            Wallet
+          </h1>
+          <p className="text-sm text-muted-foreground break-words">Manage your balance and transactions</p>
+        </div>
       </div>
 
-      <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-white">Total Balance</CardTitle>
-            <WalletIcon className="h-8 w-8 opacity-80" />
+      <Card className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl border-0">
+        <CardHeader className="border-b border-white/20">
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle className="text-white text-lg sm:text-xl font-semibold break-words">Total Balance</CardTitle>
+            <div className="p-3 rounded-full bg-white/10 backdrop-blur-sm shrink-0">
+              <WalletIcon className="h-6 w-6 text-white" />
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="text-4xl font-bold">{formatCurrency(totalBalance)}</div>
+        <CardContent className="pt-6">
+          <div className="space-y-6 min-w-0">
+            <div className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight break-words">{formatCurrency(totalBalance)}</div>
             {walletData?.isLocked && (
-              <Badge variant="destructive" className="bg-red-500/20 text-red-100 border-red-300">
+              <Badge variant="destructive" className="bg-red-500/20 text-red-100 border-red-300/50 backdrop-blur-sm w-fit">
                 Wallet Locked
               </Badge>
             )}
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <Link href="/dashboard/business/wallet/deposit">
-                <Button className="bg-white text-blue-600 hover:bg-gray-100" size="sm" disabled={walletData?.isLocked}>
+                <Button className="bg-white text-blue-600 hover:bg-gray-50 shadow-lg hover:shadow-xl transition-all font-semibold" size="default" disabled={walletData?.isLocked}>
                   <Download className="mr-2 h-4 w-4" />
                   Deposit
                 </Button>
               </Link>
               <Link href="/dashboard/business/wallet/withdraw">
-                <Button className="bg-white text-blue-600 hover:bg-gray-100" size="sm" disabled={walletData?.isLocked}>
+                <Button className="bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 border border-white/20 shadow-lg hover:shadow-xl transition-all font-semibold" size="default" disabled={walletData?.isLocked}>
                   <Upload className="mr-2 h-4 w-4" />
                   Withdraw
                 </Button>
@@ -286,85 +293,97 @@ export default function BusinessWalletPage() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-            <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
+        <Card className="shadow-md hover:shadow-lg transition-shadow border-2 hover:border-primary/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b bg-muted/20">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wide">Total Transactions</CardTitle>
+            <div className="p-2 rounded-lg bg-primary/10">
+              <ArrowLeftRight className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTransactions}</div>
-            <p className="text-xs text-muted-foreground">All time transactions</p>
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">{stats.totalTransactions}</div>
+            <p className="text-xs font-medium text-muted-foreground">All time transactions</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">External Deposits</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+        <Card className="shadow-md hover:shadow-lg transition-shadow border-2 hover:border-green-500/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b bg-muted/20">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wide">External Deposits</CardTitle>
+            <div className="p-2 rounded-lg bg-green-500/10">
+              <Building2 className="h-4 w-4 text-green-600" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalDeposits)}</div>
-            <p className="text-xs text-muted-foreground">From bank transfers</p>
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold mb-2 bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{formatCurrency(stats.totalDeposits)}</div>
+            <p className="text-xs font-medium text-muted-foreground">From bank transfers</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Internal Earnings</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        <Card className="shadow-md hover:shadow-lg transition-shadow border-2 hover:border-blue-500/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b bg-muted/20">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wide">Internal Earnings</CardTitle>
+            <div className="p-2 rounded-lg bg-blue-500/10">
+              <TrendingUp className="h-4 w-4 text-blue-600" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalEarnings)}</div>
-            <p className="text-xs text-muted-foreground">From bookings</p>
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{formatCurrency(stats.totalEarnings)}</div>
+            <p className="text-xs font-medium text-muted-foreground">From bookings</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">External Withdrawals</CardTitle>
-            <Landmark className="h-4 w-4 text-muted-foreground" />
+        <Card className="shadow-md hover:shadow-lg transition-shadow border-2 hover:border-orange-500/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b bg-muted/20">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wide">External Withdrawals</CardTitle>
+            <div className="p-2 rounded-lg bg-orange-500/10">
+              <Landmark className="h-4 w-4 text-orange-600" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalWithdrawals)}</div>
-            <p className="text-xs text-muted-foreground">To bank account</p>
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold mb-2 bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">{formatCurrency(stats.totalWithdrawals)}</div>
+            <p className="text-xs font-medium text-muted-foreground">To bank account</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Transaction History</CardTitle>
+      <Card className="shadow-lg border-2">
+        <CardHeader className="border-b bg-muted/20">
+          <CardTitle className="text-xl font-semibold flex items-center gap-2">
+            <History className="h-5 w-5 text-primary" />
+            Transaction History
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <Tabs defaultValue="internal" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="internal">
+            <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+              <TabsTrigger value="internal" className="font-medium">
                 <ArrowLeftRight className="h-4 w-4 mr-2" />
                 Internal
               </TabsTrigger>
-              <TabsTrigger value="external">
+              <TabsTrigger value="external" className="font-medium">
                 <Building2 className="h-4 w-4 mr-2" />
                 External
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="internal" className="space-y-4">
-              <div className="rounded-md border border-blue-200 bg-blue-50/50 dark:border-blue-700 dark:bg-blue-950/50 p-3 mb-4">
-                <p className="text-sm text-blue-900 dark:text-blue-200 font-medium flex items-center gap-2">
+              <div className="rounded-lg border-2 border-blue-200/50 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:border-blue-700/50 dark:from-blue-950/30 dark:to-indigo-950/30 p-4 mb-4 shadow-sm">
+                <p className="text-sm text-blue-900 dark:text-blue-200 font-semibold flex items-center gap-2">
                   <ArrowLeftRight className="h-4 w-4" />
                   Internal transactions are transfers within the platform
                 </p>
               </div>
-              <Table>
+              <div className="rounded-lg border-2 overflow-hidden">
+                <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>From/To</TableHead>
-                    <TableHead>Reference</TableHead>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="font-semibold">Type</TableHead>
+                    <TableHead className="font-semibold">Description</TableHead>
+                    <TableHead className="font-semibold">From/To</TableHead>
+                    <TableHead className="font-semibold">Reference</TableHead>
+                    <TableHead className="font-semibold">Date & Time</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="text-right font-semibold">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -388,7 +407,7 @@ export default function BusinessWalletPage() {
                       const statusText = mapStatus(t.status);
                       const amountNumber = parseFloat(t.amount);
                       return (
-                        <TableRow key={t.id}>
+                        <TableRow key={t.id} className="hover:bg-muted/50">
                           <TableCell>
                             <div className="flex items-center gap-2 min-w-0">
                               {icon}
@@ -408,18 +427,18 @@ export default function BusinessWalletPage() {
                           </TableCell>
                           <TableCell>
                             <span className="text-sm text-muted-foreground font-mono truncate block">
-                              <Link href={`/dashboard/business/wallet/${t.id}?type=internal`} className="hover:underline">
+                              <Link href={`/dashboard/business/wallet/${t.id}?type=internal`} className="hover:underline text-primary font-medium">
                                 {t.id}
                               </Link>
                             </span>
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm text-muted-foreground whitespace-nowrap">
+                            <span className="text-sm text-muted-foreground whitespace-nowrap font-medium">
                               {formatDateTime(t.createdAt)}
                             </span>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={getStatusColor(statusText)}>
+                            <Badge variant={getStatusColor(statusText)} className="font-medium">
                               {getStatusLabel(statusText)}
                             </Badge>
                           </TableCell>
@@ -427,8 +446,8 @@ export default function BusinessWalletPage() {
                             <span 
                               className={`text-sm font-bold whitespace-nowrap ${
                                 mappedType === "transfer_out"
-                                  ? "text-orange-600" 
-                                  : "text-green-600"
+                                  ? "text-orange-600 dark:text-orange-400" 
+                                  : "text-green-600 dark:text-green-400"
                               }`}
                             >
                               {getTransactionSign(mappedType)}
@@ -441,8 +460,9 @@ export default function BusinessWalletPage() {
                   )}
                 </TableBody>
               </Table>
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
+              </div>
+              <div className="flex items-center justify-between pt-4">
+                <p className="text-sm text-muted-foreground font-medium">
                   Showing {internalTransactions.length} of {totalInternalItems} internal transactions
                 </p>
                 <div className="flex items-center gap-2">
@@ -451,10 +471,11 @@ export default function BusinessWalletPage() {
                     size="sm"
                     onClick={() => setCurrentInternalPage((p) => Math.max(1, p - 1))}
                     disabled={currentInternalPage === 1 || isLoadingInternalTransactions}
+                    className="shadow-sm"
                   >
                     Previous
                   </Button>
-                  <span className="text-sm">
+                  <span className="text-sm font-medium">
                     Page {currentInternalPage} of {totalInternalPages}
                   </span>
                   <Button
@@ -462,6 +483,7 @@ export default function BusinessWalletPage() {
                     size="sm"
                     onClick={() => setCurrentInternalPage((p) => Math.min(totalInternalPages, p + 1))}
                     disabled={currentInternalPage >= totalInternalPages || isLoadingInternalTransactions}
+                    className="shadow-sm"
                   >
                     Next
                   </Button>
@@ -470,23 +492,24 @@ export default function BusinessWalletPage() {
             </TabsContent>
 
             <TabsContent value="external" className="space-y-4">
-              <div className="rounded-md border border-amber-200 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-950/50 p-3 mb-4">
-                <p className="text-sm text-amber-900 dark:text-amber-200 font-medium flex items-center gap-2">
+              <div className="rounded-lg border-2 border-amber-200/50 bg-gradient-to-r from-amber-50/50 to-orange-50/50 dark:border-amber-700/50 dark:from-amber-950/30 dark:to-orange-950/30 p-4 mb-4 shadow-sm">
+                <p className="text-sm text-amber-900 dark:text-amber-200 font-semibold flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
                   External transactions are deposits from or withdrawals to your bank account
                 </p>
               </div>
-              <Table>
+              <div className="rounded-lg border-2 overflow-hidden">
+                <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Bank Details</TableHead>
-                    <TableHead>Reference</TableHead>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Fee</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="font-semibold">Type</TableHead>
+                    <TableHead className="font-semibold">Description</TableHead>
+                    <TableHead className="font-semibold hidden sm:table-cell">Bank Details</TableHead>
+                    <TableHead className="font-semibold hidden lg:table-cell">Reference</TableHead>
+                    <TableHead className="font-semibold hidden md:table-cell">Date & Time</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold hidden xl:table-cell">Fee</TableHead>
+                    <TableHead className="text-right font-semibold">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -513,10 +536,10 @@ export default function BusinessWalletPage() {
                               <span className="text-sm font-medium truncate">{getTypeLabel(m.type)}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="max-w-[200px]">
-                            <Link href={`/dashboard/business/wallet/${t.id}?type=external`} className="text-sm truncate block text-blue-600 hover:underline">{m.description}</Link>
+                          <TableCell>
+                            <Link href={`/dashboard/business/wallet/${t.id}?type=external`} className="text-sm truncate block text-primary hover:underline font-medium break-words">{m.description}</Link>
                           </TableCell>
-                          <TableCell className="max-w-[150px]">
+                          <TableCell className="hidden sm:table-cell">
                             <div className="flex items-center gap-2 min-w-0">
                               <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                               <div className="flex flex-col min-w-0">
@@ -525,16 +548,16 @@ export default function BusinessWalletPage() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden lg:table-cell">
                             <span className="text-sm text-muted-foreground font-mono truncate block">
-                              <Link href={`/dashboard/business/wallet/${t.id}?type=external`} className="hover:underline">{m.reference}</Link>
+                              <Link href={`/dashboard/business/wallet/${t.id}?type=external`} className="hover:underline text-primary font-medium break-all">{m.reference}</Link>
                             </span>
                           </TableCell>
-                          <TableCell><span className="text-sm text-muted-foreground whitespace-nowrap">{formatDateTime(m.date)}</span></TableCell>
-                          <TableCell><Badge variant={getStatusColor(m.status)}>{getStatusLabel(m.status)}</Badge></TableCell>
-                          <TableCell><span className="text-sm text-muted-foreground whitespace-nowrap">{m.transactionFee > 0 ? formatCurrency(m.transactionFee) : '-'}</span></TableCell>
+                          <TableCell className="hidden md:table-cell"><span className="text-sm text-muted-foreground whitespace-nowrap font-medium">{formatDateTime(m.date)}</span></TableCell>
+                          <TableCell><Badge variant={getStatusColor(m.status)} className="font-medium">{getStatusLabel(m.status)}</Badge></TableCell>
+                          <TableCell className="hidden xl:table-cell"><span className="text-sm text-muted-foreground whitespace-nowrap font-medium">{m.transactionFee > 0 ? formatCurrency(m.transactionFee) : '-'}</span></TableCell>
                           <TableCell className="text-right">
-                            <span className={`text-sm font-bold whitespace-nowrap ${m.type === "withdrawal" ? "text-orange-600" : "text-green-600"}`}>
+                            <span className={`text-sm font-bold whitespace-nowrap ${m.type === "withdrawal" ? "text-orange-600 dark:text-orange-400" : "text-green-600 dark:text-green-400"}`}>
                               {getTransactionSign(m.type)}
                               {formatCurrency(m.amount)}
                             </span>
@@ -545,13 +568,14 @@ export default function BusinessWalletPage() {
                   )}
                 </TableBody>
               </Table>
+              </div>
 
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Showing {externalTransactions.length} of {totalExternalItems} external transactions</p>
+              <div className="flex items-center justify-between pt-4">
+                <p className="text-sm text-muted-foreground font-medium">Showing {externalTransactions.length} of {totalExternalItems} external transactions</p>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setCurrentExternalPage((p) => Math.max(1, p - 1))} disabled={currentExternalPage === 1 || isLoadingExternalTransactions}>Previous</Button>
-                  <span className="text-sm">Page {currentExternalPage} of {totalExternalPages || 1}</span>
-                  <Button variant="outline" size="sm" onClick={() => setCurrentExternalPage((p) => Math.min(totalExternalPages || 1, p + 1))} disabled={currentExternalPage >= (totalExternalPages || 1) || isLoadingExternalTransactions}>Next</Button>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentExternalPage((p) => Math.max(1, p - 1))} disabled={currentExternalPage === 1 || isLoadingExternalTransactions} className="shadow-sm">Previous</Button>
+                  <span className="text-sm font-medium">Page {currentExternalPage} of {totalExternalPages || 1}</span>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentExternalPage((p) => Math.min(totalExternalPages || 1, p + 1))} disabled={currentExternalPage >= (totalExternalPages || 1) || isLoadingExternalTransactions} className="shadow-sm">Next</Button>
                 </div>
               </div>
 
