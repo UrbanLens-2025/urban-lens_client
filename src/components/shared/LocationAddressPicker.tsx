@@ -88,13 +88,13 @@ export function LocationAddressPicker() {
   }, [watchedLatitude, watchedLongitude]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <FormField
         control={form.control}
         name="addressLine"
         render={() => (
           <FormItem>
-            <FormLabel>Search Address (or click the map)</FormLabel>
+            <FormLabel className="text-sm">Search Address (or click the map)</FormLabel>
             <FormControl>
               <PlacesAutocomplete onAddressSelect={processPlaceDetails} />
             </FormControl>
@@ -102,7 +102,7 @@ export function LocationAddressPicker() {
           </FormItem>
         )}
       />
-      <div className="h-80 rounded-lg overflow-hidden border relative">
+      <div className="h-64 rounded-md overflow-hidden border relative">
         <GoogleMapsPicker
           position={markerPosition}
           onPositionChange={handlePositionChange}
@@ -110,15 +110,15 @@ export function LocationAddressPicker() {
           center={mapCenter}
         />
       </div>
-      <div className="space-y-4 animate-in fade-in-50">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in-50">
         <FormField
           name="addressLevel2"
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Province / City</FormLabel>
+              <FormLabel className="text-sm">Province / City</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input className="h-9" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -129,9 +129,9 @@ export function LocationAddressPicker() {
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>District / Ward</FormLabel>
+              <FormLabel className="text-sm">District / Ward</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input className="h-9" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -141,10 +141,10 @@ export function LocationAddressPicker() {
           name="addressLine"
           control={form.control}
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Street Address</FormLabel>
+            <FormItem className="md:col-span-2">
+              <FormLabel className="text-sm">Street Address</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input className="h-9" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

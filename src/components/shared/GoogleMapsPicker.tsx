@@ -26,10 +26,10 @@ function MapController({ center, zoom, radiusMeters }: { center: { lat: number; 
   useEffect(() => {
     if (map && radiusMeters && radiusMeters > 0) {
       const calculateZoom = (radius: number) => {
-        if (radius <= 10) return 17;
-        if (radius <= 25) return 16;
-        if (radius <= 50) return 15;
-        if (radius <= 100) return 14;
+        if (radius <= 10) return 14;
+        if (radius <= 25) return 15;
+        if (radius <= 50) return 16;
+        if (radius <= 100) return 17;
         return 13;
       };
       const newZoom = calculateZoom(radiusMeters);
