@@ -297,60 +297,77 @@ export default function MyLocationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-4">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "locations" | "requests")} className="flex-1">
+          <TabsList className="inline-flex h-9 items-center justify-start">
+            <TabsTrigger value="locations" className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Active Locations
+            </TabsTrigger>
+            <TabsTrigger value="requests" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Requests
+              {requestsMeta?.totalItems ? (
+                <Badge variant="secondary" className="ml-1 text-xs">
+                  {requestsMeta.totalItems}
+                </Badge>
+              ) : null}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <Link href="/dashboard/business/locations/create">
-          <Button>
+          <Button size="sm">
             <PlusCircle className="mr-2 h-4 w-4" /> Submit New Location
           </Button>
         </Link>
       </div>
 
       {activeTab === "locations" && (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardDescription>Total locations</CardDescription>
-              <CardTitle className="text-3xl font-bold">
+            <CardHeader className="pb-2 pt-4">
+              <CardDescription className="text-xs">Total locations</CardDescription>
+              <CardTitle className="text-2xl font-bold">
                 {stats.total.toLocaleString()}
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
+            <CardContent className="pt-0 pb-4 text-xs text-muted-foreground">
               Across all pages
             </CardContent>
           </Card>
           <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardDescription>Visible on map</CardDescription>
-              <CardTitle className="text-3xl font-bold">
+            <CardHeader className="pb-2 pt-4">
+              <CardDescription className="text-xs">Visible on map</CardDescription>
+              <CardTitle className="text-2xl font-bold">
                 {stats.visibleOnMap.toLocaleString()}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
+            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" />
               This page only
             </CardContent>
           </Card>
           <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardDescription>Total check-ins</CardDescription>
-              <CardTitle className="text-3xl font-bold">
+            <CardHeader className="pb-2 pt-4">
+              <CardDescription className="text-xs">Total check-ins</CardDescription>
+              <CardTitle className="text-2xl font-bold">
                 {stats.totalCheckIns.toLocaleString()}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="h-4 w-4" />
+            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <Users className="h-3.5 w-3.5" />
               Across locations on this page
             </CardContent>
           </Card>
           <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardDescription>Items this page</CardDescription>
-              <CardTitle className="text-3xl font-bold">
+            <CardHeader className="pb-2 pt-4">
+              <CardDescription className="text-xs">Items this page</CardDescription>
+              <CardTitle className="text-2xl font-bold">
                 {stats.currentPageCount.toLocaleString()}
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
+            <CardContent className="pt-0 pb-4 text-xs text-muted-foreground">
               Page {activeMeta?.currentPage ?? activePage} of {activeMeta?.totalPages ?? 1}
             </CardContent>
           </Card>
@@ -359,69 +376,13 @@ export default function MyLocationsPage() {
 
       <Card className="border-border/60 shadow-sm">
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "locations" | "requests")}>
-          <CardHeader className="space-y-6">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <TabsList className="grid w-full max-w-md grid-cols-2 lg:w-auto">
-                <TabsTrigger value="locations" className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Active Locations
-                </TabsTrigger>
-                <TabsTrigger value="requests" className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Requests
-                  {requestsMeta?.totalItems ? (
-                    <Badge variant="secondary" className="ml-1">
-                      {requestsMeta.totalItems}
-                    </Badge>
-                  ) : null}
-                </TabsTrigger>
-              </TabsList>
-            </div>
-          </CardHeader>
-
-          <CardContent>
-            <TabsContent value="locations" className="space-y-6 mt-0">
-              <div className="space-y-6">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <CardTitle className="text-xl font-semibold">
-                      Active Locations
-                    </CardTitle>
-                    <CardDescription>
-                      Browse and manage your published locations.
-                    </CardDescription>
-                  </div>
-                  <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-                    <Input
-                      placeholder="Search locations..."
-                      value={activeSearchTerm}
-                      onChange={(e) => {
-                        setActiveSearchTerm(e.target.value);
-                        setActivePage(1);
-                      }}
-                      className="sm:w-[260px]"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="justify-start gap-2 text-muted-foreground hover:text-foreground sm:w-auto"
-                      onClick={() => {
-                        setActiveSearchTerm("");
-                        setSortBy(sortOptions[0].value);
-                        setVisibleFilter("all");
-                        setActivePage(1);
-                      }}
-                    >
-                      <ArrowUpDown className="h-4 w-4" />
-                      Reset filters
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Filter className="h-4 w-4" /> Filters
+          <CardContent className="pt-4">
+            <TabsContent value="locations" className="space-y-3 mt-0">
+              <div className="space-y-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Filter className="h-3.5 w-3.5" /> Filters
                     </div>
                     <Select
                       value={visibleFilter}
@@ -430,7 +391,7 @@ export default function MyLocationsPage() {
                         setActivePage(1);
                       }}
                     >
-                      <SelectTrigger className="sm:w-[200px]">
+                      <SelectTrigger className="h-8 sm:w-[160px]">
                         <SelectValue placeholder="Visibility" />
                       </SelectTrigger>
                       <SelectContent>
@@ -448,7 +409,7 @@ export default function MyLocationsPage() {
                         setActivePage(1);
                       }}
                     >
-                      <SelectTrigger className="sm:w-[220px]">
+                      <SelectTrigger className="h-8 sm:w-[180px]">
                         <SelectValue placeholder="Sort" />
                       </SelectTrigger>
                       <SelectContent>
@@ -460,45 +421,70 @@ export default function MyLocationsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    Showing {activeLocations.length} of {activeMeta?.totalItems ?? activeLocations.length} locations
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="Search locations..."
+                      value={activeSearchTerm}
+                      onChange={(e) => {
+                        setActiveSearchTerm(e.target.value);
+                        setActivePage(1);
+                      }}
+                      className="h-8 sm:w-[240px]"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setActiveSearchTerm("");
+                        setSortBy(sortOptions[0].value);
+                        setVisibleFilter("all");
+                        setActivePage(1);
+                      }}
+                    >
+                      <ArrowUpDown className="h-3.5 w-3.5" />
+                      Reset
+                    </Button>
                   </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Showing {activeLocations.length} of {activeMeta?.totalItems ?? activeLocations.length} locations
                 </div>
               </div>
 
               {activeLocations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted py-12 text-center">
-                  <div className="text-xl font-semibold">
+                <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted py-8 text-center">
+                  <div className="text-lg font-semibold">
                     No locations found for your filters
                   </div>
-                  <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                  <p className="mt-1.5 max-w-md text-xs text-muted-foreground">
                     Try adjusting your filters or submit a new location to get started.
                   </p>
-                  <Button asChild className="mt-6">
+                  <Button asChild size="sm" className="mt-4">
                     <Link href="/dashboard/business/locations/create">
-                      <PlusCircle className="mr-2 h-4 w-4" />
+                      <PlusCircle className="mr-2 h-3.5 w-3.5" />
                       Submit a location
                     </Link>
                   </Button>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-xl border border-border/60">
+                <div className="overflow-hidden rounded-lg border border-border/60">
                   <Table>
                     <TableHeader className="bg-muted/40">
                       <TableRow className="border-b border-border/60">
-                        <TableHead className="w-[420px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <TableHead className="w-[380px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
                           Location
                         </TableHead>
-                        <TableHead className="w-[280px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <TableHead className="w-[260px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
                           Address
                         </TableHead>
-                        <TableHead className="w-[220px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <TableHead className="w-[200px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
                           Tags
                         </TableHead>
-                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
                           Check-ins
                         </TableHead>
-                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
                           Actions
                         </TableHead>
                       </TableRow>
@@ -509,9 +495,9 @@ export default function MyLocationsPage() {
                           key={location.id}
                           className="border-b border-border/40 transition-colors hover:bg-muted/30"
                         >
-                          <TableCell className="align-top">
-                            <div className="flex items-start gap-3">
-                              <div className="h-14 w-20 overflow-hidden rounded-lg border border-border/50 bg-muted">
+                          <TableCell className="align-top py-3">
+                            <div className="flex items-start gap-2.5">
+                              <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md border border-border/50 bg-muted">
                                 {location.imageUrl?.[0] ? (
                                   <img
                                     src={location.imageUrl[0]}
@@ -520,18 +506,18 @@ export default function MyLocationsPage() {
                                     loading="lazy"
                                   />
                                 ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
+                                  <div className="flex h-full w-full items-center justify-center text-[9px] text-muted-foreground">
                                     No image
                                   </div>
                                 )}
                               </div>
-                              <div className="flex-1 space-y-2">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="text-base font-semibold leading-tight">
+                              <div className="flex-1 min-w-0 space-y-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="text-sm font-semibold leading-tight truncate">
                                     {location.name}
                                   </span>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                                   <span>
                                     Updated {new Date(location.updatedAt).toLocaleDateString()}
                                   </span>
@@ -539,19 +525,19 @@ export default function MyLocationsPage() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="align-top text-sm text-muted-foreground">
-                            <div>{location.addressLine}</div>
-                            <div className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                          <TableCell className="align-top text-xs text-muted-foreground py-3">
+                            <div className="truncate">{location.addressLine}</div>
+                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80 truncate">
                               {location.addressLevel2}, {location.addressLevel1}
                             </div>
                           </TableCell>
-                          <TableCell className="align-top">
+                          <TableCell className="align-top py-3">
                             <DisplayTags tags={location.tags} maxCount={3} />
                           </TableCell>
-                          <TableCell className="align-top text-right text-sm font-semibold">
+                          <TableCell className="align-top text-right text-xs font-semibold py-3">
                             {parseCheckIns(location.totalCheckIns).toLocaleString()}
                           </TableCell>
-                          <TableCell className="align-top text-right">
+                          <TableCell className="align-top text-right py-3">
                             <ActiveLocationActions location={location} />
                           </TableCell>
                         </TableRow>
@@ -561,14 +547,15 @@ export default function MyLocationsPage() {
                 </div>
               )}
 
-              <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm text-muted-foreground">
+              <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-xs text-muted-foreground">
                   Page {activeMeta?.currentPage ?? activePage} of {activeMeta?.totalPages ?? 1}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-8"
                     onClick={() => setActivePage((page) => Math.max(1, page - 1))}
                     disabled={!activeMeta || activeMeta.currentPage <= 1}
                   >
@@ -577,6 +564,7 @@ export default function MyLocationsPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-8"
                     onClick={() =>
                       setActivePage((page) =>
                         activeMeta ? Math.min(activeMeta.totalPages, page + 1) : page + 1
@@ -590,29 +578,29 @@ export default function MyLocationsPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="requests" className="space-y-6 mt-0">
-              <div className="space-y-6">
+            <TabsContent value="requests" className="space-y-3 mt-0">
+              <div className="space-y-3">
                 <div>
-                  <CardTitle className="text-xl font-semibold">
+                  <CardTitle className="text-lg font-semibold">
                     Location Requests ({requestsMeta?.totalItems || 0})
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs">
                     Track and manage your location submission requests.
                   </CardDescription>
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-border/60">
+              <div className="overflow-hidden rounded-lg border border-border/60">
                 <Table>
                   <TableHeader className="bg-muted/40">
                     <TableRow className="border-b border-border/60">
-                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
                         Location Name
                       </TableHead>
-                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
                         Description
                       </TableHead>
-                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -622,10 +610,10 @@ export default function MyLocationsPage() {
                           Submitted At <RequestsSortIcon column="createdAt" />
                         </Button>
                       </TableHead>
-                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
                         Status
                       </TableHead>
-                      <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -637,18 +625,18 @@ export default function MyLocationsPage() {
                           key={request.id}
                           className="border-b border-border/40 transition-colors hover:bg-muted/30"
                         >
-                          <TableCell className="font-medium">
+                          <TableCell className="font-medium text-sm py-2.5">
                             {request.name}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="text-xs text-muted-foreground py-2.5 line-clamp-2">
                             {request.description}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-xs py-2.5">
                             {new Date(request.createdAt).toLocaleDateString()}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="py-2.5">
                             <Badge
-                              className={cn({
+                              className={cn("text-xs", {
                                 "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400":
                                   request.status === "AUTO_VALIDATING",
                                 "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400":
@@ -665,7 +653,7 @@ export default function MyLocationsPage() {
                               {request.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right py-2.5">
                             <RequestActions
                               requestId={request.id}
                               status={request.status}
@@ -675,16 +663,16 @@ export default function MyLocationsPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
-                          <div className="flex flex-col items-center justify-center py-8">
-                            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                            <div className="text-lg font-semibold">No requests found</div>
-                            <p className="text-sm text-muted-foreground mt-2">
+                        <TableCell colSpan={5} className="h-20 text-center">
+                          <div className="flex flex-col items-center justify-center py-6">
+                            <FileText className="h-10 w-10 text-muted-foreground mb-3" />
+                            <div className="text-base font-semibold">No requests found</div>
+                            <p className="text-xs text-muted-foreground mt-1.5">
                               Submit a new location to get started.
                             </p>
-                            <Button asChild className="mt-4">
+                            <Button asChild size="sm" className="mt-3">
                               <Link href="/dashboard/business/locations/create">
-                                <PlusCircle className="mr-2 h-4 w-4" />
+                                <PlusCircle className="mr-2 h-3.5 w-3.5" />
                                 Submit New Location
                               </Link>
                             </Button>
@@ -696,14 +684,15 @@ export default function MyLocationsPage() {
                 </Table>
               </div>
 
-              <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm text-muted-foreground">
+              <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-xs text-muted-foreground">
                   Page {requestsMeta?.currentPage ?? requestsPage} of {requestsMeta?.totalPages ?? 1}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-8"
                     onClick={() => setRequestsPage((page) => Math.max(1, page - 1))}
                     disabled={!requestsMeta || requestsMeta.currentPage <= 1}
                   >
@@ -712,6 +701,7 @@ export default function MyLocationsPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-8"
                     onClick={() => setRequestsPage((page) => page + 1)}
                     disabled={
                       !requestsMeta ||
