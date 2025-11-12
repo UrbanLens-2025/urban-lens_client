@@ -30,6 +30,8 @@ import { NavSecondary } from './NavSecondary';
 import { NavUser } from './NavUser';
 import { Loader2 } from 'lucide-react';
 import { useUser } from '@/hooks/user/useUser';
+import { useRouter, usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 const adminNav = [
   { title: 'Overview', url: '/admin', icon: IconDashboard },
@@ -70,6 +72,8 @@ const navSecondary = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user, isLoading } = useUser();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const dashboardTitle = React.useMemo(() => {
     switch (user?.role) {
@@ -81,6 +85,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         return 'Creator Dashboard';
       default:
         return 'Dashboard';
+    }
+  }, [user]);
+
+  const dashboardUrl = React.useMemo(() => {
+    switch (user?.role) {
+      case 'ADMIN':
+        return '/admin';
+      case 'BUSINESS_OWNER':
+        return '/dashboard/business';
+      case 'EVENT_CREATOR':
+        return '/dashboard/creator';
+      default:
+        return '/dashboard';
     }
   }, [user]);
 
@@ -107,6 +124,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }, [user]);
 
+  const isDashboardActive = pathname === dashboardUrl;
+
   if (isLoading || !user) {
     return (
       <Sidebar collapsible='icon' {...props}>
@@ -114,7 +133,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton className='data-[slot=sidebar-menu-button]:!p-1.5'>
-                <Loader2 className='animate-spin' />
+                <Loader2 className='animate-spin size-5' />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -125,28 +144,35 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible='icon' {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="border-b border-sidebar-border/50">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              asChild
-              className='data-[slot=sidebar-menu-button]:!p-1.5'
+              onClick={() => router.push(dashboardUrl)}
+              isActive={isDashboardActive}
+              className={cn(
+                "data-[slot=sidebar-menu-button]:!p-2 transition-all duration-200",
+                isDashboardActive 
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" 
+                  : "hover:bg-sidebar-accent/50"
+              )}
             >
-              <a href='#'>
-                <IconInnerShadowTop className='!size-5' />
-                <span className='text-base font-semibold'>
-                  {dashboardTitle}
-                </span>
-              </a>
+              <IconInnerShadowTop className={cn(
+                "!size-5 transition-transform duration-200",
+                isDashboardActive && "scale-110"
+              )} />
+              <span className='text-base font-semibold transition-all duration-200'>
+                {dashboardTitle}
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="gap-2">
         <NavMain items={navMain} />
         <NavSecondary items={navSecondary} className='mt-auto' />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border/50">
         <NavUser
           user={{
             name: `${user?.firstName} ${user?.lastName}`,
