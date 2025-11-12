@@ -360,7 +360,7 @@ export default function LocationForm({
       }
       queryClient.invalidateQueries({ queryKey: ["locationRequests"] });
       router.refresh();
-      router.push("/dashboard/business/locations");
+      router.push("/dashboard/business/locations?tab=requests");
     } catch (err) {
       toast.error("An error occurred. Please try again.");
     }
@@ -947,23 +947,39 @@ export default function LocationForm({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0 space-y-2">
-                      {watchedValues.locationValidationDocuments?.map((doc, docIndex) => (
-                        <div key={docIndex} className="space-y-1">
-                          <p className="text-xs font-medium text-muted-foreground">
-                            {doc.documentType} ({doc.documentImageUrls?.length || 0} images)
-                          </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {doc.documentImageUrls?.map((url: string) => (
-                              <img
-                                key={url}
-                                src={url}
-                                alt={doc.documentType}
-                                className="w-16 h-16 object-cover rounded border"
-                              />
-                            ))}
+                      {watchedValues.locationValidationDocuments?.map((doc, docIndex) => {
+                        const getDocumentTypeLabel = (type: string) => {
+                          switch (type) {
+                            case "LOCATION_REGISTRATION_CERTIFICATE":
+                              return "Location Registration Certificate";
+                            case "BUSINESS_LICENSE":
+                              return "Business License";
+                            case "TAX_REGISTRATION":
+                              return "Tax Registration";
+                            case "OTHER":
+                              return "Other";
+                            default:
+                              return type;
+                          }
+                        };
+                        return (
+                          <div key={docIndex} className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">
+                              {getDocumentTypeLabel(doc.documentType)} ({doc.documentImageUrls?.length || 0} images)
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {doc.documentImageUrls?.map((url: string) => (
+                                <img
+                                  key={url}
+                                  src={url}
+                                  alt={getDocumentTypeLabel(doc.documentType)}
+                                  className="w-16 h-16 object-cover rounded border"
+                                />
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </CardContent>
                   </Card>
                 </div>

@@ -2,8 +2,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useDebounce } from "use-debounce";
+import { useSearchParams } from "next/navigation";
 import {
   Loader2,
   MapPin,
@@ -20,6 +21,10 @@ import {
   ArrowUp,
   ArrowDown,
   FileText,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 
 import { useMyLocations, useLocationRequests } from "@/hooks/locations/useMyLocations";
@@ -265,7 +270,20 @@ const parseCheckIns = (value?: string) => {
 };
 
 export default function MyLocationsPage() {
-  const [activeTab, setActiveTab] = useState<"locations" | "requests">("locations");
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<"locations" | "requests">(
+    (tabFromUrl === "requests" ? "requests" : "locations") as "locations" | "requests"
+  );
+
+  // Update tab when URL parameter changes
+  useEffect(() => {
+    if (tabFromUrl === "requests") {
+      setActiveTab("requests");
+    } else if (tabFromUrl === "locations" || !tabFromUrl) {
+      setActiveTab("locations");
+    }
+  }, [tabFromUrl]);
   
   // Active Locations state
   const [activePage, setActivePage] = useState(1);
@@ -322,6 +340,31 @@ export default function MyLocationsPage() {
       currentPageCount: activeLocations.length,
     };
   }, [activeLocations, activeMeta]);
+
+  const requestStats = useMemo(() => {
+    const awaitingReview = locationRequests.filter(
+      (req) => req.status === "AWAITING_ADMIN_REVIEW"
+    ).length;
+    const needsMoreInfo = locationRequests.filter(
+      (req) => req.status === "NEEDS_MORE_INFO"
+    ).length;
+    const approved = locationRequests.filter(
+      (req) => req.status === "APPROVED"
+    ).length;
+    const rejectedOrCancelled = locationRequests.filter(
+      (req) => req.status === "REJECTED" || req.status === "CANCELLED_BY_BUSINESS"
+    ).length;
+
+    return {
+      total: requestsMeta?.totalItems ?? locationRequests.length,
+      awaitingReview,
+      needsMoreInfo,
+      approved,
+      rejectedOrCancelled,
+      pending: awaitingReview + needsMoreInfo,
+      currentPageCount: locationRequests.length,
+    };
+  }, [locationRequests, requestsMeta]);
 
   const handleRequestsSort = (columnName: string) => {
     setRequestsSort((currentSort) => ({
@@ -424,6 +467,71 @@ export default function MyLocationsPage() {
             </CardHeader>
             <CardContent className="pt-0 pb-4 text-xs text-muted-foreground">
               Page {activeMeta?.currentPage ?? activePage} of {activeMeta?.totalPages ?? 1}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === "requests" && (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <Card className="border-border/60 shadow-sm">
+            <CardHeader className="pb-2 pt-4">
+              <CardDescription className="text-xs">Total requests</CardDescription>
+              <CardTitle className="text-2xl font-bold">
+                {requestStats.total.toLocaleString()}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <FileText className="h-3.5 w-3.5" />
+              Across all pages
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 shadow-sm">
+            <CardHeader className="pb-2 pt-4">
+              <CardDescription className="text-xs">Pending review</CardDescription>
+              <CardTitle className="text-2xl font-bold">
+                {requestStats.awaitingReview.toLocaleString()}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              This page only
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 shadow-sm">
+            <CardHeader className="pb-2 pt-4">
+              <CardDescription className="text-xs">Needs more info</CardDescription>
+              <CardTitle className="text-2xl font-bold">
+                {requestStats.needsMoreInfo.toLocaleString()}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <AlertCircle className="h-3.5 w-3.5" />
+              This page only
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 shadow-sm">
+            <CardHeader className="pb-2 pt-4">
+              <CardDescription className="text-xs">Approved</CardDescription>
+              <CardTitle className="text-2xl font-bold">
+                {requestStats.approved.toLocaleString()}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <CheckCircle className="h-3.5 w-3.5" />
+              This page only
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 shadow-sm">
+            <CardHeader className="pb-2 pt-4">
+              <CardDescription className="text-xs">Rejected/Cancelled</CardDescription>
+              <CardTitle className="text-2xl font-bold">
+                {requestStats.rejectedOrCancelled.toLocaleString()}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <XCircle className="h-3.5 w-3.5" />
+              This page only
             </CardContent>
           </Card>
         </div>
