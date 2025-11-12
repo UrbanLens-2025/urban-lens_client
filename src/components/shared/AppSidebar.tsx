@@ -49,11 +49,6 @@ const businessNav = [
     url: '/dashboard/business/locations',
     icon: IconMapPin,
   },
-  {
-    title: 'My Location Requests',
-    url: '/dashboard/business/locations/requests',
-    icon: IconFileText,
-  },
   { title: "Location Bookings", url: "/dashboard/business/location-bookings", icon: IconBrandBooking },
   { title: "Wallet", url: "/dashboard/business/wallet", icon: IconWallet },
 ];
