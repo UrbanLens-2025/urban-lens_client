@@ -25,6 +25,9 @@ import {
 import { useMyLocations, useLocationRequests } from "@/hooks/locations/useMyLocations";
 import { Location, LocationRequest, LocationStatus, SortState } from "@/types";
 import { useCancelLocationRequest } from "@/hooks/locations/useCancelLocationRequest";
+import { useLocationById } from "@/hooks/locations/useLocationById";
+import { useMutation } from "@tanstack/react-query";
+import { updateLocation } from "@/api/locations";
 
 import { DisplayTags } from "@/components/shared/DisplayTags";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +72,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const sortOptions = [
   { label: "Newest first", value: "createdAt:DESC" },
@@ -85,6 +91,55 @@ const visibleOptions = [
   { label: "Visible on map", value: "visible" },
   { label: "Hidden", value: "hidden" },
 ];
+
+function VisibilitySwitch({ location }: { location: Location }) {
+  const queryClient = useQueryClient();
+  const { data: fullLocation, isLoading: isLoadingLocation } = useLocationById(location.id);
+
+  const { mutate: toggleVisibility, isPending } = useMutation({
+    mutationFn: async (checked: boolean) => {
+      if (!fullLocation) {
+        throw new Error("Location data not loaded");
+      }
+
+      // Get current tag IDs from the location
+      const tagIds = fullLocation.tags?.map((tag) => tag.id) || [];
+
+      return updateLocation(location.id, {
+        name: fullLocation.name,
+        description: fullLocation.description,
+        imageUrl: fullLocation.imageUrl || [],
+        isVisibleOnMap: checked,
+        tagIds: tagIds,
+      });
+    },
+    onSuccess: (_, checked) => {
+      queryClient.invalidateQueries({ queryKey: ["myLocations"] });
+      queryClient.invalidateQueries({ queryKey: ["location", location.id] });
+      toast.success(
+        checked
+          ? "Location is now visible on map"
+          : "Location is now hidden from map"
+      );
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to update visibility");
+    },
+  });
+
+  const handleToggle = (checked: boolean) => {
+    toggleVisibility(checked);
+  };
+
+  return (
+    <Switch
+      checked={location.isVisibleOnMap}
+      onCheckedChange={handleToggle}
+      disabled={isPending || isLoadingLocation || !fullLocation}
+      className="data-[state=checked]:bg-primary"
+    />
+  );
+}
 
 function ActiveLocationActions({ location }: { location: Location }) {
   return (
@@ -481,6 +536,9 @@ export default function MyLocationsPage() {
                         <TableHead className="w-[200px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
                           Tags
                         </TableHead>
+                        <TableHead className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+                          Visible
+                        </TableHead>
                         <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
                           Check-ins
                         </TableHead>
@@ -533,6 +591,9 @@ export default function MyLocationsPage() {
                           </TableCell>
                           <TableCell className="align-top py-3">
                             <DisplayTags tags={location.tags} maxCount={3} />
+                          </TableCell>
+                          <TableCell className="align-top text-center py-3">
+                            <VisibilitySwitch location={location} />
                           </TableCell>
                           <TableCell className="align-top text-right text-xs font-semibold py-3">
                             {parseCheckIns(location.totalCheckIns).toLocaleString()}
