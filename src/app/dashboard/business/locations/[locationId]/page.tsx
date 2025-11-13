@@ -27,10 +27,10 @@ import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { use, useMemo, useState, useEffect } from "react";
+import { use, useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { DisplayTags } from "@/components/shared/DisplayTags";
-import type React from "react";
+import React from "react";
 import { ImageViewer } from "@/components/shared/ImageViewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocationVouchers } from "@/hooks/vouchers/useLocationVouchers";
@@ -38,7 +38,6 @@ import { useLocationMissions } from "@/hooks/missions/useLocationMissions";
 import { useDeleteLocationVoucher } from "@/hooks/vouchers/useDeleteLocationVoucher";
 import { useDeleteLocationMission } from "@/hooks/missions/useDeleteLocationMission";
 import { useDebounce } from "use-debounce";
-import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -141,6 +140,7 @@ import { cn } from "@/lib/utils";
 import { useAnnouncements } from "@/hooks/announcements/useAnnouncements";
 import { useDeleteAnnouncement } from "@/hooks/announcements/useDeleteAnnouncement";
 import { formatDateTime } from "@/lib/utils";
+import { startOfDay, startOfWeek, startOfMonth, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, format, isSameDay, isSameWeek, isSameMonth, eachDayOfInterval, eachWeekOfInterval, getDay, endOfWeek, endOfMonth } from "date-fns";
 
 function InfoRow({
   label,
@@ -175,8 +175,8 @@ function formatDate(dateString: string) {
   });
 }
 
-// Vouchers Tab Component
-function VouchersTab({ locationId }: { locationId: string }) {
+// Vouchers Tab Component - Memoized for performance
+const VouchersTab = React.memo(function VouchersTab({ locationId }: { locationId: string }) {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
@@ -514,10 +514,11 @@ function VouchersTab({ locationId }: { locationId: string }) {
       </AlertDialog>
     </div>
   );
-}
+});
+VouchersTab.displayName = "VouchersTab";
 
-// Missions Tab Component
-function MissionsTab({ locationId }: { locationId: string }) {
+// Missions Tab Component - Memoized for performance
+const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
@@ -787,7 +788,8 @@ function MissionsTab({ locationId }: { locationId: string }) {
       </AlertDialog>
     </div>
   );
-}
+});
+MissionsTab.displayName = "MissionsTab";
 
 // Booking Config Tab Component
 const bookingConfigSchema = z
@@ -822,11 +824,99 @@ const bookingConfigSchema = z
 
 type BookingConfigForm = z.infer<typeof bookingConfigSchema>;
 
+// Memoized currency formatter
+const formatCurrency = (amount: number, currency: string) => {
+  if (currency === "VND") {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  }
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+};
+
+// Memoized Preview Card Component
+const BookingPreviewCard = React.memo(({ 
+  allowBooking, 
+  basePrice, 
+  currency, 
+  minDuration, 
+  maxDuration, 
+  gapMinutes 
+}: { 
+  allowBooking: boolean;
+  basePrice: number;
+  currency: string;
+  minDuration: number;
+  maxDuration: number;
+  gapMinutes: number;
+}) => {
+  const formattedPrice = useMemo(() => formatCurrency(basePrice, currency), [basePrice, currency]);
+
+  return (
+    <Card className="border-border/60 shadow-sm sticky top-4">
+      <CardHeader className="pb-3 pt-4">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Calendar className="h-4 w-4" />
+          Preview
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-0 pb-4">
+        <div className="space-y-2">
+          <div>
+            <Label className="text-xs text-muted-foreground">Status</Label>
+            <p className="text-sm font-semibold">
+              {allowBooking ? (
+                <span className="text-green-600">Booking Enabled</span>
+              ) : (
+                <span className="text-gray-500">Booking Disabled</span>
+              )}
+            </p>
+          </div>
+
+          <div>
+            <Label className="text-xs text-muted-foreground">Base Price</Label>
+            <p className="text-xl font-bold">{formattedPrice}</p>
+            <p className="text-xs text-muted-foreground">per {minDuration} minutes</p>
+          </div>
+
+          <div className="border-t pt-3 space-y-1.5">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Min Duration</span>
+              <span className="font-medium">{minDuration} min</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Max Duration</span>
+              <span className="font-medium">{maxDuration} min</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Gap Required</span>
+              <span className="font-medium">{gapMinutes} min</span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
+BookingPreviewCard.displayName = "BookingPreviewCard";
+
 function BookingConfigTab({ locationId }: { locationId: string }) {
   const { data: existingConfig, isLoading: isLoadingConfig, error: configError } =
     useOwnerLocationBookingConfig(locationId);
+  const { data: availabilities, isLoading: isLoadingAvailabilities } = useWeeklyAvailabilities(locationId);
   const createConfig = useCreateLocationBookingConfig();
   const updateConfig = useUpdateLocationBookingConfig();
+  
+  // Check if availability is configured
+  const hasAvailability = useMemo(() => {
+    return availabilities && availabilities.length > 0;
+  }, [availabilities]);
 
   const form = useForm<BookingConfigForm>({
     resolver: zodResolver(bookingConfigSchema),
@@ -840,8 +930,19 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
     },
   });
 
+  // Memoize hasConfig to avoid recalculation
+  const hasConfig = useMemo(() => existingConfig && !configError, [existingConfig, configError]);
+  const isSubmitting = createConfig.isPending || updateConfig.isPending;
+
+  // Create a stable key from config properties to track changes
+  const configKey = useMemo(() => {
+    if (!existingConfig) return null;
+    return `${existingConfig.locationId}-${existingConfig.allowBooking}-${existingConfig.baseBookingPrice}-${existingConfig.currency}-${existingConfig.minBookingDurationMinutes}-${existingConfig.maxBookingDurationMinutes}-${existingConfig.minGapBetweenBookingsMinutes}`;
+  }, [existingConfig]);
+
+  // Only reset form when config actually changes
   useEffect(() => {
-    if (existingConfig && !configError) {
+    if (existingConfig && !configError && configKey) {
       form.reset({
         allowBooking: existingConfig.allowBooking,
         baseBookingPrice: parseFloat(existingConfig.baseBookingPrice),
@@ -849,11 +950,11 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
         minBookingDurationMinutes: existingConfig.minBookingDurationMinutes,
         maxBookingDurationMinutes: existingConfig.maxBookingDurationMinutes,
         minGapBetweenBookingsMinutes: existingConfig.minGapBetweenBookingsMinutes,
-      });
+      }, { keepDefaultValues: false });
     }
-  }, [existingConfig, configError, form]);
+  }, [configKey, configError, form]); // Only reset when config key changes
 
-  const onSubmit = (data: BookingConfigForm) => {
+  const onSubmit = useCallback((data: BookingConfigForm) => {
     if (hasConfig) {
       const updatePayload: UpdateLocationBookingConfigPayload = {
         allowBooking: data.allowBooking,
@@ -873,30 +974,11 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
         ...data,
       });
     }
-  };
+  }, [hasConfig, locationId, updateConfig, createConfig]);
 
-  const formatCurrency = (amount: number, currency: string) => {
-    if (currency === "VND") {
-      return new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-        minimumFractionDigits: 0,
-      }).format(amount);
-    }
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
-
-  const basePrice = form.watch("baseBookingPrice");
-  const currency = form.watch("currency");
-  const minDuration = form.watch("minBookingDurationMinutes");
-  const maxDuration = form.watch("maxBookingDurationMinutes");
-
-  const hasConfig = existingConfig && !configError;
-  const isSubmitting = createConfig.isPending || updateConfig.isPending;
+  // Watch form values with debouncing for preview
+  const watchedValues = form.watch();
+  const { baseBookingPrice, currency, minBookingDurationMinutes, maxBookingDurationMinutes, allowBooking, minGapBetweenBookingsMinutes } = watchedValues;
 
   if (isLoadingConfig) {
     return (
@@ -1088,49 +1170,14 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
         </div>
 
         <div className="lg:col-span-1">
-          <Card className="border-border/60 shadow-sm sticky top-4">
-            <CardHeader className="pb-3 pt-4">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4" />
-                Preview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-0 pb-4">
-              <div className="space-y-2">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Status</Label>
-                  <p className="text-sm font-semibold">
-                    {form.watch("allowBooking") ? (
-                      <span className="text-green-600">Booking Enabled</span>
-                    ) : (
-                      <span className="text-gray-500">Booking Disabled</span>
-                    )}
-                  </p>
-                </div>
-
-                <div>
-                  <Label className="text-xs text-muted-foreground">Base Price</Label>
-                  <p className="text-xl font-bold">{formatCurrency(basePrice, currency)}</p>
-                  <p className="text-xs text-muted-foreground">per {minDuration} minutes</p>
-                </div>
-
-                <div className="border-t pt-3 space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Min Duration</span>
-                    <span className="font-medium">{minDuration} min</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Max Duration</span>
-                    <span className="font-medium">{maxDuration} min</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Gap Required</span>
-                    <span className="font-medium">{form.watch("minGapBetweenBookingsMinutes")} min</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <BookingPreviewCard
+            allowBooking={allowBooking}
+            basePrice={baseBookingPrice}
+            currency={currency}
+            minDuration={minBookingDurationMinutes}
+            maxDuration={maxBookingDurationMinutes}
+            gapMinutes={minGapBetweenBookingsMinutes}
+          />
         </div>
       </div>
     </div>
@@ -1183,7 +1230,9 @@ function EditLocationTab({ locationId }: { locationId: string }) {
     }
   }, [location, form]);
 
-  const onSubmit = async (values: FormValues) => {
+  const onSubmit = useCallback(async (values: FormValues) => {
+    if (!location) return;
+    
     try {
       const { name, description, imageUrl, isVisibleOnMap, tagIds: newTagIds } = values;
       const mainPayload = {
@@ -1194,7 +1243,7 @@ function EditLocationTab({ locationId }: { locationId: string }) {
         tagIds: newTagIds,
       };
 
-      const originalTagIds = location?.tags.map((t) => t.id) || [];
+      const originalTagIds = location.tags.map((t) => t.id);
       const tagsToAdd = newTagIds.filter((id) => !originalTagIds.includes(id));
       const tagsToRemove = originalTagIds.filter((id) => !newTagIds.includes(id));
 
@@ -1216,7 +1265,7 @@ function EditLocationTab({ locationId }: { locationId: string }) {
     } catch (err) {
       toast.error("An error occurred while saving. Please try again.");
     }
-  };
+  }, [location, locationId, updateLocation, addTags, removeTags, queryClient]);
 
   if (isLoadingData) {
     return (
@@ -1642,6 +1691,364 @@ function AnnouncementsTab({ locationId }: { locationId: string }) {
   );
 }
 
+// Booking & Availability Tab Component with Subtabs
+function BookingAndAvailabilityTab({ locationId }: { locationId: string }) {
+  const [subTab, setSubTab] = useState("availability");
+
+  return (
+    <div className="space-y-4">
+      <Tabs value={subTab} onValueChange={setSubTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-muted/30">
+          <TabsTrigger value="availability" className="text-xs">
+            Availability
+          </TabsTrigger>
+          <TabsTrigger value="booking-config" className="text-xs">
+            Booking Config
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="text-xs">
+            Calendar
+          </TabsTrigger>
+        </TabsList>
+        <div className="mt-4">
+          <TabsContent value="availability" className="mt-0">
+            <AvailabilityTab locationId={locationId} />
+          </TabsContent>
+          <TabsContent value="booking-config" className="mt-0">
+            <BookingConfigTab locationId={locationId} />
+          </TabsContent>
+          <TabsContent value="calendar" className="mt-0">
+            <BookingCalendarTab locationId={locationId} />
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
+  );
+}
+
+// Booking Calendar Tab Component with Day/Week/Month Views
+interface MockBookingEvent {
+  id: string;
+  title: string;
+  startDateTime: Date;
+  endDateTime: Date;
+  customerName: string;
+  status: "confirmed" | "pending" | "cancelled";
+}
+
+function BookingCalendarTab({ locationId }: { locationId: string }) {
+  const [view, setView] = useState<"day" | "week" | "month">("week");
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Mock booking events
+  const mockBookings: MockBookingEvent[] = [
+    {
+      id: "1",
+      title: "Corporate Event",
+      startDateTime: new Date(new Date().setHours(10, 0, 0, 0)),
+      endDateTime: new Date(new Date().setHours(14, 0, 0, 0)),
+      customerName: "John Doe",
+      status: "confirmed" as const,
+    },
+    {
+      id: "2",
+      title: "Birthday Party",
+      startDateTime: new Date(addDays(new Date(), 1).setHours(15, 0, 0, 0)),
+      endDateTime: new Date(addDays(new Date(), 1).setHours(18, 0, 0, 0)),
+      customerName: "Jane Smith",
+      status: "confirmed" as const,
+    },
+    {
+      id: "3",
+      title: "Wedding Reception",
+      startDateTime: new Date(addDays(new Date(), 3).setHours(16, 0, 0, 0)),
+      endDateTime: new Date(addDays(new Date(), 3).setHours(22, 0, 0, 0)),
+      customerName: "Mike Johnson",
+      status: "pending" as const,
+    },
+    {
+      id: "4",
+      title: "Team Meeting",
+      startDateTime: new Date(addWeeks(new Date(), 1).setHours(9, 0, 0, 0)),
+      endDateTime: new Date(addWeeks(new Date(), 1).setHours(12, 0, 0, 0)),
+      customerName: "Sarah Williams",
+      status: "confirmed" as const,
+    },
+  ];
+
+  const navigateDate = (direction: "prev" | "next") => {
+    if (view === "day") {
+      setCurrentDate(direction === "next" ? addDays(currentDate, 1) : subDays(currentDate, 1));
+    } else if (view === "week") {
+      setCurrentDate(direction === "next" ? addWeeks(currentDate, 1) : subWeeks(currentDate, 1));
+    } else {
+      setCurrentDate(direction === "next" ? addMonths(currentDate, 1) : subMonths(currentDate, 1));
+    }
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  const getEventsForDate = (date: Date): MockBookingEvent[] => {
+    return mockBookings.filter((event) => {
+      if (view === "day") {
+        return isSameDay(event.startDateTime, date);
+      } else if (view === "week") {
+        return isSameWeek(event.startDateTime, date, { weekStartsOn: 1 });
+      } else {
+        return isSameMonth(event.startDateTime, date);
+      }
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return "bg-green-500/20 border-green-500 text-green-700";
+      case "pending":
+        return "bg-amber-500/20 border-amber-500 text-amber-700";
+      case "cancelled":
+        return "bg-red-500/20 border-red-500 text-red-700";
+      default:
+        return "bg-gray-500/20 border-gray-500 text-gray-700";
+    }
+  };
+
+  const renderDayView = () => {
+    const dayStart = startOfDay(currentDate);
+    const hours = Array.from({ length: 24 }, (_, i) => i);
+    const dayEvents = getEventsForDate(currentDate);
+
+    return (
+      <div className="space-y-4">
+        <div className="border rounded-lg overflow-hidden">
+          <div className="grid grid-cols-[80px_1fr] gap-0">
+            {hours.map((hour) => {
+              const hourDate = new Date(dayStart);
+              hourDate.setHours(hour, 0, 0, 0);
+              const hourEvents = dayEvents.filter(
+                (event) =>
+                  event.startDateTime.getHours() <= hour && event.endDateTime.getHours() > hour
+              );
+
+              return (
+                <div key={hour} className="grid grid-cols-2 border-b last:border-0">
+                  <div className="p-2 text-xs font-medium text-muted-foreground border-r bg-muted/20">
+                    {format(hourDate, "HH:mm")}
+                  </div>
+                  <div className="p-2 min-h-[60px] relative">
+                    {hourEvents.map((event) => (
+                      <div
+                        key={event.id}
+                        className={cn(
+                          "p-1.5 rounded border text-xs mb-1",
+                          getStatusColor(event.status)
+                        )}
+                      >
+                        <div className="font-semibold">{event.title}</div>
+                        <div className="text-[10px] opacity-75">
+                          {format(event.startDateTime, "HH:mm")} - {format(event.endDateTime, "HH:mm")}
+                        </div>
+                        <div className="text-[10px] opacity-75">{event.customerName}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderWeekView = () => {
+    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+    const hours = Array.from({ length: 24 }, (_, i) => i);
+
+    return (
+      <div className="space-y-4">
+        <div className="border rounded-lg overflow-hidden">
+          <div className="grid grid-cols-[80px_repeat(7,1fr)] gap-0">
+            <div className="border-r border-b bg-muted/20 p-2"></div>
+            {weekDays.map((day) => (
+              <div
+                key={day.toISOString()}
+                className={cn(
+                  "border-b p-2 text-center text-xs font-semibold",
+                  isSameDay(day, new Date()) && "bg-primary/10"
+                )}
+              >
+                <div className="text-muted-foreground">{format(day, "EEE")}</div>
+                <div className="text-base">{format(day, "d")}</div>
+              </div>
+            ))}
+            {hours.map((hour) => (
+              <React.Fragment key={hour}>
+                <div className="p-1.5 text-xs font-medium text-muted-foreground border-r border-b bg-muted/20">
+                  {String(hour).padStart(2, "0")}:00
+                </div>
+                {weekDays.map((day) => {
+                  const dayEvents = getEventsForDate(day).filter(
+                    (event) =>
+                      isSameDay(event.startDateTime, day) &&
+                      event.startDateTime.getHours() <= hour &&
+                      event.endDateTime.getHours() > hour
+                  );
+                  return (
+                    <div
+                      key={`${day.toISOString()}-${hour}`}
+                      className="border-b border-r p-1 min-h-[40px] relative"
+                    >
+                      {dayEvents.map((event) => (
+                        <div
+                          key={event.id}
+                          className={cn(
+                            "p-1 rounded border text-[10px] mb-0.5",
+                            getStatusColor(event.status)
+                          )}
+                        >
+                          <div className="font-semibold truncate">{event.title}</div>
+                          <div className="opacity-75 truncate">{event.customerName}</div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderMonthView = () => {
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+    const weeks = eachWeekOfInterval({ start: calendarStart, end: calendarEnd }, { weekStartsOn: 1 });
+
+    return (
+      <div className="space-y-4">
+        <div className="border rounded-lg overflow-hidden">
+          <div className="grid grid-cols-7 gap-0">
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+              <div key={day} className="p-2 text-center text-xs font-semibold border-b bg-muted/20">
+                {day}
+              </div>
+            ))}
+            {days.map((day) => {
+              const dayEvents = getEventsForDate(day);
+              const isCurrentMonth = isSameMonth(day, currentDate);
+              const isToday = isSameDay(day, new Date());
+
+              return (
+                <div
+                  key={day.toISOString()}
+                  className={cn(
+                    "min-h-[100px] border-b border-r p-1.5",
+                    !isCurrentMonth && "bg-muted/10 opacity-50",
+                    isToday && "bg-primary/5 border-primary border-2"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "text-xs font-semibold mb-1",
+                      isToday && "text-primary"
+                    )}
+                  >
+                    {format(day, "d")}
+                  </div>
+                  <div className="space-y-0.5">
+                    {dayEvents.slice(0, 3).map((event) => (
+                      <div
+                        key={event.id}
+                        className={cn(
+                          "p-1 rounded border text-[10px] truncate",
+                          getStatusColor(event.status)
+                        )}
+                        title={`${event.title} - ${event.customerName}`}
+                      >
+                        {format(event.startDateTime, "HH:mm")} {event.title}
+                      </div>
+                    ))}
+                    {dayEvents.length > 3 && (
+                      <div className="text-[10px] text-muted-foreground">
+                        +{dayEvents.length - 3} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => navigateDate("prev")} className="h-8">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={goToToday} className="h-8 text-xs">
+            Today
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigateDate("next")} className="h-8">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <div className="ml-4 text-sm font-semibold">
+            {view === "day" && format(currentDate, "EEEE, MMMM d, yyyy")}
+            {view === "week" &&
+              `${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d")} - ${format(
+                endOfWeek(currentDate, { weekStartsOn: 1 }),
+                "MMM d, yyyy"
+              )}`}
+            {view === "month" && format(currentDate, "MMMM yyyy")}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={view === "day" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setView("day")}
+            className="h-8 text-xs"
+          >
+            Day
+          </Button>
+          <Button
+            variant={view === "week" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setView("week")}
+            className="h-8 text-xs"
+          >
+            Week
+          </Button>
+          <Button
+            variant={view === "month" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setView("month")}
+            className="h-8 text-xs"
+          >
+            Month
+          </Button>
+        </div>
+      </div>
+
+      {view === "day" && renderDayView()}
+      {view === "week" && renderWeekView()}
+      {view === "month" && renderMonthView()}
+    </div>
+  );
+}
+
 // Availability Tab Component - Simplified version
 interface WeeklyAvailabilitySlot {
   id?: number;
@@ -1697,6 +2104,19 @@ function AvailabilityTab({ locationId }: { locationId: string }) {
     return transformApiResponse(apiAvailability);
   }, [apiAvailability]);
 
+  // Local state for availability (for mock updates during resize)
+  const [localAvailability, setLocalAvailability] = useState<WeeklyAvailabilitySlot[]>([]);
+
+  // Sync local availability with API data
+  useEffect(() => {
+    if (apiAvailability) {
+      setLocalAvailability(transformApiResponse(apiAvailability));
+    }
+  }, [apiAvailability]);
+
+  // Use local availability for rendering
+  const displayAvailability = localAvailability.length > 0 ? localAvailability : availability;
+
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [slotsToConfirm, setSlotsToConfirm] = useState<WeeklyAvailabilitySlot[]>([]);
@@ -1705,27 +2125,47 @@ function AvailabilityTab({ locationId }: { locationId: string }) {
   const [editedStartHour, setEditedStartHour] = useState<number>(0);
   const [editedEndHour, setEditedEndHour] = useState<number>(0);
   const [editErrors, setEditErrors] = useState<{ start?: string; end?: string; overlap?: string }>({});
+  
+  // Track hovered block for highlighting
+  const [hoveredBlock, setHoveredBlock] = useState<WeeklyAvailabilitySlot | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Track if we should show dialog after selection
+  const selectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Track if user is dragging to select multiple cells
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ day: number; hour: number } | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef<{ day: number; hour: number } | null>(null);
+  const hasMovedRef = useRef(false);
+  
+  // Track resize state (resizing an existing slot)
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeSlot, setResizeSlot] = useState<WeeklyAvailabilitySlot | null>(null);
+  const [resizeEdge, setResizeEdge] = useState<"start" | "end" | null>(null);
+  const isResizingRef = useRef(false);
+  const resizeSlotRef = useRef<WeeklyAvailabilitySlot | null>(null);
+  const resizeEdgeRef = useRef<"start" | "end" | null>(null);
 
   const availabilityCellsSet = useMemo(() => {
     const set = new Set<string>();
-    availability.forEach((slot) => {
+    displayAvailability.forEach((slot) => {
       for (let hour = slot.startHour; hour < slot.endHour; hour++) {
         set.add(`${slot.dayOfWeek}_${hour}`);
       }
     });
     return set;
-  }, [availability]);
+  }, [displayAvailability]);
 
   const weeklyStats = useMemo(() => {
-    if (availability.length === 0) {
+    if (displayAvailability.length === 0) {
       return { totalHours: 0, activeDays: 0, slotCount: 0, longestBlock: 0 };
     }
     const activeDaysSet = new Set<number>();
     let totalHours = 0;
     let longestBlock = 0;
-    availability.forEach((slot) => {
+    displayAvailability.forEach((slot) => {
       activeDaysSet.add(slot.dayOfWeek);
       const duration = slot.endHour - slot.startHour;
       totalHours += duration;
@@ -1734,10 +2174,10 @@ function AvailabilityTab({ locationId }: { locationId: string }) {
     return {
       totalHours,
       activeDays: activeDaysSet.size,
-      slotCount: availability.length,
+      slotCount: displayAvailability.length,
       longestBlock,
     };
-  }, [availability]);
+  }, [displayAvailability]);
 
   const getCellStatus = (day: number, hour: number): "available" | "saved" => {
     const key = `${day}_${hour}`;
@@ -1745,27 +2185,365 @@ function AvailabilityTab({ locationId }: { locationId: string }) {
   };
 
   const getSlotAtCell = (day: number, hour: number): WeeklyAvailabilitySlot | null => {
-    return availability.find(
+    return displayAvailability.find(
       (slot) => slot.dayOfWeek === day && hour >= slot.startHour && hour < slot.endHour
     ) || null;
   };
 
-  const handleCellClick = (day: number, hour: number) => {
-    const key = `${day}_${hour}`;
+  // Check if a cell is on the left edge (startHour) or right edge (endHour) of a slot
+  const getEdgeAtCell = (day: number, hour: number): "start" | "end" | null => {
+    const slot = getSlotAtCell(day, hour);
+    if (!slot) return null;
+    if (hour === slot.startHour) return "start";
+    if (hour === slot.endHour - 1) return "end";
+    return null;
+  };
+
+  // Round hour to nearest integer
+  const roundHour = (hour: number): number => {
+    return Math.round(hour);
+  };
+
+  // Handle mouse down (start drag or resize)
+  const handleMouseDown = (day: number, hour: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const roundedHour = roundHour(hour);
+    const key = `${day}_${roundedHour}`;
+
+    // Check if we're on an edge of an existing slot (resize mode)
+    const edge = getEdgeAtCell(day, roundedHour);
+    if (edge) {
+      const slot = getSlotAtCell(day, roundedHour);
+      if (slot) {
+        setIsResizing(true);
+        setResizeSlot(slot);
+        setResizeEdge(edge);
+        isResizingRef.current = true;
+        resizeSlotRef.current = slot;
+        resizeEdgeRef.current = edge;
+        hasMovedRef.current = false;
+        return;
+      }
+    }
+
+    // Don't allow dragging from already saved cells (unless we're resizing)
     if (availabilityCellsSet.has(key)) {
-      const block = getSlotAtCell(day, hour);
-      if (block) {
-        setSlotToEdit(block);
-        setEditedStartHour(block.startHour);
-        setEditedEndHour(block.endHour);
+      return;
+    }
+
+    const dragStartValue = { day, hour: roundedHour };
+    setIsDragging(true);
+    setDragStart(dragStartValue);
+    isDraggingRef.current = true;
+    dragStartRef.current = dragStartValue;
+    hasMovedRef.current = false;
+    setSelectedCells(new Set([key]));
+  };
+
+  // Handle mouse enter (during drag or resize)
+  const handleMouseEnter = (day: number, hour: number) => {
+    // Check if we're resizing
+    if (isResizingRef.current && resizeSlotRef.current && resizeEdgeRef.current) {
+      hasMovedRef.current = true;
+      const roundedHour = roundHour(hour);
+
+      // Only allow resizing within the same day
+      if (resizeSlotRef.current.dayOfWeek !== day) {
+        return;
+      }
+
+      // Get the current slot from local state
+      const currentSlot = localAvailability.find((s) => s.id === resizeSlotRef.current?.id);
+      if (!currentSlot) return;
+
+      // Update the slot based on which edge is being dragged
+      let newStartHour = currentSlot.startHour;
+      let newEndHour = currentSlot.endHour;
+
+      if (resizeEdgeRef.current === "start") {
+        newStartHour = Math.min(roundedHour, currentSlot.endHour - 1);
+        if (newStartHour >= currentSlot.endHour) {
+          newStartHour = currentSlot.endHour - 1;
+        }
+      } else {
+        newEndHour = Math.max(roundedHour + 1, currentSlot.startHour + 1);
+        if (newEndHour <= currentSlot.startHour) {
+          newEndHour = currentSlot.startHour + 1;
+        }
+      }
+
+      // Check for overlaps with other slots
+      const otherSlots = displayAvailability.filter((s) => s.id !== currentSlot.id);
+      let hasOverlap = false;
+
+      for (let h = newStartHour; h < newEndHour; h++) {
+        for (const otherSlot of otherSlots) {
+          if (otherSlot.dayOfWeek === day && h >= otherSlot.startHour && h < otherSlot.endHour) {
+            hasOverlap = true;
+            break;
+          }
+        }
+        if (hasOverlap) break;
+      }
+
+      // If no overlap, update the slot
+      if (!hasOverlap) {
+        setLocalAvailability((prev) =>
+          prev.map((s) =>
+            s.id === currentSlot.id
+              ? { ...s, startHour: newStartHour, endHour: newEndHour }
+              : s
+          )
+        );
+      }
+
+      return;
+    }
+
+    // Check if we're dragging
+    if (!isDraggingRef.current || !dragStartRef.current) return;
+
+    // Only allow selecting cells within the same day as the drag start
+    if (dragStartRef.current.day !== day) {
+      return;
+    }
+
+    hasMovedRef.current = true;
+
+    const roundedHour = roundHour(hour);
+    const newSelectedCells = new Set<string>();
+
+    // Select all cells between drag start and current position (same day only)
+    const startHour = Math.min(dragStartRef.current.hour, roundedHour);
+    const endHour = Math.max(dragStartRef.current.hour, roundedHour);
+
+    // Check if any cell in the range overlaps with existing availability
+    let hasOverlap = false;
+    for (let h = startHour; h <= endHour; h++) {
+      const key = `${day}_${h}`;
+      if (availabilityCellsSet.has(key)) {
+        hasOverlap = true;
+        break;
+      }
+    }
+
+    // If there's an overlap, don't allow the selection
+    if (hasOverlap) {
+      return;
+    }
+
+    // Only allow selecting cells that aren't already saved
+    for (let h = startHour; h <= endHour; h++) {
+      const key = `${day}_${h}`;
+      if (!availabilityCellsSet.has(key)) {
+        newSelectedCells.add(key);
+      }
+    }
+
+    setSelectedCells(newSelectedCells);
+  };
+
+  // Handle mouse up (end drag or resize)
+  const handleMouseUp = useCallback(() => {
+    // Handle resize end
+    if (isResizingRef.current && resizeSlotRef.current) {
+      const finalSlot = localAvailability.find((s) => s.id === resizeSlotRef.current?.id);
+      const originalSlot = availability.find((s) => s.id === resizeSlotRef.current?.id);
+
+      if (finalSlot && originalSlot) {
+        // Always open edit dialog after resize
+        setSlotToEdit(originalSlot);
+        setEditedStartHour(finalSlot.startHour);
+        setEditedEndHour(finalSlot.endHour);
         setEditErrors({});
         setShowEditDialog(true);
       }
+
+      // Reset resize state
+      setIsResizing(false);
+      isResizingRef.current = false;
+      resizeSlotRef.current = null;
+      resizeEdgeRef.current = null;
+      hasMovedRef.current = false;
       return;
     }
+
+    const wasDragging = isDraggingRef.current;
+    const hadMoved = hasMovedRef.current;
+    const currentSelectedCells = new Set(selectedCells);
+
+    setIsDragging(false);
+    setDragStart(null);
+    isDraggingRef.current = false;
+    dragStartRef.current = null;
+
+    // If mouse moved during drag, or if we have multiple selected cells, it was a drag
+    const shouldProcess = (wasDragging && hadMoved) || currentSelectedCells.size > 1;
+
+    if (shouldProcess && currentSelectedCells.size > 0) {
+      // Clear any existing timeout
+      if (selectionTimeoutRef.current) {
+        clearTimeout(selectionTimeoutRef.current);
+      }
+
+      // Show dialog after a short delay
+      selectionTimeoutRef.current = setTimeout(() => {
+        processSelectedCellsWithSet(currentSelectedCells);
+      }, 100);
+    }
+
+    hasMovedRef.current = false;
+  }, [selectedCells, localAvailability, availability]);
+
+  // Process a specific set of selected cells
+  const processSelectedCellsWithSet = useCallback((cellsToProcess: Set<string>) => {
+    if (cellsToProcess.size === 0) return;
+
+    // Group consecutive hours per day into slots
+    const slotsByDay = new Map<number, number[]>();
+
+    cellsToProcess.forEach((key) => {
+      const [dayStr, hourStr] = key.split("_");
+      const day = parseInt(dayStr, 10);
+      const hour = parseInt(hourStr, 10);
+
+      if (!slotsByDay.has(day)) {
+        slotsByDay.set(day, []);
+      }
+      slotsByDay.get(day)!.push(hour);
+    });
+
+    // Create slots from consecutive hours
+    const newSlots: WeeklyAvailabilitySlot[] = [];
+    slotsByDay.forEach((hours, day) => {
+      if (hours.length === 0) return;
+
+      hours.sort((a, b) => a - b);
+
+      let startHour = hours[0];
+      for (let i = 1; i < hours.length; i++) {
+        if (hours[i] !== hours[i - 1] + 1) {
+          // Gap found, create slot
+          newSlots.push({
+            dayOfWeek: day,
+            startHour,
+            endHour: hours[i - 1] + 1,
+          });
+          startHour = hours[i];
+        }
+      }
+      // Add final slot
+      newSlots.push({
+        dayOfWeek: day,
+        startHour,
+        endHour: hours[hours.length - 1] + 1,
+      });
+    });
+
+    // Show confirmation dialog
+    setSlotsToConfirm(newSlots);
+    setShowConfirmDialog(true);
+  }, [availabilityCellsSet]);
+
+  // Handle single cell click - show dialog immediately
+  const handleCellClick = (day: number, hour: number) => {
+    // If we were resizing, don't treat it as a click
+    if (isResizingRef.current || hasMovedRef.current || isDraggingRef.current) {
+      return;
+    }
+
+    const roundedHour = roundHour(hour);
+    const key = `${day}_${roundedHour}`;
+
+    // If clicking on a saved cell (and not on an edge), show edit dialog
+    if (availabilityCellsSet.has(key)) {
+      const edge = getEdgeAtCell(day, roundedHour);
+      // Only show edit dialog if not clicking on an edge
+      if (!edge) {
+        const block = getSlotAtCell(day, roundedHour);
+        if (block) {
+          setSlotToEdit(block);
+          setEditedStartHour(block.startHour);
+          setEditedEndHour(block.endHour);
+          setEditErrors({});
+          setShowEditDialog(true);
+        }
+      }
+      return;
+    }
+
+    // If clicking on a single cell, select just that one and show dialog
     const newSelectedCells = new Set([key]);
     setSelectedCells(newSelectedCells);
-    processSelectedCells(newSelectedCells);
+
+    // Process and show dialog immediately for single clicks
+    setTimeout(() => {
+      const currentSelected = new Set([key]);
+      processSelectedCellsWithSet(currentSelected);
+    }, 50);
+  };
+
+  // Find the block of saved cells in the same day starting from a given hour
+  const findSavedBlockInDay = (day: number, startHour: number): WeeklyAvailabilitySlot | null => {
+    const matchingSlot = displayAvailability.find((slot) => {
+      return slot.dayOfWeek === day && startHour >= slot.startHour && startHour < slot.endHour;
+    });
+
+    return matchingSlot || null;
+  };
+
+  // Check if a cell belongs to the hovered block
+  const isCellInHoveredBlock = (day: number, hour: number): boolean => {
+    if (!hoveredBlock) return false;
+    return (
+      hoveredBlock.dayOfWeek === day &&
+      hour >= hoveredBlock.startHour &&
+      hour < hoveredBlock.endHour
+    );
+  };
+
+  // Handle cell hover
+  const handleCellHover = (day: number, hour: number) => {
+    // Clear any pending timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+
+    const key = `${day}_${hour}`;
+
+    // Only show hover effect for saved cells
+    if (availabilityCellsSet.has(key)) {
+      const block = findSavedBlockInDay(day, hour);
+      if (block) {
+        setHoveredBlock(block);
+      }
+    } else {
+      setHoveredBlock(null);
+    }
+  };
+
+  // Handle cell hover leave
+  const handleCellHoverLeave = () => {
+    // Clear any pending timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+
+    // Small delay to allow mouse to move to adjacent cells in the same block
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredBlock(null);
+      hoverTimeoutRef.current = null;
+    }, 100);
+  };
+
+  // Check if a cell is the start or end of the hovered block
+  const isEdgeOfHoveredBlock = (day: number, hour: number): boolean => {
+    if (!hoveredBlock) return false;
+    if (hoveredBlock.dayOfWeek !== day) return false;
+    return hour === hoveredBlock.startHour || hour === hoveredBlock.endHour - 1;
   };
 
   const processSelectedCells = (cellsToProcess: Set<string>) => {
@@ -1853,7 +2631,7 @@ function AvailabilityTab({ locationId }: { locationId: string }) {
     if (endHour < 1 || endHour > 24) {
       errors.end = "End time must be between 01:00 and 24:00";
     }
-    const otherSlots = availability.filter((s) => s.id !== slotId);
+    const otherSlots = displayAvailability.filter((s) => s.id !== slotId);
     for (let h = startHour; h < endHour; h++) {
       for (const otherSlot of otherSlots) {
         if (otherSlot.dayOfWeek === dayOfWeek && h >= otherSlot.startHour && h < otherSlot.endHour) {
@@ -1884,7 +2662,7 @@ function AvailabilityTab({ locationId }: { locationId: string }) {
       const errors = validateEditedTimes(editedStartHour, editedEndHour, slotToEdit.dayOfWeek, slotToEdit.id);
       setEditErrors(errors);
     }
-  }, [editedStartHour, editedEndHour, slotToEdit, availability]);
+  }, [editedStartHour, editedEndHour, slotToEdit, displayAvailability]);
 
   const handleConfirmUpdate = () => {
     if (!slotToEdit || !slotToEdit.id) return;
@@ -1921,21 +2699,66 @@ function AvailabilityTab({ locationId }: { locationId: string }) {
   };
 
   const handleCancelEditDialog = () => {
+    // If we were resizing, revert localAvailability back to API data
+    if (apiAvailability) {
+      setLocalAvailability(transformApiResponse(apiAvailability));
+    }
     setShowEditDialog(false);
     setSlotToEdit(null);
     setEditErrors({});
   };
 
-  const getCellClassName = (status: "available" | "saved", isSelected: boolean) => {
+  // Get cell class names
+  const getCellClassName = (status: "available" | "saved", isSelected: boolean, day: number, hour: number) => {
+    const isHovered = isCellInHoveredBlock(day, hour);
+    const edge = getEdgeAtCell(day, hour);
+    const isEdgeOfHovered = isEdgeOfHoveredBlock(day, hour);
+
     return cn(
-      "w-full h-full rounded border transition-all flex items-center justify-center text-[8px] font-medium",
+      "w-full h-full rounded border transition-all flex items-center justify-center text-[8px] font-medium relative",
       {
-        "bg-green-500 border-green-600 border-2 text-white cursor-pointer": status === "saved",
+        "bg-green-500 border-green-600 border-2 text-white cursor-pointer": status === "saved" && !isEdgeOfHovered,
+        "bg-green-600 border-green-700 border-2 text-white shadow-md cursor-pointer": status === "saved" && isHovered && !isEdgeOfHovered,
+        "bg-green-600 border-green-700 border-2 text-white shadow-md cursor-col-resize": status === "saved" && isEdgeOfHovered,
         "bg-blue-400 border-blue-500 border-2 text-white": isSelected && status === "available",
-        "bg-white border-gray-300 border-2 text-gray-700 hover:opacity-80 cursor-pointer": !isSelected && status === "available",
+        "bg-white border-gray-300 border-2 text-gray-700 hover:opacity-80 cursor-grab": !isSelected && status === "available",
       }
     );
   };
+
+  // Add global mouse up handler to end dragging
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      handleMouseUp();
+    };
+
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener("mouseup", handleGlobalMouseUp);
+      if (selectionTimeoutRef.current) {
+        clearTimeout(selectionTimeoutRef.current);
+      }
+    };
+  }, [handleMouseUp]);
+
+  // Update document cursor during drag/resize
+  useEffect(() => {
+    if (isDragging) {
+      document.body.style.cursor = "grabbing";
+      document.body.style.userSelect = "none";
+    } else if (isResizing) {
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    } else {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isDragging, isResizing]);
 
   if (isLoading) {
     return (
@@ -2008,7 +2831,20 @@ function AvailabilityTab({ locationId }: { locationId: string }) {
 
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full">
-              <div className="rounded-xl border border-border/60 bg-muted/10 p-2 shadow-sm">
+              <div
+                className={cn(
+                  "rounded-xl border border-border/60 bg-muted/10 p-2 shadow-sm",
+                  isDragging && "cursor-grabbing select-none",
+                  isResizing && "cursor-col-resize select-none"
+                )}
+                style={{
+                  userSelect: (isDragging || isResizing) ? 'none' : 'auto',
+                }}
+                onMouseUp={(e) => {
+                  e.stopPropagation();
+                  handleMouseUp();
+                }}
+              >
                 <div className="mb-2 grid grid-cols-[80px_repeat(7,1fr)] gap-1 border-b border-border/60 pb-2">
                   <div className="border-r border-border/60" />
                   {DAYS_OF_WEEK.map((day, index) => (
@@ -2036,13 +2872,44 @@ function AvailabilityTab({ locationId }: { locationId: string }) {
                           const status = getCellStatus(dayIndex, hour);
                           const key = `${dayIndex}_${hour}`;
                           const isSelected = selectedCells.has(key);
+                          const edge = getEdgeAtCell(dayIndex, hour);
+                          const isResizeEdge = edge !== null && !isResizing;
+                          const isHovered = isCellInHoveredBlock(dayIndex, hour);
+                          const isEdgeOfHovered = isEdgeOfHoveredBlock(dayIndex, hour);
+                          // Show icon only on the start/end cells of the hovered block
+                          const showResizeIcon = isHovered && isEdgeOfHovered && status === "saved";
+                          // Determine which icon to show based on which edge of the hovered block
+                          const isStartEdge = hoveredBlock && hoveredBlock.dayOfWeek === dayIndex && hour === hoveredBlock.startHour;
+                          const isEndEdge = hoveredBlock && hoveredBlock.dayOfWeek === dayIndex && hour === hoveredBlock.endHour - 1;
+
                           return (
                             <div
                               key={`${dayIndex}_${hour}`}
-                              className="h-[18px] cursor-pointer"
+                              className={cn(
+                                "h-[18px] select-none",
+                                !isResizeEdge && !isDragging && !isResizing && !availabilityCellsSet.has(key) && "cursor-grab",
+                                isDragging && "cursor-grabbing",
+                                isResizing && "cursor-col-resize"
+                              )}
                               onClick={() => handleCellClick(dayIndex, hour)}
+                              onMouseDown={(e) => handleMouseDown(dayIndex, hour, e)}
+                              onMouseEnter={() => {
+                                handleMouseEnter(dayIndex, hour);
+                                handleCellHover(dayIndex, hour);
+                              }}
+                              onMouseLeave={handleCellHoverLeave}
                             >
-                              <div className={getCellClassName(status, isSelected)} />
+                              <div className={getCellClassName(status, isSelected, dayIndex, hour)}>
+                                {showResizeIcon && (
+                                  <>
+                                    {isStartEdge ? (
+                                      <ChevronLeft className="h-3 w-3 text-white drop-shadow-md" />
+                                    ) : isEndEdge ? (
+                                      <ChevronRight className="h-3 w-3 text-white drop-shadow-md" />
+                                    ) : null}
+                                  </>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
@@ -2209,8 +3076,7 @@ export default function LocationDetailsPage({
   useEffect(() => {
     if (pathname.includes("/vouchers")) setActiveTab("vouchers");
     else if (pathname.includes("/missions")) setActiveTab("missions");
-    else if (pathname.includes("/availability")) setActiveTab("availability");
-    else if (pathname.includes("/booking-config")) setActiveTab("booking-config");
+    else if (pathname.includes("/availability") || pathname.includes("/booking-config")) setActiveTab("booking");
     else if (pathname.includes("/announcements")) setActiveTab("announcements");
     else if (pathname.includes("/edit")) setActiveTab("edit");
     else setActiveTab("overview");
@@ -2320,7 +3186,7 @@ export default function LocationDetailsPage({
       <Card className="border-border/60 shadow-sm">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <CardHeader className="pb-3 pt-4 border-b bg-muted/20">
-            <TabsList className="grid w-full grid-cols-7 h-auto p-1 bg-transparent">
+            <TabsList className="grid w-full grid-cols-6 h-auto p-1 bg-transparent">
               <TabsTrigger 
                 value="overview" 
                 className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
@@ -2343,18 +3209,11 @@ export default function LocationDetailsPage({
                 Missions
               </TabsTrigger>
               <TabsTrigger 
-                value="availability" 
+                value="booking" 
                 className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
               >
                 <CalendarDays className="h-3.5 w-3.5" />
-                Availability
-              </TabsTrigger>
-              <TabsTrigger 
-                value="booking-config" 
-                className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <DollarSign className="h-3.5 w-3.5" />
-                Booking
+                Booking & Availability
               </TabsTrigger>
               <TabsTrigger 
                 value="announcements" 
@@ -2692,22 +3551,19 @@ export default function LocationDetailsPage({
               </div>
             </TabsContent>
             <TabsContent value="vouchers" className="mt-0">
-              <VouchersTab locationId={location.id} />
+              {activeTab === "vouchers" && <VouchersTab locationId={location.id} />}
             </TabsContent>
             <TabsContent value="missions" className="mt-0">
-              <MissionsTab locationId={location.id} />
+              {activeTab === "missions" && <MissionsTab locationId={location.id} />}
             </TabsContent>
-            <TabsContent value="availability" className="mt-0">
-              <AvailabilityTab locationId={location.id} />
-            </TabsContent>
-            <TabsContent value="booking-config" className="mt-0">
-              <BookingConfigTab locationId={location.id} />
+            <TabsContent value="booking" className="mt-0">
+              {activeTab === "booking" && <BookingAndAvailabilityTab locationId={location.id} />}
             </TabsContent>
             <TabsContent value="announcements" className="mt-0">
-              <AnnouncementsTab locationId={location.id} />
+              {activeTab === "announcements" && <AnnouncementsTab locationId={location.id} />}
             </TabsContent>
             <TabsContent value="edit" className="mt-0">
-              <EditLocationTab locationId={location.id} />
+              {activeTab === "edit" && <EditLocationTab locationId={location.id} />}
             </TabsContent>
           </CardContent>
         </Tabs>
