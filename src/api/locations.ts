@@ -14,6 +14,7 @@ import type {
   PaginatedData,
   ProcessLocationBookingPayload,
   Tag,
+  TagCategory,
   UpdateLocationBookingConfigPayload,
   UpdateLocationPayload,
 } from "@/types";
@@ -182,6 +183,14 @@ export const getAllTags = async (params?: { page?: number; limit?: number }): Pr
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Tag>>>(
     "/v1/public/tag",
     { params: params || { page: 1, limit: 1000 } } // Use high limit to get all tags
+  );
+  return data.data;
+};
+
+export const getTagCategories = async (type: "LOCATION" | "EVENT"): Promise<TagCategory[]> => {
+  const { data } = await axiosInstance.get<ApiResponse<TagCategory[]>>(
+    "/v1/public/tag-categories",
+    { params: { type } }
   );
   return data.data;
 };

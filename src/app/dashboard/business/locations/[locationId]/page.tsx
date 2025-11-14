@@ -1344,7 +1344,7 @@ function EditLocationTab({ locationId }: { locationId: string }) {
 
               <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-2">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                  Selected tags
+                  Selected tag categories
                 </p>
                 <div>
                   {tags.length > 0 ? (

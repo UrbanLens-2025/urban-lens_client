@@ -278,7 +278,7 @@ export default function EditLocationPage({
 
                 <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-3">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Selected tags
+                    Selected tag categories
                   </p>
                   <div className="mt-3">
                     {tags.length > 0 ? (

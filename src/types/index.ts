@@ -161,6 +161,15 @@ export interface Tag {
   isSelectable: boolean;
 }
 
+export interface TagCategory {
+  id: number;
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+  applicableTypes: ("USER" | "LOCATION" | "EVENT")[];
+}
+
 export interface GetTagsParams {
   page?: number;
   limit?: number;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -31,8 +31,8 @@ import { LocationAddressPicker } from '@/components/shared/LocationAddressPicker
 import { DisplayTags } from '@/components/shared/DisplayTags';
 import { useResolvedTags } from '@/hooks/tags/useResolvedTags';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAllTags } from '@/hooks/tags/useAllTags';
-import type { Tag } from '@/types';
+import { useTagCategories } from '@/hooks/tags/useTagCategories';
+import type { TagCategory } from '@/types';
 import { Badge } from '@/components/ui/badge';
 
 const publicLocationSchema = z.object({
@@ -104,63 +104,41 @@ export default function CreatePublicLocationPage() {
 
   const watchedValues = form.watch();
   const { resolvedTags: tags } = useResolvedTags(watchedValues.tagIds);
-  const { data: allTags, isLoading: isLoadingTags } = useAllTags();
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-  const [searchTerms, setSearchTerms] = useState<Record<string, string>>({});
+  const { data: tagCategories, isLoading: isLoadingTags } = useTagCategories("LOCATION");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const selectedTagIds = watchedValues.tagIds || [];
 
-  // Filter to only show LOCATION_TYPE tags for locations
-  const tagsFromDb: Tag[] = (allTags || []).filter((tag) => tag.groupName === 'LOCATION_TYPE');
-  const groupedTags = tagsFromDb.reduce((acc: Record<string, Tag[]>, tag: Tag) => {
-    const group = tag.groupName || 'Others';
-    if (!acc[group]) acc[group] = [];
-    acc[group].push(tag);
-    return acc;
-  }, {} as Record<string, Tag[]>);
+  // Filter tags based on search term
+  const filteredTags = useMemo(() => {
+    if (!tagCategories) return [];
+    const term = searchTerm.toLowerCase();
+    return tagCategories.filter((tag) =>
+      tag.name.toLowerCase().includes(term) ||
+      tag.description.toLowerCase().includes(term)
+    );
+  }, [tagCategories, searchTerm]);
 
-  // Check if at least one LOCATION_TYPE tag is selected
-  const locationTypeTagIds = (allTags || [])
-    .filter((tag) => tag.groupName === 'LOCATION_TYPE')
-    .map((tag) => tag.id);
-  const hasLocationType = selectedTagIds.some((id) => locationTypeTagIds.includes(id));
+  // Get displayed tags (limited if not expanded)
+  const displayedTags = useMemo(() => {
+    return isExpanded ? filteredTags : filteredTags.slice(0, INITIAL_DISPLAY_COUNT);
+  }, [filteredTags, isExpanded]);
 
-  const toggleTag = (tagId: number, groupName: string | null) => {
-    const group = groupName || 'Others';
-    // LOCATION_TYPE: single selection (required)
-    if (group === 'LOCATION_TYPE') {
-      if (selectedTagIds.includes(tagId)) {
-        form.setValue('tagIds', selectedTagIds.filter((id) => id !== tagId), { shouldValidate: true });
-      } else {
-        const locationTypeTags = groupedTags['LOCATION_TYPE']?.map((t) => t.id) || [];
-        const newSelection = selectedTagIds.filter((id) => !locationTypeTags.includes(id));
-        form.setValue('tagIds', [...newSelection, tagId], { shouldValidate: true });
-      }
+  const hasMore = filteredTags.length > INITIAL_DISPLAY_COUNT;
+
+  // Handle tag selection - allow multiple selections
+  const toggleTag = (tagId: number) => {
+    const isSelected = selectedTagIds.includes(tagId);
+    if (isSelected) {
+      form.setValue('tagIds', selectedTagIds.filter((id) => id !== tagId), { shouldValidate: true });
     } else {
-      // Other groups: multiple selection (shouldn't happen since we filter to LOCATION_TYPE only)
-      const newSelection = selectedTagIds.includes(tagId)
-        ? selectedTagIds.filter((id) => id !== tagId)
-        : [...selectedTagIds, tagId];
-      form.setValue('tagIds', newSelection, { shouldValidate: true });
+      // Add to current selection (multiple allowed)
+      form.setValue('tagIds', [...selectedTagIds, tagId], { shouldValidate: true });
     }
   };
 
-  const getGroupLabel = (group: string) => {
-    if (group === 'Others') return 'Others';
-    return group
-      .split('_')
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(' ') + (group === 'LOCATION_TYPE' ? ' (Select One)' : '');
-  };
-
-  const getFilteredTags = (tags: Tag[], groupName: string) => {
-    const term = (searchTerms[groupName] || '').toLowerCase();
-    return tags.filter((t) => t.displayName.toLowerCase().includes(term));
-  };
-  const getDisplayedTags = (tags: Tag[], groupName: string) => {
-    const filtered = getFilteredTags(tags, groupName);
-    const isExpanded = expandedGroups[groupName];
-    return isExpanded ? filtered : filtered.slice(0, INITIAL_DISPLAY_COUNT);
-  };
+  // Check if at least one tag is selected
+  const hasLocationType = selectedTagIds.length > 0;
 
   const progress = ((currentStep + 1) / steps.length) * 100;
   const isFirstStep = currentStep === 0;
@@ -169,19 +147,19 @@ export default function CreatePublicLocationPage() {
   const handleNextStep = async () => {
     const fields = steps[currentStep].fields;
     if (fields) {
-      // Additional validation for LOCATION_TYPE in step 1
-      if (currentStep === 0 && fields.includes('tagIds')) {
+      // Additional validation for tagIds in step 1
+      if (currentStep === 0 && Array.isArray(fields) && fields.includes('tagIds' as any)) {
         if (!hasLocationType) {
           form.setError('tagIds', {
             type: 'manual',
-            message: 'At least one location type is required. Please select a location type.',
+            message: 'At least one tag category is required. Please select at least one tag category.',
           });
           await form.trigger('tagIds', { shouldFocus: true });
           return;
         }
       }
       
-      const output = await form.trigger(fields, { shouldFocus: true });
+      const output = await form.trigger(fields as any, { shouldFocus: true });
       if (!output) return;
     }
     setCurrentStep((prev) => prev + 1);
@@ -190,19 +168,18 @@ export default function CreatePublicLocationPage() {
   const handlePrevStep = () => setCurrentStep((prev) => prev - 1);
 
   async function onSubmit(values: FormValues) {
-    // Validate LOCATION_TYPE requirement
+    // Validate tag categories requirement
     if (!hasLocationType) {
       form.setError('tagIds', {
         type: 'manual',
-        message: 'At least one location type is required. Please select a location type.',
+        message: 'At least one tag category is required. Please select at least one tag category.',
       });
       await form.trigger('tagIds', { shouldFocus: true });
       return;
     }
 
-    // Note: tagIds might not be in the payload type, but we'll include it if the API accepts it
-    const { tagIds, ...payload } = values;
-    createLocation(payload as any);
+    // Include tagIds in the payload
+    createLocation(values as any);
   }
 
   return (
@@ -339,137 +316,97 @@ export default function CreatePublicLocationPage() {
                           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                         </div>
                       ) : (
-                        <div className="space-y-3">
-                          {Object.entries(groupedTags)
-                            .sort(([a], [b]) => {
-                              if (a === 'Others') return 1;
-                              if (b === 'Others') return -1;
-                              return a.localeCompare(b);
-                            })
-                            .map(([groupName, tagsInGroup]) => {
-                              const filtered = getFilteredTags(tagsInGroup, groupName);
-                              const displayed = getDisplayedTags(tagsInGroup, groupName);
-                              const hasMore = filtered.length > INITIAL_DISPLAY_COUNT;
-                              const isGroupExpanded = expandedGroups[`group_${groupName}`] ?? true;
-                              const isExpandedList = expandedGroups[groupName];
-                              const isLocationType = groupName === 'LOCATION_TYPE';
-                              const hasError = isLocationType && !hasLocationType && form.formState.errors.tagIds;
-                              return (
-                                <div 
-                                  key={groupName} 
-                                  className={cn(
-                                    'border rounded-lg p-3 space-y-2 bg-muted/30',
-                                    hasError && 'bg-destructive/5 border-destructive border-2 shadow-md'
-                                  )}
+                        <div
+                          className={cn(
+                            'border rounded-lg p-4 space-y-3 bg-muted/30',
+                            !hasLocationType && form.formState.errors.tagIds && 'bg-destructive/5 border-destructive border-2 shadow-md'
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 text-sm font-semibold">
+                              Location Tag Categories
+                              <span className="text-xs text-muted-foreground font-normal">({filteredTags.length})</span>
+                            </div>
+                            <div className="relative w-40">
+                              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                              <Input
+                                type="text"
+                                placeholder="Search tags..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="h-8 pl-8 text-xs"
+                              />
+                              {searchTerm.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSearchTerm("")}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                                 >
-                                  <div className="flex items-center justify-between gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setExpandedGroups((prev) => ({
-                                          ...prev,
-                                          [`group_${groupName}`]: !prev[`group_${groupName}`],
-                                        }))
-                                      }
-                                      className="flex items-center gap-2 flex-1 text-left hover:text-primary transition-colors"
-                                    >
-                                      {isGroupExpanded ? (
-                                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                                      ) : (
-                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                      )}
-                                      <h3 className="text-sm font-semibold">
-                                        {getGroupLabel(groupName)}
-                                        <span className="text-xs text-muted-foreground font-normal ml-2">({filtered.length})</span>
-                                      </h3>
-                                    </button>
-                                    {isGroupExpanded && (
-                                      <div className="relative w-40">
-                                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                        <Input
-                                          type="text"
-                                          placeholder="Search tags..."
-                                          value={searchTerms[groupName] || ''}
-                                          onChange={(e) =>
-                                            setSearchTerms((prev) => ({
-                                              ...prev,
-                                              [groupName]: e.target.value,
-                                            }))
-                                          }
-                                          className="h-8 pl-8 text-xs"
-                                          onClick={(e) => e.stopPropagation()}
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-                                  {isGroupExpanded && (
-                                    <>
-                                      <div className="flex flex-wrap gap-2">
-                                        {displayed.map((tag) => {
-                                          const isSelected = selectedTagIds.includes(tag.id);
-                                          return (
-                                            <Badge
-                                              key={tag.id}
-                                              variant={isSelected ? 'default' : 'outline'}
-                                              className={cn(
-                                                'cursor-pointer transition-all',
-                                                isSelected && 'ring-2 ring-primary'
-                                              )}
-                                              style={
-                                                isSelected
-                                                  ? {
-                                                      backgroundColor: tag.color,
-                                                      color: '#fff',
-                                                      borderColor: tag.color,
-                                                    }
-                                                  : {}
-                                              }
-                                              onClick={() => toggleTag(tag.id, tag.groupName)}
-                                            >
-                                              <span className="mr-1">{tag.icon}</span>
-                                              {tag.displayName}
-                                            </Badge>
-                                          );
-                                        })}
-                                      </div>
-                                      {hasMore && (
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            setExpandedGroups((prev) => ({
-                                              ...prev,
-                                              [groupName]: !prev[groupName],
-                                            }))
-                                          }
-                                          className="text-xs text-primary hover:underline flex items-center gap-1"
-                                        >
-                                          {isExpandedList ? (
-                                            <>
-                                              <ChevronUp className="h-3 w-3" />
-                                              Show Less
-                                            </>
-                                          ) : (
-                                            <>
-                                              <ChevronDown className="h-3 w-3" />
-                                              View More ({filtered.length - INITIAL_DISPLAY_COUNT} more)
-                                            </>
-                                          )}
-                                        </button>
-                                      )}
-                                      {filtered.length === 0 && (
-                                        <p className="text-xs text-muted-foreground text-center py-2">
-                                          No tags found for "{searchTerms[groupName]}"
-                                        </p>
-                                      )}
-                                    </>
+                                  <X className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {displayedTags.map((tag: TagCategory) => {
+                              const isSelected = selectedTagIds.includes(tag.id);
+                              return (
+                                <Badge
+                                  key={tag.id}
+                                  variant={isSelected ? 'default' : 'outline'}
+                                  className={cn(
+                                    'cursor-pointer transition-all hover:shadow-sm',
+                                    isSelected && 'ring-2 ring-primary'
                                   )}
-                                </div>
+                                  style={
+                                    isSelected
+                                      ? {
+                                          backgroundColor: tag.color,
+                                          color: '#fff',
+                                          borderColor: tag.color,
+                                        }
+                                      : { borderColor: tag.color, color: tag.color }
+                                  }
+                                  onClick={() => toggleTag(tag.id)}
+                                  title={tag.description}
+                                >
+                                  <span className="mr-1">{tag.icon}</span>
+                                  {tag.name}
+                                </Badge>
                               );
                             })}
+                          </div>
+
+                          {hasMore && (
+                            <button
+                              type="button"
+                              onClick={() => setIsExpanded(!isExpanded)}
+                              className="text-xs text-primary hover:underline flex items-center gap-1"
+                            >
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="h-3 w-3" />
+                                  Show Less
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="h-3 w-3" />
+                                  View More ({filteredTags.length - INITIAL_DISPLAY_COUNT} more)
+                                </>
+                              )}
+                            </button>
+                          )}
+
+                          {filteredTags.length === 0 && searchTerm && (
+                            <p className="text-xs text-muted-foreground text-center py-2">
+                              No tags found for "{searchTerm}"
+                            </p>
+                          )}
                         </div>
                       )}
                       <FormDescription>
-                        Select tags that best describe your location (e.g., Indoor, Outdoor, Parking Available)
+                        Select tags that best describe your location (you can select multiple)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -477,7 +414,7 @@ export default function CreatePublicLocationPage() {
                 />
                 {tags.length > 0 && (
                   <div className="p-3 bg-muted/50 rounded-md">
-                    <p className="text-sm font-medium mb-2">Selected Tags:</p>
+                    <p className="text-sm font-medium mb-2">Selected Tag Categories:</p>
                     <DisplayTags tags={tags} maxCount={10} />
                   </div>
                 )}
