@@ -20,8 +20,14 @@ import {
   Ticket,
   DollarSign,
   Users,
+  QrCode,
+  Download,
+  Copy,
+  Search,
+  ArrowRight,
+  AlertCircle,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
@@ -37,6 +43,7 @@ import { useLocationVouchers } from "@/hooks/vouchers/useLocationVouchers";
 import { useLocationMissions } from "@/hooks/missions/useLocationMissions";
 import { useDeleteLocationVoucher } from "@/hooks/vouchers/useDeleteLocationVoucher";
 import { useDeleteLocationMission } from "@/hooks/missions/useDeleteLocationMission";
+import { useGenerateOneTimeQRCode } from "@/hooks/missions/useGenerateOneTimeQRCode";
 import { useDebounce } from "use-debounce";
 import { Input } from "@/components/ui/input";
 import {
@@ -524,6 +531,14 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [sort, setSort] = useState<SortState>({ column: "createdAt", direction: "DESC" });
   const [missionToDelete, setMissionToDelete] = useState<LocationMission | null>(null);
+  const [selectedMissionId, setSelectedMissionId] = useState<string>("");
+  const [generatedQRCode, setGeneratedQRCode] = useState<{
+    qrCodeData: string;
+    qrCodeUrl: string;
+    expiresAt: string;
+    id: string;
+    isUsed: boolean;
+  } | null>(null);
 
   const { data: response, isLoading, isError } = useLocationMissions({
     locationId,
@@ -533,6 +548,7 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
   });
 
   const { mutate: deleteMission, isPending: isDeleting } = useDeleteLocationMission(locationId);
+  const { mutate: generateQRCode, isPending: isGeneratingQR } = useGenerateOneTimeQRCode(locationId);
 
   const missions = response?.data || [];
   const meta = response?.meta;
@@ -595,6 +611,59 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
     });
   };
 
+  const handleGenerateQRCode = () => {
+    generateQRCode(
+      selectedMissionId ? { missionId: selectedMissionId } : undefined,
+      {
+        onSuccess: (data) => {
+          setGeneratedQRCode({
+            qrCodeData: data.qrCodeData,
+            qrCodeUrl: data.qrCodeUrl,
+            expiresAt: data.expiresAt,
+            id: data.id,
+            isUsed: data.isUsed,
+          });
+          toast.success("QR code generated successfully!");
+        },
+      }
+    );
+  };
+
+  const handleCopyQRCode = () => {
+    if (generatedQRCode?.qrCodeData) {
+      navigator.clipboard.writeText(generatedQRCode.qrCodeData);
+      toast.success("QR code data copied to clipboard!");
+    }
+  };
+
+  const handleDownloadQRCode = () => {
+    if (!generatedQRCode) return;
+    
+    // Generate QR code image from data using a QR code API service
+    const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(generatedQRCode.qrCodeData)}`;
+    
+    const link = document.createElement("a");
+    link.href = qrCodeImageUrl;
+    link.download = `qr-code-${locationId}-${Date.now()}.png`;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("QR code downloaded!");
+  };
+
+  const getQRCodeImageUrl = () => {
+    if (!generatedQRCode) return null;
+    
+    // If qrCodeUrl is provided, use it; otherwise generate from qrCodeData
+    if (generatedQRCode.qrCodeUrl) {
+      return generatedQRCode.qrCodeUrl;
+    }
+    
+    // Generate QR code image from data using a QR code API service
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(generatedQRCode.qrCodeData)}`;
+  };
+
   function MissionActions({ mission }: { mission: LocationMission }) {
     return (
       <DropdownMenu modal={false}>
@@ -623,150 +692,353 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <Button asChild size="sm">
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Missions</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage and track your location missions
+          </p>
+        </div>
+        <Button asChild size="default" className="shrink-0">
           <Link href={`/dashboard/business/locations/${locationId}/missions/create`}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Create mission
+            Create Mission
           </Link>
         </Button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Total missions</CardTitle>
+      {/* Stats Overview */}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Missions</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
-          <CardContent className="flex items-center gap-2 pt-0 pb-3">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <p className="text-xl font-semibold">{missionStats.total.toLocaleString()}</p>
+          <CardContent>
+            <div className="text-2xl font-bold">{missionStats.total.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {meta?.totalItems ? `of ${meta.totalItems} total` : "All missions"}
+            </p>
           </CardContent>
         </Card>
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Active missions</CardTitle>
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Missions</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <Target className="h-4 w-4 text-emerald-600" />
+            </div>
           </CardHeader>
-          <CardContent className="flex items-center gap-2 pt-0 pb-3">
-            <Target className="h-4 w-4 text-emerald-500" />
-            <p className="text-xl font-semibold">{missionStats.active.toLocaleString()}</p>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">{missionStats.active.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Currently running
+            </p>
           </CardContent>
         </Card>
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Scheduled / Completed</CardTitle>
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Scheduled / Completed</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <Clock className="h-4 w-4 text-amber-600" />
+            </div>
           </CardHeader>
-          <CardContent className="pt-0 pb-3">
-            <p className="text-xl font-semibold">{missionStats.scheduled}/{missionStats.completed}</p>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              <span className="text-amber-600">{missionStats.scheduled}</span>
+              <span className="text-muted-foreground mx-1">/</span>
+              <span className="text-muted-foreground">{missionStats.completed}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Upcoming / Finished
+            </p>
           </CardContent>
         </Card>
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Total rewards</CardTitle>
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Rewards</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <Trophy className="h-4 w-4 text-amber-600" />
+            </div>
           </CardHeader>
-          <CardContent className="flex items-center gap-2 pt-0 pb-3">
-            <Trophy className="h-4 w-4 text-amber-500" />
-            <p className="text-xl font-semibold">{missionStats.totalReward.toLocaleString()} pts</p>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-600">{missionStats.totalReward.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Points available
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-border/60 shadow-sm">
-        <CardHeader className="pb-3 pt-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-sm font-semibold">Missions ({meta?.totalItems || 0})</CardTitle>
-            <div className="w-full md:w-72">
-              <Input placeholder="Search missions by title..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="h-8" />
+      {/* QR Code Generator */}
+      <Card className="border-border/60 shadow-sm bg-gradient-to-br from-background to-muted/20">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <QrCode className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold">Generate One-Time QR Code</CardTitle>
+              <CardDescription className="text-xs mt-0.5">
+                Create a QR code for location check-ins or specific missions
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-0 pb-4">
-          {isLoading && !response ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <CardContent>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Select Mission (Optional)
+              </label>
+              <Select value={selectedMissionId || "all"} onValueChange={(value) => setSelectedMissionId(value === "all" ? "" : value)}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="All missions (general QR code)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All missions (general QR code)</SelectItem>
+                  {missions.map((mission) => (
+                    <SelectItem key={mission.id} value={mission.id}>
+                      {mission.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          ) : isError ? (
-            <div className="text-center text-red-500 py-12">Failed to load missions.</div>
-          ) : (
-            <div className="overflow-hidden rounded-lg border border-border/60">
-              <Table>
-                <TableHeader className="bg-muted/40">
-                  <TableRow>
-                    <TableHead className="min-w-[220px]">
-                      <Button variant="ghost" className="px-0 h-auto" onClick={() => handleSort("title")}>
-                        Title <SortIcon column="title" />
-                      </Button>
-                    </TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead>
-                      <Button variant="ghost" className="px-0 h-auto" onClick={() => handleSort("target")}>
-                        Target <SortIcon column="target" />
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button variant="ghost" className="px-0 h-auto" onClick={() => handleSort("reward")}>
-                        Reward <SortIcon column="reward" />
-                      </Button>
-                    </TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {missions.length > 0 ? (
-                    missions.map((mission) => (
-                      <TableRow key={mission.id} className="hover:bg-muted/20">
-                        <TableCell className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm">{mission.title}</span>
-                            <Badge variant="outline" className="text-[10px]">{mission.metric}</Badge>
-                          </div>
-                          {mission.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1">{mission.description}</p>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground space-y-1">
-                          <div>{mission.metric?.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ")}</div>
-                          <div>{formatDateRange(mission.startDate, mission.endDate)}</div>
-                        </TableCell>
-                        <TableCell className="font-medium">{mission.target}</TableCell>
-                        <TableCell className="font-medium">{mission.reward} pts</TableCell>
-                        <TableCell>{getStatusBadge(mission.startDate, mission.endDate)}</TableCell>
-                        <TableCell className="text-right">
-                          <MissionActions mission={mission} />
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-32">
-                        <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
-                          <div className="text-sm font-semibold">No missions yet</div>
-                          <Button asChild size="sm">
-                            <Link href={`/dashboard/business/locations/${locationId}/missions/create`}>
-                              <PlusCircle className="mr-2 h-4 w-4" />
-                              Create your first mission
-                            </Link>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+            <Button
+              onClick={handleGenerateQRCode}
+              disabled={isGeneratingQR}
+              className="h-10"
+            >
+              {isGeneratingQR ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <QrCode className="mr-2 h-4 w-4" />
+                  Generate QR Code
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-end space-x-2 py-2">
-        <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={!meta || meta.currentPage <= 1}>
-          Previous
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={!meta || meta.currentPage >= meta.totalPages}>
-          Next
-        </Button>
-      </div>
+      {/* Missions Table */}
+      <Card className="border-border/60 shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-lg font-semibold">All Missions</CardTitle>
+              <CardDescription className="text-sm mt-1">
+                {meta?.totalItems ? `${meta.totalItems} mission${meta.totalItems !== 1 ? 's' : ''} total` : "Manage your location missions"}
+              </CardDescription>
+            </div>
+            <div className="w-full sm:w-80">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search missions by title..." 
+                  value={searchTerm} 
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                  className="h-10 pl-9" 
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {isLoading && !response ? (
+            <div className="flex flex-col justify-center items-center py-16">
+              <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-3" />
+              <p className="text-sm text-muted-foreground">Loading missions...</p>
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <AlertCircle className="h-10 w-10 text-red-500 mb-3" />
+              <p className="text-sm font-medium text-red-500 mb-1">Failed to load missions</p>
+              <p className="text-xs text-muted-foreground">Please try refreshing the page</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-hidden rounded-lg border border-border/60">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="hover:bg-muted/50">
+                      <TableHead className="min-w-[240px]">
+                        <Button variant="ghost" className="px-0 h-auto font-semibold hover:bg-transparent" onClick={() => handleSort("title")}>
+                          Mission <SortIcon column="title" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="min-w-[180px]">
+                        <span className="font-semibold">Details</span>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" className="px-0 h-auto font-semibold hover:bg-transparent" onClick={() => handleSort("target")}>
+                          Target <SortIcon column="target" />
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" className="px-0 h-auto font-semibold hover:bg-transparent" onClick={() => handleSort("reward")}>
+                          Reward <SortIcon column="reward" />
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <span className="font-semibold">Status</span>
+                      </TableHead>
+                      <TableHead className="text-right w-[80px]">
+                        <span className="font-semibold">Actions</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {missions.length > 0 ? (
+                      missions.map((mission) => (
+                        <TableRow key={mission.id} className="hover:bg-muted/30 transition-colors">
+                          <TableCell className="py-4">
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-2.5">
+                                <span className="font-semibold text-sm">{mission.title}</span>
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 font-medium">
+                                  {mission.metric}
+                                </Badge>
+                              </div>
+                              {mission.description && (
+                                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                                  {mission.description}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-4">
+                            <div className="space-y-1.5 text-xs">
+                              <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <Target className="h-3.5 w-3.5" />
+                                <span className="capitalize">
+                                  {mission.metric?.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ")}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <CalendarDays className="h-3.5 w-3.5" />
+                                <span>{formatDateRange(mission.startDate, mission.endDate)}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-4">
+                            <div className="font-semibold text-sm">{mission.target.toLocaleString()}</div>
+                          </TableCell>
+                          <TableCell className="py-4">
+                            <div className="flex items-center gap-1.5">
+                              <Trophy className="h-4 w-4 text-amber-500" />
+                              <span className="font-semibold text-sm text-amber-600">{mission.reward.toLocaleString()}</span>
+                              <span className="text-xs text-muted-foreground">pts</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-4">
+                            {getStatusBadge(mission.startDate, mission.endDate)}
+                          </TableCell>
+                          <TableCell className="text-right py-4">
+                            <MissionActions mission={mission} />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-64">
+                          <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+                            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                              <Target className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-base font-semibold">No missions found</p>
+                              <p className="text-sm text-muted-foreground max-w-sm">
+                                {searchTerm 
+                                  ? "Try adjusting your search terms or create a new mission"
+                                  : "Get started by creating your first mission to engage with your customers"}
+                              </p>
+                            </div>
+                            <Button asChild size="default">
+                              <Link href={`/dashboard/business/locations/${locationId}/missions/create`}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Create Your First Mission
+                              </Link>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {/* Pagination */}
+              {meta && meta.totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t mt-4">
+                  <div className="text-sm text-muted-foreground">
+                    Showing <span className="font-medium text-foreground">{(meta.currentPage - 1) * meta.itemsPerPage + 1}</span> to{" "}
+                    <span className="font-medium text-foreground">
+                      {Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)}
+                    </span>{" "}
+                    of <span className="font-medium text-foreground">{meta.totalItems}</span> missions
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setPage(page - 1)} 
+                      disabled={!meta || meta.currentPage <= 1}
+                      className="h-9"
+                    >
+                      <ArrowLeft className="mr-1 h-4 w-4" />
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, meta.totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (meta.totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (meta.currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (meta.currentPage >= meta.totalPages - 2) {
+                          pageNum = meta.totalPages - 4 + i;
+                        } else {
+                          pageNum = meta.currentPage - 2 + i;
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={meta.currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setPage(pageNum)}
+                            className="h-9 w-9 p-0"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setPage(page + 1)} 
+                      disabled={!meta || meta.currentPage >= meta.totalPages}
+                      className="h-9"
+                    >
+                      Next
+                      <ArrowRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <AlertDialog open={!!missionToDelete} onOpenChange={() => setMissionToDelete(null)}>
         <AlertDialogContent>
@@ -786,6 +1058,82 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* QR Code Display Dialog */}
+      <Dialog open={!!generatedQRCode} onOpenChange={(open) => !open && setGeneratedQRCode(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5" />
+              One-Time QR Code
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex justify-center p-4 bg-muted/30 rounded-lg">
+              {generatedQRCode && getQRCodeImageUrl() && (
+                <img
+                  src={getQRCodeImageUrl() || ""}
+                  alt="QR Code"
+                  className="w-64 h-64 object-contain"
+                />
+              )}
+            </div>
+            {generatedQRCode && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">QR Code Data</label>
+                  <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
+                    <code className="flex-1 text-xs break-all">{generatedQRCode.qrCodeData}</code>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={handleCopyQRCode}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Expires at:</span>
+                    <span className="font-medium">
+                      {new Date(generatedQRCode.expiresAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge variant={generatedQRCode.isUsed ? "destructive" : "default"}>
+                      {generatedQRCode.isUsed ? "Used" : "Active"}
+                    </Badge>
+                  </div>
+                </div>
+              </>
+            )}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={handleDownloadQRCode}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={handleCopyQRCode}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy Data
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              This is a one-time use QR code. It will expire after being scanned once.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

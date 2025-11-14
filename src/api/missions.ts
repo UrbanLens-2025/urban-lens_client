@@ -74,3 +74,32 @@ export const deleteLocationMission = async (missionId: string): Promise<any> => 
   );
   return data;
 };
+
+export interface GenerateOneTimeQRCodePayload {
+  missionId?: string;
+}
+
+export interface GenerateOneTimeQRCodeResponse {
+  id: string;
+  qrCodeData: string; // The data encoded in the QR code
+  qrCodeUrl: string; // URL to the QR code image (may be empty)
+  locationId: string;
+  expiresAt: string;
+  referenceId: string | null;
+  isUsed: boolean;
+  createdAt: string;
+}
+
+export const generateOneTimeQRCode = async ({
+  locationId,
+  payload,
+}: {
+  locationId: string;
+  payload?: GenerateOneTimeQRCodePayload;
+}): Promise<GenerateOneTimeQRCodeResponse> => {
+  const { data } = await axiosInstance.post<ApiResponse<GenerateOneTimeQRCodeResponse>>(
+    `/v1/business/location-mission/${locationId}/generate-one-time-qr`,
+    payload || {}
+  );
+  return data.data;
+};
