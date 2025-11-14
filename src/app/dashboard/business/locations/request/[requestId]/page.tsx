@@ -2,9 +2,11 @@
 
 import type React from "react";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import { useLocationRequestById } from "@/hooks/locations/useLocationRequestById";
+import { useMyLocations } from "@/hooks/locations/useMyLocations";
 import {
   Loader2,
   ArrowLeft,
@@ -84,6 +86,22 @@ export default function LocationRequestDetailsPage({
     isError,
   } = useLocationRequestById(requestId);
 
+  // If request is approved, try to find the corresponding location
+  const { data: locationsData } = useMyLocations(1, "", { enabled: request?.status === "APPROVED" });
+  const approvedLocation = locationsData?.data?.find(
+    (loc) => loc.name === request?.name && 
+    Math.abs(loc.latitude - (request?.latitude || 0)) < 0.0001 &&
+    Math.abs(loc.longitude - (request?.longitude || 0)) < 0.0001
+  );
+
+  // Redirect to location detail if approved and location found
+  useEffect(() => {
+    if (request?.status === "APPROVED" && approvedLocation) {
+      // Use replace with clean URL (no query parameters)
+      router.replace(`/dashboard/business/locations/${approvedLocation.id}`, { scroll: false });
+    }
+  }, [request?.status, approvedLocation, router]);
+
   if (isLoadingRequest) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -109,7 +127,11 @@ export default function LocationRequestDetailsPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => router.push("/dashboard/business/locations?tab=requests")}
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <Badge

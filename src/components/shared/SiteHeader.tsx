@@ -71,7 +71,8 @@ function getDynamicRouteLabel(
   segment: string,
   prevSegment: string | undefined,
   params: Record<string, string | string[]>,
-  searchParams: URLSearchParams
+  searchParams: URLSearchParams,
+  pathname: string
 ): string | null {
   // Transaction detail pages
   if (prevSegment === "wallet" && isIdSegment(segment)) {
@@ -107,7 +108,7 @@ function getDynamicRouteLabel(
     return "Booking Details";
   }
 
-  // Request detail
+  // Request detail - for event requests (creator dashboard)
   if (prevSegment === "requests" || prevSegment === "request") {
     if (isIdSegment(segment)) {
       return "Request Details";
@@ -165,7 +166,7 @@ function buildBreadcrumbs(
 
     // Check if this is a dynamic route (ID segment)
     if (isIdSegment(segment)) {
-      const dynamicLabel = getDynamicRouteLabel(segment, actualPrevSegment, params, searchParams);
+      const dynamicLabel = getDynamicRouteLabel(segment, actualPrevSegment, params, searchParams, pathname);
       if (dynamicLabel) {
         breadcrumbs.push({
           label: dynamicLabel,
@@ -187,6 +188,11 @@ function buildBreadcrumbs(
         label: `${actionLabel} ${parentLabel}`,
         icon: FileText,
       });
+      return;
+    }
+
+    // Skip "request" segment when it's under locations (since location requests are merged into locations page)
+    if ((segment === "request" || segment === "requests") && actualPrevSegment === "locations") {
       return;
     }
 

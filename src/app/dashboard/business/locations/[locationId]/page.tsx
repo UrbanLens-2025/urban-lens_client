@@ -28,7 +28,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { use, useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { DisplayTags } from "@/components/shared/DisplayTags";
 import React from "react";
 import { ImageViewer } from "@/components/shared/ImageViewer";
@@ -3068,10 +3068,18 @@ export default function LocationDetailsPage({
   const { data: location, isLoading, isError } = useLocationById(locationId);
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState("");
   const [currentImageAlt, setCurrentImageAlt] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Remove any query parameters from URL (like ?tab=requests) when on location detail page
+  useEffect(() => {
+    if (searchParams.toString()) {
+      router.replace(pathname, { scroll: false });
+    }
+  }, [pathname, router, searchParams]);
 
   useEffect(() => {
     if (pathname.includes("/vouchers")) setActiveTab("vouchers");
@@ -3122,7 +3130,7 @@ export default function LocationDetailsPage({
     <div className="space-y-4 p-4">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon" onClick={() => router.back()} className="h-8 w-8">
+        <Button variant="outline" size="icon" onClick={() => router.push("/dashboard/business/locations")} className="h-8 w-8">
           <ArrowLeft className="h-3.5 w-3.5" />
           <span className="sr-only">Back</span>
         </Button>
