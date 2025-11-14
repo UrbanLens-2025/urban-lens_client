@@ -37,6 +37,7 @@ import { Slider } from "@/components/ui/slider";
 import { LocationRequest } from "@/types";
 import { LocationAddressPicker } from "@/components/shared/LocationAddressPicker";
 import { useUpdateLocationRequest } from "@/hooks/locations/useUpdateLocationRequest";
+import { updateLocationRequest as updateLocationRequestAPI } from "@/api/locations";
 import { toast } from "sonner";
 import { useLocationRequestById } from "@/hooks/locations/useLocationRequestById";
 import { useAddTagsToRequest } from "@/hooks/locations/useAddTagsToRequest";
@@ -55,6 +56,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 const locationSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -152,8 +160,7 @@ export default function LocationForm({
     useLocationRequestById(copyFromId);
   const { mutate: createLocation, isPending: isCreating } =
     useCreateLocationRequest();
-  const { mutate: updateLocationRequest, isPending: isUpdating } =
-    useUpdateLocationRequest();
+  const { isPending: isUpdating } = useUpdateLocationRequest();
   const { mutateAsync: addTags } = useAddTagsToRequest();
   const { mutateAsync: removeTags } = useRemoveTagsFromRequest();
 
@@ -292,23 +299,63 @@ export default function LocationForm({
     
     try {
       const { tagIds: newTagIds, ...rest } = values;
+      
+      // Ensure tagIds is a valid array of numbers
+      const validTagIds = Array.isArray(newTagIds) && newTagIds.length > 0
+        ? newTagIds.map(id => Number(id)).filter(id => !isNaN(id))
+        : [];
+
+      if (validTagIds.length === 0) {
+        form.setError("tagIds", {
+          type: "manual",
+          message: "At least one location type is required. Please select a location type.",
+        });
+        await form.trigger("tagIds", { shouldFocus: true });
+        return;
+      }
+
+      // Validate that all selected tag IDs exist in the available tag categories
+      // Only send category IDs that are currently available and valid
+      const availableTagIds = tagCategories?.map(tag => tag.id) || [];
+      const categoryIds = validTagIds.filter(id => availableTagIds.includes(id));
+
+      if (categoryIds.length === 0) {
+        form.setError("tagIds", {
+          type: "manual",
+          message: "Selected tags are not valid. Please select valid location types from the available options.",
+        });
+        // Clear invalid selections
+        form.setValue("tagIds", [], { shouldValidate: true });
+        await form.trigger("tagIds", { shouldFocus: true });
+        return;
+      }
+
+      if (categoryIds.length !== validTagIds.length) {
+        // Some tags were filtered out - update form and warn user
+        const invalidCount = validTagIds.length - categoryIds.length;
+        toast.warning(`${invalidCount} invalid tag${invalidCount > 1 ? 's' : ''} ${invalidCount > 1 ? 'were' : 'was'} removed. Please select valid location types.`);
+        // Update form with only valid tag IDs
+        form.setValue("tagIds", categoryIds, { shouldValidate: true });
+      }
+
       const payload = {
         ...rest,
+        categoryIds: categoryIds,
       };
 
       if (isEditMode && locationId) {
         const originalTagIds = initialData?.tags.map((t) => t.id) || [];
-        const tagsToAdd = newTagIds.filter(
+        const tagsToAdd = categoryIds.filter(
           (id) => !originalTagIds.includes(id)
         );
         const tagsToRemove = originalTagIds.filter(
-          (id) => !newTagIds.includes(id)
+          (id) => !categoryIds.includes(id)
         );
 
         const mutationPromises = [];
 
         mutationPromises.push(
-          updateLocationRequest({
+          updateLocationRequestAPI({
             locationRequestId: locationId,
             payload: payload as any,
           })
@@ -328,17 +375,19 @@ export default function LocationForm({
 
         await Promise.all(mutationPromises);
       } else {
-        await createLocation({ ...payload, tagIds: newTagIds } as any);
+        await createLocation(payload as any);
       }
 
       if (isEditMode) {
         toast.success("Location request updated successfully!");
+        queryClient.invalidateQueries({ queryKey: ["locationRequests"] });
+        queryClient.invalidateQueries({ queryKey: ["locationRequest", locationId] });
+        router.push(`/dashboard/business/locations/${locationId}`);
       } else {
         toast.success("Location submitted successfully! It's now under review.");
+        queryClient.invalidateQueries({ queryKey: ["locationRequests"] });
+        router.push("/dashboard/business/locations?tab=requests");
       }
-      queryClient.invalidateQueries({ queryKey: ["locationRequests"] });
-      router.refresh();
-      router.push("/dashboard/business/locations?tab=requests");
     } catch (err) {
       toast.error("An error occurred. Please try again.");
     }
@@ -816,118 +865,135 @@ export default function LocationForm({
               </div>
 
               {/* === STEP 4: Review & Submit === */}
-              <div className={cn("space-y-3", currentStep !== 3 && "hidden")}>
-                <Alert className="py-2 px-3">
+              <div className={cn("space-y-1", currentStep !== 3 && "hidden")}>
+                <Alert className="py-1 px-2">
                   <FileCheck className="h-3.5 w-3.5" />
                   <AlertDescription className="text-xs">
                     Please review all information carefully before submitting. Your request will be reviewed by our team.
                   </AlertDescription>
                 </Alert>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Card className="border shadow-sm">
-                    <CardHeader className="pb-2 pt-3">
-                      <CardTitle className="text-sm font-semibold">Basic Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 pt-0">
-                      <InfoRow label="Location Name" value={watchedValues.name} />
-                      <InfoRow
-                        label="Description"
-                        value={<span className="text-xs line-clamp-2">{watchedValues.description}</span>}
-                      />
-                      <InfoRow
-                        label="Tags"
-                        value={<DisplayTags tags={tags} maxCount={5} />}
-                      />
-                    </CardContent>
-                  </Card>
+                <Card className="border shadow-sm">
+                  <CardHeader className="pb-1 pt-1.5">
+                    <CardTitle className="text-sm font-semibold">Location Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-0">
+                      <div className="space-y-0">
+                        <InfoRow label="Location Name" value={watchedValues.name} />
+                        <InfoRow
+                          label="Description"
+                          value={<span className="text-xs line-clamp-2">{watchedValues.description}</span>}
+                        />
+                        <InfoRow
+                          label="Tags"
+                          value={<DisplayTags tags={tags} maxCount={5} />}
+                        />
+                      </div>
+                      <div className="space-y-0">
+                        <InfoRow label="Address" value={<span className="text-xs">{watchedValues.addressLine}</span>} />
+                        <InfoRow
+                          label="District / Ward"
+                          value={<span className="text-xs">{watchedValues.addressLevel2}</span>}
+                        />
+                        <InfoRow
+                          label="Province / City"
+                          value={<span className="text-xs">{watchedValues.addressLevel1}</span>}
+                        />
+                        <InfoRow
+                          label="Radius"
+                          value={<span className="text-xs">{watchedValues.radiusMeters}m</span>}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  <Card className="border shadow-sm">
-                    <CardHeader className="pb-2 pt-3">
-                      <CardTitle className="text-sm font-semibold">Location Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1.5 pt-0">
-                      <InfoRow label="Address" value={<span className="text-xs">{watchedValues.addressLine}</span>} />
-                      <InfoRow
-                        label="District / Ward"
-                        value={<span className="text-xs">{watchedValues.addressLevel2}</span>}
-                      />
-                      <InfoRow
-                        label="Province / City"
-                        value={<span className="text-xs">{watchedValues.addressLevel1}</span>}
-                      />
-                      <InfoRow
-                        label="Radius"
-                        value={<span className="text-xs">{watchedValues.radiusMeters}m</span>}
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Card className="border shadow-sm">
-                    <CardHeader className="pb-2 pt-3">
-                      <CardTitle className="text-sm font-semibold">
+                <Card className="border shadow-sm">
+                  <CardHeader className="pb-1 pt-1.5">
+                    <CardTitle className="text-sm font-semibold">Photos & Documents</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 space-y-1.5">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">
                         Location Photos ({watchedValues.locationImageUrls?.length || 0})
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="flex flex-wrap gap-1.5">
-                        {watchedValues.locationImageUrls?.map((url) => (
-                          <img
-                            key={url}
-                            src={url}
-                            alt="Location"
-                            className="w-16 h-16 object-cover rounded border"
-                          />
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                        {watchedValues.locationImageUrls?.map((url, index) => (
+                          <Dialog key={url || index}>
+                            <DialogTrigger asChild>
+                              <div className="relative w-full aspect-video bg-gray-100 rounded-md overflow-hidden group cursor-pointer">
+                                <img
+                                  src={url}
+                                  alt={`Location photo ${index + 1}`}
+                                  className="w-full h-full object-cover rounded-md transition-transform group-hover:scale-105"
+                                />
+                              </div>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl p-0 bg-transparent border-none shadow-none">
+                              <VisuallyHidden>
+                                <DialogTitle>Location photo preview</DialogTitle>
+                              </VisuallyHidden>
+                              <img
+                                src={url}
+                                alt="Location photo preview"
+                                className="w-full h-auto max-h-[90vh] rounded-lg object-contain"
+                              />
+                            </DialogContent>
+                          </Dialog>
                         ))}
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border shadow-sm">
-                    <CardHeader className="pb-2 pt-3">
-                      <CardTitle className="text-sm font-semibold">
-                        Validation Documents ({watchedValues.locationValidationDocuments?.length || 0})
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0 space-y-2">
-                      {watchedValues.locationValidationDocuments?.map((doc, docIndex) => {
-                        const getDocumentTypeLabel = (type: string) => {
-                          switch (type) {
-                            case "LOCATION_REGISTRATION_CERTIFICATE":
-                              return "Location Registration Certificate";
-                            case "BUSINESS_LICENSE":
-                              return "Business License";
-                            case "TAX_REGISTRATION":
-                              return "Tax Registration";
-                            case "OTHER":
-                              return "Other";
-                            default:
-                              return type;
-                          }
-                        };
-                        return (
-                          <div key={docIndex} className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">
-                              {getDocumentTypeLabel(doc.documentType)} ({doc.documentImageUrls?.length || 0} images)
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {doc.documentImageUrls?.map((url: string) => (
-                                <img
-                                  key={url}
-                                  src={url}
-                                  alt={getDocumentTypeLabel(doc.documentType)}
-                                  className="w-16 h-16 object-cover rounded border"
-                                />
-                              ))}
-                            </div>
+                    </div>
+                    {watchedValues.locationValidationDocuments?.map((doc, docIndex) => {
+                      const getDocumentTypeLabel = (type: string) => {
+                        switch (type) {
+                          case "LOCATION_REGISTRATION_CERTIFICATE":
+                            return "Location Registration Certificate";
+                          case "BUSINESS_LICENSE":
+                            return "Business License";
+                          case "TAX_REGISTRATION":
+                            return "Tax Registration";
+                          case "OTHER":
+                            return "Other";
+                          default:
+                            return type;
+                        }
+                      };
+                      return (
+                        <div key={docIndex}>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">
+                            {getDocumentTypeLabel(doc.documentType)} ({doc.documentImageUrls?.length || 0} images)
+                          </p>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                            {doc.documentImageUrls?.map((url: string, imgIndex: number) => (
+                              <Dialog key={url || imgIndex}>
+                                <DialogTrigger asChild>
+                                  <div className="relative w-full aspect-video bg-gray-100 rounded-md overflow-hidden group cursor-pointer">
+                                    <img
+                                      src={url}
+                                      alt={`${getDocumentTypeLabel(doc.documentType)} ${imgIndex + 1}`}
+                                      className="w-full h-full object-cover rounded-md transition-transform group-hover:scale-105"
+                                    />
+                                  </div>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-4xl p-0 bg-transparent border-none shadow-none">
+                                  <VisuallyHidden>
+                                    <DialogTitle>{getDocumentTypeLabel(doc.documentType)} preview</DialogTitle>
+                                  </VisuallyHidden>
+                                  <img
+                                    src={url}
+                                    alt={`${getDocumentTypeLabel(doc.documentType)} preview`}
+                                    className="w-full h-auto max-h-[90vh] rounded-lg object-contain"
+                                  />
+                                </DialogContent>
+                              </Dialog>
+                            ))}
                           </div>
-                        );
-                      })}
-                    </CardContent>
-                  </Card>
-                </div>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
               </div>
 
               <div className="flex justify-between pt-3 border-t">

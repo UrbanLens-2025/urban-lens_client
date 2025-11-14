@@ -19,14 +19,15 @@ export function useUpdateLocation() {
       payload: UpdateLocationPayload;
     }) => updateLocation(locationId, payload),
 
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success("Location updated successfully!");
 
       queryClient.invalidateQueries({ queryKey: ["myLocations"] });
       queryClient.invalidateQueries({ queryKey: ["location"] });
+      queryClient.invalidateQueries({ queryKey: ["location", variables.locationId] });
 
-      router.back();
-      router.refresh();
+      // Navigate to location detail page instead of going back
+      router.push(`/dashboard/business/locations/${variables.locationId}`);
     },
     onError: (err) => {
       toast.error(err.message || "Failed to update location.");

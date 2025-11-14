@@ -258,7 +258,7 @@ export interface CreateLocationPayload {
   addressLevel2: string;
   locationImageUrls: string[];
   locationValidationDocuments: LocationValidationDocument[];
-  tagIds: number[];
+  categoryIds: number[];
 }
 
 export interface UpdateLocationPayload {
