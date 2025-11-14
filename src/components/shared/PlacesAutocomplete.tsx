@@ -21,13 +21,19 @@ export function PlacesAutocomplete({ onAddressSelect }: PlacesAutocompleteProps)
     suggestions: { status, data },
     setValue,
     clearSuggestions,
-  } = usePlacesAutocomplete({ debounce: 300 });
+  } = usePlacesAutocomplete({ 
+    debounce: 300,
+    requestOptions: {
+      componentRestrictions: { country: 'vn' }, // Restrict to Vietnam only
+    },
+  });
 
   const handleSelect = async (address: string) => {
     setValue(address, false);
     clearSuggestions();
 
     try {
+      // Address is already restricted to Vietnam via autocomplete
       const results = await getGeocode({ address });
       const { lat, lng } = await getLatLng(results[0]);
       

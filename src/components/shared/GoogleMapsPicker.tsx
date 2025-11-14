@@ -48,7 +48,16 @@ export function GoogleMapsPicker({
 }: GoogleMapsPickerProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
+  // Default center: Ho Chi Minh City, Vietnam
   const defaultCenter = { lat: 10.769444, lng: 106.681944 };
+  
+  // Restrict map bounds to Vietnam
+  const vietnamBounds = useMemo(() => ({
+    north: 23.392627,
+    south: 8.559611,
+    east: 109.464638,
+    west: 102.144653,
+  }), []);
 
   const numericPosition = useMemo(() => {
     if (!position) return null;
@@ -88,9 +97,22 @@ export function GoogleMapsPicker({
       gestureHandling={"greedy"}
       disableDefaultUI={false}
       mapId="your-map-id"
+      restriction={{
+        latLngBounds: vietnamBounds,
+        strictBounds: false, // Allow slight panning outside bounds
+      }}
       onClick={(e) => {
         if (e.detail.latLng) {
-          onPositionChange(e.detail.latLng);
+          const { lat, lng } = e.detail.latLng;
+          // Validate that clicked location is within Vietnam bounds
+          if (
+            lat >= vietnamBounds.south &&
+            lat <= vietnamBounds.north &&
+            lng >= vietnamBounds.west &&
+            lng <= vietnamBounds.east
+          ) {
+            onPositionChange(e.detail.latLng);
+          }
         }
       }}
     >

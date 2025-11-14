@@ -66,6 +66,7 @@ export function LocationAddressPicker() {
     form.setValue("longitude", latLng.lng, { shouldValidate: true });
     setMapCenter(latLng);
     try {
+      // Location is already validated to be within Vietnam bounds
       const results = await getGeocode({ location: latLng });
       if (results && results[0]) {
         processPlaceDetails({
