@@ -3526,15 +3526,26 @@ export default function LocationDetailsPage({
                   {location.description || "No description provided for this location."}
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-white/80">
-                <MapPin className="h-3.5 w-3.5" />
-                <span>{location.addressLine}</span>
-                <span>•</span>
-                <span>
-                  {location.addressLevel2}, {location.addressLevel1}
-                </span>
+              <div className="flex flex-col gap-1.5 text-sm text-white/90">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 flex-shrink-0" />
+                  <span className="font-medium">{location.addressLine}</span>
+                </div>
+                <div className="flex items-center gap-2 pl-6 text-xs text-white/70">
+                  <span>{location.addressLevel1}</span>
+                  <span>•</span>
+                  <span>{location.addressLevel2}</span>
+                </div>
               </div>
             </div>
+            <Button
+              onClick={() => setActiveTab("edit")}
+              className="bg-white/90 hover:bg-white text-foreground shadow-sm shrink-0"
+              size="sm"
+            >
+              <FilePenLine className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
           </div>
         </div>
       </section>
@@ -3542,7 +3553,7 @@ export default function LocationDetailsPage({
       <Card className="border-border/60 shadow-sm">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <CardHeader className="pb-3 pt-4 border-b bg-muted/20">
-            <TabsList className="grid w-full grid-cols-6 h-auto p-1 bg-transparent">
+            <TabsList className="grid w-full grid-cols-5 h-auto p-1 bg-transparent">
               <TabsTrigger 
                 value="overview" 
                 className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
@@ -3578,74 +3589,78 @@ export default function LocationDetailsPage({
                 <Megaphone className="h-3.5 w-3.5" />
                 Announcements
               </TabsTrigger>
-              <TabsTrigger 
-                value="edit" 
-                className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <FilePenLine className="h-3.5 w-3.5" />
-                Edit
-              </TabsTrigger>
             </TabsList>
           </CardHeader>
           <CardContent className="pt-4 pb-4">
             <TabsContent value="overview" className="mt-0 space-y-4">
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <Card className="border-border/60 shadow-sm">
-                  <CardHeader className="pb-2 pt-3">
-                    <CardTitle className="text-xs font-medium text-muted-foreground">
-                      Total check-ins
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Total Check-ins
                     </CardTitle>
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Users className="h-4 w-4 text-primary" />
+                    </div>
                   </CardHeader>
-                  <CardContent className="flex items-center gap-2 pt-0 pb-3">
-                    <Users className="h-4 w-4 text-primary" />
-                    <p className="text-xl font-semibold">{totalCheckIns.toLocaleString()}</p>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{totalCheckIns.toLocaleString()}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      All time check-ins
+                    </p>
                   </CardContent>
                 </Card>
-                <Card className="border-border/60 shadow-sm">
-                  <CardHeader className="pb-2 pt-3">
-                    <CardTitle className="text-xs font-medium text-muted-foreground">
-                      Visibility status
+                <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Visibility Status
                     </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex items-center gap-2 pt-0 pb-3">
-                    {location.isVisibleOnMap ? (
-                      <>
-                        <Eye className="h-4 w-4 text-emerald-500" />
-                        <p className="text-sm font-semibold text-emerald-600">
-                          Visible on map
-                        </p>
-                      </>
-                    ) : (
-                      <>
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${location.isVisibleOnMap ? 'bg-emerald-500/10' : 'bg-muted'}`}>
+                      {location.isVisibleOnMap ? (
+                        <Eye className="h-4 w-4 text-emerald-600" />
+                      ) : (
                         <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        <p className="text-sm font-semibold text-muted-foreground">
-                          Hidden from map
-                        </p>
-                      </>
-                    )}
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${location.isVisibleOnMap ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                      {location.isVisibleOnMap ? 'Visible' : 'Hidden'}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {location.isVisibleOnMap ? 'On map' : 'From map'}
+                    </p>
                   </CardContent>
                 </Card>
-                <Card className="border-border/60 shadow-sm">
-                  <CardHeader className="pb-2 pt-3">
-                    <CardTitle className="text-xs font-medium text-muted-foreground">
-                      Service radius
+                <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Service Radius
                     </CardTitle>
+                    <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                      <MapPin className="h-4 w-4 text-blue-600" />
+                    </div>
                   </CardHeader>
-                  <CardContent className="flex items-center gap-2 pt-0 pb-3">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    <p className="text-sm font-semibold">{location.radiusMeters} m</p>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-blue-600">{location.radiusMeters}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      meters
+                    </p>
                   </CardContent>
                 </Card>
-                <Card className="border-border/60 shadow-sm">
-                  <CardHeader className="pb-2 pt-3">
-                    <CardTitle className="text-xs font-medium text-muted-foreground">
-                      Last updated
+                <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Last Updated
                     </CardTitle>
+                    <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+                      <Calendar className="h-4 w-4 text-amber-600" />
+                    </div>
                   </CardHeader>
-                  <CardContent className="flex items-center gap-2 pt-0 pb-3">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    <p className="text-xs font-semibold">
-                      {formatDate(location.updatedAt)}
+                  <CardContent>
+                    <div className="text-sm font-bold">{format(new Date(location.updatedAt), "MMM d, yyyy")}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {format(new Date(location.updatedAt), "h:mm a")}
                     </p>
                   </CardContent>
                 </Card>
@@ -3654,43 +3669,75 @@ export default function LocationDetailsPage({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* LEFT COLUMN: DETAILS */}
                 <div className="space-y-4">
-                  {/* Basic Information */}
+                  {/* Basic Information & Address - Consolidated */}
                   <Card className="border-border/60 shadow-sm">
                     <CardHeader className="pb-3 pt-4">
                       <CardTitle className="flex items-center gap-2 text-sm">
                         <Layers className="h-4 w-4" />
-                        Basic Information
+                        Location Details
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3 pt-0 pb-4">
-                      <InfoRow
-                        label="Description"
-                        value={location.description || "No description"}
-                      />
-                      <InfoRow
-                        label="Category"
-                        value={location.business?.category || "N/A"}
-                      />
-                      <InfoRow
-                        label="Total Check-ins"
-                        value={location.totalCheckIns || "0"}
-                      />
-                      <InfoRow
-                        label="Visibility"
-                        value={
-                          location.isVisibleOnMap ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs">Visible on map</span>
-                              <Eye className="h-3.5 w-3.5 text-green-600" />
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs">Hidden from map</span>
-                              <EyeOff className="h-3.5 w-3.5 text-gray-400" />
-                            </div>
-                          )
-                        }
-                      />
+                    <CardContent className="space-y-4 pt-0 pb-4">
+                      {/* Basic Info Section */}
+                      <div className="space-y-3">
+                        <InfoRow
+                          label="Description"
+                          value={location.description || "No description"}
+                        />
+                        <InfoRow
+                          label="Category"
+                          value={location.business?.category || "N/A"}
+                        />
+                        <InfoRow
+                          label="Total Check-ins"
+                          value={location.totalCheckIns || "0"}
+                        />
+                        <InfoRow
+                          label="Visibility"
+                          value={
+                            location.isVisibleOnMap ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs">Visible on map</span>
+                                <Eye className="h-3.5 w-3.5 text-green-600" />
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs">Hidden from map</span>
+                                <EyeOff className="h-3.5 w-3.5 text-gray-400" />
+                              </div>
+                            )
+                          }
+                        />
+                      </div>
+                      
+                      {/* Divider */}
+                      <div className="border-t pt-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <p className="text-xs font-semibold text-muted-foreground">Address & Location</p>
+                        </div>
+                        <div className="space-y-3">
+                          <InfoRow label="Address" value={location.addressLine} icon={MapPin} />
+                          <div className="grid grid-cols-2 gap-3">
+                            <InfoRow
+                              label="District/Ward"
+                              value={location.addressLevel1 || "N/A"}
+                            />
+                            <InfoRow
+                              label="Province/City"
+                              value={location.addressLevel2 || "N/A"}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <InfoRow label="Latitude" value={typeof location.latitude === 'number' ? location.latitude.toFixed(8) : String(location.latitude || 'N/A')} />
+                            <InfoRow label="Longitude" value={typeof location.longitude === 'number' ? location.longitude.toFixed(8) : String(location.longitude || 'N/A')} />
+                          </div>
+                          <InfoRow
+                            label="Service Radius"
+                            value={`${location.radiusMeters} meters`}
+                          />
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -3828,35 +3875,8 @@ export default function LocationDetailsPage({
                   </Card>
                 </div>
 
-                {/* RIGHT COLUMN: ADDRESS, MAP, AND STATS */}
+                {/* RIGHT COLUMN: MAP AND IMAGES */}
                 <div className="space-y-4">
-                  {/* Address Information */}
-                  <Card className="border-border/60 shadow-sm">
-                    <CardHeader className="pb-3 pt-4">
-                      <CardTitle className="flex items-center gap-2 text-sm">
-                        <MapPin className="h-4 w-4" />
-                        Address Information
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 pt-0 pb-4">
-                      <InfoRow label="Address" value={location.addressLine} />
-                      <InfoRow
-                        label="District/Ward"
-                        value={location.addressLevel1 || "N/A"}
-                      />
-                      <InfoRow
-                        label="Province/City"
-                        value={location.addressLevel2 || "N/A"}
-                      />
-                      <InfoRow label="Latitude" value={location.latitude} />
-                      <InfoRow label="Longitude" value={location.longitude} />
-                      <InfoRow
-                        label="Service Radius"
-                        value={`${location.radiusMeters} meters`}
-                      />
-                    </CardContent>
-                  </Card>
-
                   {/* Quick Stats */}
                   {location.imageUrl && location.imageUrl.length > 0 && (
                     <Card className="border-border/60 shadow-sm">
