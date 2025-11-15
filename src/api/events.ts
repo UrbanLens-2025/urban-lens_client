@@ -223,3 +223,12 @@ export const updateTicket = async (
   );
   return data.data;
 };
+
+export const deleteTicket = async (
+  eventId: string,
+  ticketId: string
+): Promise<void> => {
+  await axiosInstance.delete<ApiResponse<void>>(
+    `/v1/creator/events/${eventId}/tickets/${ticketId}`
+  );
+};

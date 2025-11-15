@@ -946,18 +946,18 @@ export interface CreateTicketPayload {
 }
 
 export interface UpdateTicketPayload {
-  displayName: string;
-  description: string;
-  price: number;
-  currency: string;
-  imageUrl: string | null;
-  isActive: boolean;
-  tos: string | null;
-  totalQuantityAvailable: number;
-  saleStartDate: string;
-  saleEndDate: string;
-  minQuantityPerOrder: number;
-  maxQuantityPerOrder: number;
+  displayName?: string;
+  description?: string;
+  price?: number;
+  currency?: string;
+  imageUrl?: string | null;
+  isActive?: boolean;
+  tos?: string | null;
+  totalQuantityAvailable?: number;
+  saleStartDate?: Date;
+  saleEndDate?: Date;
+  minQuantityPerOrder?: number;
+  maxQuantityPerOrder?: number;
 }
 
 export interface Ticket {

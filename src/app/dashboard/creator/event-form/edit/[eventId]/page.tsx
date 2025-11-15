@@ -175,7 +175,7 @@ function FieldLabel({ label, tooltip }: { label: string; tooltip: string }) {
   );
 }
 
-export default function EditEventPage({
+export default function EditEventFormPage({
   params,
 }: {
   params: Promise<{ eventId: string }>;
@@ -376,7 +376,12 @@ export default function EditEventPage({
         <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
           <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
             <div className="flex items-center gap-4">
-              <Button type="button" variant="ghost" size="icon" onClick={() => router.back()}>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => router.push(`/dashboard/creator/events/${eventId}`)}
+              >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div>
@@ -384,22 +389,31 @@ export default function EditEventPage({
                 <p className="text-sm text-muted-foreground">{event.displayName}</p>
               </div>
             </div>
-            <Button
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={isSubmitting || !form.formState.isDirty}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/dashboard/creator/events/${eventId}`)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={isSubmitting || !form.formState.isDirty}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -1149,3 +1163,4 @@ export default function EditEventPage({
     </TooltipProvider>
   );
 }
+
