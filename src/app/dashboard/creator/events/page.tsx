@@ -25,6 +25,7 @@ import {
   FileText,
   XCircle,
   Clock,
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
 import { useDebounce } from "use-debounce";
@@ -78,7 +79,7 @@ export default function CreatorEventsPage() {
   const [page, setPage] = useState(1);
   const [debouncedSearchTerm] = useDebounce(search, 300);
 
-  const { data: eventsData, isLoading } = useMyEvents({
+  const { data: eventsData, isLoading, refetch } = useMyEvents({
     page,
     limit: 10,
     search: debouncedSearchTerm,
@@ -183,68 +184,86 @@ export default function CreatorEventsPage() {
       </div>
 
       {/* Events Table */}
-      <Card>
-        <CardContent className="p-6">
-          {/* Search and Filter Section */}
-          <div className="mb-6 pb-4 border-b">
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Search Input */}
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by event name, location, date, or tags..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="pl-9"
-                />
-              </div>
+      <Card className="overflow-hidden">
+        <CardContent className="p-0">
+          <div className="flex flex-col h-full">
+            {/* Search and Filter Section */}
+            <div className="px-6 py-4 border-b">
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Search Input */}
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by event name, location, date, or tags..."
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    className="pl-9"
+                  />
+                </div>
 
-              {/* Status Filter */}
-              <Select
-                value={statusFilter}
-                onValueChange={(value) => {
-                  setStatusFilter(value);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Filter by Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="PUBLISHED">Published</SelectItem>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="DRAFT">Draft</SelectItem>
-                  <SelectItem value="COMPLETED">Completed</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+                <div className="flex gap-2">
+                  {/* Status Filter */}
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(value) => {
+                      setStatusFilter(value);
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Filter by Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="PUBLISHED">Published</SelectItem>
+                      <SelectItem value="ACTIVE">Active</SelectItem>
+                      <SelectItem value="DRAFT">Draft</SelectItem>
+                      <SelectItem value="COMPLETED">Completed</SelectItem>
+                      <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Refresh Button */}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      refetch();
+                      setPage(1);
+                    }}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
-          {isLoading && !eventsData ? (
-            <div className="text-center py-12">
-              <Loader2 className="mx-auto h-12 w-12 animate-spin text-muted-foreground/50" />
-            </div>
-          ) : (
-            <div className="rounded-lg border overflow-hidden">
-              <Table>
+
+            {/* Table Section */}
+            <div className="flex-1 overflow-auto">
+              {isLoading && !eventsData ? (
+                <div className="text-center py-12">
+                  <Loader2 className="mx-auto h-12 w-12 animate-spin text-muted-foreground/50" />
+                </div>
+              ) : (
+                <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-12 font-semibold">#</TableHead>
+                <TableRow className="bg-muted/50 border-b">
+                  <TableHead className="w-12 font-semibold pl-6">#</TableHead>
                   <TableHead className="font-semibold">Event Name</TableHead>
                   <TableHead className="font-semibold">Location</TableHead>
                   <TableHead className="font-semibold">Tags</TableHead>
                   <TableHead className="font-semibold">Created</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold pr-6">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {events.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={6} className="text-center py-12 pl-6 pr-6">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <CalendarDays className="h-12 w-12 mb-4" />
                         <p className="font-medium">No events found</p>
@@ -263,8 +282,8 @@ export default function CreatorEventsPage() {
                     const remainingTagsCount = (event.tags?.length || 0) - visibleTags.length;
                     
                     return (
-                      <TableRow key={event.id} className="hover:bg-muted/30 border-b transition-colors">
-                        <TableCell className="py-4">
+                      <TableRow key={event.id} className="hover:bg-muted/30 transition-colors">
+                        <TableCell className="py-4 pl-6">
                           <span className="text-sm font-medium text-muted-foreground">
                             {rowNumber}
                           </span>
@@ -334,7 +353,7 @@ export default function CreatorEventsPage() {
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="py-4">
+                        <TableCell className="py-4 pr-6">
                           <Badge 
                             variant="outline"
                             className={`${getStatusBadgeStyle(event.status)} flex items-center gap-1.5 w-fit font-medium`}
@@ -349,40 +368,45 @@ export default function CreatorEventsPage() {
                 )}
               </TableBody>
             </Table>
+              )}
             </div>
-          )}
 
-          {/* Pagination */}
-          {meta && meta.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <p className="text-sm text-muted-foreground">
-                Showing {((meta.currentPage - 1) * meta.itemsPerPage) + 1} to{" "}
-                {Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)} of{" "}
-                {meta.totalItems} events
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page - 1)}
-                  disabled={!meta || meta.currentPage <= 1 || isLoading}
-                >
-                  Previous
-                </Button>
-                <span className="text-sm text-muted-foreground px-2">
-                  Page {meta.currentPage} of {meta.totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page + 1)}
-                  disabled={!meta || meta.currentPage >= meta.totalPages || isLoading}
-                >
-                  Next
-                </Button>
-              </div>
+            {/* Table Bottom Border and Pagination */}
+            <div className="border-t">
+              {meta && meta.totalPages > 1 && (
+                <div className="px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {((meta.currentPage - 1) * meta.itemsPerPage) + 1} to{" "}
+                      {Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)} of{" "}
+                      {meta.totalItems} events
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage(page - 1)}
+                        disabled={!meta || meta.currentPage <= 1 || isLoading}
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-sm text-muted-foreground px-2">
+                        Page {meta.currentPage} of {meta.totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage(page + 1)}
+                        disabled={!meta || meta.currentPage >= meta.totalPages || isLoading}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     </div>
