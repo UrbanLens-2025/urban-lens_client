@@ -148,26 +148,16 @@ function VisibilitySwitch({ location }: { location: Location }) {
 
 function ActiveLocationActions({ location }: { location: Location }) {
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem asChild>
-          <Link href={`/dashboard/business/locations/${location.id}/edit`}>
-            <Pencil className="mr-2 h-4 w-4" /> Edit Details
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href={`/dashboard/business/locations/${location.id}`}>
-            <Eye className="mr-2 h-4 w-4" />
-            View Live Page
-          </Link>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button 
+      variant="ghost" 
+      size="icon"
+      className="h-9 w-9 hover:bg-muted/80 transition-colors"
+      asChild
+    >
+      <Link href={`/dashboard/business/locations/${location.id}`}>
+        <Eye className="h-4 w-4" />
+      </Link>
+    </Button>
   );
 }
 
@@ -429,51 +419,61 @@ export default function MyLocationsPage() {
       </div>
 
       {activeTab === "locations" && (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2 pt-4">
-              <CardDescription className="text-xs">Total locations</CardDescription>
-              <CardTitle className="text-2xl font-bold">
-                {stats.total.toLocaleString()}
-              </CardTitle>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Locations</CardTitle>
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <MapPin className="h-4 w-4 text-primary" />
+              </div>
             </CardHeader>
-            <CardContent className="pt-0 pb-4 text-xs text-muted-foreground">
-              Across all pages
+            <CardContent>
+              <div className="text-3xl font-bold">{stats.total.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Across all pages
+              </p>
             </CardContent>
           </Card>
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2 pt-4">
-              <CardDescription className="text-xs">Visible on map</CardDescription>
-              <CardTitle className="text-2xl font-bold">
-                {stats.visibleOnMap.toLocaleString()}
-              </CardTitle>
+          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Visible on Map</CardTitle>
+              <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <Eye className="h-4 w-4 text-emerald-600" />
+              </div>
             </CardHeader>
-            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5" />
-              This page only
+            <CardContent>
+              <div className="text-3xl font-bold text-emerald-600">{stats.visibleOnMap.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                This page only
+              </p>
             </CardContent>
           </Card>
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2 pt-4">
-              <CardDescription className="text-xs">Total check-ins</CardDescription>
-              <CardTitle className="text-2xl font-bold">
-                {stats.totalCheckIns.toLocaleString()}
-              </CardTitle>
+          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Check-ins</CardTitle>
+              <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <Users className="h-4 w-4 text-blue-600" />
+              </div>
             </CardHeader>
-            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <Users className="h-3.5 w-3.5" />
-              Across locations on this page
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600">{stats.totalCheckIns.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Across locations on this page
+              </p>
             </CardContent>
           </Card>
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2 pt-4">
-              <CardDescription className="text-xs">Items this page</CardDescription>
-              <CardTitle className="text-2xl font-bold">
-                {stats.currentPageCount.toLocaleString()}
-              </CardTitle>
+          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Items This Page</CardTitle>
+              <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <FileText className="h-4 w-4 text-amber-600" />
+              </div>
             </CardHeader>
-            <CardContent className="pt-0 pb-4 text-xs text-muted-foreground">
-              Page {activeMeta?.currentPage ?? activePage} of {activeMeta?.totalPages ?? 1}
+            <CardContent>
+              <div className="text-3xl font-bold text-amber-600">{stats.currentPageCount.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Page {activeMeta?.currentPage ?? activePage} of {activeMeta?.totalPages ?? 1}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -640,24 +640,24 @@ export default function MyLocationsPage() {
               ) : (
                 <div className="overflow-hidden rounded-lg border border-border/60">
                   <Table>
-                    <TableHeader className="bg-muted/40">
-                      <TableRow className="border-b border-border/60">
-                        <TableHead className="w-[380px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+                    <TableHeader className="bg-muted/50">
+                      <TableRow className="border-b border-border/60 hover:bg-muted/50">
+                        <TableHead className="w-[380px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
                           Location
                         </TableHead>
-                        <TableHead className="w-[260px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+                        <TableHead className="w-[260px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
                           Address
                         </TableHead>
-                        <TableHead className="w-[200px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+                        <TableHead className="w-[200px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
                           Tags
                         </TableHead>
-                        <TableHead className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+                        <TableHead className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
                           Visible
                         </TableHead>
-                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
                           Check-ins
                         </TableHead>
-                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[100px]">
                           Actions
                         </TableHead>
                       </TableRow>
@@ -668,8 +668,11 @@ export default function MyLocationsPage() {
                           key={location.id}
                           className="border-b border-border/40 transition-colors hover:bg-muted/30"
                         >
-                          <TableCell className="align-top py-3">
-                            <div className="flex items-start gap-2.5">
+                          <TableCell className="align-top py-4">
+                            <Link 
+                              href={`/dashboard/business/locations/${location.id}`}
+                              className="flex items-start gap-2.5 group cursor-pointer"
+                            >
                               <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md border border-border/50 bg-muted">
                                 {location.imageUrl?.[0] ? (
                                   <img
@@ -686,7 +689,7 @@ export default function MyLocationsPage() {
                               </div>
                               <div className="flex-1 min-w-0 space-y-1">
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="text-sm font-semibold leading-tight truncate">
+                                  <span className="text-sm font-semibold leading-tight truncate group-hover:text-primary transition-colors">
                                     {location.name}
                                   </span>
                                 </div>
@@ -696,25 +699,27 @@ export default function MyLocationsPage() {
                                   </span>
                                 </div>
                               </div>
-                            </div>
+                            </Link>
                           </TableCell>
-                          <TableCell className="align-top text-xs text-muted-foreground py-3">
+                          <TableCell className="align-top text-xs text-muted-foreground py-4">
                             <div className="truncate">{location.addressLine}</div>
-                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80 truncate">
+                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80 truncate mt-0.5">
                               {location.addressLevel2}, {location.addressLevel1}
                             </div>
                           </TableCell>
-                          <TableCell className="align-top py-3">
+                          <TableCell className="align-top py-4">
                             <DisplayTags tags={location.tags} maxCount={3} />
                           </TableCell>
-                          <TableCell className="align-top text-center py-3">
+                          <TableCell className="align-top text-center py-4">
                             <VisibilitySwitch location={location} />
                           </TableCell>
-                          <TableCell className="align-top text-right text-xs font-semibold py-3">
+                          <TableCell className="align-top text-right text-xs font-semibold py-4">
                             {parseCheckIns(location.totalCheckIns).toLocaleString()}
                           </TableCell>
-                          <TableCell className="align-top text-right py-3">
-                            <ActiveLocationActions location={location} />
+                          <TableCell className="align-top text-right py-4">
+                            <div className="flex items-center justify-end gap-2">
+                              <ActiveLocationActions location={location} />
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
