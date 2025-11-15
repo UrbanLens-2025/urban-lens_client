@@ -490,7 +490,7 @@ function EventDetailLayoutContent({
                       setPreventAutoOpenTicketId(closingTicketId);
                       // Navigate to Overview tab after state update
                       requestAnimationFrame(() => {
-                        router.push(`/dashboard/creator/events/${eventId}`);
+                        router.push(`/dashboard/creator/events/${eventId}/tickets`);
                       });
                     }
                   }}
