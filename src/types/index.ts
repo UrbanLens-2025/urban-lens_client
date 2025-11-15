@@ -909,13 +909,15 @@ export interface GetEventsParams {
 }
 
 export interface UpdateEventPayload {
-  displayName: string;
-  description: string;
-  avatarUrl: string | null;
-  coverUrl: string | null;
-  refundPolicy: string | null;
-  termsAndConditions: string | null;
-  social: SocialLink[];
+  displayName?: string;
+  description?: string;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
+  startDate?: Date;
+  endDate?: Date;
+  refundPolicy?: string | null;
+  termsAndConditions?: string | null;
+  social?: SocialLink[] | null;
 }
 
 export interface AddEventTagsPayload {
@@ -950,18 +952,18 @@ export interface CreateTicketPayload {
 }
 
 export interface UpdateTicketPayload {
-  displayName: string;
-  description: string;
-  price: number;
-  currency: string;
-  imageUrl: string | null;
-  isActive: boolean;
-  tos: string | null;
-  totalQuantityAvailable: number;
-  saleStartDate: string;
-  saleEndDate: string;
-  minQuantityPerOrder: number;
-  maxQuantityPerOrder: number;
+  displayName?: string;
+  description?: string;
+  price?: number;
+  currency?: string;
+  imageUrl?: string | null;
+  isActive?: boolean;
+  tos?: string | null;
+  totalQuantityAvailable?: number;
+  saleStartDate?: Date;
+  saleEndDate?: Date;
+  minQuantityPerOrder?: number;
+  maxQuantityPerOrder?: number;
 }
 
 export interface Ticket {

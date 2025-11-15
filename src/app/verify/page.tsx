@@ -180,23 +180,23 @@ export default function VerifyOtpPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="otpCode"
-                render={({ field }) => (
-                  <FormItem>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="otpCode"
+              render={({ field }) => (
+                <FormItem>
                     <FormLabel>Enter OTP Code</FormLabel>
-                    <FormControl>
-                      <Input
+                  <FormControl>
+                    <Input
                         ref={inputRef}
                         type="text"
                         inputMode="numeric"
                         placeholder="0000"
-                        maxLength={4}
+                      maxLength={4}
                         className="text-center text-2xl tracking-widest font-mono"
-                        {...field}
+                      {...field}
                         onChange={(e) => {
                           handleOtpChange(e.target.value);
                         }}
@@ -209,22 +209,22 @@ export default function VerifyOtpPage() {
                             e.preventDefault();
                           }
                         }}
-                      />
-                    </FormControl>
-                    <FormMessage />
+                    />
+                  </FormControl>
+                  <FormMessage />
                     <p className="text-xs text-muted-foreground mt-1">
                       Enter the 4-digit code sent to your email
                     </p>
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? (
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
                   <>
                     <Loader2 className="mr-2 size-4 animate-spin" />
                     Verifying...
                   </>
-                ) : (
+              ) : (
                   "Verify Code"
                 )}
               </Button>
@@ -254,10 +254,10 @@ export default function VerifyOtpPage() {
                   `Resend OTP (${resendCountdown}s)`
                 ) : (
                   "Resend OTP"
-                )}
-              </Button>
-            </form>
-          </Form>
+              )}
+            </Button>
+          </form>
+        </Form>
         </CardContent>
       </Card>
     </div>

@@ -2,15 +2,12 @@
 
 import type React from "react";
 import { use, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useEventAttendance } from "@/hooks/events/useEventAttendance";
-import { useEventById } from "@/hooks/events/useEventById";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Loader2,
-  ArrowLeft,
   Users,
   Ticket,
   DollarSign,
@@ -20,8 +17,6 @@ import {
   Mail,
   CreditCard,
   CheckCircle,
-  Clock,
-  XCircle,
   FileText,
   ChevronLeft,
   ChevronRight,
@@ -37,12 +32,10 @@ export default function EventAttendancePage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = use(params);
-  const router = useRouter();
 
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 20;
 
-  const { data: event, isLoading: isLoadingEvent } = useEventById(eventId);
   const {
     data: attendanceData,
     isLoading: isLoadingAttendance,
@@ -82,11 +75,9 @@ export default function EventAttendancePage({
     return "outline" as const;
   };
 
-  const isLoading = isLoadingEvent || isLoadingAttendance;
-
-  if (isLoading) {
+  if (isLoadingAttendance) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
       </div>
     );
@@ -94,13 +85,11 @@ export default function EventAttendancePage({
 
   if (isError || !attendanceData) {
     return (
-      <div className="space-y-6 p-6">
-        <div className="text-center py-20 text-red-500">
-          <p className="font-medium">Error loading attendance data</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Please try refreshing the page
-          </p>
-        </div>
+      <div className="text-center py-20 text-red-500">
+        <p className="font-medium">Error loading attendance data</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Please try refreshing the page
+        </p>
       </div>
     );
   }
@@ -117,30 +106,14 @@ export default function EventAttendancePage({
   );
 
   return (
-    <div className="space-y-8 p-6">
-      {/* Header */}
+    <div className="space-y-6">
+      {/* Header with QR Scan Button */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => router.back()}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">
-              Event Attendance
-              {event && (
-                <span className="text-xl font-normal text-muted-foreground ml-2">
-                  - {event.displayName}
-                </span>
-              )}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              View all attendees and ticket purchases
-            </p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold">Attendance Overview</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            View all attendees and ticket purchases
+          </p>
         </div>
         <Link href={`/dashboard/creator/events/${eventId}/attendance/scan`}>
           <Button variant="default" size="lg">

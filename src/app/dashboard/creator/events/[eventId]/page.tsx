@@ -2,41 +2,34 @@
 
 import type React from "react";
 import { use, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useEventById } from "@/hooks/events/useEventById";
-import { usePublishEvent } from "@/hooks/events/usePublishEvent";
 import { useEventTickets } from "@/hooks/events/useEventTickets";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEventAttendance } from "@/hooks/events/useEventAttendance";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ImageViewer } from "@/components/shared/ImageViewer";
-import { DisplayTags } from "@/components/shared/DisplayTags";
+import { Progress } from "@/components/ui/progress";
 import {
   Loader2,
-  ArrowLeft,
   MapPin,
   User,
   ImageIcon,
   Layers,
   Users,
-  Tag as TagIcon,
   Globe,
   FileText,
   Calendar,
   Phone,
-  Edit,
-  Send,
   Ticket,
   DollarSign,
-  Hash,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Pencil,
-  UserCheck,
-  Megaphone,
+  TrendingUp,
+  ChevronDown,
+  ChevronUp,
+  Target,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
+import { format } from "date-fns";
 
 function InfoRow({ label, value, icon: Icon }: { label: string, value: React.ReactNode, icon?: React.ComponentType<{ className?: string }> }) {
   if (!value) return null;
@@ -51,433 +44,230 @@ function InfoRow({ label, value, icon: Icon }: { label: string, value: React.Rea
   );
 }
 
-export default function EventDetailPage({
+export default function EventOverviewPage({
   params,
 }: {
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = use(params);
-  const router = useRouter();
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [visibleTagsCount, setVisibleTagsCount] = useState(10);
 
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [currentImageSrc, setCurrentImageSrc] = useState("");
-
-  const { data: event, isLoading, isError } = useEventById(eventId);
+  const { data: event, isLoading: isLoadingEvent } = useEventById(eventId);
   const { data: tickets, isLoading: isLoadingTickets } = useEventTickets(eventId);
-  const publishEvent = usePublishEvent();
-
-  const handlePublish = () => {
-    if (event && event.status === "DRAFT") {
-      publishEvent.mutate(eventId);
-    }
-  };
-
-  const formatDateTime = (iso: string) => new Date(iso).toLocaleString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  const { data: attendanceData, isLoading: isLoadingAttendance } = useEventAttendance(eventId, {
+    page: 1,
+    limit: 100,
+    sortBy: "createdAt:DESC",
   });
 
-  const statusVariant = (status: string) => {
-    const s = status?.toUpperCase();
-    if (s === 'PUBLISHED' || s === 'ACTIVE') return 'default' as const;
-    if (s === 'DRAFT') return 'outline' as const;
-    if (s === 'COMPLETED') return 'secondary' as const;
-    if (s === 'CANCELLED') return 'destructive' as const;
-    return 'secondary' as const;
+  const formatCurrency = (amount: string | number, currency: string = "VND") => {
+    const num = typeof amount === "string" ? parseFloat(amount) : amount;
+    if (currency === "VND") {
+      return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        minimumFractionDigits: 0,
+      }).format(num);
+    }
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(num);
   };
 
-  const handleImageClick = (src: string) => {
-    setCurrentImageSrc(src);
-    setIsImageViewerOpen(true);
-  };
-
-  if (isLoading) {
+  if (isLoadingEvent) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  if (isError || !event) {
+  if (!event) {
     return (
-      <div className="space-y-6 p-6">
-        <div className="text-center py-20 text-red-500">
-          <p className="font-medium">Error loading event details</p>
-          <p className="text-sm text-muted-foreground mt-2">Please try refreshing the page</p>
-        </div>
+      <div className="text-center py-20 text-red-500">
+        <p className="font-medium">Error loading event details</p>
       </div>
     );
   }
 
+  // Calculate statistics
+  const attendances = attendanceData?.data || [];
+  const totalTicketsSold = attendances.reduce(
+    (sum, attendance) =>
+      sum +
+      attendance.order.orderDetails.reduce(
+        (detailSum, detail) => detailSum + detail.quantity,
+        0
+      ),
+    0
+  );
+
+  const totalRevenue = attendances.reduce(
+    (sum, attendance) => sum + parseFloat(attendance.order.totalPaymentAmount || "0"),
+    0
+  );
+
+  const paidOrders = attendances.filter(
+    (a) => a.order.status?.toUpperCase() === "PAID"
+  ).length;
+
+  const totalTicketsAvailable = tickets?.reduce(
+    (sum, ticket) => sum + ticket.totalQuantityAvailable,
+    0
+  ) || 0;
+
+  const ticketsSoldPercentage = totalTicketsAvailable > 0 
+    ? (totalTicketsSold / totalTicketsAvailable) * 100 
+    : 0;
+
+  const isEventPast = event.endDate ? new Date(event.endDate) < new Date() : false;
+  const isEventUpcoming = event.startDate ? new Date(event.startDate) > new Date() : true;
+  const isEventOngoing = !isEventPast && !isEventUpcoming;
+
+  // Truncate description to 200 characters
+  const truncatedDescription = event.description && event.description.length > 200
+    ? event.description.substring(0, 200) + "..."
+    : event.description;
+
+  // Handle tag pagination
+  const allTags = event.tags || [];
+  const visibleTags = allTags.slice(0, visibleTagsCount);
+  const hasMoreTags = allTags.length > visibleTagsCount;
+
   return (
-    <div className="space-y-8 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{event.displayName}</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Created {formatDateTime(event.createdAt)}
-            </p>
-          </div>
-          <Badge variant={statusVariant(event.status)}>{event.status}</Badge>
-        </div>
-        <div className="flex items-center gap-2">
-          {event.status === "DRAFT" && (
-            <Button
-              variant="default"
-              onClick={handlePublish}
-              disabled={publishEvent.isPending}
-            >
-              {publishEvent.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Publishing...
-                </>
+    <div className="space-y-6">
+
+      {/* Key Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Revenue */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingAttendance ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
               ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Publish Event
-                </>
+                formatCurrency(totalRevenue)
               )}
-            </Button>
-          )}
-          <Link href={`/dashboard/creator/events/${eventId}/attendance`}>
-            <Button variant="default">
-              <UserCheck className="h-4 w-4 mr-2" />
-              View Attendance
-            </Button>
-          </Link>
-          <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
-            <Button variant="default">
-              <Ticket className="h-4 w-4 mr-2" />
-              Create Ticket
-            </Button>
-          </Link>
-          <Link href={`/dashboard/creator/events/${eventId}/announcements`}>
-            <Button variant="default">
-              <Megaphone className="h-4 w-4 mr-2" />
-              Announcements
-            </Button>
-          </Link>
-          <Link href={`/dashboard/creator/events/${eventId}/edit`}>
-            <Button variant="outline">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Event
-            </Button>
-          </Link>
-        </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              From {paidOrders} paid order{paidOrders !== 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Tickets Sold */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tickets Sold</CardTitle>
+            <Ticket className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingAttendance ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                `${totalTicketsSold} / ${totalTicketsAvailable}`
+              )}
+            </div>
+            <Progress value={ticketsSoldPercentage} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-1">
+              {ticketsSoldPercentage.toFixed(1)}% sold
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Total Attendees */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Attendees</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingAttendance ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                totalTicketsSold
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {attendances.length} total order{attendances.length !== 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Ticket Types */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Ticket Types</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingTickets ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                tickets?.length || 0
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {tickets?.filter(t => t.isActive).length || 0} active
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Grid Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Event Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Layers /> Event Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <InfoRow label="Description" value={event.description} />
-              
-              {event.tags && event.tags.length > 0 && (
-                <div>
-                  <p className="text-sm font-semibold text-muted-foreground mb-2">Tags</p>
-                  <div className="flex flex-wrap gap-2">
-                    {event.tags.map((tag) => (
-                      <Badge 
-                        key={tag.id} 
-                        variant="secondary"
-                        style={{ 
-                          backgroundColor: `${tag.color}20`,
-                          borderColor: tag.color,
-                          color: tag.color
-                        }}
-                        className="flex items-center gap-1"
-                      >
-                        <span>{tag.icon}</span>
-                        <span>{tag.displayName}</span>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {event.social && event.social.length > 0 && (
-                <div>
-                  <p className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
-                    <Globe className="h-4 w-4" />
-                    Social Links
-                  </p>
-                  <div className="space-y-2">
-                    {event.social.map((social, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Badge variant="outline">{social.platform}</Badge>
-                        <a 
-                          href={social.url} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="text-sm text-blue-600 hover:underline truncate"
-                        >
-                          {social.url}
-                        </a>
-                        {social.isMain && (
-                          <Badge variant="secondary" className="text-xs">Main</Badge>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {event.refundPolicy && (
-                <InfoRow label="Refund Policy" value={event.refundPolicy} icon={FileText} />
-              )}
-
-              {event.termsAndConditions && (
-                <InfoRow label="Terms and Conditions" value={event.termsAndConditions} icon={FileText} />
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Tickets */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Ticket className="h-5 w-5" />
-                  Tickets
-                </div>
-                <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
-                  <Button variant="outline" size="sm">
-                    <Ticket className="h-4 w-4 mr-2" />
-                    Create Ticket
-                  </Button>
-                </Link>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingTickets ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : !tickets || tickets.length === 0 ? (
-                <div className="text-center py-8">
-                  <Ticket className="h-12 w-12 mx-auto text-muted-foreground mb-3 opacity-50" />
-                  <p className="text-sm text-muted-foreground mb-4">
-                    No tickets created yet
-                  </p>
-                  <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
-                    <Button variant="default" size="sm">
-                      <Ticket className="h-4 w-4 mr-2" />
-                      Create Your First Ticket
-                    </Button>
-                  </Link>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {tickets.map((ticket) => {
-                    const formatCurrency = (price: string, currency: string) => {
-                      const numPrice = parseFloat(price);
-                      if (currency === "VND") {
-                        return new Intl.NumberFormat('vi-VN', {
-                          style: 'currency',
-                          currency: 'VND',
-                          minimumFractionDigits: 0,
-                        }).format(numPrice);
-                      }
-                      return new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: currency,
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 2,
-                      }).format(numPrice);
-                    };
-
-                    const formatDate = (dateString: string) => {
-                      return new Date(dateString).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      });
-                    };
-
-                    const availableQuantity = ticket.totalQuantityAvailable - ticket.quantityReserved;
-                    const isSaleActive = new Date(ticket.saleStartDate) <= new Date() && 
-                                       new Date(ticket.saleEndDate) >= new Date();
-                    const availabilityPercentage = (availableQuantity / ticket.totalQuantityAvailable) * 100;
-
-                    return (
-                      <div
-                        key={ticket.id}
-                        className="group relative border-2 rounded-xl overflow-hidden bg-white hover:shadow-lg transition-all duration-300 hover:border-primary/50"
-                      >
-                        {/* Status Badge - Top Right */}
-                        <div className="absolute top-3 right-3 z-10 flex flex-col gap-2">
-                          {ticket.isActive ? (
-                            <Badge className="bg-green-500 hover:bg-green-600 text-white border-0 shadow-md">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Active
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="bg-gray-400 text-white border-0">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Inactive
-                            </Badge>
-                          )}
-                          {!isSaleActive && ticket.isActive && (
-                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
-                              Not On Sale
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Ticket Image */}
-                        {ticket.imageUrl && (
-                          <div className="relative h-48 overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5">
-                            <img
-                              src={ticket.imageUrl}
-                              alt={ticket.displayName}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                          </div>
-                        )}
-
-                        {/* Ticket Content */}
-                        <div className="p-5 space-y-4">
-                          {/* Ticket Name */}
-                          <div>
-                            <h3 className="font-bold text-xl text-gray-900 mb-2 line-clamp-1">
-                              {ticket.displayName}
-                            </h3>
-                            {ticket.description && (
-                              <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                                {ticket.description}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Price - Prominent Display */}
-                          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-4 border border-primary/20">
-                            <p className="text-xs text-gray-600 mb-1 font-medium">Ticket Price</p>
-                            <p className="text-3xl font-bold text-primary">
-                              {formatCurrency(ticket.price, ticket.currency)}
-                            </p>
-                          </div>
-
-                          {/* Key Information */}
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600 flex items-center gap-2">
-                                <Hash className="h-4 w-4" />
-                                Available
-                              </span>
-                              <span className="font-semibold text-gray-900">
-                                {availableQuantity} / {ticket.totalQuantityAvailable}
-                              </span>
-                            </div>
-
-                            {/* Availability Progress Bar */}
-                            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                              <div
-                                className={`h-full transition-all ${
-                                  availabilityPercentage > 50
-                                    ? "bg-green-500"
-                                    : availabilityPercentage > 20
-                                    ? "bg-yellow-500"
-                                    : "bg-red-500"
-                                }`}
-                                style={{ width: `${availabilityPercentage}%` }}
-                              />
-                            </div>
-
-                            <div className="flex items-center justify-between text-sm pt-1">
-                              <span className="text-gray-600 flex items-center gap-2">
-                                <Users className="h-4 w-4" />
-                                Per Order
-                              </span>
-                              <span className="font-semibold text-gray-900">
-                                {ticket.minQuantityPerOrder} - {ticket.maxQuantityPerOrder}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Sale Period */}
-                          <div className="pt-3 border-t border-gray-200 space-y-2">
-                            <div className="flex items-start gap-2 text-xs text-gray-600">
-                              <Calendar className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                              <div className="flex-1">
-                                <p className="font-medium text-gray-700 mb-1">Sale Period</p>
-                                <p className="leading-relaxed">
-                                  <span className="block">Start: {formatDate(ticket.saleStartDate)}</span>
-                                  <span className="block">End: {formatDate(ticket.saleEndDate)}</span>
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Terms */}
-                          {ticket.tos && (
-                            <div className="pt-2 border-t border-gray-200">
-                              <p className="text-xs text-gray-600 line-clamp-2">
-                                <span className="font-medium">Terms: </span>
-                                {ticket.tos}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Action Button */}
-                          <div className="pt-3 border-t border-gray-200">
-                            <Link href={`/dashboard/creator/events/${eventId}/tickets/${ticket.id}/edit`}>
-                              <Button variant="outline" size="sm" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Edit Ticket
-                              </Button>
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Location Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin /> Location Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <InfoRow label="Location Name" value={event.location?.name} />
-              <InfoRow label="Description" value={event.location?.description} />
-              <InfoRow label="Address" value={event.location?.addressLine} />
-              <InfoRow label="Area" value={`${event.location?.addressLevel1}, ${event.location?.addressLevel2}`} />
-              <InfoRow label="Coordinates" value={`${event.location?.latitude}, ${event.location?.longitude}`} />
-              <InfoRow label="Visibility" value={event.location?.isVisibleOnMap ? "Visible on map" : "Hidden"} />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column */}
+      {/* Quick Actions & Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Side Info */}
         <div className="lg:col-span-1 space-y-6">
+          {/* Social Links */}
+          {event.social && event.social.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Social Links
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {event.social.map((social, index) => (
+                    <a
+                      key={index}
+                      href={social.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors group"
+                    >
+                      <Badge variant={social.isMain ? "default" : "outline"}>
+                        {social.platform}
+                      </Badge>
+                      <span className="text-sm truncate flex-1 text-muted-foreground group-hover:text-foreground">
+                        {social.url}
+                      </span>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </a>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Creator Info */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User /> Creator
+                <User className="h-5 w-5" />
+                Event Creator
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -504,34 +294,13 @@ export default function EventDetailPage({
             </CardContent>
           </Card>
 
-          {/* Location Images */}
-          {event.location?.imageUrl && event.location.imageUrl.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ImageIcon /> Location Images
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                {event.location.imageUrl.slice(0, 4).map((url, index) => (
-                  <img
-                    key={index}
-                    src={url || "/placeholder.svg"}
-                    alt={`Location ${index + 1}`}
-                    onClick={() => handleImageClick(url)}
-                    className="w-full h-32 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity"
-                  />
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
           {/* Event Request Link */}
           {event.referencedEventRequestId && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Calendar /> Related Request
+                  <Calendar className="h-5 w-5" />
+                  Related Request
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -544,15 +313,278 @@ export default function EventDetailPage({
             </Card>
           )}
         </div>
+
+        {/* Right Column - Event Details */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Event Description & Tags Combined */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="h-5 w-5" />
+                Event Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Description Section */}
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-3">Description</p>
+                {event.description ? (
+                  <div>
+                    <p className="text-base text-foreground whitespace-pre-wrap leading-relaxed">
+                      {isDescriptionExpanded ? event.description : truncatedDescription}
+                    </p>
+                    {event.description.length > 200 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                        className="mt-2 p-0 h-auto font-normal text-primary hover:text-primary/80"
+                      >
+                        {isDescriptionExpanded ? (
+                          <>
+                            <ChevronUp className="h-4 w-4 mr-1" />
+                            Show less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4 mr-1" />
+                            Read more
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground italic">No description provided</p>
+                )}
+              </div>
+
+              {/* Separator */}
+              {event.tags && event.tags.length > 0 && (
+                <div className="border-t" />
+              )}
+
+              {/* Tags Section */}
+              {event.tags && event.tags.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground mb-3">Tags</p>
+                  <div className="flex flex-wrap gap-2">
+                    {visibleTags.map((tag) => (
+                      <Badge 
+                        key={tag.id} 
+                        variant="secondary"
+                        style={{ 
+                          backgroundColor: `${tag.color}20`,
+                          borderColor: tag.color,
+                          color: tag.color
+                        }}
+                        className="flex items-center gap-1 text-sm px-3 py-1"
+                      >
+                        <span>{tag.icon}</span>
+                        <span>{tag.displayName}</span>
+                      </Badge>
+                    ))}
+                  </div>
+                  {hasMoreTags && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setVisibleTagsCount(prev => prev + 10)}
+                      className="mt-3 p-0 h-auto font-normal text-primary hover:text-primary/80"
+                    >
+                      <ChevronDown className="h-4 w-4 mr-1" />
+                      Load 10 more tags
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Policies */}
+          {(event.refundPolicy || event.termsAndConditions) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Policies & Terms
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {event.refundPolicy && (
+                  <div>
+                    <p className="text-sm font-semibold text-muted-foreground mb-2">Refund Policy</p>
+                    <p className="text-base text-foreground">{event.refundPolicy}</p>
+                  </div>
+                )}
+                {event.termsAndConditions && (
+                  <div>
+                    <p className="text-sm font-semibold text-muted-foreground mb-2">Terms and Conditions</p>
+                    <p className="text-base text-foreground">{event.termsAndConditions}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Location Details */}
+          <Card className="overflow-hidden">
+            {/* Featured Location Image */}
+            {event.location?.imageUrl && event.location.imageUrl.length > 0 && (
+              <div className="relative w-full h-48 bg-gradient-to-br from-primary/10 to-muted">
+                <img
+                  src={event.location.imageUrl[0] || "/placeholder.svg"}
+                  alt={event.location?.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                <div className="absolute bottom-4 left-4 right-4">
+                  <div className="flex items-center gap-2 text-white">
+                    <MapPin className="h-5 w-5" />
+                    <h3 className="text-xl font-bold">{event.location?.name}</h3>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <CardHeader className={event.location?.imageUrl && event.location.imageUrl.length > 0 ? "pb-3" : ""}>
+              {(!event.location?.imageUrl || event.location.imageUrl.length === 0) && (
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  {event.location?.name || "Event Location"}
+                </CardTitle>
+              )}
+              <CardDescription>
+                {event.location?.description || "Where this event will take place"}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {/* Description (if no images at top) */}
+              {(!event.location?.imageUrl || event.location.imageUrl.length === 0) && event.location?.description && (
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {event.location.description}
+                </p>
+              )}
+
+              {/* Address */}
+              <div className="flex items-start gap-3 p-4 bg-muted/30 rounded-lg border">
+                <MapPin className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-foreground">{event.location?.addressLine}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {event.location?.addressLevel1}, {event.location?.addressLevel2}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Additional Location Images Gallery */}
+              {event.location?.imageUrl && event.location.imageUrl.length > 1 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-muted-foreground">Location Gallery</p>
+                    <Badge variant="secondary" className="text-xs">
+                      {event.location.imageUrl.length} photo{event.location.imageUrl.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </div>
+                  <div className={`grid gap-2 ${
+                    event.location.imageUrl.length === 2 ? 'grid-cols-2' :
+                    event.location.imageUrl.length === 3 ? 'grid-cols-3' :
+                    'grid-cols-4'
+                  }`}>
+                    {event.location.imageUrl.slice(1, 5).map((url, index) => (
+                      <div 
+                        key={index} 
+                        className="relative aspect-square overflow-hidden rounded-md border group cursor-pointer"
+                      >
+                        <img
+                          src={url || "/placeholder.svg"}
+                          alt={`${event.location?.name} - View ${index + 2}`}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                        {index === 3 && event.location.imageUrl.length > 5 && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <span className="text-white font-semibold text-lg">
+                              +{event.location.imageUrl.length - 5}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      <ImageViewer
-        src={currentImageSrc}
-        alt="Enlarged preview"
-        open={isImageViewerOpen}
-        onOpenChange={setIsImageViewerOpen}
-      />
+      {/* Ticket Sales Breakdown */}
+      {tickets && tickets.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Ticket Sales Breakdown
+            </CardTitle>
+            <CardDescription>
+              Performance of each ticket type
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {tickets.map((ticket) => {
+                const soldCount = attendances.reduce((sum, attendance) => {
+                  const ticketOrders = attendance.order.orderDetails.filter(
+                    detail => detail.ticket.id === ticket.id
+                  );
+                  return sum + ticketOrders.reduce((s, order) => s + order.quantity, 0);
+                }, 0);
+                
+                const soldPercentage = (soldCount / ticket.totalQuantityAvailable) * 100;
+                const revenue = soldCount * parseFloat(ticket.price);
+
+                return (
+                  <div key={ticket.id} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold">{ticket.displayName}</h4>
+                          <Badge variant={ticket.isActive ? "default" : "secondary"}>
+                            {ticket.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {formatCurrency(ticket.price, ticket.currency)} per ticket
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold">{soldCount}</p>
+                        <p className="text-sm text-muted-foreground">sold</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {soldCount} / {ticket.totalQuantityAvailable} tickets
+                        </span>
+                        <span className="font-medium">{soldPercentage.toFixed(1)}%</span>
+                      </div>
+                      <Progress value={soldPercentage} />
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <span className="text-sm text-muted-foreground">Revenue</span>
+                      <span className="font-semibold">{formatCurrency(revenue, ticket.currency)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
-

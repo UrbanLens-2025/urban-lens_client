@@ -369,21 +369,21 @@ export function BusinessOnboardingForm() {
                           </div>
 
                           <div className="space-y-4">
-                            <FormField
-                              control={form.control}
+                <FormField
+                  control={form.control}
                               name={`licenses.${index}.licenseType`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>License Type</FormLabel>
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>License Type</FormLabel>
                                   <Select
                                     onValueChange={field.onChange}
                                     value={field.value}
                                   >
-                                    <FormControl>
+                      <FormControl>
                                       <SelectTrigger>
                                         <SelectValue placeholder="Select license type" />
                                       </SelectTrigger>
-                                    </FormControl>
+                      </FormControl>
                                     <SelectContent>
                                       {Object.values(AcceptedBusinessLicenseTypes).map((type) => (
                                         <SelectItem key={type} value={type}>
@@ -393,30 +393,30 @@ export function BusinessOnboardingForm() {
                                     </SelectContent>
                                   </Select>
                                   <FormMessage />
-                                </FormItem>
-                              )}
-                            />
+                    </FormItem>
+                  )}
+                />
 
-                            <FormField
-                              control={form.control}
+                  <FormField
+                    control={form.control}
                               name={`licenses.${index}.documentImageUrls`}
-                              render={({ field }) => (
-                                <FormItem>
+                    render={({ field }) => (
+                      <FormItem>
                                   <FormLabel>Document Images</FormLabel>
-                                  <FormControl>
+                        <FormControl>
                                     <FileUpload
                                       value={field.value || []}
                                       onChange={field.onChange}
                                     />
-                                  </FormControl>
+                        </FormControl>
                                   <FormDescription>
                                     Upload images of your {getLicenseTypeLabel(license.licenseType).toLowerCase()}. You can upload multiple images.
                                   </FormDescription>
                                   <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
                         </CardContent>
                       </Card>
                     ))}

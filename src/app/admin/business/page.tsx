@@ -207,15 +207,15 @@ export default function AdminBusinessPage() {
                         <TableCell>{formatDateTime((biz as any).createdAt)}</TableCell>
                         <TableCell>{getStatusBadge((biz as any).status || statusTab)}</TableCell>
                         <TableCell className='text-right space-x-2'>
-                          <Button
+                              <Button
                             variant='outline'
-                            size='sm'
+                                size='sm'
                             asChild
                           >
                             <Link href={`/admin/business/${biz.accountId}`}>
                               View Details
                             </Link>
-                          </Button>
+                            </Button>
                         </TableCell>
                       </TableRow>
                     ))}
