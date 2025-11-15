@@ -35,6 +35,8 @@ import {
   Pencil,
   UserCheck,
   Megaphone,
+  CalendarDays,
+  CalendarClock,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -76,6 +78,14 @@ export default function EventDetailPage({
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
+  const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  const formatTime = (iso: string) => new Date(iso).toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit'
+  });
+
   const statusVariant = (status: string) => {
     const s = status?.toUpperCase();
     if (s === 'PUBLISHED' || s === 'ACTIVE') return 'default' as const;
@@ -109,82 +119,171 @@ export default function EventDetailPage({
     );
   }
 
+  const truncatedDescription = event.description 
+    ? (event.description.length > 200 ? event.description.substring(0, 200) + "..." : event.description)
+    : null;
+
   return (
-    <div className="space-y-8 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
+    <div className="space-y-0">
+      {/* Cover Banner */}
+      <div className="relative w-full h-64 md:h-80 lg:h-96 bg-gradient-to-br from-primary/20 via-primary/10 to-muted overflow-hidden">
+        {event.coverUrl ? (
+          <img
+            src={event.coverUrl}
+            alt={event.displayName}
+            className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => handleImageClick(event.coverUrl!)}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+            <div className="text-center space-y-2">
+              <ImageIcon className="h-16 w-16 mx-auto text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">No cover image</p>
+            </div>
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/40 to-transparent" />
+        
+        {/* Back Button - Overlay */}
+        <div className="absolute top-4 left-4">
+          <Button variant="outline" size="icon" onClick={() => router.back()} className="bg-background/90 backdrop-blur-sm">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{event.displayName}</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Created {formatDateTime(event.createdAt)}
-            </p>
-          </div>
-          <Badge variant={statusVariant(event.status)}>{event.status}</Badge>
-        </div>
-        <div className="flex items-center gap-2">
-          {event.status === "DRAFT" && (
-            <Button
-              variant="default"
-              onClick={handlePublish}
-              disabled={publishEvent.isPending}
-            >
-              {publishEvent.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Publishing...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Publish Event
-                </>
-              )}
-            </Button>
-          )}
-          <Link href={`/dashboard/creator/events/${eventId}/attendance`}>
-            <Button variant="default">
-              <UserCheck className="h-4 w-4 mr-2" />
-              View Attendance
-            </Button>
-          </Link>
-          <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
-            <Button variant="default">
-              <Ticket className="h-4 w-4 mr-2" />
-              Create Ticket
-            </Button>
-          </Link>
-          <Link href={`/dashboard/creator/events/${eventId}/announcements`}>
-            <Button variant="default">
-              <Megaphone className="h-4 w-4 mr-2" />
-              Announcements
-            </Button>
-          </Link>
-          <Link href={`/dashboard/creator/events/${eventId}/edit`}>
-            <Button variant="outline">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Event
-            </Button>
-          </Link>
         </div>
       </div>
 
-      {/* Grid Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Event Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Layers /> Event Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <InfoRow label="Description" value={event.description} />
+      {/* Main Content Container */}
+      <div className="space-y-8 p-6 -mt-20 relative z-10">
+        {/* Header Section with Avatar and Key Info */}
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Avatar */}
+          <div className="flex-shrink-0">
+            <div className="relative">
+              {event.avatarUrl ? (
+                <img
+                  src={event.avatarUrl}
+                  alt={event.displayName}
+                  className="w-32 h-32 md:w-40 md:h-40 rounded-2xl border-4 border-background shadow-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => handleImageClick(event.avatarUrl!)}
+                />
+              ) : (
+                <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl border-4 border-background shadow-lg bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
+                  <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Key Information */}
+          <div className="flex-1 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-3xl md:text-4xl font-bold">{event.displayName}</h1>
+                  <Badge variant={statusVariant(event.status)} className="text-sm">{event.status}</Badge>
+                </div>
+                
+                {truncatedDescription && (
+                  <p className="text-base text-muted-foreground leading-relaxed max-w-3xl">
+                    {truncatedDescription}
+                  </p>
+                )}
+
+                {/* Date Information */}
+                {(event.startDate || event.endDate) && (
+                  <div className="flex flex-wrap items-center gap-4 pt-2">
+                    {event.startDate && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <span className="text-muted-foreground">Start: </span>
+                          <span className="font-medium">{formatDate(event.startDate)}</span>
+                          <span className="text-muted-foreground ml-2">{formatTime(event.startDate)}</span>
+                        </div>
+                      </div>
+                    )}
+                    {event.endDate && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <CalendarClock className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <span className="text-muted-foreground">End: </span>
+                          <span className="font-medium">{formatDate(event.endDate)}</span>
+                          <span className="text-muted-foreground ml-2">{formatTime(event.endDate)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2 pt-2">
+              {event.status === "DRAFT" && (
+                <Button
+                  variant="default"
+                  onClick={handlePublish}
+                  disabled={publishEvent.isPending}
+                >
+                  {publishEvent.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Publishing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Publish Event
+                    </>
+                  )}
+                </Button>
+              )}
+              <Link href={`/dashboard/creator/events/${eventId}/attendance`}>
+                <Button variant="default">
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  View Attendance
+                </Button>
+              </Link>
+              <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
+                <Button variant="default">
+                  <Ticket className="h-4 w-4 mr-2" />
+                  Create Ticket
+                </Button>
+              </Link>
+              <Link href={`/dashboard/creator/events/${eventId}/announcements`}>
+                <Button variant="default">
+                  <Megaphone className="h-4 w-4 mr-2" />
+                  Announcements
+                </Button>
+              </Link>
+              <Link href={`/dashboard/creator/events/${eventId}/edit`}>
+                <Button variant="outline">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Event
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Grid Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Event Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Layers /> Event Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {event.description && (
+                  <div>
+                    <p className="text-sm font-semibold text-muted-foreground mb-2">Full Description</p>
+                    <p className="text-base text-foreground whitespace-pre-wrap leading-relaxed">{event.description}</p>
+                  </div>
+                )}
               
               {event.tags && event.tags.length > 0 && (
                 <div>
@@ -544,6 +643,7 @@ export default function EventDetailPage({
             </Card>
           )}
         </div>
+      </div>
       </div>
 
       <ImageViewer

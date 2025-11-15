@@ -903,13 +903,15 @@ export interface GetEventsParams {
 }
 
 export interface UpdateEventPayload {
-  displayName: string;
-  description: string;
-  avatarUrl: string | null;
-  coverUrl: string | null;
-  refundPolicy: string | null;
-  termsAndConditions: string | null;
-  social: SocialLink[];
+  displayName?: string;
+  description?: string;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
+  startDate?: Date;
+  endDate?: Date;
+  refundPolicy?: string | null;
+  termsAndConditions?: string | null;
+  social?: SocialLink[] | null;
 }
 
 export interface AddEventTagsPayload {

@@ -29,6 +29,7 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
+import { DateTimePicker } from "@/app/dashboard/creator/request/create/_components/DateTimePicker";
 import {
   Loader2,
   ArrowLeft,
@@ -43,6 +44,7 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  CalendarDays,
 } from "lucide-react";
 import type { UpdateEventPayload } from "@/types";
 import { cn } from "@/lib/utils";
@@ -51,11 +53,13 @@ const updateEventSchema = z.object({
   displayName: z
     .string()
     .min(3, "Event name must be at least 3 characters")
-    .max(255, "Event name must not exceed 255 characters"),
+    .max(255, "Event name must not exceed 255 characters")
+    .optional(),
   description: z
     .string()
     .min(5, "Description must be at least 5 characters")
-    .max(1024, "Description must not exceed 1024 characters"),
+    .max(1024, "Description must not exceed 1024 characters")
+    .optional(),
   avatarUrl: z
     .union([
       z.string().url("Invalid URL"),
@@ -63,7 +67,8 @@ const updateEventSchema = z.object({
       z.null(),
     ])
     .nullable()
-    .transform((val) => (val === "" || !val ? null : val)),
+    .transform((val) => (val === "" || !val ? null : val))
+    .optional(),
   coverUrl: z
     .union([
       z.string().url("Invalid URL"),
@@ -71,15 +76,26 @@ const updateEventSchema = z.object({
       z.null(),
     ])
     .nullable()
-    .transform((val) => (val === "" || !val ? null : val)),
+    .transform((val) => (val === "" || !val ? null : val))
+    .optional(),
+  startDate: z
+    .date()
+    .optional()
+    .nullable(),
+  endDate: z
+    .date()
+    .optional()
+    .nullable(),
   refundPolicy: z
     .string()
     .nullable()
-    .or(z.literal("").transform(() => null)),
+    .or(z.literal("").transform(() => null))
+    .optional(),
   termsAndConditions: z
     .string()
     .nullable()
-    .or(z.literal("").transform(() => null)),
+    .or(z.literal("").transform(() => null))
+    .optional(),
   social: z
     .array(
       z.object({
@@ -88,8 +104,21 @@ const updateEventSchema = z.object({
         isMain: z.boolean(),
       })
     )
-    .default([]),
-});
+    .default([])
+    .nullable()
+    .optional(),
+}).refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      return data.startDate < data.endDate;
+    }
+    return true;
+  },
+  {
+    message: "Start date must be before end date",
+    path: ["endDate"],
+  }
+);
 
 type UpdateEventForm = z.infer<typeof updateEventSchema>;
 
@@ -142,6 +171,8 @@ export default function EditEventPage({
       description: "",
       avatarUrl: null,
       coverUrl: null,
+      startDate: undefined,
+      endDate: undefined,
       refundPolicy: null,
       termsAndConditions: null,
       social: [],
@@ -156,6 +187,8 @@ export default function EditEventPage({
         description: event.description || "",
         avatarUrl: event.avatarUrl || null,
         coverUrl: event.coverUrl || null,
+        startDate: event.startDate ? new Date(event.startDate) : undefined,
+        endDate: event.endDate ? new Date(event.endDate) : undefined,
         refundPolicy: event.refundPolicy || null,
         termsAndConditions: event.termsAndConditions || null,
         social: event.social || [],
@@ -193,15 +226,24 @@ export default function EditEventPage({
     setIsSubmitting(true);
     try {
       // Step 1: Update event details
-      const payload: UpdateEventPayload = {
-        displayName: data.displayName,
-        description: data.description,
-        avatarUrl: data.avatarUrl || null,
-        coverUrl: data.coverUrl || null,
-        refundPolicy: data.refundPolicy || null,
-        termsAndConditions: data.termsAndConditions || null,
-        social: data.social || [],
-      };
+      // Only include fields that are defined (not undefined) - matching DTO @ApiPropertyOptional fields
+      const payload: UpdateEventPayload = {};
+      
+      if (data.displayName !== undefined) payload.displayName = data.displayName;
+      if (data.description !== undefined) payload.description = data.description;
+      if (data.avatarUrl !== undefined) payload.avatarUrl = data.avatarUrl || null;
+      if (data.coverUrl !== undefined) payload.coverUrl = data.coverUrl || null;
+      // Only include dates if they're defined (Date or null, but not undefined)
+      // Send the value as-is: Date object, null, or omit if undefined
+      if (data.startDate !== undefined) {
+        payload.startDate = data.startDate;
+      }
+      if (data.endDate !== undefined) {
+        payload.endDate = data.endDate;
+      }
+      if (data.refundPolicy !== undefined) payload.refundPolicy = data.refundPolicy || null;
+      if (data.termsAndConditions !== undefined) payload.termsAndConditions = data.termsAndConditions || null;
+      if (data.social !== undefined) payload.social = data.social || null;
 
       // Call API directly to avoid hook's auto-navigation
       const updatedEvent = await updateEvent(eventId, payload);
@@ -332,6 +374,55 @@ export default function EditEventPage({
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          {/* Event Dates */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5" />
+                Event Dates
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <DateTimePicker
+                          label="Start Date"
+                          value={field.value || undefined}
+                          onChange={(date) => field.onChange(date || null)}
+                          error={form.formState.errors.startDate?.message}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <DateTimePicker
+                          label="End Date"
+                          value={field.value || undefined}
+                          onChange={(date) => field.onChange(date || null)}
+                          error={form.formState.errors.endDate?.message}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
 
