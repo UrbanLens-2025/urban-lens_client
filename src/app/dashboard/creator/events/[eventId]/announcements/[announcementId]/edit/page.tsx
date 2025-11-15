@@ -30,6 +30,7 @@ import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useCreatorAnnouncementById } from "@/hooks/announcements/useCreatorAnnouncementById";
 import { useUpdateCreatorAnnouncement } from "@/hooks/announcements/useUpdateCreatorAnnouncement";
+import { useEventTabs } from "@/contexts/EventTabContext";
 import { formatDateTime } from "@/lib/utils";
 
 const announcementSchema = z.object({
@@ -50,6 +51,7 @@ export default function EditCreatorAnnouncementPage({
 }) {
   const { eventId, announcementId } = use(params);
   const router = useRouter();
+  const { openAnnouncementTab } = useEventTabs();
   const {
     data: announcement,
     isLoading,
@@ -82,7 +84,9 @@ export default function EditCreatorAnnouncementPage({
       imageUrl: announcement.imageUrl ?? "",
       isHidden: announcement.isHidden,
     });
-  }, [announcement, form]);
+    // Update the tab name when announcement loads
+    openAnnouncementTab('edit', announcementId, announcement.title);
+  }, [announcement, form, announcementId, openAnnouncementTab]);
 
   const onSubmit = (values: AnnouncementFormValues) => {
     updateAnnouncement(

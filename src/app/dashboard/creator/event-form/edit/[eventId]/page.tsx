@@ -38,6 +38,7 @@ import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
 import { DateTimePicker } from "@/app/dashboard/creator/request/create/_components/DateTimePicker";
 import {
   Loader2,
+  ArrowLeft,
   Save,
   Plus,
   Trash2,
@@ -174,7 +175,7 @@ function FieldLabel({ label, tooltip }: { label: string; tooltip: string }) {
   );
 }
 
-export default function EditEventPage({
+export default function EditEventFormPage({
   params,
 }: {
   params: Promise<{ eventId: string }>;
@@ -349,7 +350,7 @@ export default function EditEventPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
       </div>
     );
@@ -357,7 +358,7 @@ export default function EditEventPage({
 
   if (isError || !event) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-6">
         <div className="text-center py-20 text-red-500">
           <p className="font-medium">Error loading event details</p>
           <p className="text-sm text-muted-foreground mt-2">
@@ -370,74 +371,82 @@ export default function EditEventPage({
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Edit Event</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Update your event details and settings
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/dashboard/creator/events/${eventId}`)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={isSubmitting || !form.formState.isDirty}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
+            <div className="flex items-center gap-4">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => router.push(`/dashboard/creator/events/${eventId}`)}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold">Edit Event</h1>
+                <p className="text-sm text-muted-foreground">{event.displayName}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/dashboard/creator/events/${eventId}`)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={isSubmitting || !form.formState.isDirty}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-6">
+        <div className="flex max-w-7xl mx-auto">
           {/* Section Navigation Sidebar */}
-          <aside className="hidden lg:block w-64 flex-shrink-0">
-            <div className="sticky top-24">
-              <nav className="space-y-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                  Sections
-                </p>
-                {sections.map((section) => {
-                  const Icon = section.icon;
-                  return (
-                    <button
-                      key={section.id}
-                      onClick={() => scrollToSection(section.id)}
-                      className={cn(
-                        "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium transition-all",
-                        activeSection === section.id
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {section.label}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
+          <aside className="hidden lg:block w-64 sticky top-20 h-[calc(100vh-5rem)] p-6">
+            <nav className="space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                Sections
+              </p>
+              {sections.map((section) => {
+                const Icon = section.icon;
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => scrollToSection(section.id)}
+                    className={cn(
+                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                      activeSection === section.id
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {section.label}
+                  </button>
+                );
+              })}
+            </nav>
           </aside>
 
           {/* Main Content */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 p-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 {/* Basic Information */}
@@ -532,12 +541,12 @@ export default function EditEventPage({
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
                           name="startDate"
                           render={({ field }) => (
-                            <FormItem className="w-full">
+                            <FormItem>
                               <div className="mb-2">
                                 <FieldLabel
                                   label="Start Date & Time"
@@ -561,7 +570,7 @@ export default function EditEventPage({
                           control={form.control}
                           name="endDate"
                           render={({ field }) => (
-                            <FormItem className="w-full">
+                            <FormItem>
                               <div className="mb-2">
                                 <FieldLabel
                                   label="End Date & Time"
