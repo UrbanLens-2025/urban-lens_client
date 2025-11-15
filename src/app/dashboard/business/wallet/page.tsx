@@ -127,6 +127,8 @@ export default function BusinessWalletPage() {
   const { data: transactionDetail, isLoading: isLoadingDetail } = useWalletExternalTransactionById(selectedTransactionId);
 
   const totalBalance = walletData ? parseFloat(walletData.balance) : 0;
+  const lockedBalance = walletData ? parseFloat(walletData.lockedBalance || "0") : 0;
+  const availableBalance = totalBalance - lockedBalance;
   const currency = walletData?.currency || "VND";
 
   // External
@@ -256,7 +258,21 @@ export default function BusinessWalletPage() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="space-y-6 min-w-0">
-            <div className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight break-words">{formatCurrency(totalBalance)}</div>
+            <div className="space-y-3">
+              <div className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight break-words">{formatCurrency(totalBalance)}</div>
+              {lockedBalance > 0 && (
+                <div className="space-y-1.5 text-sm opacity-90">
+                  <div className="flex items-center justify-between">
+                    <span className="opacity-80">Available Balance</span>
+                    <span className="font-semibold">{formatCurrency(availableBalance)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="opacity-80">Locked Balance</span>
+                    <span className="font-semibold text-yellow-200">{formatCurrency(lockedBalance)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
             {walletData?.isLocked && (
               <Badge variant="destructive" className="bg-red-500/20 text-red-100 border-red-300/50 backdrop-blur-sm w-fit">
                 Wallet Locked

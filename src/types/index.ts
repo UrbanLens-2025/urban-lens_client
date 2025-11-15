@@ -674,6 +674,7 @@ export interface Wallet {
   ownedBy: string | null;
   walletType: string;
   balance: string;
+  lockedBalance: string;
   currency: string;
   totalTransactions: number;
   isLocked: boolean;
@@ -726,6 +727,11 @@ export interface WalletExternalTransaction {
   withdrawBankAccountNumber?: string | null;
   withdrawBankAccountName?: string | null;
   timeline?: WalletExternalTransactionTimelineEvent[];
+  customMetadata?: {
+    paymentUrl?: string;
+    provider?: string;
+    checkoutFields?: Record<string, string>;
+  };
 }
 
 export interface GetWalletExternalTransactionsParams {
