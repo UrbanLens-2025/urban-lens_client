@@ -125,7 +125,7 @@ export default function LocationRequestDetailsPage({
   return (
     <div className="space-y-8 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="space-y-4">
         <div className="flex items-center gap-4">
           <Button 
             variant="outline" 
@@ -134,38 +134,79 @@ export default function LocationRequestDetailsPage({
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <Badge
-            className={cn({
-              "bg-yellow-100 text-yellow-800":
-                request.status === "AWAITING_ADMIN_REVIEW" ||
-                request.status === "NEEDS_MORE_INFO",
-              "bg-green-100 text-green-800": request.status === "APPROVED",
-              "bg-red-100 text-red-800": request.status === "REJECTED",
-            })}
-          >
-            {request.status}
-          </Badge>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl mb-2">
+              {request.name}
+            </h1>
+            <Badge
+              className={cn({
+                "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400":
+                  request.status === "AWAITING_ADMIN_REVIEW" ||
+                  request.status === "NEEDS_MORE_INFO",
+                "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400": request.status === "APPROVED",
+                "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400": request.status === "REJECTED",
+                "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400": request.status === "CANCELLED_BY_BUSINESS",
+                "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400": request.status === "AUTO_VALIDATING",
+              })}
+            >
+              {request.status === "AWAITING_ADMIN_REVIEW" && "Pending Review"}
+              {request.status === "NEEDS_MORE_INFO" && "Needs Info"}
+              {request.status === "APPROVED" && "Approved"}
+              {request.status === "REJECTED" && "Rejected"}
+              {request.status === "CANCELLED_BY_BUSINESS" && "Cancelled"}
+              {request.status === "AUTO_VALIDATING" && "Validating"}
+              {!["AWAITING_ADMIN_REVIEW", "NEEDS_MORE_INFO", "APPROVED", "REJECTED", "CANCELLED_BY_BUSINESS", "AUTO_VALIDATING"].includes(request.status) && request.status}
+            </Badge>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column */}
         <div className="space-y-6">
-          {/* Basic Information */}
+          {/* Basic Information & Address - Consolidated */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Layers className="h-5 w-5" />
-                Basic Information
+                Location Details
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <InfoRow label="Description" value={request.description} />
-              <InfoRow
-                label="Radius"
-                value={`${request.radiusMeters} meters`}
-              />
-              <InfoRow label="Request Type" value={request.type} />
+              {/* Basic Info Section */}
+              <div className="space-y-4">
+                <InfoRow label="Description" value={request.description} />
+                <InfoRow
+                  label="Radius"
+                  value={`${request.radiusMeters} meters`}
+                />
+                <InfoRow label="Request Type" value={request.type} />
+              </div>
+              
+              {/* Divider */}
+              <div className="border-t pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <MapPin className="h-5 w-5 text-muted-foreground" />
+                  <p className="text-sm font-semibold text-muted-foreground">Address & Location</p>
+                </div>
+                <div className="space-y-4">
+                  <InfoRow label="Address" value={request.addressLine} icon={MapPin} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <InfoRow label="District" value={request.addressLevel1} />
+                    <InfoRow label="City/Province" value={request.addressLevel2} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <InfoRow 
+                      label="Latitude" 
+                      value={typeof request.latitude === 'number' ? request.latitude.toFixed(8) : String(request.latitude || 'N/A')} 
+                    />
+                    <InfoRow 
+                      label="Longitude" 
+                      value={typeof request.longitude === 'number' ? request.longitude.toFixed(8) : String(request.longitude || 'N/A')} 
+                    />
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -389,25 +430,8 @@ export default function LocationRequestDetailsPage({
           </Card>
         </div>
 
-        {/* Right Column - Address, Images, and Map */}
+        {/* Right Column - Images and Map */}
         <div className="space-y-6">
-          {/* Address Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Address Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <InfoRow label="Address" value={request.addressLine} />
-              <InfoRow label="District" value={request.addressLevel1} />
-              <InfoRow label="City/Province" value={request.addressLevel2} />
-              <InfoRow label="Latitude" value={request.latitude} />
-              <InfoRow label="Longitude" value={request.longitude} />
-            </CardContent>
-          </Card>
-
           {/* Location Images */}
           {request.locationImageUrls &&
             request.locationImageUrls.length > 0 && (
