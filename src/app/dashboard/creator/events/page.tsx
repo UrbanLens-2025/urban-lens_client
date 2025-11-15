@@ -12,26 +12,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   CalendarDays, 
   PlusCircle, 
   Search, 
-  Users, 
-  DollarSign,
   TrendingUp,
-  Eye,
-  Pencil,
-  MoreHorizontal,
   MapPin,
   Tag as TagIcon,
   Loader2,
+  CheckCircle2,
+  FileText,
+  XCircle,
+  Clock,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { useDebounce } from "use-debounce";
 import { useMyEvents } from "@/hooks/events/useMyEvents";
@@ -40,29 +34,47 @@ import type { Event } from "@/types";
 
 // Event data will come from API
 
-const getStatusColor = (status: string) => {
-  const statusUpper = status?.toUpperCase();
-  switch (statusUpper) {
-    case "PUBLISHED":
-    case "ACTIVE":
-      return "default" as const;
-    case "DRAFT":
-      return "outline" as const;
-    case "COMPLETED":
-      return "secondary" as const;
-    case "CANCELLED":
-      return "destructive" as const;
-    default:
-      return "secondary" as const;
-  }
-};
-
 const getStatusLabel = (status: string) => {
   return status?.charAt(0).toUpperCase() + status?.slice(1).toLowerCase() || status;
 };
 
+const getStatusIcon = (status: string) => {
+  const statusUpper = status?.toUpperCase();
+  switch (statusUpper) {
+    case "PUBLISHED":
+    case "ACTIVE":
+      return <CheckCircle2 className="h-3 w-3" />;
+    case "DRAFT":
+      return <FileText className="h-3 w-3" />;
+    case "COMPLETED":
+      return <CheckCircle2 className="h-3 w-3" />;
+    case "CANCELLED":
+      return <XCircle className="h-3 w-3" />;
+    default:
+      return <Clock className="h-3 w-3" />;
+  }
+};
+
+const getStatusBadgeStyle = (status: string) => {
+  const statusUpper = status?.toUpperCase();
+  switch (statusUpper) {
+    case "PUBLISHED":
+    case "ACTIVE":
+      return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800";
+    case "DRAFT":
+      return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800";
+    case "COMPLETED":
+      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800";
+    case "CANCELLED":
+      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800";
+    default:
+      return "";
+  }
+};
+
 export default function CreatorEventsPage() {
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [debouncedSearchTerm] = useDebounce(search, 300);
 
@@ -73,8 +85,13 @@ export default function CreatorEventsPage() {
     sortBy: "createdAt:DESC",
   });
 
-  const events = eventsData?.data || [];
+  const allEvents = eventsData?.data || [];
   const meta = eventsData?.meta;
+
+  // Filter events by status if status filter is set
+  const events = statusFilter === "all" 
+    ? allEvents 
+    : allEvents.filter((event) => event.status?.toUpperCase() === statusFilter.toUpperCase());
 
   // Calculate statistics from actual data
   const stats = {
@@ -167,45 +184,67 @@ export default function CreatorEventsPage() {
 
       {/* Events Table */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>All Events</CardTitle>
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search events..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
+        <CardContent className="p-6">
+          {/* Search and Filter Section */}
+          <div className="mb-6 pb-4 border-b">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Search Input */}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by event name, location, date, or tags..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="pl-9"
+                />
+              </div>
+
+              {/* Status Filter */}
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value);
                   setPage(1);
                 }}
-                className="pl-8"
-              />
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Filter by Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="PUBLISHED">Published</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="DRAFT">Draft</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
           {isLoading && !eventsData ? (
             <div className="text-center py-12">
               <Loader2 className="mx-auto h-12 w-12 animate-spin text-muted-foreground/50" />
             </div>
           ) : (
-            <Table>
+            <div className="rounded-lg border overflow-hidden">
+              <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Event Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-12 font-semibold">#</TableHead>
+                  <TableHead className="font-semibold">Event Name</TableHead>
+                  <TableHead className="font-semibold">Location</TableHead>
+                  <TableHead className="font-semibold">Tags</TableHead>
+                  <TableHead className="font-semibold">Created</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {events.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12">
+                    <TableCell colSpan={6} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <CalendarDays className="h-12 w-12 mb-4" />
                         <p className="font-medium">No events found</p>
@@ -218,76 +257,99 @@ export default function CreatorEventsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  events.map((event: Event) => (
-                    <TableRow key={event.id} className="hover:bg-muted/50">
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{event.displayName}</span>
-                          <span className="text-xs text-muted-foreground font-mono mt-1">
-                            {event.id.substring(0, 8)}...
+                  events.map((event: Event, index: number) => {
+                    const rowNumber = ((meta?.currentPage || 1) - 1) * (meta?.itemsPerPage || 10) + index + 1;
+                    const visibleTags = event.tags?.slice(0, 2) || [];
+                    const remainingTagsCount = (event.tags?.length || 0) - visibleTags.length;
+                    
+                    return (
+                      <TableRow key={event.id} className="hover:bg-muted/30 border-b transition-colors">
+                        <TableCell className="py-4">
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {rowNumber}
                           </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-xs">
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {event.description || "No description"}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 max-w-[200px]">
-                          <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-medium truncate">
-                              {event.location?.name || "N/A"}
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <Link href={`/dashboard/creator/events/${event.id}`} className="hover:underline">
+                            <div className="flex flex-col gap-1">
+                              <span className="font-semibold text-foreground hover:text-primary transition-colors">{event.displayName}</span>
+                              <span className="text-xs text-muted-foreground font-mono">
+                                {event.id.substring(0, 8)}...
+                              </span>
+                            </div>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex items-center gap-2 max-w-[200px]">
+                            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <div className="flex flex-col min-w-0 gap-0.5">
+                              <span className="text-sm font-medium truncate">
+                                {event.location?.name || "N/A"}
+                              </span>
+                              <span className="text-xs text-muted-foreground truncate">
+                                {event.location?.addressLine || ""}
+                              </span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {event.tags && event.tags.length > 0 ? (
+                              <>
+                                {visibleTags.map((tag, tagIndex) => (
+                                  <Badge
+                                    key={tag.id || tagIndex}
+                                    variant="secondary"
+                                    className="text-xs border-0 font-medium"
+                                    style={{ 
+                                      backgroundColor: tag.color || 'hsl(var(--muted))', 
+                                      color: '#fff' 
+                                    }}
+                                  >
+                                    {tag.icon && <span className="mr-1">{tag.icon}</span>}
+                                    {tag.displayName}
+                                  </Badge>
+                                ))}
+                                {remainingTagsCount > 0 && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs px-1.5 py-0.5 font-medium"
+                                  >
+                                    +{remainingTagsCount}
+                                  </Badge>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">No tags</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm font-medium">
+                              {formatDate(event.createdAt)}
                             </span>
-                            <span className="text-xs text-muted-foreground truncate">
-                              {event.location?.addressLine || ""}
+                            <span className="text-xs text-muted-foreground">
+                              {formatDateTime(event.createdAt).split(',')[1]?.trim()}
                             </span>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {event.tags && event.tags.length > 0 ? (
-                            <>
-                              <TagIcon className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-xs text-muted-foreground">
-                                {event.tags.length} tag{event.tags.length !== 1 ? "s" : ""}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">No tags</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm">
-                            {formatDate(event.createdAt)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDateTime(event.createdAt).split(',')[1]?.trim()}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusColor(event.status)}>
-                          {getStatusLabel(event.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link href={`/dashboard/creator/events/${event.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <Badge 
+                            variant="outline"
+                            className={`${getStatusBadgeStyle(event.status)} flex items-center gap-1.5 w-fit font-medium`}
+                          >
+                            {getStatusIcon(event.status)}
+                            {getStatusLabel(event.status)}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
 
           {/* Pagination */}

@@ -148,7 +148,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className={cn(
                 "data-[slot=sidebar-menu-button]:!p-2 transition-all duration-200",
                 isDashboardActive 
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" 
+                  ? "bg-[var(--sidebar-active-bg,theme(colors.sidebar.accent))] text-[var(--sidebar-active-text,theme(colors.sidebar.accent-foreground))] shadow-sm" 
                   : "hover:bg-sidebar-accent/50"
               )}
             >
