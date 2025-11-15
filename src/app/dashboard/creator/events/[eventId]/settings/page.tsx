@@ -1,10 +1,13 @@
 "use client";
 
 import { use } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit, Ticket, Megaphone, Globe } from "lucide-react";
 import Link from "next/link";
+import { useEventTabs } from "@/contexts/EventTabContext";
+import { useEventById } from "@/hooks/events/useEventById";
 
 export default function EventSettingsPage({
   params,
@@ -12,6 +15,9 @@ export default function EventSettingsPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = use(params);
+  const router = useRouter();
+  const { openEditEventTab } = useEventTabs();
+  const { data: event } = useEventById(eventId);
 
   return (
     <div className="space-y-6">
@@ -24,17 +30,25 @@ export default function EventSettingsPage({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link href={`/dashboard/creator/event-form/edit/${eventId}`}>
-              <Button variant="outline" className="w-full justify-start h-auto py-4">
-                <div className="flex items-start gap-3">
-                  <Edit className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <div className="text-left">
-                    <p className="font-medium">Edit Event Details</p>
-                    <p className="text-xs text-muted-foreground">Update name, description, dates, and more</p>
-                  </div>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start h-auto py-4"
+              onClick={(e) => {
+                e.preventDefault();
+                if (event) {
+                  openEditEventTab(event.displayName);
+                  router.push(`/dashboard/creator/events/${eventId}/edit`);
+                }
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <Edit className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div className="text-left">
+                  <p className="font-medium">Edit Event Details</p>
+                  <p className="text-xs text-muted-foreground">Update name, description, dates, and more</p>
                 </div>
-              </Button>
-            </Link>
+              </div>
+            </Button>
 
             <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
               <Button variant="outline" className="w-full justify-start h-auto py-4">

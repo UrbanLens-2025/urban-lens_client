@@ -82,6 +82,7 @@ export interface BookedDatesResponse {
 }
 
 export const getBookedDates = async (
+  locationId: string,
   startDate: string,
   endDate: string
 ): Promise<BookedDatesResponse> => {
@@ -89,6 +90,7 @@ export const getBookedDates = async (
     `/v1/creator/location-booking/booked-dates`,
     {
       params: {
+        locationId,
         startDate,
         endDate,
       },

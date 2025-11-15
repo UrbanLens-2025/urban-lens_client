@@ -69,6 +69,7 @@ export default function EventTicketsPage({
 }) {
   const { eventId } = use(params);
   const router = useRouter();
+  const { openTicketCreateTab } = useEventTabs();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
@@ -193,12 +194,17 @@ export default function EventTicketsPage({
                 Create and manage tickets for your event
               </CardDescription>
             </div>
-            <Link href={`/dashboard/creator/ticket-form/create/${eventId}`}>
-              <Button className="w-full md:w-auto">
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Ticket
-              </Button>
-            </Link>
+            <Button
+              className="w-full md:w-auto"
+              onClick={(e) => {
+                e.preventDefault();
+                openTicketCreateTab();
+                router.push(`/dashboard/creator/events/${eventId}/tickets/create`);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create New Ticket
+            </Button>
           </div>
         </CardHeader>
 

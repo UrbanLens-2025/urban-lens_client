@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useEventById } from "@/hooks/events/useEventById";
 import { usePublishEvent } from "@/hooks/events/usePublishEvent";
@@ -22,15 +22,23 @@ import {
   UserCheck,
   Megaphone,
   CalendarDays,
-  MoreVertical,
   X,
 } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -43,19 +51,46 @@ function EventDetailLayoutContent({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { ticketDetailsTab, openTicketDetailsTab, closeTicketDetailsTab } = useEventTabs();
+  const { 
+    ticketDetailsTab, 
+    openTicketDetailsTab, 
+    closeTicketDetailsTab,
+    ticketCreateTab,
+    openTicketCreateTab,
+    closeTicketCreateTab,
+    announcementTab,
+    openAnnouncementTab,
+    closeAnnouncementTab,
+    editEventTab,
+    openEditEventTab,
+    closeEditEventTab,
+  } = useEventTabs();
   const [preventAutoOpenTicketId, setPreventAutoOpenTicketId] = useState<string | null>(null);
+  const [preventAutoOpenTicketCreate, setPreventAutoOpenTicketCreate] = useState(false);
+  const [preventAutoOpenAnnouncementId, setPreventAutoOpenAnnouncementId] = useState<string | null>(null);
+  const [preventAutoOpenEditEvent, setPreventAutoOpenEditEvent] = useState(false);
+  
+  // Use refs to track if we've already opened tabs to prevent infinite loops
+  const ticketCreateTabOpenedRef = useRef(false);
+  const announcementTabOpenedRef = useRef<string | null>(null);
+  const editEventTabOpenedRef = useRef(false);
 
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState("");
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
 
   const { data: event, isLoading, isError } = useEventById(eventId);
   const { data: tickets } = useEventTickets(eventId);
   const publishEvent = usePublishEvent();
 
-  const handlePublish = () => {
+  const handlePublishClick = () => {
+    setIsPublishDialogOpen(true);
+  };
+
+  const handlePublishConfirm = () => {
     if (event && event.status === "DRAFT") {
       publishEvent.mutate(eventId);
+      setIsPublishDialogOpen(false);
     }
   };
 
@@ -101,20 +136,89 @@ function EventDetailLayoutContent({
   const isActiveTab = (path: string) => {
     // Check if ticket details tab is open and active
     if (path === 'ticket-details' && ticketDetailsTab.isOpen) {
-      return pathname.includes('/tickets/') && pathname !== `/dashboard/creator/events/${eventId}/tickets`;
+      return pathname.includes('/tickets/') && 
+        pathname !== `/dashboard/creator/events/${eventId}/tickets` &&
+        !pathname.includes('/tickets/create');
+    }
+    
+    // Check if ticket create tab is open and active
+    if (path === 'ticket-create' && ticketCreateTab.isOpen) {
+      return pathname.includes('/tickets/create');
+    }
+    
+    // Check if announcement tab is open and active
+    if (path === 'announcement-tab' && announcementTab.isOpen) {
+      return pathname.includes('/announcements/') && pathname !== `/dashboard/creator/events/${eventId}/announcements`;
+    }
+    
+    // Check if edit event tab is open and active
+    if (path === 'edit-event-tab' && editEventTab.isOpen) {
+      return pathname === `/dashboard/creator/events/${eventId}/edit`;
     }
     
     if (path === `/dashboard/creator/events/${eventId}`) {
       return pathname === path;
     }
-    // For tickets tab, check if we're on the tickets list (not details)
+    // For tickets tab, check if we're on the tickets list (not details or create)
     if (path === `/dashboard/creator/events/${eventId}/tickets`) {
       return pathname === path;
     }
-    return pathname.startsWith(path) && !(pathname.includes('/tickets/') && pathname !== `/dashboard/creator/events/${eventId}/tickets`);
+    // For announcements tab, check if we're on the announcements list (not create/edit)
+    if (path === `/dashboard/creator/events/${eventId}/announcements`) {
+      return pathname === path;
+    }
+    return pathname.startsWith(path) && 
+      !(pathname.includes('/tickets/') && pathname !== `/dashboard/creator/events/${eventId}/tickets`) &&
+      !(pathname.includes('/announcements/') && pathname !== `/dashboard/creator/events/${eventId}/announcements`);
   };
 
-  const isTicketDetailsRoute = pathname.includes('/tickets/') && pathname !== `/dashboard/creator/events/${eventId}/tickets`;
+  const isTicketDetailsRoute = pathname.includes('/tickets/') && 
+    pathname !== `/dashboard/creator/events/${eventId}/tickets` &&
+    !pathname.includes('/tickets/create');
+  const isTicketCreateRoute = pathname.includes('/tickets/create');
+  const isAnnouncementRoute = pathname.includes('/announcements/') && pathname !== `/dashboard/creator/events/${eventId}/announcements`;
+  const isEditEventRoute = pathname === `/dashboard/creator/events/${eventId}/edit`;
+
+  const normalizedEventStatus = event?.status?.toUpperCase();
+  const canAccessAttendanceTab = normalizedEventStatus
+    ? ['PUBLISHED', 'FINISHED', 'COMPLETED'].includes(normalizedEventStatus)
+    : false;
+
+  const renderAttendanceTabButton = () => {
+    const button = (
+      <Button
+        variant="ghost"
+        disabled={!canAccessAttendanceTab}
+        aria-disabled={!canAccessAttendanceTab}
+        className={cn(
+          "gap-2 rounded-b-none border-b-2 transition-colors",
+          canAccessAttendanceTab
+            ? isActiveTab(`/dashboard/creator/events/${eventId}/attendance`)
+              ? "border-primary bg-muted"
+              : "border-transparent hover:border-muted-foreground/50"
+            : "border-transparent text-muted-foreground opacity-60 cursor-not-allowed"
+        )}
+      >
+        <UserCheck className="h-4 w-4" />
+        Attendance
+      </Button>
+    );
+
+    if (!canAccessAttendanceTab) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {button}
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>This tab is only available after you publish the event</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return button;
+  };
 
   // Show ticket details content if we're on a ticket details route
   const shouldShowTicketDetails = ticketDetailsTab.isOpen && isTicketDetailsRoute;
@@ -159,6 +263,90 @@ function EventDetailLayoutContent({
       setPreventAutoOpenTicketId(null);
     }
   }, [isTicketDetailsRoute, preventAutoOpenTicketId]);
+
+  // Auto-open ticket create tab when on ticket create route
+  useEffect(() => {
+    if (isTicketCreateRoute && !preventAutoOpenTicketCreate && !ticketCreateTabOpenedRef.current) {
+      ticketCreateTabOpenedRef.current = true;
+      openTicketCreateTab();
+    } else if (!isTicketCreateRoute) {
+      ticketCreateTabOpenedRef.current = false;
+    }
+  }, [isTicketCreateRoute, preventAutoOpenTicketCreate, openTicketCreateTab]);
+
+  // Reset prevent flag when leaving ticket create route
+  useEffect(() => {
+    if (!isTicketCreateRoute && preventAutoOpenTicketCreate) {
+      setPreventAutoOpenTicketCreate(false);
+    }
+  }, [isTicketCreateRoute, preventAutoOpenTicketCreate]);
+
+  // Auto-open announcement tab when on an announcement route
+  useEffect(() => {
+    if (!isAnnouncementRoute || pathname === `/dashboard/creator/events/${eventId}/announcements`) {
+      announcementTabOpenedRef.current = null;
+      return;
+    }
+
+    const pathParts = pathname.split('/');
+    const lastPart = pathParts[pathParts.length - 1];
+    const currentTabKey = lastPart === 'new' ? 'new' : lastPart;
+    
+    // Only open if we haven't already opened for this route
+    if (announcementTabOpenedRef.current === currentTabKey) {
+      return;
+    }
+    
+    if (lastPart === 'new') {
+      // Create mode
+      if (preventAutoOpenAnnouncementId === 'new') {
+        return;
+      }
+      announcementTabOpenedRef.current = 'new';
+      openAnnouncementTab('create');
+    } else if (lastPart !== 'announcements') {
+      // Edit mode - last part is the announcement ID
+      const announcementId = lastPart;
+      if (preventAutoOpenAnnouncementId === announcementId) {
+        return;
+      }
+      announcementTabOpenedRef.current = announcementId;
+      // Try to get announcement name from path or use a default
+      const announcementName = announcementTab.announcementName || 'Edit Announcement';
+      openAnnouncementTab('edit', announcementId, announcementName);
+    }
+  }, [
+    isAnnouncementRoute,
+    pathname,
+    eventId,
+    announcementTab.announcementName,
+    openAnnouncementTab,
+    preventAutoOpenAnnouncementId,
+  ]);
+
+  // Reset prevent flag when leaving announcement routes
+  useEffect(() => {
+    if (!isAnnouncementRoute && preventAutoOpenAnnouncementId) {
+      setPreventAutoOpenAnnouncementId(null);
+    }
+  }, [isAnnouncementRoute, preventAutoOpenAnnouncementId]);
+
+  // Auto-open edit event tab when on edit event route
+  useEffect(() => {
+    if (isEditEventRoute && !preventAutoOpenEditEvent && !editEventTabOpenedRef.current && event) {
+      editEventTabOpenedRef.current = true;
+      openEditEventTab(event.displayName);
+    } else if (!isEditEventRoute) {
+      editEventTabOpenedRef.current = false;
+    }
+  }, [isEditEventRoute, preventAutoOpenEditEvent, openEditEventTab, event]);
+
+  // Reset prevent flag when leaving edit event route
+  useEffect(() => {
+    if (!isEditEventRoute && preventAutoOpenEditEvent) {
+      setPreventAutoOpenEditEvent(false);
+    }
+  }, [isEditEventRoute, preventAutoOpenEditEvent]);
 
   if (isLoading) {
     return (
@@ -316,7 +504,7 @@ function EventDetailLayoutContent({
                 {event.status === "DRAFT" && (
                   <div className="w-full sm:w-auto">
                     <Button
-                      onClick={handlePublish}
+                      onClick={handlePublishClick}
                       disabled={publishEvent.isPending || !canPublish}
                       className="w-full"
                       size="lg"
@@ -340,44 +528,7 @@ function EventDetailLayoutContent({
                     )}
                   </div>
                 )}
-                
-                <Link href={`/dashboard/creator/event-form/edit/${eventId}`} className="w-full sm:w-auto">
-                  <Button variant="outline" className="w-full" size="lg">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Event
-                  </Button>
-                </Link>
               </div>
-
-              {/* Quick Actions Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                    <MoreVertical className="h-4 w-4 mr-2" />
-                    <span className="sm:inline">Quick Actions</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
-                    <DropdownMenuItem>
-                      <Ticket className="h-4 w-4 mr-2" />
-                      Create Ticket
-                    </DropdownMenuItem>
-                  </Link>
-                  <Link href={`/dashboard/creator/events/${eventId}/attendance`}>
-                    <DropdownMenuItem>
-                      <UserCheck className="h-4 w-4 mr-2" />
-                      View Attendance
-                    </DropdownMenuItem>
-                  </Link>
-                  <Link href={`/dashboard/creator/events/${eventId}/announcements`}>
-                    <DropdownMenuItem>
-                      <Megaphone className="h-4 w-4 mr-2" />
-                      Announcements
-                    </DropdownMenuItem>
-                  </Link>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -413,20 +564,13 @@ function EventDetailLayoutContent({
                 Tickets
               </Button>
             </Link>
-            <Link href={`/dashboard/creator/events/${eventId}/attendance`}>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "gap-2 rounded-b-none border-b-2 transition-colors",
-                  isActiveTab(`/dashboard/creator/events/${eventId}/attendance`)
-                    ? "border-primary bg-muted"
-                    : "border-transparent hover:border-muted-foreground/50"
-                )}
-              >
-                <UserCheck className="h-4 w-4" />
-                Attendance
-              </Button>
-            </Link>
+            {canAccessAttendanceTab ? (
+              <Link href={`/dashboard/creator/events/${eventId}/attendance`}>
+                {renderAttendanceTabButton()}
+              </Link>
+            ) : (
+              <span className="inline-flex">{renderAttendanceTabButton()}</span>
+            )}
             <Link href={`/dashboard/creator/events/${eventId}/announcements`}>
               <Button
                 variant="ghost"
@@ -456,6 +600,47 @@ function EventDetailLayoutContent({
               </Button>
             </Link>
             
+            {/* Dynamic Ticket Create Tab */}
+            {ticketCreateTab.isOpen && (
+              <div className="relative flex items-center">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "rounded-b-none border-b-2 transition-colors pr-7",
+                    isActiveTab('ticket-create')
+                      ? "border-primary bg-muted"
+                      : "border-transparent hover:border-muted-foreground/50"
+                  )}
+                  onClick={() => {
+                    router.push(`/dashboard/creator/events/${eventId}/tickets/create`);
+                  }}
+                >
+                  Create Ticket
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Close the tab immediately
+                    const wasOnCreatePage = isTicketCreateRoute;
+                    closeTicketCreateTab();
+                    if (wasOnCreatePage) {
+                      setPreventAutoOpenTicketCreate(true);
+                      // Navigate to tickets list after state update
+                      requestAnimationFrame(() => {
+                        router.push(`/dashboard/creator/events/${eventId}/tickets`);
+                      });
+                    }
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
             {/* Dynamic Ticket Details Tab */}
             {ticketDetailsTab.isOpen && (
               <div className="relative flex items-center">
@@ -499,6 +684,93 @@ function EventDetailLayoutContent({
                 </Button>
               </div>
             )}
+
+            {/* Dynamic Announcement Tab */}
+            {announcementTab.isOpen && (
+              <div className="relative flex items-center">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "rounded-b-none border-b-2 transition-colors pr-7",
+                    isActiveTab('announcement-tab')
+                      ? "border-primary bg-muted"
+                      : "border-transparent hover:border-muted-foreground/50"
+                  )}
+                  onClick={() => {
+                    if (announcementTab.mode === 'create') {
+                      router.push(`/dashboard/creator/events/${eventId}/announcements/new`);
+                    } else if (announcementTab.mode === 'edit' && announcementTab.announcementId) {
+                      router.push(`/dashboard/creator/events/${eventId}/announcements/${announcementTab.announcementId}/edit`);
+                    }
+                  }}
+                >
+                  {announcementTab.mode === 'create' ? 'Create Announcement' : announcementTab.announcementName || 'Edit Announcement'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Close the tab immediately
+                    const wasOnAnnouncementPage = isAnnouncementRoute;
+                    const closingAnnouncementId = announcementTab.mode === 'create' ? 'new' : announcementTab.announcementId;
+                    closeAnnouncementTab();
+                    if (wasOnAnnouncementPage && closingAnnouncementId) {
+                      setPreventAutoOpenAnnouncementId(closingAnnouncementId);
+                      // Navigate to announcements list after state update
+                      requestAnimationFrame(() => {
+                        router.push(`/dashboard/creator/events/${eventId}/announcements`);
+                      });
+                    }
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
+            {/* Dynamic Edit Event Tab */}
+            {editEventTab.isOpen && (
+              <div className="relative flex items-center">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "rounded-b-none border-b-2 transition-colors pr-7",
+                    isActiveTab('edit-event-tab')
+                      ? "border-primary bg-muted"
+                      : "border-transparent hover:border-muted-foreground/50"
+                  )}
+                  onClick={() => {
+                    router.push(`/dashboard/creator/events/${eventId}/edit`);
+                  }}
+                >
+                  {editEventTab.eventName || 'Edit Event'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Close the tab immediately
+                    const wasOnEditPage = isEditEventRoute;
+                    closeEditEventTab();
+                    if (wasOnEditPage) {
+                      setPreventAutoOpenEditEvent(true);
+                      // Navigate to event overview after state update
+                      requestAnimationFrame(() => {
+                        router.push(`/dashboard/creator/events/${eventId}`);
+                      });
+                    }
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
           </nav>
         </div>
 
@@ -514,6 +786,51 @@ function EventDetailLayoutContent({
         open={isImageViewerOpen}
         onOpenChange={setIsImageViewerOpen}
       />
+
+      {/* Publish Event Confirmation Dialog */}
+      <AlertDialog open={isPublishDialogOpen} onOpenChange={setIsPublishDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Publish Event</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Are you sure you want to publish this event? By publishing the event:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm mt-2 ml-2">
+                <li>Users will be able to view and discover your event</li>
+                <li>Attendees can purchase tickets and register</li>
+                <li>The event will appear in public event listings</li>
+                <li>You'll be able to track attendance and manage registrations</li>
+              </ul>
+              <p className="mt-3 font-medium">
+                Once published, you can still edit event details, but the event will be visible to the public.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={publishEvent.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePublishConfirm}
+              disabled={publishEvent.isPending}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {publishEvent.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Publishing...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Publish Event
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

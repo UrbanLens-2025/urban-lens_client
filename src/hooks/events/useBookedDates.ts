@@ -3,11 +3,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { getBookedDates } from "@/api/events";
 
-export function useBookedDates(startDate: string | undefined, endDate: string | undefined) {
+export function useBookedDates(
+  locationId: string | undefined,
+  startDate: string | undefined,
+  endDate: string | undefined
+) {
   return useQuery({
-    queryKey: ["bookedDates", startDate, endDate],
-    queryFn: () => getBookedDates(startDate!, endDate!),
-    enabled: !!startDate && !!endDate,
+    queryKey: ["bookedDates", locationId, startDate, endDate],
+    queryFn: () => getBookedDates(locationId!, startDate!, endDate!),
+    enabled: !!locationId && !!startDate && !!endDate,
   });
 }
 

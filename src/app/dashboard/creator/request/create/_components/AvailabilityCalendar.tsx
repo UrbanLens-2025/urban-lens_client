@@ -58,6 +58,7 @@ export function AvailabilityCalendar({
 
   // Fetch booked dates for the week
   const { data: bookedDatesData } = useBookedDates(
+    locationId,
     weekStartDate ? weekStartDate.toISOString() : undefined,
     weekEndDate ? weekEndDate.toISOString() : undefined
   );
