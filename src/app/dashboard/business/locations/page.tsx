@@ -179,52 +179,16 @@ function RequestActions({
 
   return (
     <>
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem asChild>
-            <Link href={`/dashboard/business/locations/request/${requestId}`}>
-              <Eye className="mr-2 h-4 w-4" />
-              View Details
-            </Link>
-          </DropdownMenuItem>
-
-          {(status === "AWAITING_ADMIN_REVIEW" ||
-            status === "NEEDS_MORE_INFO") && (
-            <DropdownMenuItem asChild>
-              <Link
-                href={`/dashboard/business/locations/request/${requestId}/edit`}
-              >
-                <Edit className="mr-2 h-4 w-4" /> Edit Request
-              </Link>
-            </DropdownMenuItem>
-          )}
-
-          {(status === "REJECTED" || status === "CANCELLED_BY_BUSINESS") && (
-            <DropdownMenuItem asChild>
-              <Link href={`/dashboard/locations/create?copyFrom=${requestId}`}>
-                <Copy className="mr-2 h-4 w-4" /> Copy & Create New
-              </Link>
-            </DropdownMenuItem>
-          )}
-
-          {(status === "AWAITING_ADMIN_REVIEW" ||
-            status === "NEEDS_MORE_INFO") && (
-            <DropdownMenuItem
-              className="text-red-500"
-              onClick={() => setIsCancelAlertOpen(true)}
-              disabled={isPending}
-            >
-              <BadgeX className="mr-2 h-4 w-4" />
-              Cancel Request
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button 
+        variant="ghost" 
+        size="icon"
+        className="h-9 w-9 hover:bg-muted/80 transition-colors"
+        asChild
+      >
+        <Link href={`/dashboard/business/locations/request/${requestId}`}>
+          <Eye className="h-4 w-4" />
+        </Link>
+      </Button>
 
       <AlertDialog open={isCancelAlertOpen} onOpenChange={setIsCancelAlertOpen}>
         <AlertDialogContent>
@@ -480,65 +444,75 @@ export default function MyLocationsPage() {
       )}
 
       {activeTab === "requests" && (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2 pt-4">
-              <CardDescription className="text-xs">Total requests</CardDescription>
-              <CardTitle className="text-2xl font-bold">
-                {requestStats.total.toLocaleString()}
-              </CardTitle>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Requests</CardTitle>
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <FileText className="h-4 w-4 text-primary" />
+              </div>
             </CardHeader>
-            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <FileText className="h-3.5 w-3.5" />
-              Across all pages
+            <CardContent>
+              <div className="text-3xl font-bold">{requestStats.total.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Across all pages
+              </p>
             </CardContent>
           </Card>
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2 pt-4">
-              <CardDescription className="text-xs">Pending review</CardDescription>
-              <CardTitle className="text-2xl font-bold">
-                {requestStats.awaitingReview.toLocaleString()}
-              </CardTitle>
+          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
+              <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <Clock className="h-4 w-4 text-amber-600" />
+              </div>
             </CardHeader>
-            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              This page only
+            <CardContent>
+              <div className="text-3xl font-bold text-amber-600">{requestStats.awaitingReview.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                This page only
+              </p>
             </CardContent>
           </Card>
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2 pt-4">
-              <CardDescription className="text-xs">Needs more info</CardDescription>
-              <CardTitle className="text-2xl font-bold">
-                {requestStats.needsMoreInfo.toLocaleString()}
-              </CardTitle>
+          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Needs More Info</CardTitle>
+              <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <AlertCircle className="h-4 w-4 text-orange-600" />
+              </div>
             </CardHeader>
-            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <AlertCircle className="h-3.5 w-3.5" />
-              This page only
+            <CardContent>
+              <div className="text-3xl font-bold text-orange-600">{requestStats.needsMoreInfo.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                This page only
+              </p>
             </CardContent>
           </Card>
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2 pt-4">
-              <CardDescription className="text-xs">Approved</CardDescription>
-              <CardTitle className="text-2xl font-bold">
-                {requestStats.approved.toLocaleString()}
-              </CardTitle>
+          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
+              <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+              </div>
             </CardHeader>
-            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <CheckCircle className="h-3.5 w-3.5" />
-              This page only
+            <CardContent>
+              <div className="text-3xl font-bold text-emerald-600">{requestStats.approved.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                This page only
+              </p>
             </CardContent>
           </Card>
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2 pt-4">
-              <CardDescription className="text-xs">Rejected/Cancelled</CardDescription>
-              <CardTitle className="text-2xl font-bold">
-                {requestStats.rejectedOrCancelled.toLocaleString()}
-              </CardTitle>
+          <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Rejected/Cancelled</CardTitle>
+              <div className="h-8 w-8 rounded-full bg-red-500/10 flex items-center justify-center">
+                <XCircle className="h-4 w-4 text-red-600" />
+              </div>
             </CardHeader>
-            <CardContent className="pt-0 pb-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <XCircle className="h-3.5 w-3.5" />
-              This page only
+            <CardContent>
+              <div className="text-3xl font-bold text-red-600">{requestStats.rejectedOrCancelled.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                This page only
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -638,26 +612,26 @@ export default function MyLocationsPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-border/60">
+                <div className="overflow-x-auto rounded-lg border border-border/60">
                   <Table>
                     <TableHeader className="bg-muted/50">
                       <TableRow className="border-b border-border/60 hover:bg-muted/50">
-                        <TableHead className="w-[380px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
+                        <TableHead className="min-w-[200px] max-w-[300px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
                           Location
                         </TableHead>
-                        <TableHead className="w-[260px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
+                        <TableHead className="min-w-[180px] max-w-[250px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
                           Address
                         </TableHead>
-                        <TableHead className="w-[200px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
+                        <TableHead className="min-w-[120px] max-w-[180px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
                           Tags
                         </TableHead>
-                        <TableHead className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
+                        <TableHead className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[100px]">
                           Visible
                         </TableHead>
-                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
+                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[100px]">
                           Check-ins
                         </TableHead>
-                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[100px]">
+                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[80px]">
                           Actions
                         </TableHead>
                       </TableRow>
@@ -671,9 +645,9 @@ export default function MyLocationsPage() {
                           <TableCell className="align-top py-4">
                             <Link 
                               href={`/dashboard/business/locations/${location.id}`}
-                              className="flex items-start gap-2.5 group cursor-pointer"
+                              className="flex items-start gap-2 group cursor-pointer"
                             >
-                              <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md border border-border/50 bg-muted">
+                              <div className="h-10 w-12 shrink-0 overflow-hidden rounded-md border border-border/50 bg-muted">
                                 {location.imageUrl?.[0] ? (
                                   <img
                                     src={location.imageUrl[0]}
@@ -682,19 +656,19 @@ export default function MyLocationsPage() {
                                     loading="lazy"
                                   />
                                 ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-[9px] text-muted-foreground">
+                                  <div className="flex h-full w-full items-center justify-center text-[8px] text-muted-foreground">
                                     No image
                                   </div>
                                 )}
                               </div>
-                              <div className="flex-1 min-w-0 space-y-1">
+                              <div className="flex-1 min-w-0 space-y-0.5">
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <span className="text-sm font-semibold leading-tight truncate group-hover:text-primary transition-colors">
                                     {location.name}
                                   </span>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                                  <span>
+                                <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+                                  <span className="truncate">
                                     Updated {new Date(location.updatedAt).toLocaleDateString()}
                                   </span>
                                 </div>
@@ -702,13 +676,15 @@ export default function MyLocationsPage() {
                             </Link>
                           </TableCell>
                           <TableCell className="align-top text-xs text-muted-foreground py-4">
-                            <div className="truncate">{location.addressLine}</div>
-                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80 truncate mt-0.5">
+                            <div className="truncate max-w-[200px]">{location.addressLine}</div>
+                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80 truncate mt-0.5 max-w-[200px]">
                               {location.addressLevel2}, {location.addressLevel1}
                             </div>
                           </TableCell>
                           <TableCell className="align-top py-4">
-                            <DisplayTags tags={location.tags} maxCount={3} />
+                            <div className="max-w-[150px]">
+                              <DisplayTags tags={location.tags} maxCount={2} />
+                            </div>
                           </TableCell>
                           <TableCell className="align-top text-center py-4">
                             <VisibilitySwitch location={location} />
@@ -859,30 +835,33 @@ export default function MyLocationsPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-border/60">
+                <div className="overflow-x-auto rounded-lg border border-border/60">
                 <Table>
-                  <TableHeader className="bg-muted/40">
-                    <TableRow className="border-b border-border/60">
-                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="border-b border-border/60 hover:bg-muted/50">
+                      <TableHead className="min-w-[200px] max-w-[280px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
                         Location Name
                       </TableHead>
-                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+                      <TableHead className="min-w-[150px] max-w-[250px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
                         Description
                       </TableHead>
-                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+                      <TableHead className="min-w-[150px] max-w-[220px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">
+                        Address
+                      </TableHead>
+                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[120px]">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRequestsSort("createdAt")}
-                          className="h-auto p-0 font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+                          className="h-auto p-0 font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground hover:bg-transparent"
                         >
                           Submitted At <RequestsSortIcon column="createdAt" />
                         </Button>
                       </TableHead>
-                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[130px]">
                         Status
                       </TableHead>
-                      <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-2">
+                      <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[80px]">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -893,41 +872,81 @@ export default function MyLocationsPage() {
                         key={request.id}
                         className="border-b border-border/40 transition-colors hover:bg-muted/30"
                       >
-                        <TableCell className="font-medium text-sm py-2.5">
-                          {request.name}
+                        <TableCell className="py-4">
+                          <Link 
+                            href={`/dashboard/business/locations/request/${request.id}`}
+                            className="flex items-start gap-2 group cursor-pointer"
+                          >
+                            <div className="h-10 w-12 shrink-0 overflow-hidden rounded-md border border-border/50 bg-muted">
+                              {request.locationImageUrls?.[0] ? (
+                                <img
+                                  src={request.locationImageUrls[0]}
+                                  alt={request.name}
+                                  className="h-full w-full object-cover"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center text-[8px] text-muted-foreground">
+                                  No image
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-0.5">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-sm font-semibold leading-tight truncate group-hover:text-primary transition-colors">
+                                  {request.name}
+                                </span>
+                              </div>
+                            </div>
+                          </Link>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground py-2.5">
-                          <div className="line-clamp-2 max-w-[300px]">
+                        <TableCell className="text-xs text-muted-foreground py-4">
+                          <div className="line-clamp-2 max-w-[200px]">
                             {request.description}
                           </div>
                         </TableCell>
-                        <TableCell className="text-xs py-2.5">
+                        <TableCell className="text-xs text-muted-foreground py-4">
+                          <div className="truncate max-w-[180px]">{request.addressLine}</div>
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground/80 truncate mt-0.5 max-w-[180px]">
+                            {request.addressLevel2}, {request.addressLevel1}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs py-4">
                           {new Date(request.createdAt).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="py-2.5">
+                        <TableCell className="py-4">
                           <Badge
-                            className={cn("text-xs", {
-                              "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400":
+                            className={cn("text-xs font-medium px-2 py-0.5", {
+                              "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800":
                                 request.status === "AUTO_VALIDATING",
-                              "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400":
+                              "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800":
                                 request.status === "AWAITING_ADMIN_REVIEW" ||
                                 request.status === "NEEDS_MORE_INFO",
-                              "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400":
+                              "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800":
                                 request.status === "APPROVED",
-                              "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400":
+                              "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800":
                                 request.status === "REJECTED",
-                              "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400":
+                              "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400 border-gray-200 dark:border-gray-800":
                                 request.status === "CANCELLED_BY_BUSINESS",
                             })}
+                            variant="outline"
                           >
-                            {request.status}
+                            {request.status === "AWAITING_ADMIN_REVIEW" && "Pending Review"}
+                            {request.status === "NEEDS_MORE_INFO" && "Needs Info"}
+                            {request.status === "APPROVED" && "Approved"}
+                            {request.status === "REJECTED" && "Rejected"}
+                            {request.status === "CANCELLED_BY_BUSINESS" && "Cancelled"}
+                            {request.status === "AUTO_VALIDATING" && "Validating"}
+                            {!["AWAITING_ADMIN_REVIEW", "NEEDS_MORE_INFO", "APPROVED", "REJECTED", "CANCELLED_BY_BUSINESS", "AUTO_VALIDATING"].includes(request.status) && request.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right py-2.5">
-                          <RequestActions
-                            requestId={request.id}
-                            status={request.status}
-                          />
+                        <TableCell className="text-right py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <RequestActions
+                              requestId={request.id}
+                              status={request.status}
+                            />
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
