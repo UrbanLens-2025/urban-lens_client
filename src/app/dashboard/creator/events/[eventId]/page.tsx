@@ -9,6 +9,7 @@ import { useEventTickets } from "@/hooks/events/useEventTickets";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageViewer } from "@/components/shared/ImageViewer";
 import { DisplayTags } from "@/components/shared/DisplayTags";
 import {
@@ -37,7 +38,15 @@ import {
   Megaphone,
   CalendarDays,
   CalendarClock,
+  MoreVertical,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 
 function InfoRow({ label, value, icon: Icon }: { label: string, value: React.ReactNode, icon?: React.ComponentType<{ className?: string }> }) {
@@ -74,6 +83,18 @@ export default function EventDetailPage({
     }
   };
 
+  // Check if event is ready to be published
+  const canPublish = event?.displayName && event?.startDate && event?.endDate && event?.locationId;
+  const publishDisabledReason = !event?.displayName 
+    ? "Event name is required" 
+    : !event?.startDate 
+    ? "Start date is required" 
+    : !event?.endDate 
+    ? "End date is required" 
+    : !event?.locationId 
+    ? "Location is required" 
+    : null;
+
   const formatDateTime = (iso: string) => new Date(iso).toLocaleString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
@@ -85,6 +106,19 @@ export default function EventDetailPage({
   const formatTime = (iso: string) => new Date(iso).toLocaleTimeString('en-US', {
     hour: '2-digit', minute: '2-digit'
   });
+
+  const formatCompactDateTime = (iso: string) => {
+    const date = new Date(iso);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }) + ' ' + date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
 
   const statusVariant = (status: string) => {
     const s = status?.toUpperCase();
@@ -120,13 +154,18 @@ export default function EventDetailPage({
   }
 
   const truncatedDescription = event.description 
-    ? (event.description.length > 200 ? event.description.substring(0, 200) + "..." : event.description)
+    ? (event.description.length > 150 ? event.description.substring(0, 150) + "..." : event.description)
     : null;
+
+  // Limit tags to show
+  const MAX_VISIBLE_TAGS = 4;
+  const visibleTags = event.tags?.slice(0, MAX_VISIBLE_TAGS) || [];
+  const remainingTagsCount = (event.tags?.length || 0) - MAX_VISIBLE_TAGS;
 
   return (
     <div className="space-y-0">
       {/* Cover Banner */}
-      <div className="relative w-full h-64 md:h-80 lg:h-96 bg-gradient-to-br from-primary/20 via-primary/10 to-muted overflow-hidden">
+      <div className="relative w-full h-64 md:h-80 lg:h-96 bg-gradient-to-br from-primary/20 via-primary/10 to-muted overflow-hidden rounded-b-3xl">
         {event.coverUrl ? (
           <img
             src={event.coverUrl}
@@ -146,7 +185,7 @@ export default function EventDetailPage({
         
         {/* Back Button - Overlay */}
         <div className="absolute top-4 left-4">
-          <Button variant="outline" size="icon" onClick={() => router.back()} className="bg-background/90 backdrop-blur-sm">
+          <Button variant="outline" size="icon" onClick={() => router.push('/dashboard/creator/events')} className="bg-background/90 backdrop-blur-sm">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </div>
@@ -184,90 +223,191 @@ export default function EventDetailPage({
                 </div>
                 
                 {truncatedDescription && (
-                  <p className="text-base text-muted-foreground leading-relaxed max-w-3xl">
+                  <p className="text-base text-muted-foreground leading-relaxed max-w-3xl line-clamp-2">
                     {truncatedDescription}
                   </p>
                 )}
 
-                {/* Date Information */}
-                {(event.startDate || event.endDate) && (
-                  <div className="flex flex-wrap items-center gap-4 pt-2">
-                    {event.startDate && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <span className="text-muted-foreground">Start: </span>
-                          <span className="font-medium">{formatDate(event.startDate)}</span>
-                          <span className="text-muted-foreground ml-2">{formatTime(event.startDate)}</span>
-                        </div>
-                      </div>
-                    )}
-                    {event.endDate && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <CalendarClock className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <span className="text-muted-foreground">End: </span>
-                          <span className="font-medium">{formatDate(event.endDate)}</span>
-                          <span className="text-muted-foreground ml-2">{formatTime(event.endDate)}</span>
-                        </div>
-                      </div>
+                {/* Date and Tags Information */}
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  {/* Compact Date Range */}
+                  <div className="flex items-center gap-2 text-sm bg-muted/50 px-3 py-1.5 rounded-lg">
+                    <CalendarDays className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    {event.startDate || event.endDate ? (
+                      <span className="font-medium whitespace-nowrap">
+                        {event.startDate ? formatCompactDateTime(event.startDate) : "Not set"}
+                        {event.endDate && (
+                          <>
+                            <span className="text-muted-foreground mx-1.5">→</span>
+                            {formatCompactDateTime(event.endDate)}
+                          </>
+                        )}
+                        {!event.endDate && event.startDate && (
+                          <span className="text-muted-foreground ml-1.5">(end date not set)</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground italic">Dates not set</span>
                     )}
                   </div>
-                )}
+
+                  {/* Limited Tags */}
+                  {visibleTags.length > 0 && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {visibleTags.map((tag) => (
+                        <Badge
+                          key={tag.id}
+                          variant="secondary"
+                          style={{
+                            backgroundColor: `${tag.color}15`,
+                            borderColor: tag.color,
+                            color: tag.color,
+                          }}
+                          className="text-xs border"
+                        >
+                          <span className="mr-1">{tag.icon}</span>
+                          {tag.displayName}
+                        </Badge>
+                      ))}
+                      {remainingTagsCount > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{remainingTagsCount} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-2 pt-2">
-              {event.status === "DRAFT" && (
-                <Button
-                  variant="default"
-                  onClick={handlePublish}
-                  disabled={publishEvent.isPending}
-                >
-                  {publishEvent.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Publishing...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Publish Event
-                    </>
-                  )}
-                </Button>
-              )}
-              <Link href={`/dashboard/creator/events/${eventId}/attendance`}>
-                <Button variant="default">
-                  <UserCheck className="h-4 w-4 mr-2" />
-                  View Attendance
-                </Button>
-              </Link>
-              <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
-                <Button variant="default">
-                  <Ticket className="h-4 w-4 mr-2" />
-                  Create Ticket
-                </Button>
-              </Link>
-              <Link href={`/dashboard/creator/events/${eventId}/announcements`}>
-                <Button variant="default">
-                  <Megaphone className="h-4 w-4 mr-2" />
-                  Announcements
-                </Button>
-              </Link>
-              <Link href={`/dashboard/creator/events/${eventId}/edit`}>
-                <Button variant="outline">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Event
-                </Button>
-              </Link>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-4">
+              {/* Primary Actions */}
+              <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                {event.status === "DRAFT" && (
+                  <div className="w-full sm:w-auto">
+                    <Button
+                      onClick={handlePublish}
+                      disabled={publishEvent.isPending || !canPublish}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {publishEvent.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Publishing...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Publish Event
+                        </>
+                      )}
+                    </Button>
+                    {!canPublish && publishDisabledReason && (
+                      <p className="text-xs text-destructive mt-1">
+                        {publishDisabledReason}
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                <Link href={`/dashboard/creator/events/${eventId}/edit`} className="w-full sm:w-auto">
+                  <Button variant="outline" className="w-full" size="lg">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Event
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Quick Actions Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                    <MoreVertical className="h-4 w-4 mr-2" />
+                    <span className="sm:inline">Quick Actions</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
+                    <DropdownMenuItem>
+                      <Ticket className="h-4 w-4 mr-2" />
+                      Create Ticket
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href={`/dashboard/creator/events/${eventId}/attendance`}>
+                    <DropdownMenuItem>
+                      <UserCheck className="h-4 w-4 mr-2" />
+                      View Attendance
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href={`/dashboard/creator/events/${eventId}/announcements`}>
+                    <DropdownMenuItem>
+                      <Megaphone className="h-4 w-4 mr-2" />
+                      Announcements
+                    </DropdownMenuItem>
+                  </Link>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
 
-        {/* Grid Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Tabs Navigation */}
+        <div className="border-b">
+          <nav className="flex gap-1 overflow-x-auto">
+            <Link href={`/dashboard/creator/events/${eventId}`}>
+              <Button
+                variant="ghost"
+                className="gap-2 rounded-b-none border-b-2 border-transparent data-[active=true]:border-primary data-[active=true]:bg-muted"
+                data-active="true"
+              >
+                <Layers className="h-4 w-4" />
+                Overview
+              </Button>
+            </Link>
+            <Link href={`/dashboard/creator/events/${eventId}/tickets`}>
+              <Button
+                variant="ghost"
+                className="gap-2 rounded-b-none border-b-2 border-transparent hover:border-muted-foreground/50"
+              >
+                <Ticket className="h-4 w-4" />
+                Tickets
+              </Button>
+            </Link>
+            <Link href={`/dashboard/creator/events/${eventId}/attendance`}>
+              <Button
+                variant="ghost"
+                className="gap-2 rounded-b-none border-b-2 border-transparent hover:border-muted-foreground/50"
+              >
+                <UserCheck className="h-4 w-4" />
+                Attendance
+              </Button>
+            </Link>
+            <Link href={`/dashboard/creator/events/${eventId}/announcements`}>
+              <Button
+                variant="ghost"
+                className="gap-2 rounded-b-none border-b-2 border-transparent hover:border-muted-foreground/50"
+              >
+                <Megaphone className="h-4 w-4" />
+                Announcements
+              </Button>
+            </Link>
+            <Link href={`/dashboard/creator/events/${eventId}/settings`}>
+              <Button
+                variant="ghost"
+                className="gap-2 rounded-b-none border-b-2 border-transparent hover:border-muted-foreground/50"
+              >
+                <Edit className="h-4 w-4" />
+                Settings
+              </Button>
+            </Link>
+          </nav>
+        </div>
+
+        {/* Overview Content */}
+        <div className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
             {/* Event Details */}
@@ -644,6 +784,7 @@ export default function EventDetailPage({
           )}
         </div>
       </div>
+        </div>
       </div>
 
       <ImageViewer

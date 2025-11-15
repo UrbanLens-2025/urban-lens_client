@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,13 +12,19 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAllTags } from "@/hooks/tags/useAllTags";
 import { Tag } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Form,
   FormControl,
@@ -45,6 +51,11 @@ import {
   ChevronDown,
   ChevronUp,
   CalendarDays,
+  Info,
+  FileText,
+  Shield,
+  Link2,
+  CheckCircle2,
 } from "lucide-react";
 import type { UpdateEventPayload } from "@/types";
 import { cn } from "@/lib/utils";
@@ -135,6 +146,35 @@ const popularPlatforms = [
 
 const INITIAL_DISPLAY_COUNT = 5;
 
+// Section definitions for navigation
+const sections = [
+  { id: "basic", label: "Basic Info", icon: FileText },
+  { id: "dates", label: "Schedule", icon: CalendarDays },
+  { id: "tags", label: "Tags", icon: TagIcon },
+  { id: "images", label: "Images", icon: ImageIcon },
+  { id: "social", label: "Social Links", icon: Globe },
+  { id: "policies", label: "Policies", icon: Shield },
+];
+
+// Helper component for field labels with tooltips
+function FieldLabel({ label, tooltip }: { label: string; tooltip: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span>{label}</span>
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+          </TooltipTrigger>
+          <TooltipContent side="right" className="max-w-xs">
+            <p className="text-sm">{tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  );
+}
+
 export default function EditEventPage({
   params,
 }: {
@@ -151,18 +191,18 @@ export default function EditEventPage({
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [searchTerms, setSearchTerms] = useState<Record<string, string>>({});
-  // Track pending tag changes (will be applied on form submit)
   const [pendingTagIds, setPendingTagIds] = useState<number[] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("basic");
+
+  // Refs for scroll-to-section
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Filter to only show EVENT_TYPE tags for events
   const tags = (allTags || []).filter((tag) => tag.groupName === "EVENT_TYPE");
-  // Tags are now direct Tag objects, so use tag.id instead of tag.tagId
   const currentTagIds = event?.tags?.map((tag) => tag.id) || [];
-  // Use pending tags if available, otherwise use current tags from event
   const displayedTagIds = pendingTagIds !== null ? pendingTagIds : currentTagIds;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<UpdateEventForm>({
     resolver: zodResolver(updateEventSchema) as any,
     mode: "onChange",
@@ -193,10 +233,30 @@ export default function EditEventPage({
         termsAndConditions: event.termsAndConditions || null,
         social: event.social || [],
       });
-      // Reset pending tags when event loads
       setPendingTagIds(null);
     }
   }, [event, form]);
+
+  // Track active section on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 100;
+      
+      for (const section of sections) {
+        const element = sectionRefs.current[section.id];
+        if (element) {
+          const { offsetTop, offsetHeight } = element;
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+            setActiveSection(section.id);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -222,19 +282,27 @@ export default function EditEventPage({
     form.setValue("social", newLinks);
   };
 
+  const scrollToSection = (sectionId: string) => {
+    const element = sectionRefs.current[sectionId];
+    if (element) {
+      const offset = 80; // Account for fixed header
+      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+      window.scrollTo({
+        top: elementPosition - offset,
+        behavior: "smooth",
+      });
+    }
+  };
+
   const onSubmit = async (data: UpdateEventForm) => {
     setIsSubmitting(true);
     try {
-      // Step 1: Update event details
-      // Only include fields that are defined (not undefined) - matching DTO @ApiPropertyOptional fields
       const payload: UpdateEventPayload = {};
       
       if (data.displayName !== undefined) payload.displayName = data.displayName;
       if (data.description !== undefined) payload.description = data.description;
       if (data.avatarUrl !== undefined) payload.avatarUrl = data.avatarUrl || null;
       if (data.coverUrl !== undefined) payload.coverUrl = data.coverUrl || null;
-      // Only include dates if they're defined (Date or null, but not undefined)
-      // Send the value as-is: Date object, null, or omit if undefined
       if (data.startDate !== undefined) {
         payload.startDate = data.startDate;
       }
@@ -245,20 +313,16 @@ export default function EditEventPage({
       if (data.termsAndConditions !== undefined) payload.termsAndConditions = data.termsAndConditions || null;
       if (data.social !== undefined) payload.social = data.social || null;
 
-      // Call API directly to avoid hook's auto-navigation
       const updatedEvent = await updateEvent(eventId, payload);
       
-      // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['eventDetail'] });
       queryClient.invalidateQueries({ queryKey: ['myEvents'] });
       queryClient.setQueryData(['eventDetail', updatedEvent.id], updatedEvent);
 
-      // Step 2: Apply tag changes if there are pending changes
       if (pendingTagIds !== null) {
         const tagsToAdd = pendingTagIds.filter(id => !currentTagIds.includes(id));
         const tagsToRemove = currentTagIds.filter(id => !pendingTagIds.includes(id));
 
-        // Remove tags first
         if (tagsToRemove.length > 0) {
           await removeEventTags.mutateAsync({
             eventId,
@@ -266,7 +330,6 @@ export default function EditEventPage({
           });
         }
 
-        // Then add new tags
         if (tagsToAdd.length > 0) {
           await addEventTags.mutateAsync({
             eventId,
@@ -275,12 +338,10 @@ export default function EditEventPage({
         }
       }
 
-      // Step 3: Show success message and navigate after all updates are complete
       toast.success("Event updated successfully!");
       router.push(`/dashboard/creator/events/${eventId}`);
       router.refresh();
     } catch (error: any) {
-      // Error handling
       toast.error(error?.message || "Failed to update event. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -309,638 +370,23 @@ export default function EditEventPage({
   }
 
   return (
-    <div className="space-y-8 p-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button type="button" variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Edit Event</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Update your event details
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <FormField
-                control={form.control}
-                name="displayName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Event Name *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter event name"
-                        {...field}
-                        className="h-11"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description *</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe your event..."
-                        rows={5}
-                        {...field}
-                        className="resize-none"
-                      />
-                    </FormControl>
-                    <div className="flex justify-between">
-                      <FormMessage />
-                      <span className="text-xs text-muted-foreground">
-                        {field.value?.length || 0}/1024 characters
-                      </span>
-                    </div>
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Event Dates */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarDays className="h-5 w-5" />
-                Event Dates
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <DateTimePicker
-                          label="Start Date"
-                          value={field.value || undefined}
-                          onChange={(date) => field.onChange(date || null)}
-                          error={form.formState.errors.startDate?.message}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <DateTimePicker
-                          label="End Date"
-                          value={field.value || undefined}
-                          onChange={(date) => field.onChange(date || null)}
-                          error={form.formState.errors.endDate?.message}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+    <TooltipProvider>
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
+            <div className="flex items-center gap-4">
+              <Button type="button" variant="ghost" size="icon" onClick={() => router.back()}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold">Edit Event</h1>
+                <p className="text-sm text-muted-foreground">{event.displayName}</p>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Tags Management */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <TagIcon className="h-4 w-4" />
-                Event Tags
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoadingTags ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <>
-                  {/* Selected Tags */}
-                  {displayedTagIds.length > 0 && (
-                    <div className="pb-2 border-b">
-                      <FormLabel className="mb-2 text-sm font-medium">Current Tags</FormLabel>
-                      <div className="flex flex-wrap gap-1.5">
-                        {displayedTagIds.map((tagId) => {
-                          const tag = tags.find((t: Tag) => t.id === tagId);
-                          if (!tag) return null;
-                          return (
-                            <Badge
-                              key={tagId}
-                              style={{
-                                backgroundColor: tag.color,
-                                color: "#fff",
-                              }}
-                              className="pl-1.5 pr-1 py-0.5 flex items-center gap-1 text-xs"
-                            >
-                              <span className="text-xs">{tag.icon}</span>
-                              <span className="text-xs">{tag.displayName}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  // Update pending tags instead of calling API
-                                  const newTagIds = displayedTagIds.filter(id => id !== tagId);
-                                  setPendingTagIds(newTagIds);
-                                }}
-                                disabled={isSubmitting}
-                                className="ml-1 rounded-full hover:bg-white/20 p-0.5 disabled:opacity-50"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Tag Selection by Group - Show ALL groups from database */}
-                  {(() => {
-                    // Group ALL tags by groupName (no filtering)
-                    const groupedTags = tags.reduce(
-                      (acc: Record<string, Tag[]>, tag: Tag) => {
-                        const group = tag.groupName || "Others";
-                        if (!acc[group]) {
-                          acc[group] = [];
-                        }
-                        acc[group].push(tag);
-                        return acc;
-                      },
-                      {}
-                    );
-
-                    // Format group name from database (e.g., "EVENT_TYPE" -> "Event Type")
-                    const getGroupLabel = (group: string) => {
-                      if (group === "Others") {
-                        return "Others";
-                      }
-                      // Convert SNAKE_CASE or UPPERCASE to Title Case
-                      return group
-                        .split("_")
-                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                        .join(" ");
-                    };
-
-                    const getFilteredTags = (tags: Tag[], groupName: string) => {
-                      const searchTerm =
-                        searchTerms[groupName]?.toLowerCase() || "";
-                      return tags.filter((tag: Tag) =>
-                        tag.displayName.toLowerCase().includes(searchTerm)
-                      );
-                    };
-
-                    const getDisplayedTags = (tags: Tag[], groupName: string) => {
-                      const filtered = getFilteredTags(tags, groupName);
-                      const isExpanded = expandedGroups[groupName];
-                      return isExpanded
-                        ? filtered
-                        : filtered.slice(0, INITIAL_DISPLAY_COUNT);
-                    };
-
-                    const handleAddTag = (tagId: number) => {
-                      if (!displayedTagIds.includes(tagId)) {
-                        // Update pending tags instead of calling API
-                        const newTagIds = [...displayedTagIds, tagId];
-                        setPendingTagIds(newTagIds);
-                      }
-                    };
-
-                    return (
-                      <div className="space-y-3">
-                        {Object.entries(groupedTags)
-                          .sort(([a], [b]) => {
-                            // Sort "Others" to the end
-                            if (a === "Others") return 1;
-                            if (b === "Others") return -1;
-                            return a.localeCompare(b);
-                          })
-                          .map(([groupName, tags]) => {
-                            const filteredTags = getFilteredTags(tags, groupName);
-                            const displayedTags = getDisplayedTags(
-                              tags,
-                              groupName
-                            );
-                            const hasMore =
-                              filteredTags.length > INITIAL_DISPLAY_COUNT;
-                            const isExpanded = expandedGroups[groupName];
-                            const isGroupExpanded = expandedGroups[`group_${groupName}`] ?? true;
-
-                            return (
-                              <div key={groupName} className="border rounded-lg p-3 space-y-2 bg-muted/30">
-                                <div className="flex items-center justify-between gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setExpandedGroups((prev) => ({
-                                        ...prev,
-                                        [`group_${groupName}`]: !prev[`group_${groupName}`],
-                                      }))
-                                    }
-                                    className="flex items-center gap-2 flex-1 text-left hover:text-primary transition-colors"
-                                  >
-                                    {isGroupExpanded ? (
-                                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                                    ) : (
-                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                    )}
-                                    <h3 className="text-sm font-semibold">
-                                      {getGroupLabel(groupName)}
-                                      <span className="text-xs text-muted-foreground font-normal ml-2">
-                                        ({filteredTags.length})
-                                      </span>
-                                    </h3>
-                                  </button>
-                                  {isGroupExpanded && (
-                                    <div className="relative w-40">
-                                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                      <Input
-                                        type="text"
-                                        placeholder="Search..."
-                                        value={searchTerms[groupName] || ""}
-                                        onChange={(e) =>
-                                          setSearchTerms((prev) => ({
-                                            ...prev,
-                                            [groupName]: e.target.value,
-                                          }))
-                                        }
-                                        className="pl-7 h-8 text-xs"
-                                        onClick={(e) => e.stopPropagation()}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-
-                                {isGroupExpanded && (
-                                  <>
-                                    <div className="flex flex-wrap gap-1.5 pt-1">
-                                      {displayedTags.map((tag: Tag) => {
-                                        const isSelected = displayedTagIds.includes(
-                                          tag.id
-                                        );
-                                        return (
-                                          <Badge
-                                            key={tag.id}
-                                            variant={isSelected ? "default" : "outline"}
-                                            style={
-                                              isSelected
-                                                ? {
-                                                    backgroundColor: tag.color,
-                                                    color: "#fff",
-                                                    borderColor: tag.color,
-                                                  }
-                                                : {
-                                                    borderColor: tag.color,
-                                                    color: tag.color,
-                                                  }
-                                            }
-                                            className={cn(
-                                              "cursor-pointer transition-all hover:shadow-sm px-2 py-0.5 text-xs",
-                                              isSelected &&
-                                                "ring-1 ring-offset-1 ring-primary",
-                                              !isSelected && "hover:bg-muted"
-                                            )}
-                                            onClick={() => handleAddTag(tag.id)}
-                                          >
-                                            <span className="mr-1">{tag.icon}</span>
-                                            {tag.displayName}
-                                          </Badge>
-                                        );
-                                      })}
-                                    </div>
-
-                                    {hasMore && (
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() =>
-                                          setExpandedGroups((prev) => ({
-                                            ...prev,
-                                            [groupName]: !prev[groupName],
-                                          }))
-                                        }
-                                        className="w-full h-7 text-xs"
-                                      >
-                                        {isExpanded ? (
-                                          <>
-                                            <ChevronUp className="mr-1 h-3 w-3" />
-                                            Show Less
-                                          </>
-                                        ) : (
-                                          <>
-                                            <ChevronDown className="mr-1 h-3 w-3" />
-                                            View More ({filteredTags.length - INITIAL_DISPLAY_COUNT} more)
-                                          </>
-                                        )}
-                                      </Button>
-                                    )}
-
-                                    {filteredTags.length === 0 &&
-                                      searchTerms[groupName] && (
-                                        <p className="text-xs text-muted-foreground text-center py-2">
-                                          No tags found for "{searchTerms[groupName]}"
-                                        </p>
-                                      )}
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })}
-                      </div>
-                    );
-                  })()}
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Images */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ImageIcon className="h-5 w-5" />
-                Event Images
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <FormField
-                control={form.control}
-                name="avatarUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Avatar Image</FormLabel>
-                    <FormDescription>
-                      Upload a square image for your event avatar
-                    </FormDescription>
-                    <FormControl>
-                      <SingleFileUpload
-                        value={field.value || undefined}
-                        onChange={(url) => field.onChange(url || null)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="coverUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cover Image</FormLabel>
-                    <FormDescription>
-                      Upload a wide banner image for your event cover
-                    </FormDescription>
-                    <FormControl>
-                      <SingleFileUpload
-                        value={field.value || undefined}
-                        onChange={(url) => field.onChange(url || null)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Social Links */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Social Media Links
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <FormDescription>
-                  Add links to promote your event
-                </FormDescription>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddSocialLink}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Link
-                </Button>
-              </div>
-
-              {fields.length === 0 ? (
-                <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                  <Globe className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    No social links added yet. Click "Add Link" to add your first
-                    link.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {fields.map((field, index) => (
-                    <div
-                      key={field.id}
-                      className="border rounded-lg p-4 space-y-3 bg-card"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FormLabel className="text-sm font-medium">
-                            Link {index + 1}
-                          </FormLabel>
-                          {socialLinks[index]?.isMain && (
-                            <Badge variant="default" className="text-xs">
-                              <Star className="h-3 w-3 mr-1" />
-                              Main
-                            </Badge>
-                          )}
-                        </div>
-                        {fields.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => remove(index)}
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <FormField
-                          control={form.control}
-                          name={`social.${index}.platform`}
-                          render={({ field: platformField }) => (
-                            <FormItem>
-                              <FormLabel>Platform</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="e.g., Facebook, Instagram"
-                                  list={`platforms-${index}`}
-                                  {...platformField}
-                                />
-                              </FormControl>
-                              <datalist id={`platforms-${index}`}>
-                                {popularPlatforms.map((platform) => (
-                                  <option key={platform} value={platform} />
-                                ))}
-                              </datalist>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name={`social.${index}.url`}
-                          render={({ field: urlField }) => (
-                            <FormItem>
-                              <FormLabel>URL</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="url"
-                                  placeholder="https://..."
-                                  {...urlField}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name={`social.${index}.isMain`}
-                        render={({ field: mainField }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-sm">
-                                Set as Main Link
-                              </FormLabel>
-                              <p className="text-xs text-muted-foreground">
-                                Mark this as your primary social media link
-                              </p>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={mainField.value || false}
-                                onCheckedChange={(checked) => {
-                                  mainField.onChange(checked);
-                                  if (checked) {
-                                    handleToggleMain(index);
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Policies */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Policies & Terms</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <FormField
-                control={form.control}
-                name="refundPolicy"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Refund Policy</FormLabel>
-                    <FormDescription>
-                      Describe your refund policy for this event
-                    </FormDescription>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter refund policy details..."
-                        rows={4}
-                        {...field}
-                        value={field.value || ""}
-                        className="resize-none"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="termsAndConditions"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Terms and Conditions</FormLabel>
-                    <FormDescription>
-                      Describe the terms and conditions for this event
-                    </FormDescription>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter terms and conditions..."
-                        rows={4}
-                        {...field}
-                        value={field.value || ""}
-                        className="resize-none"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          <Separator />
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-4">
+            </div>
             <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || !form.formState.isValid}
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={isSubmitting || !form.formState.isDirty}
             >
               {isSubmitting ? (
                 <>
@@ -955,9 +401,751 @@ export default function EditEventPage({
               )}
             </Button>
           </div>
-        </form>
-      </Form>
-    </div>
+        </div>
+
+        <div className="flex max-w-7xl mx-auto">
+          {/* Section Navigation Sidebar */}
+          <aside className="hidden lg:block w-64 sticky top-20 h-[calc(100vh-5rem)] p-6">
+            <nav className="space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                Sections
+              </p>
+              {sections.map((section) => {
+                const Icon = section.icon;
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => scrollToSection(section.id)}
+                    className={cn(
+                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                      activeSection === section.id
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {section.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+
+          {/* Main Content */}
+          <div className="flex-1 p-6">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Basic Information */}
+                <div ref={(el) => {sectionRefs.current["basic"] = el}}>
+                  <Card className="shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle>Basic Information</CardTitle>
+                          <CardDescription>
+                            The essential details that define your event
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <FormField
+                        control={form.control}
+                        name="displayName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <FieldLabel
+                                label="Event Name"
+                                tooltip="A clear, memorable name for your event. This is what attendees will see first."
+                              />
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="e.g., Summer Music Festival 2025"
+                                {...field}
+                                className="h-11"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <FieldLabel
+                                label="Description"
+                                tooltip="A detailed description of your event. Include what attendees can expect, highlights, and any special features."
+                              />
+                            </FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Describe what makes your event special..."
+                                rows={6}
+                                {...field}
+                                className="resize-none"
+                              />
+                            </FormControl>
+                            <div className="flex justify-between items-center">
+                              <FormMessage />
+                              <span className={cn(
+                                "text-xs transition-colors",
+                                (field.value?.length || 0) > 900 ? "text-orange-500" : "text-muted-foreground"
+                              )}>
+                                {field.value?.length || 0}/1024 characters
+                              </span>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Event Dates */}
+                <div ref={(el) => {sectionRefs.current["dates"] = el}}>
+                  <Card className="shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-blue-500/10">
+                          <CalendarDays className="h-5 w-5 text-blue-500" />
+                        </div>
+                        <div>
+                          <CardTitle>Event Schedule</CardTitle>
+                          <CardDescription>
+                            When will your event take place?
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="startDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="mb-2">
+                                <FieldLabel
+                                  label="Start Date & Time"
+                                  tooltip="When your event begins. Attendees will use this to plan their arrival."
+                                />
+                              </div>
+                              <FormControl>
+                                <DateTimePicker
+                                  label=""
+                                  value={field.value || undefined}
+                                  onChange={(date) => field.onChange(date || null)}
+                                  error={form.formState.errors.startDate?.message}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="endDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="mb-2">
+                                <FieldLabel
+                                  label="End Date & Time"
+                                  tooltip="When your event concludes. Must be after the start date."
+                                />
+                              </div>
+                              <FormControl>
+                                <DateTimePicker
+                                  label=""
+                                  value={field.value || undefined}
+                                  onChange={(date) => field.onChange(date || null)}
+                                  error={form.formState.errors.endDate?.message}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Tags Management */}
+                <div ref={(el) => {sectionRefs.current["tags"] = el}}>
+                  <Card className="shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-purple-500/10">
+                          <TagIcon className="h-5 w-5 text-purple-500" />
+                        </div>
+                        <div>
+                          <CardTitle>Event Tags</CardTitle>
+                          <CardDescription>
+                            Help attendees discover your event with relevant tags
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {isLoadingTags ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <>
+                          {/* Selected Tags */}
+                          {displayedTagIds.length > 0 && (
+                            <div className="p-4 rounded-lg bg-muted/50 border-2 border-dashed">
+                              <div className="flex items-center justify-between mb-3">
+                                <p className="text-sm font-medium flex items-center gap-2">
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                  Selected Tags ({displayedTagIds.length})
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {displayedTagIds.map((tagId) => {
+                                  const tag = tags.find((t: Tag) => t.id === tagId);
+                                  if (!tag) return null;
+                                  return (
+                                    <Badge
+                                      key={tagId}
+                                      style={{
+                                        backgroundColor: tag.color,
+                                        color: "#fff",
+                                      }}
+                                      className="pl-2 pr-1.5 py-1 flex items-center gap-1.5 text-sm hover:opacity-90 transition-opacity"
+                                    >
+                                      <span>{tag.icon}</span>
+                                      <span>{tag.displayName}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const newTagIds = displayedTagIds.filter(id => id !== tagId);
+                                          setPendingTagIds(newTagIds);
+                                        }}
+                                        disabled={isSubmitting}
+                                        className="ml-1 rounded-full hover:bg-white/30 p-0.5 disabled:opacity-50 transition-colors"
+                                      >
+                                        <X className="h-3.5 w-3.5" />
+                                      </button>
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Tag Selection */}
+                          {(() => {
+                            const groupedTags = tags.reduce(
+                              (acc: Record<string, Tag[]>, tag: Tag) => {
+                                const group = tag.groupName || "Others";
+                                if (!acc[group]) {
+                                  acc[group] = [];
+                                }
+                                acc[group].push(tag);
+                                return acc;
+                              },
+                              {}
+                            );
+
+                            const getGroupLabel = (group: string) => {
+                              if (group === "Others") return "Others";
+                              return group
+                                .split("_")
+                                .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                .join(" ");
+                            };
+
+                            const getFilteredTags = (tags: Tag[], groupName: string) => {
+                              const searchTerm = searchTerms[groupName]?.toLowerCase() || "";
+                              return tags.filter((tag: Tag) =>
+                                tag.displayName.toLowerCase().includes(searchTerm)
+                              );
+                            };
+
+                            const getDisplayedTags = (tags: Tag[], groupName: string) => {
+                              const filtered = getFilteredTags(tags, groupName);
+                              const isExpanded = expandedGroups[groupName];
+                              return isExpanded ? filtered : filtered.slice(0, INITIAL_DISPLAY_COUNT);
+                            };
+
+                            const handleAddTag = (tagId: number) => {
+                              if (!displayedTagIds.includes(tagId)) {
+                                const newTagIds = [...displayedTagIds, tagId];
+                                setPendingTagIds(newTagIds);
+                              }
+                            };
+
+                            return (
+                              <div className="space-y-3">
+                                {Object.entries(groupedTags)
+                                  .sort(([a], [b]) => {
+                                    if (a === "Others") return 1;
+                                    if (b === "Others") return -1;
+                                    return a.localeCompare(b);
+                                  })
+                                  .map(([groupName, tags]) => {
+                                    const filteredTags = getFilteredTags(tags, groupName);
+                                    const displayedTags = getDisplayedTags(tags, groupName);
+                                    const hasMore = filteredTags.length > INITIAL_DISPLAY_COUNT;
+                                    const isExpanded = expandedGroups[groupName];
+                                    const isGroupExpanded = expandedGroups[`group_${groupName}`] ?? true;
+
+                                    return (
+                                      <div key={groupName} className="border rounded-lg overflow-hidden bg-card">
+                                        <div className="bg-muted/30 p-3">
+                                          <div className="flex items-center justify-between gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                setExpandedGroups((prev) => ({
+                                                  ...prev,
+                                                  [`group_${groupName}`]: !prev[`group_${groupName}`],
+                                                }))
+                                              }
+                                              className="flex items-center gap-2 flex-1 text-left hover:text-primary transition-colors"
+                                            >
+                                              {isGroupExpanded ? (
+                                                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                              ) : (
+                                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                              )}
+                                              <h3 className="text-sm font-semibold">
+                                                {getGroupLabel(groupName)}
+                                                <span className="text-xs text-muted-foreground font-normal ml-2">
+                                                  ({filteredTags.length} available)
+                                                </span>
+                                              </h3>
+                                            </button>
+                                            {isGroupExpanded && (
+                                              <div className="relative w-48">
+                                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                                <Input
+                                                  type="text"
+                                                  placeholder="Search tags..."
+                                                  value={searchTerms[groupName] || ""}
+                                                  onChange={(e) =>
+                                                    setSearchTerms((prev) => ({
+                                                      ...prev,
+                                                      [groupName]: e.target.value,
+                                                    }))
+                                                  }
+                                                  className="pl-8 h-8 text-xs"
+                                                  onClick={(e) => e.stopPropagation()}
+                                                />
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        {isGroupExpanded && (
+                                          <div className="p-3 space-y-3">
+                                            <div className="flex flex-wrap gap-2">
+                                              {displayedTags.map((tag: Tag) => {
+                                                const isSelected = displayedTagIds.includes(tag.id);
+                                                return (
+                                                  <Badge
+                                                    key={tag.id}
+                                                    variant={isSelected ? "default" : "outline"}
+                                                    style={
+                                                      isSelected
+                                                        ? {
+                                                            backgroundColor: tag.color,
+                                                            color: "#fff",
+                                                            borderColor: tag.color,
+                                                          }
+                                                        : {
+                                                            borderColor: tag.color,
+                                                            color: tag.color,
+                                                          }
+                                                    }
+                                                    className={cn(
+                                                      "cursor-pointer transition-all hover:shadow-sm px-2.5 py-1 text-sm",
+                                                      isSelected && "ring-2 ring-offset-2 ring-primary/50",
+                                                      !isSelected && "hover:bg-muted/50"
+                                                    )}
+                                                    onClick={() => handleAddTag(tag.id)}
+                                                  >
+                                                    <span className="mr-1.5">{tag.icon}</span>
+                                                    {tag.displayName}
+                                                  </Badge>
+                                                );
+                                              })}
+                                            </div>
+
+                                            {hasMore && (
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() =>
+                                                  setExpandedGroups((prev) => ({
+                                                    ...prev,
+                                                    [groupName]: !prev[groupName],
+                                                  }))
+                                                }
+                                                className="w-full h-8 text-xs"
+                                              >
+                                                {isExpanded ? (
+                                                  <>
+                                                    <ChevronUp className="mr-1.5 h-3.5 w-3.5" />
+                                                    Show Less
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <ChevronDown className="mr-1.5 h-3.5 w-3.5" />
+                                                    Show {filteredTags.length - INITIAL_DISPLAY_COUNT} More
+                                                  </>
+                                                )}
+                                              </Button>
+                                            )}
+
+                                            {filteredTags.length === 0 && searchTerms[groupName] && (
+                                              <p className="text-xs text-muted-foreground text-center py-3">
+                                                No tags found for "{searchTerms[groupName]}"
+                                              </p>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            );
+                          })()}
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Images */}
+                <div ref={(el) => {sectionRefs.current["images"] = el}}>
+                  <Card className="shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-orange-500/10">
+                          <ImageIcon className="h-5 w-5 text-orange-500" />
+                        </div>
+                        <div>
+                          <CardTitle>Event Images</CardTitle>
+                          <CardDescription>
+                            Visual assets to attract attendees
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <FormField
+                        control={form.control}
+                        name="coverUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <FieldLabel
+                                label="Cover Image"
+                                tooltip="A wide banner image (recommended: 1920x1080px) that will be displayed prominently at the top of your event page."
+                              />
+                            </FormLabel>
+                            <FormDescription className="text-xs">
+                              This image appears as the banner on your event page
+                            </FormDescription>
+                            <FormControl>
+                              <SingleFileUpload
+                                value={field.value || undefined}
+                                onChange={(url) => field.onChange(url || null)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <Separator />
+
+                      <FormField
+                        control={form.control}
+                        name="avatarUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <FieldLabel
+                                label="Avatar Image"
+                                tooltip="A square image (recommended: 512x512px) used as your event's profile picture in listings and previews."
+                              />
+                            </FormLabel>
+                            <FormDescription className="text-xs">
+                              This image appears in event listings and thumbnails
+                            </FormDescription>
+                            <FormControl>
+                              <SingleFileUpload
+                                value={field.value || undefined}
+                                onChange={(url) => field.onChange(url || null)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Social Links */}
+                <div ref={(el) => {sectionRefs.current["social"] = el}}>
+                  <Card className="shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-green-500/10">
+                            <Globe className="h-5 w-5 text-green-500" />
+                          </div>
+                          <div>
+                            <CardTitle>Social Media Links</CardTitle>
+                            <CardDescription>
+                              Connect attendees with your online presence
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAddSocialLink}
+                          className="flex items-center gap-2"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Link
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {fields.length === 0 ? (
+                        <div className="border-2 border-dashed rounded-lg p-8 text-center bg-muted/20">
+                          <Globe className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-50" />
+                          <p className="text-sm text-muted-foreground mb-2">
+                            No social links added yet
+                          </p>
+                          <p className="text-xs text-muted-foreground mb-4">
+                            Add links to your social media profiles, website, or other online presence
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleAddSocialLink}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Your First Link
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {fields.map((field, index) => (
+                            <div
+                              key={field.id}
+                              className="border rounded-lg p-4 space-y-4 bg-card hover:shadow-sm transition-shadow"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                                    {index + 1}
+                                  </div>
+                                  {socialLinks[index]?.isMain && (
+                                    <Badge variant="default" className="text-xs">
+                                      <Star className="h-3 w-3 mr-1" />
+                                      Primary Link
+                                    </Badge>
+                                  )}
+                                </div>
+                                {fields.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => remove(index)}
+                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                  control={form.control}
+                                  name={`social.${index}.platform`}
+                                  render={({ field: platformField }) => (
+                                    <FormItem>
+                                      <FormLabel>Platform</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          placeholder="e.g., Facebook, Instagram"
+                                          list={`platforms-${index}`}
+                                          {...platformField}
+                                        />
+                                      </FormControl>
+                                      <datalist id={`platforms-${index}`}>
+                                        {popularPlatforms.map((platform) => (
+                                          <option key={platform} value={platform} />
+                                        ))}
+                                      </datalist>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name={`social.${index}.url`}
+                                  render={({ field: urlField }) => (
+                                    <FormItem>
+                                      <FormLabel>URL</FormLabel>
+                                      <FormControl>
+                                        <div className="relative">
+                                          <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                          <Input
+                                            type="url"
+                                            placeholder="https://..."
+                                            className="pl-9"
+                                            {...urlField}
+                                          />
+                                        </div>
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+
+                              <FormField
+                                control={form.control}
+                                name={`social.${index}.isMain`}
+                                render={({ field: mainField }) => (
+                                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-muted/20">
+                                    <div className="space-y-0.5">
+                                      <FormLabel className="text-sm">
+                                        Set as Primary Link
+                                      </FormLabel>
+                                      <p className="text-xs text-muted-foreground">
+                                        This link will be featured prominently
+                                      </p>
+                                    </div>
+                                    <FormControl>
+                                      <Switch
+                                        checked={mainField.value || false}
+                                        onCheckedChange={(checked) => {
+                                          mainField.onChange(checked);
+                                          if (checked) {
+                                            handleToggleMain(index);
+                                          }
+                                        }}
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Policies */}
+                <div ref={(el) => {sectionRefs.current["policies"] = el}}>
+                  <Card className="shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-amber-500/10">
+                          <Shield className="h-5 w-5 text-amber-500" />
+                        </div>
+                        <div>
+                          <CardTitle>Policies & Terms</CardTitle>
+                          <CardDescription>
+                            Important legal information for attendees
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <FormField
+                        control={form.control}
+                        name="refundPolicy"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <FieldLabel
+                                label="Refund Policy"
+                                tooltip="Clearly state your refund and cancellation policy. This helps set expectations and reduces disputes."
+                              />
+                            </FormLabel>
+                            <FormDescription className="text-xs">
+                              Let attendees know if and when they can get refunds
+                            </FormDescription>
+                            <FormControl>
+                              <Textarea
+                                placeholder="e.g., Full refund available up to 7 days before the event. No refunds within 7 days of the event date."
+                                rows={4}
+                                {...field}
+                                value={field.value || ""}
+                                className="resize-none"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <Separator />
+
+                      <FormField
+                        control={form.control}
+                        name="termsAndConditions"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <FieldLabel
+                                label="Terms and Conditions"
+                                tooltip="Any rules, restrictions, or requirements attendees must agree to. This may include age restrictions, dress codes, prohibited items, etc."
+                              />
+                            </FormLabel>
+                            <FormDescription className="text-xs">
+                              Rules and requirements for attending this event
+                            </FormDescription>
+                            <FormControl>
+                              <Textarea
+                                placeholder="e.g., All attendees must be 18+. No outside food or beverages allowed. Photography is permitted for personal use only."
+                                rows={4}
+                                {...field}
+                                value={field.value || ""}
+                                className="resize-none"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              </form>
+            </Form>
+          </div>
+        </div>
+      </div>
+    </TooltipProvider>
   );
 }
-
