@@ -532,12 +532,12 @@ export default function EditEventPage({
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                         <FormField
                           control={form.control}
                           name="startDate"
                           render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="w-full">
                               <div className="mb-2">
                                 <FieldLabel
                                   label="Start Date & Time"
@@ -561,7 +561,7 @@ export default function EditEventPage({
                           control={form.control}
                           name="endDate"
                           render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="w-full">
                               <div className="mb-2">
                                 <FieldLabel
                                   label="End Date & Time"

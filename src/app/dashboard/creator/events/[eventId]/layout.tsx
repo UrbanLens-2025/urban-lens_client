@@ -401,9 +401,30 @@ function EventDetailLayoutContent({
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/40 to-transparent" />
         
         {/* Back Button - Overlay */}
-        <div className="absolute top-4 left-4">
-          <Button variant="outline" size="icon" onClick={() => router.push('/dashboard/creator/events')} className="bg-background/90 backdrop-blur-sm">
-            <ArrowLeft className="h-4 w-4" />
+        <div className="absolute top-4 left-4 z-10">
+          <Button 
+            variant="default" 
+            size="icon" 
+            onClick={() => router.push('/dashboard/creator/events')} 
+            className="bg-background/98 border-2 border-foreground/30 shadow-2xl backdrop-blur-lg hover:bg-background min-w-[44px] min-h-[44px]"
+          >
+            <ArrowLeft className="h-5 w-5 text-foreground stroke-2" />
+          </Button>
+        </div>
+
+        {/* Edit Event Button - Overlay */}
+        <div className="absolute top-4 right-4 z-10">
+          <Button 
+            variant="default" 
+            size="icon" 
+            onClick={(e) => {
+              e.preventDefault();
+              openEditEventTab(event.displayName);
+              router.push(`/dashboard/creator/events/${eventId}/edit`);
+            }}
+            className="bg-background/98 border-2 border-foreground/30 shadow-2xl backdrop-blur-lg hover:bg-background min-w-[44px] min-h-[44px]"
+          >
+            <Edit className="h-5 w-5 text-foreground stroke-2" />
           </Button>
         </div>
       </div>
