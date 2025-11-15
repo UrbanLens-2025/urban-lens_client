@@ -44,6 +44,7 @@ function EventDetailLayoutContent({
   const router = useRouter();
   const pathname = usePathname();
   const { ticketDetailsTab, openTicketDetailsTab, closeTicketDetailsTab } = useEventTabs();
+  const [preventAutoOpenTicketId, setPreventAutoOpenTicketId] = useState<string | null>(null);
 
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState("");
@@ -106,7 +107,11 @@ function EventDetailLayoutContent({
     if (path === `/dashboard/creator/events/${eventId}`) {
       return pathname === path;
     }
-    return pathname.startsWith(path) && !ticketDetailsTab.isOpen;
+    // For tickets tab, check if we're on the tickets list (not details)
+    if (path === `/dashboard/creator/events/${eventId}/tickets`) {
+      return pathname === path;
+    }
+    return pathname.startsWith(path) && !(pathname.includes('/tickets/') && pathname !== `/dashboard/creator/events/${eventId}/tickets`);
   };
 
   const isTicketDetailsRoute = pathname.includes('/tickets/') && pathname !== `/dashboard/creator/events/${eventId}/tickets`;
@@ -116,7 +121,9 @@ function EventDetailLayoutContent({
 
   // Auto-open ticket details tab when on a ticket details route
   useEffect(() => {
-    if (isTicketDetailsRoute && !ticketDetailsTab.isOpen) {
+    // Only auto-open if we're actually on a ticket details route
+    // and not navigating to the tickets list
+    if (isTicketDetailsRoute && pathname !== `/dashboard/creator/events/${eventId}/tickets`) {
       // Extract ticket ID from pathname
       const pathParts = pathname.split('/');
       const ticketId = pathParts[pathParts.length - 1];
@@ -125,18 +132,33 @@ function EventDetailLayoutContent({
       if (tickets && ticketId) {
         const ticket = tickets.find(t => t.id === ticketId);
         if (ticket) {
-          openTicketDetailsTab(ticketId, ticket.displayName);
+          if (preventAutoOpenTicketId === ticketId) {
+            return;
+          }
+          // Only update if it's a different ticket or tab is not open
+          if (!ticketDetailsTab.isOpen || ticketDetailsTab.ticketId !== ticketId) {
+            openTicketDetailsTab(ticketId, ticket.displayName);
+          }
         }
       }
     }
-  }, [isTicketDetailsRoute, pathname, tickets, ticketDetailsTab.isOpen, openTicketDetailsTab]);
+  }, [
+    isTicketDetailsRoute,
+    pathname,
+    tickets,
+    ticketDetailsTab.isOpen,
+    ticketDetailsTab.ticketId,
+    openTicketDetailsTab,
+    eventId,
+    preventAutoOpenTicketId,
+  ]);
 
-  // Auto-close ticket details tab when navigating away from ticket details routes
+  // Reset prevent flag when leaving ticket details routes
   useEffect(() => {
-    if (ticketDetailsTab.isOpen && !isTicketDetailsRoute) {
-      closeTicketDetailsTab();
+    if (!isTicketDetailsRoute && preventAutoOpenTicketId) {
+      setPreventAutoOpenTicketId(null);
     }
-  }, [pathname, ticketDetailsTab.isOpen, isTicketDetailsRoute, closeTicketDetailsTab]);
+  }, [isTicketDetailsRoute, preventAutoOpenTicketId]);
 
   if (isLoading) {
     return (
@@ -458,9 +480,19 @@ function EventDetailLayoutContent({
                   size="icon"
                   className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
+                    // Close the tab immediately
+                    const wasOnDetailsPage = isTicketDetailsRoute;
+                    const closingTicketId = ticketDetailsTab.ticketId;
                     closeTicketDetailsTab();
-                    router.push(`/dashboard/creator/events/${eventId}/tickets`);
+                    if (wasOnDetailsPage && closingTicketId) {
+                      setPreventAutoOpenTicketId(closingTicketId);
+                      // Navigate to Overview tab after state update
+                      requestAnimationFrame(() => {
+                        router.push(`/dashboard/creator/events/${eventId}`);
+                      });
+                    }
                   }}
                 >
                   <X className="h-3 w-3" />
