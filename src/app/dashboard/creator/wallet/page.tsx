@@ -12,6 +12,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Wallet,
   Download,
@@ -24,15 +32,26 @@ import {
   ArrowLeftRight,
   Landmark,
   Loader2,
+  Eye,
+  X,
+  MoreVertical,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  AlertCircle,
+  Search,
+  Filter,
 } from "lucide-react";
 import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useWallet } from "@/hooks/user/useWallet";
 import { useWalletExternalTransactions } from "@/hooks/wallet/useWalletExternalTransactions";
 import type { WalletExternalTransaction, WalletTransaction } from "@/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useWalletExternalTransactionById } from "@/hooks/wallet/useWalletExternalTransactionById";
 import { useWalletTransactions } from "@/hooks/wallet/useWalletTransactions";
+import { useCancelWithdrawTransaction } from "@/hooks/wallet/useCancelWithdrawTransaction";
 
 // Helper mappers
 const getInternalTransactionIcon = (mappedType: string) => {
@@ -60,12 +79,51 @@ const getStatusColor = (status: string) => {
       return "secondary";
     case "failed":
       return "destructive";
+    case "cancelled":
+      return "secondary";
+    case "ready":
+      return "secondary";
     default:
       return "secondary";
   }
 };
 
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case "completed":
+      return <CheckCircle2 className="h-3 w-3" />;
+    case "pending":
+      return <Clock className="h-3 w-3" />;
+    case "failed":
+      return <XCircle className="h-3 w-3" />;
+    case "cancelled":
+      return <XCircle className="h-3 w-3" />;
+    case "ready":
+      return <AlertCircle className="h-3 w-3" />;
+    default:
+      return null;
+  }
+};
+
+const getStatusBadgeStyle = (status: string) => {
+  switch (status) {
+    case "completed":
+      return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800";
+    case "pending":
+      return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800";
+    case "failed":
+      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800";
+    case "cancelled":
+      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800";
+    case "ready":
+      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800";
+    default:
+      return "";
+  }
+};
+
 const getStatusLabel = (status: string) => {
+  if (status === "ready") return "Ready for Payment";
   return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
@@ -75,6 +133,8 @@ const getTypeLabel = (type: string) => {
       return "Received";
     case "transfer_out":
       return "Sent";
+    case "transfer":
+      return "Receive";
     case "deposit":
       return "Deposit";
     case "withdrawal":
@@ -93,12 +153,28 @@ function mapInternalType(type: string): "transfer_in" | "transfer_out" | "transf
 }
 
 export default function CreatorWalletPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: walletData, isLoading, error } = useWallet();
   const [currentInternalPage, setCurrentInternalPage] = useState(1);
   const [currentExternalPage, setCurrentExternalPage] = useState(1);
   const itemsPerPage = 10;
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [transactionToCancel, setTransactionToCancel] = useState<string | null>(null);
+  const cancelWithdraw = useCancelWithdrawTransaction();
+
+  // Get active tab from URL or default to "internal"
+  const activeTab = searchParams.get("tab") || "internal";
+  const validTab = activeTab === "internal" || activeTab === "external" ? activeTab : "internal";
+
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", value);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
 
   // External transactions
   const { 
@@ -124,6 +200,8 @@ export default function CreatorWalletPage() {
 
   // Use real wallet balance from API
   const totalBalance = walletData ? parseFloat(walletData.balance) : 0;
+  const lockedBalance = walletData ? parseFloat(walletData.lockedBalance || "0") : 0;
+  const availableBalance = totalBalance - lockedBalance;
   const currency = walletData?.currency || "VND";
 
   // External
@@ -175,8 +253,22 @@ export default function CreatorWalletPage() {
       "PENDING": "pending",
       "FAILED": "failed",
       "CANCELLED": "cancelled",
+      "READY_FOR_PAYMENT": "ready",
     };
     return statusMap[status.toUpperCase()] || status.toLowerCase();
+  };
+
+  const handleCancelClick = (transactionId: string) => {
+    setTransactionToCancel(transactionId);
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelConfirm = () => {
+    if (transactionToCancel) {
+      cancelWithdraw.mutate(transactionToCancel);
+      setCancelDialogOpen(false);
+      setTransactionToCancel(null);
+    }
   };
 
   const getBankName = (bankCode: string): string => {
@@ -263,8 +355,22 @@ export default function CreatorWalletPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="text-4xl font-bold">
-              {formatCurrency(totalBalance)}
+            <div className="space-y-2">
+              <div className="text-4xl font-bold">
+                {formatCurrency(totalBalance)}
+              </div>
+              {lockedBalance > 0 && (
+                <div className="space-y-1 text-sm opacity-90">
+                  <div className="flex items-center justify-between">
+                    <span className="opacity-80">Available Balance</span>
+                    <span className="font-semibold">{formatCurrency(availableBalance)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="opacity-80">Locked Balance</span>
+                    <span className="font-semibold text-yellow-200">{formatCurrency(lockedBalance)}</span>
+                  </div>
+                </div>
+              )}
             </div>
             {walletData?.isLocked && (
               <Badge variant="destructive" className="bg-red-500/20 text-red-100 border-red-300">
@@ -366,17 +472,25 @@ export default function CreatorWalletPage() {
           <CardTitle>Transaction History</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="internal" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="internal">
-                <ArrowLeftRight className="h-4 w-4 mr-2" />
-                Internal
-              </TabsTrigger>
-              <TabsTrigger value="external">
-                <Building2 className="h-4 w-4 mr-2" />
-                External
-              </TabsTrigger>
-            </TabsList>
+          <Tabs value={validTab} onValueChange={handleTabChange} className="w-full">
+            <div className="flex items-center gap-4 mb-6 border-b">
+              <TabsList className="inline-flex h-auto p-1 bg-transparent border-0">
+                <TabsTrigger 
+                  value="internal" 
+                  className="px-6 py-3 text-base font-medium rounded-t-lg data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-sm transition-all"
+                >
+                  <ArrowLeftRight className="h-5 w-5 mr-2" />
+                  Internal Transactions
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="external"
+                  className="px-6 py-3 text-base font-medium rounded-t-lg data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-sm transition-all"
+                >
+                  <Building2 className="h-5 w-5 mr-2" />
+                  External Transactions
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* Internal Transactions Tab */}
             <TabsContent value="internal" className="space-y-4">
@@ -386,13 +500,58 @@ export default function CreatorWalletPage() {
                   Internal transactions represent money movements within the platform (e.g., to/from escrow)
                 </p>
               </div>
+
+              {/* Search and Filter Section */}
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {/* Search Input */}
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by ID, date & time, or amount..."
+                      className="pl-9"
+                    />
+                  </div>
+
+                  {/* Filter Dropdowns */}
+                  <div className="flex gap-2">
+                    {/* Type Filter */}
+                    <Select>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Filter by Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="transfer_in">Received</SelectItem>
+                        <SelectItem value="transfer_out">Sent</SelectItem>
+                        <SelectItem value="transfer">Receive</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {/* Status Filter */}
+                    <Select>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Filter by Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="failed">Failed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="ready">Ready for Payment</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>ID</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead>From/To</TableHead>
-                    <TableHead>Reference</TableHead>
                     <TableHead>Date & Time</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
@@ -401,13 +560,13 @@ export default function CreatorWalletPage() {
                 <TableBody>
                   {isLoadingInternalTransactions ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
+                      <TableCell colSpan={6} className="text-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                       </TableCell>
                     </TableRow>
                   ) : internalTransactions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
+                      <TableCell colSpan={6} className="text-center py-8">
                         <p className="text-muted-foreground">No internal transactions found</p>
                       </TableCell>
                     </TableRow>
@@ -421,6 +580,11 @@ export default function CreatorWalletPage() {
                       return (
                         <TableRow key={t.id}>
                           <TableCell>
+                            <span className="text-sm font-mono text-muted-foreground">
+                              {t.id.slice(0, 8).toUpperCase()}
+                            </span>
+                          </TableCell>
+                          <TableCell>
                             <div className="flex items-center gap-2 min-w-0">
                               {icon}
                               <span className="text-sm font-medium truncate">
@@ -431,26 +595,17 @@ export default function CreatorWalletPage() {
                           <TableCell className="max-w-[200px]">
                             <span className="text-sm truncate block">{description}</span>
                           </TableCell>
-                          <TableCell className="max-w-[180px]">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <ArrowLeftRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                              <span className="text-sm text-muted-foreground truncate">Escrow</span>
-                            </div>
-                          </TableCell>
-                            <TableCell>
-                            <span className="text-sm text-muted-foreground font-mono truncate block">
-                              <Link href={`/dashboard/creator/wallet/${t.id}?type=internal`} className="hover:underline">
-                                {t.id}
-                              </Link>
-                            </span>
-                          </TableCell>
                           <TableCell>
                             <span className="text-sm text-muted-foreground whitespace-nowrap">
                               {formatDateTime(t.createdAt)}
                             </span>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={getStatusColor(statusText)}>
+                            <Badge 
+                              variant="outline"
+                              className={`${getStatusBadgeStyle(statusText)} flex items-center gap-1.5 w-fit`}
+                            >
+                              {getStatusIcon(statusText)}
                               {getStatusLabel(statusText)}
                             </Badge>
                           </TableCell>
@@ -511,34 +666,38 @@ export default function CreatorWalletPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>ID</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Bank Details</TableHead>
-                    <TableHead>Reference</TableHead>
                     <TableHead>Date & Time</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Fee</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoadingExternalTransactions ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
+                      <TableCell colSpan={6} className="text-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                       </TableCell>
                     </TableRow>
                   ) : externalTransactions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
+                      <TableCell colSpan={6} className="text-center py-8">
                         <p className="text-muted-foreground">No external transactions found</p>
                       </TableCell>
                     </TableRow>
                   ) : (
                     externalTransactions.map((transaction) => {
                       const mappedTransaction = mapExternalTransaction(transaction);
+                      const canCancel = transaction.status.toUpperCase() === "PENDING" || transaction.status.toUpperCase() === "READY_FOR_PAYMENT";
                       return (
-                        <TableRow key={transaction.id} className="cursor-pointer hover:bg-muted/50">
+                        <TableRow key={transaction.id} className="hover:bg-muted/50">
+                          <TableCell>
+                            <span className="text-sm font-mono text-muted-foreground">
+                              {transaction.id.slice(0, 8).toUpperCase()}
+                            </span>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2 min-w-0">
                               {getExternalTransactionIcon(mappedTransaction.type)}
@@ -547,45 +706,19 @@ export default function CreatorWalletPage() {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="max-w-[200px]">
-                            <Link href={`/dashboard/creator/wallet/${transaction.id}?type=external`} className="text-sm truncate block text-blue-600 hover:underline">
-                              {mappedTransaction.description}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="max-w-[150px]">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-sm font-medium truncate">
-                                  {mappedTransaction.bankName}
-                                </span>
-                                <span className="text-xs text-muted-foreground truncate">
-                                  {mappedTransaction.accountNumber}
-                                </span>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground font-mono truncate block">
-                              <Link href={`/dashboard/creator/wallet/${transaction.id}?type=external`} className="hover:underline">
-                                {mappedTransaction.reference}
-                              </Link>
-                            </span>
-                          </TableCell>
                           <TableCell>
                             <span className="text-sm text-muted-foreground whitespace-nowrap">
                               {formatDateTime(mappedTransaction.date)}
                             </span>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={getStatusColor(mappedTransaction.status)}>
+                            <Badge 
+                              variant="outline"
+                              className={`${getStatusBadgeStyle(mappedTransaction.status)} flex items-center gap-1.5 w-fit`}
+                            >
+                              {getStatusIcon(mappedTransaction.status)}
                               {getStatusLabel(mappedTransaction.status)}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground whitespace-nowrap">
-                              {mappedTransaction.transactionFee > 0 ? formatCurrency(mappedTransaction.transactionFee) : '-'}
-                            </span>
                           </TableCell>
                           <TableCell className="text-right">
                             <span 
@@ -598,6 +731,54 @@ export default function CreatorWalletPage() {
                               {getTransactionSign(mappedTransaction.type)}
                               {formatCurrency(mappedTransaction.amount)}
                             </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/dashboard/creator/wallet/${transaction.id}?type=external`} className="cursor-pointer">
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Details
+                                  </Link>
+                                </DropdownMenuItem>
+                                {canCancel && (
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleCancelClick(transaction.id);
+                                    }}
+                                    disabled={cancelWithdraw.isPending}
+                                    className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                                  >
+                                    {cancelWithdraw.isPending && transactionToCancel === transaction.id ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Cancelling...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <X className="h-4 w-4 mr-2" />
+                                        Cancel Transaction
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       );
@@ -637,6 +818,44 @@ export default function CreatorWalletPage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Cancel Transaction Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Transaction</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this transaction? This action cannot be undone. The transaction will be moved to CANCELLED status.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelDialogOpen(false);
+                setTransactionToCancel(null);
+              }}
+              disabled={cancelWithdraw.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelConfirm}
+              disabled={cancelWithdraw.isPending}
+            >
+              {cancelWithdraw.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                "Confirm Cancel"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

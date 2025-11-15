@@ -52,11 +52,14 @@ export default function WalletDepositPage() {
   }, [wallet?.currency, form]);
 
   const onSubmit = (data: DepositForm) => {
-    // Use mock strings for non-UI fields
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const returnUrl = isLocalhost 
+      ? "https://google.com"
+      : `${window.location.origin}/dashboard/creator/wallet?tab=external`;
     deposit.mutate({
       amount: data.amount,
       currency: data.currency,
-      returnUrl: "http://google.com",
+      returnUrl,
       afterAction: "NONE",
     });
   };
