@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, FileText } from "lucide-react";
 import { StepIndicator } from "./_components/StepIndicator";
 import { Step1BasicInfo } from "./_components/Step1BasicInfo";
 import { Step2TagsSelection } from "./_components/Step2TagsSelection";
@@ -336,11 +336,18 @@ export default function CreateEventRequestPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-8 px-4">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Create Event Request</h1>
-        <p className="text-muted-foreground mt-2">
-          Fill out the form below to submit your event request
-        </p>
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10 text-primary">
+            <FileText className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Create Event Request</h1>
+            <p className="text-muted-foreground mt-1">
+              Fill out the form below to submit your event request
+            </p>
+          </div>
+        </div>
       </div>
 
       <StepIndicator currentStep={currentStep} />
@@ -357,7 +364,7 @@ export default function CreateEventRequestPage() {
       )}
 
       <Form {...form}>
-        <Card>
+        <Card className="border-2 border-primary/10 bg-gradient-to-br from-background to-primary/5">
           <CardContent className="pt-6">{renderStepContent()}</CardContent>
         </Card>
       </Form>

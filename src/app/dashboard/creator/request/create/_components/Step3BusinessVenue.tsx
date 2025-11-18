@@ -25,6 +25,7 @@ import {
   Building2,
   Calendar
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useBookableLocations } from "@/hooks/events/useBookableLocations";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -141,11 +142,26 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-semibold mb-2">Choose Business Venue</h2>
-        <p className="text-muted-foreground">
-          Click on a location marker on the map to view details and select your venue.
-        </p>
+      <div className="flex items-start gap-3 pb-2 border-b border-primary/10">
+        <div className="p-2 rounded-lg bg-primary/10 text-primary mt-1">
+          <MapPin className="h-5 w-5" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-2xl font-semibold">Choose Business Venue</h2>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Select a venue from the map or list, then choose your event time slots</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            Click on a location marker on the map to view details and select your venue.
+          </p>
+        </div>
       </div>
 
       {/* Search Bar */}

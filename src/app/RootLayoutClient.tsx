@@ -33,6 +33,25 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const redirectingToOnboarding = !isLoading && requiresOnboarding && !pathname.startsWith('/onboarding');
   const redirectingToPending = !isLoading && isPendingAfterOnboard && pathname !== '/onboarding/pending';
 
+  // Check if dark mode is active
+  const [isDarkMode, setIsDarkMode] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkDarkMode = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
+    };
+
+    checkDarkMode();
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   if (isLoading || redirectingToOnboarding || redirectingToPending) {
     return (
       <div className='flex h-screen items-center justify-center'>
@@ -43,16 +62,114 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
   if (!user) return null;
 
+  // Set background color based on user role
+  const getBackgroundColor = () => {
+    switch (user.role) {
+      case 'EVENT_CREATOR':
+        return 'rgb(239 246 255)'; // blue-50
+      case 'BUSINESS_OWNER':
+        return 'rgb(255 247 237)'; // orange-50
+      case 'ADMIN':
+        return 'rgb(254 242 242)'; // red-50
+      default:
+        return 'transparent';
+    }
+  };
+
+  const getDarkBackgroundColor = () => {
+    switch (user.role) {
+      case 'EVENT_CREATOR':
+        return 'rgb(30 58 138 / 0.2)'; // blue-950/20
+      case 'BUSINESS_OWNER':
+        return 'rgb(154 52 18 / 0.2)'; // orange-950/20
+      case 'ADMIN':
+        return 'rgb(127 29 29 / 0.2)'; // red-950/20
+      default:
+        return 'transparent';
+    }
+  };
+
+  const sidebarBgColor = isDarkMode ? getDarkBackgroundColor() : getBackgroundColor();
+  const sidebarContentBgColor = () => {
+    if (isDarkMode) {
+      switch (user.role) {
+        case 'EVENT_CREATOR':
+          return 'rgb(30 58 138 / 0.3)'; // blue-900/30
+        case 'BUSINESS_OWNER':
+          return 'rgb(154 52 18 / 0.3)'; // orange-900/30
+        case 'ADMIN':
+          return 'rgb(127 29 29 / 0.3)'; // red-900/30
+        default:
+          return 'transparent';
+      }
+    } else {
+      switch (user.role) {
+        case 'EVENT_CREATOR':
+          return 'rgb(219 234 254)'; // blue-100
+        case 'BUSINESS_OWNER':
+          return 'rgb(255 237 213)'; // orange-100
+        case 'ADMIN':
+          return 'rgb(254 226 226)'; // red-100
+        default:
+          return 'transparent';
+      }
+    }
+  };
+
+  const getActiveButtonBgColor = () => {
+    if (isDarkMode) {
+      switch (user.role) {
+        case 'EVENT_CREATOR':
+          return 'rgb(37 99 235)'; // blue-600
+        case 'BUSINESS_OWNER':
+          return 'rgb(234 88 12)'; // orange-600
+        case 'ADMIN':
+          return 'rgb(220 38 38)'; // red-600
+        default:
+          return 'hsl(var(--sidebar-accent))';
+      }
+    } else {
+      switch (user.role) {
+        case 'EVENT_CREATOR':
+          return 'rgb(59 130 246)'; // blue-500
+        case 'BUSINESS_OWNER':
+          return 'rgb(249 115 22)'; // orange-500
+        case 'ADMIN':
+          return 'rgb(239 68 68)'; // red-500
+        default:
+          return 'hsl(var(--sidebar-accent))';
+      }
+    }
+  };
+
+  const getActiveButtonTextColor = () => {
+    // White text for all active buttons for better contrast
+    return 'rgb(255 255 255)';
+  };
+
   return (
     <SidebarProvider
       style={
         {
           '--sidebar-width': 'calc(var(--spacing) * 72)',
           '--header-height': 'calc(var(--spacing) * 12)',
+          backgroundColor: sidebarBgColor,
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant='inset' />
+      <AppSidebar 
+        variant='inset' 
+        className="[&_[data-slot=sidebar-inner]]:!bg-transparent"
+        style={{
+          '--sidebar-bg-color': sidebarContentBgColor(),
+          '--sidebar-active-bg': getActiveButtonBgColor(),
+          '--sidebar-active-text': getActiveButtonTextColor(),
+        } as React.CSSProperties & { 
+          '--sidebar-bg-color': string;
+          '--sidebar-active-bg': string;
+          '--sidebar-active-text': string;
+        }}
+      />
       <SidebarInset>
         <SiteHeader />
         <div className='flex flex-1 flex-col'>
