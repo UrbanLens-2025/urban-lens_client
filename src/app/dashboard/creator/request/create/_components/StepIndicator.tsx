@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, FileText, Tags, MapPin, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StepIndicatorProps {
@@ -8,10 +8,10 @@ interface StepIndicatorProps {
 }
 
 const steps = [
-  { number: 1, label: "Basic Info" },
-  { number: 2, label: "Select Tags" },
-  { number: 3, label: "Location" },
-  { number: 4, label: "Review & Payment" },
+  { number: 1, label: "Basic Info", icon: FileText },
+  { number: 2, label: "Select Tags", icon: Tags },
+  { number: 3, label: "Location", icon: MapPin },
+  { number: 4, label: "Review & Payment", icon: CheckCircle2 },
 ];
 
 export function StepIndicator({ currentStep }: StepIndicatorProps) {
@@ -29,23 +29,25 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
               <div className="flex flex-col items-center flex-1">
                 <div
                   className={cn(
-                    "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors",
+                    "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all",
                     isCompleted
-                      ? "bg-primary border-primary text-primary-foreground"
+                      ? "bg-primary border-primary text-primary-foreground shadow-md"
                       : isCurrent
-                        ? "bg-primary border-primary text-primary-foreground"
+                        ? "bg-primary border-primary text-primary-foreground shadow-md ring-2 ring-primary/20"
                         : "bg-background border-muted-foreground text-muted-foreground"
                   )}
                 >
                   {isCompleted ? (
                     <Check className="h-5 w-5" />
+                  ) : isCurrent ? (
+                    <step.icon className="h-5 w-5" />
                   ) : (
-                    <span className="font-semibold">{step.number}</span>
+                    <step.icon className="h-4 w-4" />
                   )}
                 </div>
                 <span
                   className={cn(
-                    "mt-2 text-sm font-medium",
+                    "mt-2 text-sm font-medium text-center w-20",
                     isCurrent
                       ? "text-foreground"
                       : isCompleted
