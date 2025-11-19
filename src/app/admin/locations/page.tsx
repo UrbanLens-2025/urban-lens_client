@@ -52,6 +52,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { formatDateTime } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Building2, Globe, Mail, Phone, MapPin, FileText } from 'lucide-react';
 
 export default function LocationDashboardPage() {
   // Unified search and sort state
@@ -217,7 +223,7 @@ export default function LocationDashboardPage() {
                         Location <SortIcon column='name' />
                       </Button>
                     </TableHead>
-                    <TableHead>Business Owner</TableHead>
+                    <TableHead>Location Type</TableHead>
                     <TableHead>
                       <Button
                         variant='ghost'
@@ -251,7 +257,115 @@ export default function LocationDashboardPage() {
                           </Link>
                         </div>
                       </TableCell>
-                      <TableCell>{loc.business?.name || 'N/A'}</TableCell>
+                      <TableCell>
+                        {loc.business ? (
+                          <Tooltip delayDuration={200}>
+                            <TooltipTrigger asChild>
+                              <Link
+                                href={`/admin/business/${loc.business.accountId}`}
+                                className='flex items-center gap-2 text-primary hover:underline group transition-colors'
+                              >
+                                <Building2 className='h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors' />
+                                <span className='font-medium group-hover:text-primary transition-colors'>
+                                  {loc.business.name}
+                                </span>
+                              </Link>
+                            </TooltipTrigger>
+                            <TooltipContent 
+                              side='right' 
+                              sideOffset={8}
+                              className='max-w-sm bg-card text-card-foreground border shadow-lg p-0'
+                            >
+                              <div className='p-4 space-y-3'>
+                                {/* Business Header */}
+                                <div className='space-y-1.5'>
+                                  <div className='flex items-center gap-2'>
+                                    <div className='h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0'>
+                                      <Building2 className='h-4 w-4 text-primary' />
+                                    </div>
+                                    <p className='font-semibold text-base leading-tight'>
+                                      {loc.business.name}
+                                    </p>
+                                  </div>
+                                  {loc.business.description && (
+                                    <p className='text-xs text-muted-foreground line-clamp-2 pl-10'>
+                                      {loc.business.description}
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* Business Details */}
+                                <div className='space-y-2 border-t pt-3'>
+                                  {loc.business.email && (
+                                    <div className='flex items-start gap-2.5 group/item'>
+                                      <Mail className='h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0' />
+                                      <div className='flex-1 min-w-0'>
+                                        <p className='text-xs font-medium text-muted-foreground mb-0.5'>
+                                          Email
+                                        </p>
+                                        <p className='text-sm text-foreground break-all'>
+                                          {loc.business.email}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {loc.business.phone && (
+                                    <div className='flex items-start gap-2.5 group/item'>
+                                      <Phone className='h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0' />
+                                      <div className='flex-1 min-w-0'>
+                                        <p className='text-xs font-medium text-muted-foreground mb-0.5'>
+                                          Phone
+                                        </p>
+                                        <p className='text-sm text-foreground'>
+                                          {loc.business.phone}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {loc.business.addressLine && (
+                                    <div className='flex items-start gap-2.5 group/item'>
+                                      <MapPin className='h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0' />
+                                      <div className='flex-1 min-w-0'>
+                                        <p className='text-xs font-medium text-muted-foreground mb-0.5'>
+                                          Address
+                                        </p>
+                                        <p className='text-sm text-foreground line-clamp-2'>
+                                          {loc.business.addressLine}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {loc.business.licenseNumber && (
+                                    <div className='flex items-start gap-2.5 group/item'>
+                                      <FileText className='h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0' />
+                                      <div className='flex-1 min-w-0'>
+                                        <p className='text-xs font-medium text-muted-foreground mb-0.5'>
+                                          License
+                                        </p>
+                                        <p className='text-sm text-foreground font-mono'>
+                                          {loc.business.licenseNumber}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Click hint */}
+                                <div className='pt-2 border-t'>
+                                  <p className='text-xs text-muted-foreground text-center'>
+                                    Click to view full details
+                                  </p>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <div className='flex items-center gap-2 text-muted-foreground'>
+                            <Globe className='h-4 w-4' />
+                            <span>Public</span>
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell>{formatDateTime(loc.createdAt)}</TableCell>
                       <TableCell className='text-right'>
                         <Button asChild variant='outline' size='sm'>
