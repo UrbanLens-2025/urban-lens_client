@@ -19,6 +19,8 @@ import type {
   Wallet,
   WalletExternalTransaction,
   GetWalletExternalTransactionsParams,
+  Event,
+  GetEventsParams,
 } from "@/types";
 
 export const getLocationRequestsForAdmin = async ({
@@ -281,6 +283,38 @@ export const rejectWithdrawTransaction = async (
   const { data } = await axiosInstance.post<ApiResponse<WalletExternalTransaction>>(
     `/v1/admin/wallet/transactions/external/${transactionId}/reject`,
     { rejectionReason }
+  );
+  return data.data;
+};
+
+// Admin Event APIs
+export const getAllEventsForAdmin = async ({
+  page = 1,
+  limit = 10,
+  search,
+  sortBy,
+}: GetEventsParams): Promise<PaginatedData<Event>> => {
+  const params: any = { page, limit };
+
+  if (search) {
+    params.search = search;
+    params.searchBy = ["displayName", "description"];
+  }
+
+  if (sortBy) {
+    params.sortBy = sortBy;
+  }
+
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Event>>>(
+    "/v1/admin/events",
+    { params }
+  );
+  return data.data;
+};
+
+export const getEventByIdForAdmin = async (id: string): Promise<Event> => {
+  const { data } = await axiosInstance.get<ApiResponse<Event>>(
+    `/v1/admin/events/${id}`
   );
   return data.data;
 };
