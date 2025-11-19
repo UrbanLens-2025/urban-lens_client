@@ -14,6 +14,7 @@ import {
   IconFileText,
   IconWallet,
   IconBrandBooking,
+  IconUsers,
 } from "@tabler/icons-react";
 
 import {
@@ -40,6 +41,7 @@ const adminNav = [
   { title: 'Events', url: '/admin/events', icon: IconCalendar },
   { title: 'Wallet', url: '/admin/wallet', icon: IconWallet },
   { title: 'Tags', url: '/admin/tags', icon: IconTag },
+  { title: 'Accounts', url: '/admin/accounts', icon: IconUsers },
 ];
 
 const businessNav = [
@@ -147,8 +149,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               isActive={isDashboardActive}
               className={cn(
                 "data-[slot=sidebar-menu-button]:!p-2 transition-all duration-200",
-                isDashboardActive 
-                  ? "bg-[var(--sidebar-active-bg,theme(colors.sidebar.accent))] text-[var(--sidebar-active-text,theme(colors.sidebar.accent-foreground))] shadow-sm" 
+                isDashboardActive
+                  ? "bg-[var(--sidebar-active-bg,theme(colors.sidebar.accent))] text-[var(--sidebar-active-text,theme(colors.sidebar.accent-foreground))] shadow-sm"
                   : "hover:bg-sidebar-accent/50"
               )}
             >
