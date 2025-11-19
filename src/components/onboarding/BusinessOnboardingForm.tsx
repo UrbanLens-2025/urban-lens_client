@@ -3,18 +3,26 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { useSubmitBusinessOnboarding } from "@/hooks/onboarding/useSubmitBusinessOnboarding";
+import { useUser } from "@/hooks/user/useUser";
 
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -33,8 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Loader2, Plus, Trash2, Store, Building2, Contact, MapPin, FileCheck, ArrowRight, Sparkles, ExternalLink, CheckCircle2, Mail, Phone, Globe } from "lucide-react";
+import { Loader2, Plus, Trash2, Store, Building2, Contact, MapPin, FileCheck, ArrowRight, ExternalLink, CheckCircle2, Mail, Phone, Globe, LogOut, UserCheck, Sparkles } from "lucide-react";
 import { LocationAddressPicker } from "../shared/LocationAddressPicker";
 import { SingleFileUpload } from "../shared/SingleFileUpload";
 import { FileUpload } from "../shared/FileUpload";
@@ -53,7 +60,7 @@ const businessCategories = [
 
 const licenseSchema = z.object({
   licenseType: z.nativeEnum(AcceptedBusinessLicenseTypes, {
-    errorMap: () => ({ message: "Please select a license type." }),
+    message: "Please select a license type.",
   }),
   documentImageUrls: z
     .array(z.string().url("Invalid image URL"))
@@ -69,7 +76,11 @@ const businessSchema = z.object({
   addressLevel1: z.string().min(1, "Province/City is required"),
   addressLevel2: z.string().min(1, "District/Ward is required"),
   email: z.string().email("Invalid email address."),
-  phone: z.string().min(10, "A valid phone number is required."),
+  phone: z.string()
+    .regex(/^[0-9]{9,10}$/, { message: "Phone number must be 9-10 digits." })
+    .refine((val) => {
+      return /^(0[3|5|7|8|9])[0-9]{8}$/.test(val) || /^[3|5|7|8|9][0-9]{8}$/.test(val);
+    }, { message: "Invalid Vietnam phone number format." }),
   avatar: z
     .string()
     .url("Please upload an avatar.")
@@ -77,7 +88,7 @@ const businessSchema = z.object({
   licenses: z
     .array(licenseSchema)
     .min(1, "At least one license is required."),
-  website: z.string().url("Must be a valid URL.").optional().or(z.literal("")),
+  website: z.string().url("Must be a valid URL.").min(1, "Website is required."),
   category: z.enum(businessCategories, {
     message: "Please select a category.",
   }),
@@ -85,10 +96,18 @@ const businessSchema = z.object({
 
 type FormValues = z.infer<typeof businessSchema>;
 
-export function BusinessOnboardingForm() {
+interface BusinessOnboardingFormProps {
+  onLogout: () => void;
+}
+
+export function BusinessOnboardingForm({ onLogout }: BusinessOnboardingFormProps) {
   const { mutate: submit, isPending } = useSubmitBusinessOnboarding();
-  const [step, setStep] = useState(0);
-  const totalSteps = 6;
+  const { user } = useUser();
+  const [step, setStep] = useState(1);
+  const totalSteps = 5;
+  const [countryCode, setCountryCode] = useState("+84");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(businessSchema),
@@ -109,18 +128,36 @@ export function BusinessOnboardingForm() {
     },
   });
 
+  // Warn user before leaving if form has been modified
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Check if form is dirty (has been modified) and not currently submitting
+      if (form.formState.isDirty && !isSubmitting) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [form.formState.isDirty, isSubmitting]);
+
   function onSubmit(values: FormValues) {
-    submit(values);
+    setIsSubmitting(true);
+    const phoneWithCode = `${countryCode}${values.phone}`;
+    submit({ ...values, phone: phoneWithCode });
   }
 
   const stepFields: Record<number, (keyof FormValues)[]> = {
-    0: [], // Welcome step has no fields
     1: ["name", "category"],
     2: ["description", "avatar", "website"],
     3: ["email", "phone"],
     4: ["addressLine", "addressLevel1", "addressLevel2"],
     5: ["licenses"],
-    6: [], // Confirmation step has no fields
   };
 
   const handleNext = async () => {
@@ -130,14 +167,9 @@ export function BusinessOnboardingForm() {
     setStep((s) => Math.min(totalSteps, s + 1));
   };
 
-  const handleBack = () => setStep((s) => Math.max(0, s - 1));
+  const handleBack = () => setStep((s) => Math.max(1, s - 1));
 
-  const progress = step === 0 ? 0 : Math.round((step / totalSteps) * 100);
-
-  const showError = (name: keyof FormValues) => {
-    const state = form.getFieldState(name);
-    return state.invalid && (state.isTouched || form.formState.isSubmitted);
-  };
+  const progress = Math.round((step / totalSteps) * 100);
 
   const licenses = form.watch("licenses");
 
@@ -175,12 +207,6 @@ export function BusinessOnboardingForm() {
 
   const getStepInfo = () => {
     switch (step) {
-      case 0:
-        return {
-          icon: Sparkles,
-          title: "Welcome to UrbanLens!",
-          description: "Let's set up your business profile in just a few simple steps. This will help customers discover and connect with your business.",
-        };
       case 1:
         return {
           icon: Building2,
@@ -211,12 +237,6 @@ export function BusinessOnboardingForm() {
           title: "Verify your business",
           description: "Upload your business licenses and permits to build trust with customers.",
         };
-      case 6:
-        return {
-          icon: Sparkles,
-          title: "Review & Confirm",
-          description: "Take a moment to review all your information before submitting.",
-        };
       default:
         return { icon: Store, title: "", description: "" };
     }
@@ -238,92 +258,77 @@ export function BusinessOnboardingForm() {
   };
 
   return (
-    <Card className="w-full max-w-2xl shadow-lg">
-      <CardHeader>
-        <div className="flex items-center gap-4 mb-4">
-          <div className={`flex h-14 w-14 items-center justify-center rounded-full ${getStepColor()} shadow-md`}>
-            <StepIcon className="h-7 w-7 text-white" />
+    <>
+      {/* Left Column - Image Section */}
+      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
+        <img 
+          src="https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?q=80&w=2187&auto=format&fit=crop"
+          alt="Urban business scene"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 via-purple-600/80 to-pink-600/90 mix-blend-multiply" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        
+        <div className="relative z-10 h-full flex flex-col justify-between p-12 text-white">
+          <div>
+            <div className="inline-block px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 mb-6">
+              <span className="text-sm font-medium">✨ Setup takes ~5 minutes</span>
+            </div>
+            <h1 className="text-5xl font-bold mb-4 leading-tight">Welcome to<br />UrbanLens</h1>
+            <p className="text-xl text-white/90">Join thousands of businesses connecting with customers</p>
           </div>
-          <div className="flex-1">
-            <CardTitle className="text-2xl">{stepInfo.title}</CardTitle>
-            <CardDescription className="mt-1.5 text-base">
-              {stepInfo.description}
-            </CardDescription>
+
+          <div className="text-sm text-white/70">
+            © 2025 UrbanLens. All rights reserved.
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        {/* Step Progress */}
-        {step > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Step {step} of {totalSteps}</span>
-              <span className="text-sm font-semibold text-primary">{progress}%</span>
-            </div>
-            <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-2.5 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-500 ease-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        )}
+      </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {step === 0 && (
-              <div className="space-y-6 py-6">
-                <div className="grid gap-3">
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200 dark:border-blue-900/50">
-                    <div className="rounded-full p-2 bg-blue-500/10 dark:bg-blue-500/20">
-                      <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold mb-1 text-blue-900 dark:text-blue-100">Basic Information</h4>
-                      <p className="text-sm text-blue-700 dark:text-blue-200">Share your business name, category, and details</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border border-emerald-200 dark:border-emerald-900/50">
-                    <div className="rounded-full p-2 bg-emerald-500/10 dark:bg-emerald-500/20">
-                      <Contact className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold mb-1 text-emerald-900 dark:text-emerald-100">Contact Details</h4>
-                      <p className="text-sm text-emerald-700 dark:text-emerald-200">Provide ways for customers to reach you</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-br from-violet-50 to-violet-100/50 dark:from-violet-950/30 dark:to-violet-900/20 border border-violet-200 dark:border-violet-900/50">
-                    <div className="rounded-full p-2 bg-violet-500/10 dark:bg-violet-500/20">
-                      <MapPin className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold mb-1 text-violet-900 dark:text-violet-100">Location</h4>
-                      <p className="text-sm text-violet-700 dark:text-violet-200">Help customers find where you are</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20 border border-amber-200 dark:border-amber-900/50">
-                    <div className="rounded-full p-2 bg-amber-500/10 dark:bg-amber-500/20">
-                      <FileCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold mb-1 text-amber-900 dark:text-amber-100">Business Verification</h4>
-                      <p className="text-sm text-amber-700 dark:text-amber-200">Upload licenses to verify your business</p>
-                    </div>
-                  </div>
+      {/* Right Column - Form Section */}
+      <div className="w-full lg:w-1/2 flex flex-col relative">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={onLogout} 
+          className="absolute top-6 right-6 z-10 gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
+
+        <div className="flex-1 flex flex-col justify-center overflow-y-auto">
+          <div className="max-w-xl mx-auto px-6 py-10 lg:px-10 lg:py-12 w-full">
+            <div className="mb-10">
+              <div className="flex items-start gap-4 mb-8">
+                <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${getStepColor()} shadow-lg shrink-0`}>
+                  <StepIcon className="h-6 w-6 text-white" />
                 </div>
-                <div className="p-4 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border border-indigo-200 dark:border-indigo-900">
-                  <div className="flex gap-3">
-                    <div className="rounded-full p-1.5 bg-indigo-500/10 dark:bg-indigo-500/20 h-fit">
-                      <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <p className="text-sm text-indigo-900 dark:text-indigo-100">
-                      <strong className="font-semibold">Quick tip:</strong> This process takes about 5-10 minutes. Have your business licenses and photos ready to make it even faster!
-                    </p>
-                  </div>
+                <div className="flex-1 pt-1">
+                  <h3 className="text-2xl font-bold mb-2">{stepInfo.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {stepInfo.description}
+                  </p>
                 </div>
               </div>
-            )}
+              {/* Step Progress */}
+              {step > 0 && (
+                <div className="mb-10">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Step {step} of {totalSteps}</span>
+                    <span className="text-sm font-bold text-primary">{progress}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-muted/50 overflow-hidden">
+                    <div
+                      className="h-2 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-500 ease-out shadow-sm"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
 
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {step === 1 && (
               <div className="space-y-5">
                 <FormField
@@ -333,7 +338,7 @@ export function BusinessOnboardingForm() {
                     <FormItem>
                       <FormLabel className="text-base flex items-center gap-2">
                         <Store className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        What's your business name?
+                        What&apos;s your business name?
                       </FormLabel>
                       <FormControl>
                         <Input 
@@ -427,12 +432,13 @@ export function BusinessOnboardingForm() {
                     const isValidUrl = field.value && !fieldState.error;
                     return (
                       <FormItem>
-                        <FormLabel className="text-base">Do you have a website?</FormLabel>
+                        <FormLabel className="text-base">What&apos;s your business website?</FormLabel>
                         <FormControl>
                           <div className="relative">
+                            <Globe className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input 
                               placeholder="https://www.yourbusiness.com" 
-                              className="text-base pr-12"
+                              className="text-base pl-9 pr-12"
                               {...field} 
                             />
                             {isValidUrl && (
@@ -454,7 +460,6 @@ export function BusinessOnboardingForm() {
                             )}
                           </div>
                         </FormControl>
-                        <FormDescription>Optional - but it helps customers learn more about you online</FormDescription>
                         <FormMessage />
                       </FormItem>
                     );
@@ -465,21 +470,80 @@ export function BusinessOnboardingForm() {
 
             {step === 3 && (
               <div className="space-y-5">
+                {user && (user.email || user.phoneNumber) && (
+                  <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 flex-1">
+                        <UserCheck className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                            Use your account information?
+                          </p>
+                          <p className="text-xs text-blue-700 dark:text-blue-300">
+                            We can auto-fill your business contact details from your account
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (user.email) {
+                            form.setValue('email', user.email, { shouldValidate: true, shouldDirty: true });
+                          }
+                          if (user.phoneNumber) {
+                            console.log('Original phone number:', user.phoneNumber);
+                            
+                            // Check if phone number starts with +84
+                            if (user.phoneNumber.startsWith('+84')) {
+                              const numberWithoutCode = user.phoneNumber.substring(3); // Remove +84
+                              console.log('Extracted number:', numberWithoutCode);
+                              setCountryCode('+84');
+                              form.setValue('phone', numberWithoutCode, { shouldValidate: true, shouldDirty: true });
+                            } else if (user.phoneNumber.startsWith('+')) {
+                              // For other country codes
+                              const match = user.phoneNumber.match(/^(\+\d{1,4})(\d+)$/);
+                              if (match) {
+                                const [, code, number] = match;
+                                console.log('Extracted code:', code, 'number:', number);
+                                setCountryCode(code);
+                                form.setValue('phone', number, { shouldValidate: true, shouldDirty: true });
+                              }
+                            } else {
+                              // No country code, assume +84
+                              console.log('No country code, using phone as is:', user.phoneNumber);
+                              setCountryCode('+84');
+                              form.setValue('phone', user.phoneNumber, { shouldValidate: true, shouldDirty: true });
+                            }
+                          }
+                        }}
+                        className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                      >
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        Auto-fill
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
                 <FormField
                   name="email"
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base">What's your business email?</FormLabel>
+                      <FormLabel className="text-base">What&apos;s your business email?</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="email" 
-                          placeholder="contact@yourbusiness.com" 
-                          className="text-base"
-                          {...field} 
-                        />
+                        <div className="relative">
+                          <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            type="email" 
+                            placeholder="contact@yourbusiness.com" 
+                            className="text-base pl-9"
+                            {...field} 
+                          />
+                        </div>
                       </FormControl>
-                      <FormDescription>Customers will use this to reach out to you</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -489,16 +553,37 @@ export function BusinessOnboardingForm() {
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base">What's your contact phone number?</FormLabel>
+                      <FormLabel className="text-base">What&apos;s your contact phone number?</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="tel" 
-                          placeholder="+84 901 234 567" 
-                          className="text-base"
-                          {...field} 
-                        />
+                        <div className="flex gap-2">
+                          <Select value={countryCode} onValueChange={setCountryCode}>
+                            <SelectTrigger className="w-[110px] h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="+84">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-base">🇻🇳</span>
+                                  <span>+84</span>
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <div className="relative flex-1">
+                            <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                              type="tel" 
+                              placeholder="912345678" 
+                              className="text-base pl-9"
+                              {...field}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                field.onChange(value);
+                              }}
+                            />
+                          </div>
+                        </div>
                       </FormControl>
-                      <FormDescription>Include your country code (e.g., +84 for Vietnam)</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -532,7 +617,7 @@ export function BusinessOnboardingForm() {
                       <FileCheck className="h-5 w-5 text-amber-600 dark:text-amber-500 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Need at least one license</p>
-                        <p className="text-xs text-amber-700 dark:text-amber-200 mt-0.5">Click "Add License" to get started</p>
+                        <p className="text-xs text-amber-700 dark:text-amber-200 mt-0.5">Click &quot;Add License&quot; to get started</p>
                       </div>
                     </div>
                     <Button
@@ -643,7 +728,7 @@ export function BusinessOnboardingForm() {
                 ) : (
                   <div className="text-center py-8 border-2 border-dashed rounded-lg">
                     <p className="text-sm text-muted-foreground mb-4">
-                      No licenses added yet. Click "Add License" to get started.
+                      No licenses added yet. Click &quot;Add License&quot; to get started.
                     </p>
                     <Button
                       type="button"
@@ -803,40 +888,112 @@ export function BusinessOnboardingForm() {
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-6">
-              {step > 0 && (
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={handleBack} 
-                  disabled={isPending}
-                  className="min-w-[100px]"
-                >
-                  Back
-                </Button>
-              )}
-              {step === 0 && <div />}
-              {step < totalSteps ? (
-                <Button 
-                  type="button" 
-                  onClick={handleNext} 
-                  disabled={isPending}
-                  className="min-w-[140px] bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                >
-                  {step === 0 ? "Let's Get Started" : "Continue"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                {/* Navigation Buttons */}
+                <div className="flex items-center justify-between gap-4 pt-8">
+                  {step > 1 && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={handleBack} 
+                      disabled={isPending}
+                      className="px-6"
+                    >
+                      Back
+                    </Button>
+                  )}
+                  {step === 1 && <div />}
+                  {step < totalSteps ? (
+                    <Button 
+                      type="button" 
+                      onClick={handleNext} 
+                      disabled={isPending}
+                      className="px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all"
+                    >
+                      Continue
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button 
+                      type="button" 
+                      disabled={isPending} 
+                      className="px-8 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-md hover:shadow-lg transition-all"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowConfirmDialog(true);
+                      }}
+                    >
+                      {isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Setting Up...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Complete Setup
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </Form>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Ready to Launch Your Business Profile?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2">
+                <p>
+                  You&apos;re about to submit your business profile for review. Once submitted:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Your business will be reviewed by our team</li>
+                  <li>You&apos;ll receive a notification once approved</li>
+                  <li>You can edit your profile anytime from your dashboard</li>
+                </ul>
+                <p className="font-medium text-foreground pt-2">
+                  Are you ready to continue?
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>
+              Go Back
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                form.handleSubmit(onSubmit)();
+              }}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
               ) : (
-                <Button type="submit" disabled={isPending} className="min-w-[180px] bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
-                  {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isPending ? "Setting Up..." : "Complete Setup"}
-                </Button>
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Yes, Submit Now
+                </>
               )}
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

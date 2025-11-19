@@ -40,13 +40,9 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Button className="fixed top-4 right-16 z-50" onClick={logout}>
-        <IconLogout />
-        Log out
-      </Button>
-      {user.role === "BUSINESS_OWNER" && <BusinessOnboardingForm />}
-      {user.role === "EVENT_CREATOR" && <CreatorOnboardingForm />}
+    <div className="min-h-screen flex">
+      {user.role === "BUSINESS_OWNER" && <BusinessOnboardingForm onLogout={logout} />}
+      {user.role === "EVENT_CREATOR" && <CreatorOnboardingForm onLogout={logout} />}
     </div>
   );
 }
