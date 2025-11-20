@@ -219,100 +219,102 @@ export default function AdminAccountDetailPage({
       </Card>
 
       {/* Main Content Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <Tabs 
-          value={currentTab} 
-          onValueChange={handleTabChange}
-          orientation="vertical" 
-          className="lg:col-span-12 flex flex-col lg:flex-row gap-6"
-        >
-          {/* Vertical Tabs List Sidebar */}
-          <div className={cn(
-            "flex flex-col transition-all duration-300 ease-in-out self-start sticky top-6 gap-2 border-r border-border/50 bg-muted/10 rounded-lg py-4",
-            isTabSidebarCollapsed ? "w-16 items-center px-2" : "w-full lg:w-52 pr-4"
-          )}>
-            <div className="flex justify-end mb-2 hidden lg:flex px-2">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setIsTabSidebarCollapsed(!isTabSidebarCollapsed)}
-                className="h-8 w-8 text-muted-foreground hover:bg-muted"
-              >
-                {isTabSidebarCollapsed ? <IconLayoutSidebarLeftExpand className="h-4 w-4" /> : <IconLayoutSidebarLeftCollapse className="h-4 w-4" />}
-              </Button>
-            </div>
+      <div className="space-y-6">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card className="bg-muted/20 border-none shadow-sm">
+            <CardContent className="px-3 py-2.5 flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Total Spent</span>
+              <span className="text-base font-bold">₫0</span>
+            </CardContent>
+          </Card>
+          <Card className="bg-muted/20 border-none shadow-sm">
+            <CardContent className="px-3 py-2.5 flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Active Days</span>
+              <span className="text-base font-bold">12</span>
+            </CardContent>
+          </Card>
+          <Card className="bg-muted/20 border-none shadow-sm">
+            <CardContent className="px-3 py-2.5 flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Reviews</span>
+              <span className="text-base font-bold">0</span>
+            </CardContent>
+          </Card>
+          <Card className="bg-muted/20 border-none shadow-sm">
+            <CardContent className="px-3 py-2.5 flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Support</span>
+              <span className="text-base font-bold">0</span>
+            </CardContent>
+          </Card>
+        </div>
 
-            <TabsList className={cn(
-              "flex flex-row lg:flex-col h-auto bg-transparent p-0 w-full overflow-x-auto lg:overflow-visible",
-              isTabSidebarCollapsed ? "items-center gap-3" : "gap-1"
+        {/* Tabs Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <Tabs 
+            value={currentTab} 
+            onValueChange={handleTabChange}
+            orientation="vertical" 
+            className="lg:col-span-12 flex flex-col lg:flex-row gap-6"
+          >
+            {/* Vertical Tabs List Sidebar */}
+            <div className={cn(
+              "flex flex-col transition-all duration-300 ease-in-out self-start sticky top-6 gap-2 border-r border-border/50 bg-muted/10 rounded-lg py-4",
+              isTabSidebarCollapsed ? "w-16 items-center px-2" : "w-full lg:w-52 pr-4"
             )}>
-              <TooltipProvider delayDuration={0}>
-                {[
-                  { value: "profile", icon: IconUser, label: "Profile Details" },
-                  { value: "security", icon: IconLock, label: "Security" },
-                  { value: "transactions", icon: IconReceipt, label: "Transactions" },
-                  { value: "content", icon: IconMessageCircle, label: "Content" },
-                  { value: "activity", icon: IconActivity, label: "Activity Log" },
-                  { value: "notifications", icon: IconBell, label: "Notifications" },
-                  { value: "settings", icon: IconSettings, label: "Settings" },
-                ].map((tab) => (
-                  <Tooltip key={tab.value}>
-                    <TooltipTrigger asChild>
-                      <TabsTrigger
-                        value={tab.value}
-                        className={cn(
-                          "h-auto data-[state=active]:bg-primary/10 data-[state=active]:text-primary border border-transparent data-[state=active]:border-primary/20 hover:bg-muted/50 transition-all rounded-md",
-                          isTabSidebarCollapsed 
-                            ? "w-12 h-12 p-0 justify-center" 
-                            : "w-full justify-start px-4 py-3"
-                        )}
-                      >
-                        <tab.icon className={cn(isTabSidebarCollapsed ? "h-7 w-7" : "h-5 w-5", !isTabSidebarCollapsed && "mr-3")} />
-                        {!isTabSidebarCollapsed && <span className="font-medium">{tab.label}</span>}
-                      </TabsTrigger>
-                    </TooltipTrigger>
-                    {isTabSidebarCollapsed && (
-                      <TooltipContent side="right">
-                        {tab.label}
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                ))}
-              </TooltipProvider>
-            </TabsList>
-          </div>
+              <div className="flex justify-end mb-2 hidden lg:flex px-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setIsTabSidebarCollapsed(!isTabSidebarCollapsed)}
+                  className="h-8 w-8 text-muted-foreground hover:bg-muted"
+                >
+                  {isTabSidebarCollapsed ? <IconLayoutSidebarLeftExpand className="h-4 w-4" /> : <IconLayoutSidebarLeftCollapse className="h-4 w-4" />}
+                </Button>
+              </div>
 
-          {/* Tabs Content Area */}
-          <div className="flex-1 min-w-0">
-            {/* Small Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <Card className="bg-muted/20 border-none shadow-sm">
-                <CardContent className="p-4 flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground font-medium uppercase">Total Spent</span>
-                  <span className="text-lg font-bold">₫0</span>
-                </CardContent>
-              </Card>
-              <Card className="bg-muted/20 border-none shadow-sm">
-                <CardContent className="p-4 flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground font-medium uppercase">Active Days</span>
-                  <span className="text-lg font-bold">12</span>
-                </CardContent>
-              </Card>
-              <Card className="bg-muted/20 border-none shadow-sm">
-                <CardContent className="p-4 flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground font-medium uppercase">Reviews</span>
-                  <span className="text-lg font-bold">0</span>
-                </CardContent>
-              </Card>
-              <Card className="bg-muted/20 border-none shadow-sm">
-                <CardContent className="p-4 flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground font-medium uppercase">Support</span>
-                  <span className="text-lg font-bold">0</span>
-                </CardContent>
-              </Card>
+              <TabsList className={cn(
+                "flex flex-row lg:flex-col h-auto bg-transparent p-0 w-full overflow-x-auto lg:overflow-visible",
+                isTabSidebarCollapsed ? "items-center gap-3" : "gap-1"
+              )}>
+                <TooltipProvider delayDuration={0}>
+                  {[
+                    { value: "profile", icon: IconUser, label: "Profile Details" },
+                    { value: "security", icon: IconLock, label: "Security" },
+                    { value: "transactions", icon: IconReceipt, label: "Transactions" },
+                    { value: "content", icon: IconMessageCircle, label: "Content" },
+                    { value: "activity", icon: IconActivity, label: "Activity Log" },
+                    { value: "notifications", icon: IconBell, label: "Notifications" },
+                    { value: "settings", icon: IconSettings, label: "Settings" },
+                  ].map((tab) => (
+                    <Tooltip key={tab.value}>
+                      <TooltipTrigger asChild>
+                        <TabsTrigger
+                          value={tab.value}
+                          className={cn(
+                            "h-auto data-[state=active]:bg-primary/10 data-[state=active]:text-primary border border-transparent data-[state=active]:border-primary/20 hover:bg-muted/50 transition-all rounded-md",
+                            isTabSidebarCollapsed 
+                              ? "w-12 h-12 p-0 justify-center" 
+                              : "w-full justify-start px-4 py-3"
+                          )}
+                        >
+                          <tab.icon className={cn(isTabSidebarCollapsed ? "h-7 w-7" : "h-5 w-5", !isTabSidebarCollapsed && "mr-3")} />
+                          {!isTabSidebarCollapsed && <span className="font-medium">{tab.label}</span>}
+                        </TabsTrigger>
+                      </TooltipTrigger>
+                      {isTabSidebarCollapsed && (
+                        <TooltipContent side="right">
+                          {tab.label}
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  ))}
+                </TooltipProvider>
+              </TabsList>
             </div>
 
-            <TabsContent value="profile" className="mt-0 space-y-6">
+            {/* Tabs Content Area */}
+            <div className="flex-1 min-w-0">
+              <TabsContent value="profile" className="mt-0 space-y-6">
               
               {/* Business Profile Section */}
               {account.businessProfile && (
@@ -595,8 +597,9 @@ export default function AdminAccountDetailPage({
                 </CardContent>
               </Card>
             </TabsContent>
-          </div>
-        </Tabs>
+            </div>
+          </Tabs>
+        </div>
       </div>
     </div>
   );
