@@ -409,21 +409,26 @@ export default function LocationForm({
   const progress = ((currentStep + 1) / steps.length) * 100;
 
   return (
-    <div className="container mx-auto py-4 max-w-4xl">
-      <Card className="w-full mx-auto shadow-lg border-2">
-        <CardHeader className="pb-3 pt-4 border-b bg-muted/20">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg font-semibold">
-                {isEditMode ? "Edit Location Request" : "Submit a New Location"}
-              </CardTitle>
-              <CardDescription className="text-xs mt-0.5">
-                {currentStepData.description}
-              </CardDescription>
-            </div>
-            <div className="text-right shrink-0 ml-4">
-              <div className="text-xs text-muted-foreground">Step {currentStep + 1} of {steps.length}</div>
-              <div className="text-xl font-bold">{Math.round(progress)}%</div>
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold">
+          {isEditMode ? "Edit Location Request" : "Submit a New Location"}
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {currentStepData.description}
+        </p>
+      </div>
+
+      {/* Step Progress Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between mb-4">
+            <CardTitle className="text-lg">
+              Step {currentStep + 1} of {steps.length}: {currentStepData.title}
+            </CardTitle>
+            <div className="text-right">
+              <div className="text-sm text-muted-foreground">{Math.round(progress)}% Complete</div>
             </div>
           </div>
           
@@ -476,20 +481,20 @@ export default function LocationForm({
             })}
           </div>
           
-          <Progress value={progress} className="h-1.5 mt-2" />
+          <Progress value={progress} className="h-2" />
         </CardHeader>
-        <CardContent className="pt-4 pb-4">
+        <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {/* === STEP 1: Basic Information === */}
-              <div className={cn("space-y-3", currentStep !== 0 && "hidden")}>
-                <Alert className="py-2 px-3">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  <AlertDescription className="text-xs">
+              <div className={cn("space-y-4", currentStep !== 0 && "hidden")}>
+                <Alert>
+                  <CheckCircle2 className="h-4 w-4" />
+                  <AlertDescription>
                     Provide basic details about your location. This information will be visible to event creators.
                   </AlertDescription>
                 </Alert>
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-4">
                   <FormField
                     name="name"
                     control={form.control}
@@ -641,14 +646,14 @@ export default function LocationForm({
               </div>
 
               {/* === STEP 2: Address & Map === */}
-              <div className={cn("space-y-3", currentStep !== 1 && "hidden")}>
-                <Alert className="py-2 px-3">
-                  <MapPin className="h-3.5 w-3.5" />
-                  <AlertDescription className="text-xs">
+              <div className={cn("space-y-4", currentStep !== 1 && "hidden")}>
+                <Alert>
+                  <MapPin className="h-4 w-4" />
+                  <AlertDescription>
                     Set the exact location and define the coverage area where events can be booked.
                   </AlertDescription>
                 </Alert>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <LocationAddressPicker />
                   <FormField
                     control={form.control}
@@ -679,10 +684,10 @@ export default function LocationForm({
               </div>
 
               {/* === STEP 3: Upload Files === */}
-              <div className={cn("space-y-3", currentStep !== 2 && "hidden")}>
-                <Alert className="py-2 px-3">
-                  <Image className="h-3.5 w-3.5" />
-                  <AlertDescription className="text-xs">
+              <div className={cn("space-y-4", currentStep !== 2 && "hidden")}>
+                <Alert>
+                  <Image className="h-4 w-4" />
+                  <AlertDescription>
                     Upload high-quality photos of your location and required validation documents.
                   </AlertDescription>
                 </Alert>
@@ -865,10 +870,10 @@ export default function LocationForm({
               </div>
 
               {/* === STEP 4: Review & Submit === */}
-              <div className={cn("space-y-1", currentStep !== 3 && "hidden")}>
-                <Alert className="py-1 px-2">
-                  <FileCheck className="h-3.5 w-3.5" />
-                  <AlertDescription className="text-xs">
+              <div className={cn("space-y-4", currentStep !== 3 && "hidden")}>
+                <Alert>
+                  <FileCheck className="h-4 w-4" />
+                  <AlertDescription>
                     Please review all information carefully before submitting. Your request will be reviewed by our team.
                   </AlertDescription>
                 </Alert>
@@ -996,40 +1001,37 @@ export default function LocationForm({
                 </Card>
               </div>
 
-              <div className="flex justify-between pt-3 border-t">
+              <div className="flex justify-between pt-6 border-t">
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
                   onClick={handlePrevStep}
                   disabled={currentStep === 0 || isPending}
-                  className={cn(currentStep === 0 && "invisible", "h-8")}
+                  className={cn(currentStep === 0 && "invisible")}
                 >
-                  <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-                  Back
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Previous
                 </Button>
                 {currentStep < steps.length - 1 && (
                   <Button 
                     type="button"
-                    size="sm"
                     onClick={handleNextStep}
                     disabled={isPending}
-                    className="h-8"
                   >
                     Next Step
-                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 )}
                 {currentStep === steps.length - 1 && (
-                  <Button type="submit" size="sm" disabled={isPending} className="min-w-[140px] h-8">
+                  <Button type="submit" disabled={isPending}>
                     {isPending ? (
                       <>
-                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Submitting...
                       </>
                     ) : (
                       <>
-                        <FileCheck className="mr-1.5 h-3.5 w-3.5" />
+                        <FileCheck className="mr-2 h-4 w-4" />
                         Submit for Review
                       </>
                     )}

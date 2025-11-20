@@ -184,14 +184,6 @@ export default function CreatePublicLocationPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Create Public Location</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Add a new public location to the platform
-        </p>
-      </div>
-
       {/* Step Indicator */}
       <Card>
         <CardHeader>

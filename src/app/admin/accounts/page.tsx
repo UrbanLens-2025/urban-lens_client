@@ -150,7 +150,6 @@ export default function AccountsPage() {
     if (error) {
         return (
             <div className="space-y-6">
-                <h1 className="text-3xl font-bold">Accounts Management</h1>
                 <Card>
                     <CardContent className="pt-6">
                         <p className="text-red-600">Error loading accounts. Please try again.</p>
@@ -162,10 +161,6 @@ export default function AccountsPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold">Accounts Management</h1>
-            </div>
-
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card>

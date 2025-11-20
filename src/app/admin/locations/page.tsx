@@ -97,7 +97,6 @@ export default function LocationDashboardPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Location Management</h1>
         <Card>
           <CardContent className="pt-6">
             <p className="text-red-600">Error loading locations. Please try again.</p>
@@ -109,11 +108,6 @@ export default function LocationDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Location Management</h1>
-      </div>
-
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>

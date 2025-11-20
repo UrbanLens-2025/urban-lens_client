@@ -96,7 +96,7 @@ const creatorNav = [
 
 const navSecondary = [
   { title: 'Settings', url: '#', icon: IconSettings },
-  { title: 'Get Help', url: '#', icon: IconHelp },
+  { title: 'Toggle theme', url: '#theme-toggle', icon: IconHelp },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
