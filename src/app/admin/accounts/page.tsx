@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
+import Link from 'next/link';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
     Card,
     CardContent,
@@ -26,140 +28,207 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { IconSearch, IconFilter, IconEye, IconEdit, IconTrash } from '@tabler/icons-react';
+import { IconSearch, IconFilter, IconUsers, IconUserCheck, IconUserX, IconShieldCheck, IconBriefcase, IconStar, IconUser } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
-
-// Mock Data
-const MOCK_ACCOUNTS = [
-    {
-        id: '1',
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        role: 'ADMIN',
-        status: 'ACTIVE',
-        joinedDate: '2023-01-15T10:00:00Z',
-    },
-    {
-        id: '2',
-        name: 'Jane Smith',
-        email: 'jane.smith@business.com',
-        role: 'BUSINESS_OWNER',
-        status: 'ACTIVE',
-        joinedDate: '2023-02-20T14:30:00Z',
-    },
-    {
-        id: '3',
-        name: 'Alice Johnson',
-        email: 'alice.j@creator.com',
-        role: 'EVENT_CREATOR',
-        status: 'PENDING',
-        joinedDate: '2023-03-10T09:15:00Z',
-    },
-    {
-        id: '4',
-        name: 'Bob Williams',
-        email: 'bob.w@example.com',
-        role: 'USER',
-        status: 'INACTIVE',
-        joinedDate: '2023-04-05T16:45:00Z',
-    },
-    {
-        id: '5',
-        name: 'Charlie Brown',
-        email: 'charlie.b@business.com',
-        role: 'BUSINESS_OWNER',
-        status: 'ACTIVE',
-        joinedDate: '2023-05-12T11:20:00Z',
-    },
-    {
-        id: '6',
-        name: 'Diana Prince',
-        email: 'diana.p@example.com',
-        role: 'ADMIN',
-        status: 'ACTIVE',
-        joinedDate: '2023-06-18T08:00:00Z',
-    },
-    {
-        id: '7',
-        name: 'Evan Wright',
-        email: 'evan.w@creator.com',
-        role: 'EVENT_CREATOR',
-        status: 'BANNED',
-        joinedDate: '2023-07-22T13:10:00Z',
-    },
-    {
-        id: '8',
-        name: 'Fiona Gallagher',
-        email: 'fiona.g@example.com',
-        role: 'USER',
-        status: 'ACTIVE',
-        joinedDate: '2023-08-30T15:50:00Z',
-    },
-];
+import { useAllAccounts } from '@/hooks/admin/useAllAccounts';
+import { Loader2 } from 'lucide-react';
 
 export default function AccountsPage() {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-    const [roleFilter, setRoleFilter] = useState('ALL');
-    const [page, setPage] = useState(1);
-    const itemsPerPage = 5;
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
-    // Filter Logic
-    const filteredAccounts = MOCK_ACCOUNTS.filter((account) => {
-        const matchesSearch =
-            account.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-            account.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-        const matchesRole = roleFilter === 'ALL' || account.role === roleFilter;
-        return matchesSearch && matchesRole;
+    // Initialize state from URL params or defaults
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+    const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+    const [roleFilter, setRoleFilter] = useState(searchParams.get('role') || 'ALL');
+    const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
+    const itemsPerPage = 10;
+
+    // Update URL when filters change
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        const trimmedSearch = debouncedSearchTerm.trim();
+        
+        if (trimmedSearch) {
+            params.set('search', trimmedSearch);
+        } else {
+            params.delete('search');
+        }
+        
+        if (roleFilter !== 'ALL') {
+            params.set('role', roleFilter);
+        } else {
+            params.delete('role');
+        }
+
+        if (page > 1) {
+            params.set('page', page.toString());
+        } else {
+            params.delete('page');
+        }
+
+        router.push(`${pathname}?${params.toString()}`);
+    }, [debouncedSearchTerm, roleFilter, page, pathname, router, searchParams]);
+
+    // Fetch accounts from API
+    const { data, isLoading, error } = useAllAccounts({
+        page,
+        limit: itemsPerPage,
+        search: debouncedSearchTerm.trim() || undefined,
+        searchBy: debouncedSearchTerm.trim() ? ['email', 'firstName', 'lastName', 'phoneNumber'] : undefined,
+        filterRole: roleFilter !== 'ALL' ? `$eq:${roleFilter}` : undefined,
+        sortBy: ['createdAt:DESC'],
     });
 
-    // Pagination Logic
-    const totalPages = Math.ceil(filteredAccounts.length / itemsPerPage);
-    const paginatedAccounts = filteredAccounts.slice(
-        (page - 1) * itemsPerPage,
-        page * itemsPerPage
-    );
+    const accounts = data?.data?.data || [];
+    const meta = data?.data?.meta;
+
+    // Calculate statistics
+    const stats = useMemo(() => {
+        // TODO: Implement real statistics from API
+        // Currently using mock data as the list API only returns paginated results
+        return {
+            total: meta?.totalItems || 0,
+            active: 120,
+            locked: 5,
+            onboarded: 98,
+            byRole: {
+                'ADMIN': 2,
+                'BUSINESS_OWNER': 45,
+                'EVENT_CREATOR': 30,
+                'USER': 48
+            }
+        };
+    }, [meta]);
 
     const getRoleBadgeColor = (role: string) => {
         switch (role) {
             case 'ADMIN':
-                return 'default'; // Black/White
+                return 'default';
             case 'BUSINESS_OWNER':
-                return 'secondary'; // Gray
+                return 'secondary';
             case 'EVENT_CREATOR':
-                return 'outline'; // Outline
+                return 'outline';
             default:
                 return 'secondary';
         }
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'ACTIVE':
-                return 'text-green-600 bg-green-100';
-            case 'PENDING':
-                return 'text-yellow-600 bg-yellow-100';
-            case 'INACTIVE':
-                return 'text-gray-600 bg-gray-100';
-            case 'BANNED':
-                return 'text-red-600 bg-red-100';
+    const getRoleBadgeStyles = (role: string) => {
+        switch (role) {
+            case 'ADMIN':
+                return 'bg-violet-100 text-violet-700 hover:bg-violet-100 border-violet-200';
+            case 'BUSINESS_OWNER':
+                return 'bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200';
+            case 'EVENT_CREATOR':
+                return 'bg-pink-100 text-pink-700 hover:bg-pink-100 border-pink-200';
             default:
-                return 'text-gray-600 bg-gray-100';
+                return 'bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200';
         }
     };
+
+    const getRoleIcon = (role: string) => {
+        switch (role) {
+            case 'ADMIN':
+                return <IconShieldCheck className="h-3 w-3 mr-1" />;
+            case 'BUSINESS_OWNER':
+                return <IconBriefcase className="h-3 w-3 mr-1" />;
+            case 'EVENT_CREATOR':
+                return <IconStar className="h-3 w-3 mr-1" />;
+            default:
+                return <IconUser className="h-3 w-3 mr-1" />;
+        }
+    };
+
+    const getStatusColor = (isLocked: boolean) => {
+        return isLocked
+            ? 'text-red-600 bg-red-100'
+            : 'text-green-600 bg-green-100';
+    };
+
+    if (error) {
+        return (
+            <div className="space-y-6">
+                <h1 className="text-3xl font-bold">Accounts Management</h1>
+                <Card>
+                    <CardContent className="pt-6">
+                        <p className="text-red-600">Error loading accounts. Please try again.</p>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold">Accounts Management</h1>
-                {/* Add User Button could go here */}
+            </div>
+
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
+                        <IconUsers className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.total}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {stats.onboarded} onboarded
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Active</CardTitle>
+                        <IconUserCheck className="h-4 w-4 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+                        <p className="text-xs text-muted-foreground">
+                            Not locked accounts
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Locked</CardTitle>
+                        <IconUserX className="h-4 w-4 text-red-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-red-600">{stats.locked}</div>
+                        <p className="text-xs text-muted-foreground">
+                            Restricted accounts
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">By Role</CardTitle>
+                        <IconShieldCheck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-1">
+                            {Object.entries(stats.byRole).map(([role, count]: [string, any]) => (
+                                <div key={role} className="flex justify-between text-xs">
+                                    <span className="text-muted-foreground">{role.replace('_', ' ')}</span>
+                                    <span className="font-medium">{count}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center justify-between">
-                        <span>All Accounts ({filteredAccounts.length})</span>
+                        <span>All Accounts ({meta?.totalItems || 0})</span>
                         <div className="flex items-center gap-2">
                             <div className="relative">
                                 <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -196,97 +265,105 @@ export default function AccountsPage() {
                             </Select>
                         </div>
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="hidden">
                         Manage users, business owners, and administrators.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Role</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Joined Date</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {paginatedAccounts.map((account) => (
-                                <TableRow key={account.id}>
-                                    <TableCell className="font-medium">{account.name}</TableCell>
-                                    <TableCell>{account.email}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={getRoleBadgeColor(account.role) as any}>
-                                            {account.role.replace('_', ' ')}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <span
-                                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                                account.status
-                                            )}`}
-                                        >
-                                            {account.status}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>
-                                        {new Date(account.joinedDate).toLocaleDateString()}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="icon" title="View Details">
-                                                <IconEye className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" title="Edit">
-                                                <IconEdit className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                title="Delete"
-                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                            >
-                                                <IconTrash className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                            {paginatedAccounts.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center h-24">
-                                        No accounts found matching your criteria.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-end space-x-2 py-4">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage(page - 1)}
-                                disabled={page <= 1}
-                            >
-                                Previous
-                            </Button>
-                            <div className="text-sm text-muted-foreground">
-                                Page {page} of {totalPages}
-                            </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage(page + 1)}
-                                disabled={page >= totalPages}
-                            >
-                                Next
-                            </Button>
+                    {isLoading ? (
+                        <div className="flex items-center justify-center h-64">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
+                    ) : (
+                        <>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[50px]">#</TableHead>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Role</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Onboarded</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {accounts.map((account: any, index: number) => (
+                                        <TableRow key={account.id}>
+                                            <TableCell className="font-medium text-muted-foreground">
+                                                {(page - 1) * itemsPerPage + index + 1}
+                                            </TableCell>
+                                            <TableCell className="font-medium">
+                                                <Link
+                                                    href={`/admin/accounts/${account.id}`}
+                                                    className="hover:underline text-blue-600 hover:text-blue-800"
+                                                >
+                                                    {account.firstName} {account.lastName}
+                                                </Link>
+                                            </TableCell>
+                                            <TableCell>{account.email}</TableCell>
+                                            <TableCell>
+                                                <Badge 
+                                                    variant="outline" 
+                                                    className={`flex items-center w-fit ${getRoleBadgeStyles(account.role)}`}
+                                                >
+                                                    {getRoleIcon(account.role)}
+                                                    {account.role.replace('_', ' ')}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <span
+                                                    className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                                                        account.isLocked
+                                                    )}`}
+                                                >
+                                                    {account.isLocked ? 'LOCKED' : 'ACTIVE'}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell>
+                                                {account.hasOnboarded ? (
+                                                    <Badge variant="outline" className="text-green-600">Yes</Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-gray-600">No</Badge>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {accounts.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center h-24">
+                                                No accounts found matching your criteria.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+
+                            {/* Pagination */}
+                            {meta && meta.totalPages > 1 && (
+                                <div className="flex items-center justify-end space-x-2 py-4">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setPage(page - 1)}
+                                        disabled={page <= 1}
+                                    >
+                                        Previous
+                                    </Button>
+                                    <div className="text-sm text-muted-foreground">
+                                        Page {page} of {meta.totalPages}
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setPage(page + 1)}
+                                        disabled={page >= meta.totalPages}
+                                    >
+                                        Next
+                                    </Button>
+                                </div>
+                            )}
+                        </>
                     )}
                 </CardContent>
             </Card>

@@ -15,6 +15,7 @@ import {
   IconWallet,
   IconBrandBooking,
   IconUsers,
+  IconStar,
 } from "@tabler/icons-react";
 
 import {
@@ -27,6 +28,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { NavMain } from './NavMain';
+import { NavMainGrouped } from './NavMainGrouped';
 import { NavSecondary } from './NavSecondary';
 import { NavUser } from './NavUser';
 import { Loader2 } from 'lucide-react';
@@ -34,14 +36,33 @@ import { useUser } from '@/hooks/user/useUser';
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
-const adminNav = [
+const adminOverview = [
   { title: 'Overview', url: '/admin', icon: IconDashboard },
-  { title: 'Locations', url: '/admin/locations', icon: IconMapPin },
-  { title: 'Business', url: '/admin/business', icon: IconBriefcase },
-  { title: 'Events', url: '/admin/events', icon: IconCalendar },
-  { title: 'Wallet', url: '/admin/wallet', icon: IconWallet },
-  { title: 'Tags', url: '/admin/tags', icon: IconTag },
-  { title: 'Accounts', url: '/admin/accounts', icon: IconUsers },
+];
+
+const adminNavGroups = [
+  {
+    groupLabel: 'User Management',
+    items: [
+      { title: 'All Accounts', url: '/admin/accounts', icon: IconUsers },
+      { title: 'Business Profiles', url: '/admin/business', icon: IconBriefcase },
+      { title: 'Creator Profiles', url: '/admin/creators', icon: IconStar },
+    ]
+  },
+  {
+    groupLabel: 'Content Management',
+    items: [
+      { title: 'Locations', url: '/admin/locations', icon: IconMapPin },
+      { title: 'Events', url: '/admin/events', icon: IconCalendar },
+      { title: 'Tags', url: '/admin/tags', icon: IconTag },
+    ]
+  },
+  {
+    groupLabel: 'Financial',
+    items: [
+      { title: 'Wallet', url: '/admin/wallet', icon: IconWallet },
+    ]
+  },
 ];
 
 const businessNav = [
@@ -98,25 +119,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }, [user]);
 
-  const { navMain } = React.useMemo(() => {
-    if (!user) return { navMain: [] };
+  const { navMain, navOverview, navGroups } = React.useMemo(() => {
+    if (!user) return { navMain: [], navOverview: [], navGroups: [] };
 
     switch (user.role) {
       case 'ADMIN':
         return {
-          navMain: adminNav,
+          navMain: [],
+          navOverview: adminOverview,
+          navGroups: adminNavGroups,
         };
       case 'BUSINESS_OWNER':
         return {
           navMain: businessNav,
+          navOverview: [],
+          navGroups: [],
         };
       case 'EVENT_CREATOR':
         return {
           navMain: creatorNav,
+          navOverview: [],
+          navGroups: [],
         };
       default:
         return {
           navMain: [],
+          navOverview: [],
+          navGroups: [],
         };
     }
   }, [user]);
@@ -165,8 +194,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className="gap-2">
-        <NavMain items={navMain} />
+      <SidebarContent className="gap-0">
+        {navOverview.length > 0 && <NavMain items={navOverview} />}
+        {navGroups.length > 0 ? (
+          <NavMainGrouped groups={navGroups} />
+        ) : (
+          <NavMain items={navMain} />
+        )}
         <NavSecondary items={navSecondary} className='mt-auto' />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border/50">
