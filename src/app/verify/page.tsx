@@ -39,6 +39,7 @@ export default function VerifyOtpPage() {
   const [isReady, setIsReady] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isSubmittingRef = useRef(false);
 
   const router = useRouter();
 
@@ -106,7 +107,11 @@ export default function VerifyOtpPage() {
   }
 
   async function onSubmit(values: z.infer<typeof otpSchema>) {
+    // Prevent duplicate submissions
+    if (isSubmittingRef.current) return;
+    
     try {
+      isSubmittingRef.current = true;
       setIsLoading(true);
       const res = await verifyOtp({
         email,
@@ -134,18 +139,29 @@ export default function VerifyOtpPage() {
       }
     } finally {
       setIsLoading(false);
+      isSubmittingRef.current = false;
     }
   }
 
   // Handle input change to restrict to numeric and auto-submit
   function handleOtpChange(value: string) {
-    // Only allow numeric characters
-    const numericValue = value.replace(/\D/g, "");
+    // Only allow numeric characters and limit to exactly 4 digits
+    const numericValue = value.replace(/\D/g, "").slice(0, 4);
+    
+    // Update form value with exactly 4 characters max
     form.setValue("otpCode", numericValue, { shouldValidate: true });
 
-    // Auto-submit when 4 digits are entered
-    if (numericValue.length === 4 && !isLoading) {
-      form.handleSubmit(onSubmit)();
+    // Auto-submit when exactly 4 digits are entered
+    // Only submit if we have exactly 4 digits, not loading, and not already submitting
+    if (numericValue.length === 4 && !isLoading && !isSubmittingRef.current) {
+      // Use requestAnimationFrame to ensure the value is set and prevent race conditions
+      requestAnimationFrame(() => {
+        const currentValue = form.getValues("otpCode");
+        // Double-check that we have exactly 4 digits before submitting
+        if (currentValue.length === 4 && /^\d{4}$/.test(currentValue) && !isSubmittingRef.current) {
+          form.handleSubmit(onSubmit)();
+        }
+      });
     }
   }
 
