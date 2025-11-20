@@ -13,7 +13,6 @@ import { AppSidebar } from '@/components/shared/AppSidebar';
 import { SiteHeader } from '@/components/shared/SiteHeader';
 import { useUser } from '@/hooks/user/useUser';
 import { useOnboardingCheck } from '@/hooks/onboarding/useOnboardingCheck';
-import { ModeSwitcher } from '@/components/shared/ModeSwitcher';
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useUser();
@@ -206,9 +205,6 @@ export default function RootLayoutClient({
       <ActiveThemeProvider>
         <Providers>
           <GoogleMapsProvider>
-            <div className='fixed top-4 right-4 z-50'>
-              <ModeSwitcher />
-            </div>
             {isAuthPage ? (
               <>{children}</>
             ) : (

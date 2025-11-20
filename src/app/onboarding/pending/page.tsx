@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUser } from "@/hooks/user/useUser";
 import { IconLogout } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, MailCheck, Clock, ShieldCheck } from "lucide-react";
+import { Loader2, MailCheck, Clock, ShieldCheck, Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 export default function PendingPage() {
   const { user, isLoading } = useUser();
@@ -45,10 +46,10 @@ export default function PendingPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="fixed top-4 right-16 z-50 flex gap-2">
-        <Button onClick={logout}>
-          <IconLogout />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center p-4">
+      <div className="fixed top-4 right-4 z-50 flex gap-2">
+        <Button onClick={logout} variant="outline">
+          <IconLogout className="h-4 w-4 mr-2" />
           Log out
         </Button>
       </div>
@@ -86,6 +87,12 @@ export default function PendingPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 justify-center mt-2">
+              <Link href="/onboarding/business/profile">
+                <Button variant="outline">
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Profile
+                </Button>
+              </Link>
               <a href="mailto:support@urbanlens.app" className="inline-flex">
                 <Button variant="ghost">Contact Support</Button>
               </a>

@@ -29,3 +29,11 @@ export async function login(payload: LoginPayload): Promise<ApiResponse<LoginRes
   }
   return data;
 }
+
+export async function checkEmailExists(email: string): Promise<{ exists: boolean }> {
+  const { data } = await axiosInstance.post<ApiResponse<{ exists: boolean }>>(
+    '/v1/public/auth/exists-by-email',
+    { email }
+  );
+  return data.data;
+}

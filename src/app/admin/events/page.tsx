@@ -189,14 +189,8 @@ export default function AdminEventsPage() {
 
   return (
     <div className='space-y-6'>
-      {/* Header */}
+      {/* Header
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
-        <div>
-          <h1 className='text-3xl font-bold tracking-tight'>Event Management</h1>
-          <p className='text-muted-foreground mt-1'>
-            Manage and monitor all events in the system
-          </p>
-        </div>
         <Button
           variant='outline'
           onClick={handleRefresh}
@@ -206,7 +200,7 @@ export default function AdminEventsPage() {
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
-      </div>
+      </div> */}
 
       {/* Statistics Cards */}
       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>

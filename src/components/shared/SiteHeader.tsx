@@ -20,8 +20,10 @@ const routeLabels: Record<string, string> = {
   business: "Business",
   creator: "Creator",
   admin: "Admin",
+  accounts: "Accounts Management",
   wallet: "Wallet",
   locations: "Locations",
+  "location-requests": "Location Requests",
   "location-bookings": "Location Bookings",
   requests: "Requests",
   events: "Events",
@@ -221,7 +223,7 @@ export function SiteHeader() {
   // Handle root dashboard pages - show "Overview" instead of just "Business" or "Creator"
   if (breadcrumbs.length === 1 && (pathname === "/dashboard/business" || pathname === "/dashboard/creator" || pathname === "/admin")) {
     return (
-      <header className="flex h-[var(--header-height)] rounded-t-lg shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-[var(--header-height)]">
+      <header className="sticky top-0 z-10 flex h-[var(--header-height)] rounded-t-lg shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-[var(--header-height)]">
         <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
           <SidebarTrigger className="-ml-1 shrink-0" />
           <Separator
@@ -237,13 +239,32 @@ export function SiteHeader() {
     );
   }
 
+  // Handle admin/business page - show "Business Registrations"
+  if (pathname === "/admin/business") {
+    return (
+      <header className="sticky top-0 z-10 flex h-[var(--header-height)] rounded-t-lg shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-[var(--header-height)]">
+        <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
+          <SidebarTrigger className="-ml-1 shrink-0" />
+          <Separator
+            orientation="vertical"
+            className="mx-2 data-[orientation=vertical]:h-4 shrink-0"
+          />
+          <div className="flex items-center gap-2 min-w-0">
+            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+            <h1 className="text-base font-semibold text-foreground truncate">Business Registrations</h1>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   // If only one breadcrumb, show it as a simple title
   if (breadcrumbs.length <= 1) {
     const item = breadcrumbs[0] || { label: "Dashboard" };
     const Icon = item.icon;
 
     return (
-      <header className="flex h-[var(--header-height)] rounded-t-lg shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-[var(--header-height)]">
+      <header className="sticky top-0 z-10 flex h-[var(--header-height)] rounded-t-lg shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-[var(--header-height)]">
         <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
           <SidebarTrigger className="-ml-1 shrink-0" />
           <Separator
@@ -260,30 +281,30 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="flex h-[var(--header-height)] rounded-t-lg shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-[var(--header-height)]">
+    <header className="sticky top-0 z-10 flex h-[var(--header-height)] rounded-t-lg shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-[var(--header-height)]">
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6 min-w-0">
         <SidebarTrigger className="-ml-1 shrink-0" />
         <Separator
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4 shrink-0"
         />
-        <nav className="flex items-center gap-1.5 min-w-0 flex-1" aria-label="Breadcrumb">
-          <ol className="flex items-center gap-1.5 min-w-0 flex-wrap">
+        <nav className="flex items-center gap-1 min-w-0 flex-1" aria-label="Breadcrumb">
+          <ol className="flex items-center gap-1 min-w-0 flex-wrap">
             {breadcrumbs.map((item, index) => {
               const isLast = index === breadcrumbs.length - 1;
               const Icon = item.icon;
 
               return (
-                <li key={index} className="flex items-center gap-1.5 min-w-0">
+                <li key={index} className="flex items-center gap-1 min-w-0">
                   {index > 0 && (
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mx-0.5" />
+                    <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0 mx-0.5" />
                   )}
                   {isLast ? (
-                    <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
                       {Icon && (
-                        <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
                       )}
-                      <span className="text-sm font-semibold text-foreground truncate">
+                      <span className="text-base font-semibold text-foreground truncate">
                         {item.label}
                       </span>
                     </div>
@@ -291,12 +312,12 @@ export function SiteHeader() {
                     <Link
                       href={item.href || "#"}
                       className={cn(
-                        "flex items-center gap-1.5 min-w-0 text-sm text-muted-foreground hover:text-foreground transition-colors",
+                        "flex items-center gap-1 min-w-0 text-xs text-muted-foreground hover:text-foreground transition-colors",
                         "truncate"
                       )}
                     >
                       {Icon && (
-                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        <Icon className="h-3 w-3 shrink-0" />
                       )}
                       <span className="truncate">{item.label}</span>
                     </Link>

@@ -21,6 +21,7 @@ import type {
   GetWalletExternalTransactionsParams,
   Event,
   GetEventsParams,
+  User,
 } from "@/types";
 
 export const getLocationRequestsForAdmin = async ({
@@ -315,6 +316,67 @@ export const getAllEventsForAdmin = async ({
 export const getEventByIdForAdmin = async (id: string): Promise<Event> => {
   const { data } = await axiosInstance.get<ApiResponse<Event>>(
     `/v1/admin/events/${id}`
+  );
+  return data.data;
+};
+
+// Admin Account APIs
+interface GetAllAccountsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string[];
+  search?: string;
+  searchBy?: string[];
+  filterRole?: string;
+  filterHasOnboarded?: string;
+  filterIsLocked?: string;
+}
+
+export const getAllAccounts = async ({
+  page = 1,
+  limit = 20,
+  sortBy,
+  search,
+  searchBy,
+  filterRole,
+  filterHasOnboarded,
+  filterIsLocked,
+}: GetAllAccountsParams = {}): Promise<
+  ApiResponse<PaginatedData<any>>
+> => {
+  const params: any = { page, limit };
+
+  if (search && searchBy) {
+    params.search = search;
+    params.searchBy = searchBy;
+  }
+
+  if (sortBy) {
+    params.sortBy = sortBy;
+  }
+
+  if (filterRole) {
+    params['filter.role'] = filterRole;
+  }
+
+  if (filterHasOnboarded) {
+    params['filter.hasOnboarded'] = filterHasOnboarded;
+  }
+
+  if (filterIsLocked) {
+    params['filter.isLocked'] = filterIsLocked;
+  }
+
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<any>>>(
+    '/v1/admin/account',
+    { params }
+  );
+  return data;
+};
+
+export const getAccountById = async (id: string): Promise<User> => {
+  const { data } = await axiosInstance.get<ApiResponse<User>>(
+    `/v1/admin/account/${id}`
   );
   return data.data;
 };

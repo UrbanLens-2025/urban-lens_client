@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useDebounce } from 'use-debounce';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useBusinessAccounts } from '@/hooks/admin/useBusinessAccounts';
 import { useProcessBusinessAccount } from '@/hooks/admin/useProcessBusinessAccount';
-
-// Import các component UI
 import {
   Card,
   CardContent,
@@ -24,10 +23,17 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, RefreshCw } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { IconSearch, IconFilter, IconBriefcase, IconClock, IconCheck, IconX, IconRefresh } from '@tabler/icons-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
 import { BusinessProfile, BusinessStatus } from '@/types';
-import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   AlertDialog,
@@ -40,17 +46,50 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 
 export default function AdminBusinessPage() {
-  const [page, setPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+
+  // Initialize state from URL params or defaults
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-  const [statusTab, setStatusTab] = useState<BusinessStatus>('PENDING');
+  const [statusTab, setStatusTab] = useState<BusinessStatus>((searchParams.get('status') as BusinessStatus) || 'PENDING');
+  const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
+  const itemsPerPage = 10;
+
+  // Update URL when filters change
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    const trimmedSearch = debouncedSearchTerm.trim();
+    
+    if (trimmedSearch) {
+      params.set('search', trimmedSearch);
+    } else {
+      params.delete('search');
+    }
+    
+    if (statusTab !== 'PENDING') {
+      params.set('status', statusTab);
+    } else {
+      params.delete('status');
+    }
+
+    if (page > 1) {
+      params.set('page', page.toString());
+    } else {
+      params.delete('page');
+    }
+
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [debouncedSearchTerm, statusTab, page, pathname, router, searchParams]);
 
   const { data: response, isLoading, isFetching } = useBusinessAccounts({
     page,
-    search: debouncedSearchTerm,
+    limit: itemsPerPage,
+    search: debouncedSearchTerm.trim() || undefined,
     status: statusTab,
     sortBy: 'createdAt:DESC',
   });
@@ -59,12 +98,9 @@ export default function AdminBusinessPage() {
 
   const { mutate: processAccount, isPending } = useProcessBusinessAccount();
 
-  const [approvingBusiness, setApprovingBusiness] =
-    useState<BusinessProfile | null>(null);
-  const [rejectingBusiness, setRejectingBusiness] =
-    useState<BusinessProfile | null>(null);
+  const [approvingBusiness, setApprovingBusiness] = useState<BusinessProfile | null>(null);
+  const [rejectingBusiness, setRejectingBusiness] = useState<BusinessProfile | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
-  const queryClient = useQueryClient();
 
   const handleConfirmApprove = () => {
     if (!approvingBusiness) return;
@@ -116,7 +152,7 @@ export default function AdminBusinessPage() {
   };
 
   const getStatusBadge = (status: BusinessStatus) => {
-    const map: Record<BusinessStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' } > = {
+    const map: Record<BusinessStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' }> = {
       PENDING: { label: 'Pending', variant: 'secondary' },
       APPROVED: { label: 'Approved', variant: 'default' },
       REJECTED: { label: 'Rejected', variant: 'destructive' },
@@ -125,112 +161,201 @@ export default function AdminBusinessPage() {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
+  // Calculate statistics
+  const stats = useMemo(() => {
+    // TODO: Implement real statistics from API
+    // Currently using mock data as the list API only returns paginated results
+    return {
+      total: meta?.totalItems || 0,
+      pending: 15,
+      approved: 120,
+      rejected: 8,
+    };
+  }, [meta]);
+
   return (
-    <div className='space-y-8'>
+    <div className="space-y-6">
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Businesses</CardTitle>
+            <IconBriefcase className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">
+              All business accounts
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <IconClock className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+            <p className="text-xs text-muted-foreground">
+              Awaiting review
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <IconCheck className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
+            <p className="text-xs text-muted-foreground">
+              Active businesses
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Rejected</CardTitle>
+            <IconX className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
+            <p className="text-xs text-muted-foreground">
+              Rejected accounts
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
-          <div className='flex items-center justify-between gap-3'>
-            <div>
-              <CardTitle>Manage Business Registrations</CardTitle>
-              <CardDescription>
-                Approve or reject new business accounts.
-              </CardDescription>
-            </div>
-            <Button variant='outline' onClick={refresh} disabled={isFetching}>
-              {isFetching ? (
-                <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' /> Refreshing
-                </>
-              ) : (
-                <>
-                  <RefreshCw className='mr-2 h-4 w-4' /> Refresh
-                </>
-              )}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs
-            value={statusTab}
-            onValueChange={(value) => {
-              setStatusTab(value as BusinessStatus);
-              setPage(1);
-            }}
-          >
-            <div className='flex justify-between items-center'>
-              <TabsList>
-                <TabsTrigger value='PENDING'>Pending</TabsTrigger>
-                <TabsTrigger value='APPROVED'>Approved</TabsTrigger>
-                <TabsTrigger value='REJECTED'>Rejected</TabsTrigger>
-              </TabsList>
-              <div className='w-full max-w-sm'>
+          <CardTitle className="flex items-center justify-between">
+            <span>All Registrations ({meta?.totalItems || 0})</span>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder='Search by name or email...'
+                  placeholder="Search businesses..."
+                  className="pl-8 w-[250px]"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setPage(1);
+                  }}
                 />
               </div>
-            </div>
-
-            <div className='mt-4'>
-              {isLoading ? (
-                <div className='p-6'>
-                  <div className='animate-pulse space-y-3'>
-                    <div className='h-8 w-1/3 bg-muted rounded' />
-                    <div className='h-10 w-full bg-muted rounded' />
-                    <div className='h-10 w-full bg-muted rounded' />
-                    <div className='h-10 w-2/3 bg-muted rounded' />
+              <Select
+                value={statusTab}
+                onValueChange={(value) => {
+                  setStatusTab(value as BusinessStatus);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <div className="flex items-center gap-2">
+                    <IconFilter className="h-4 w-4" />
+                    <SelectValue placeholder="Filter by Status" />
                   </div>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Business Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Submitted</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className='text-right'>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {businesses.map((biz: BusinessProfile) => (
-                      <TableRow key={biz.accountId} className='hover:bg-muted/40'>
-                        <TableCell className='font-medium'>
-                          {biz.name}
-                        </TableCell>
-                        <TableCell>{biz.email}</TableCell>
-                        <TableCell>
-                          <Badge variant='secondary'>{biz.category}</Badge>
-                        </TableCell>
-                        <TableCell>{formatDateTime((biz as any).createdAt)}</TableCell>
-                        <TableCell>{getStatusBadge((biz as any).status || statusTab)}</TableCell>
-                        <TableCell className='text-right space-x-2'>
-                              <Button
-                            variant='outline'
-                                size='sm'
-                            asChild
-                          >
-                            <Link href={`/admin/business/${biz.accountId}`}>
-                              View Details
-                            </Link>
-                            </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {businesses.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} className='text-center h-24 text-muted-foreground'>
-                          No accounts found. Try adjusting filters or search.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="APPROVED">Approved</SelectItem>
+                  <SelectItem value="REJECTED">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="icon" onClick={refresh} disabled={isFetching}>
+                {isFetching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <IconRefresh className="h-4 w-4" />
+                )}
+              </Button>
             </div>
-          </Tabs>
+          </CardTitle>
+          <CardDescription className="hidden">
+            Manage business registrations and approvals.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">#</TableHead>
+                    <TableHead>Business Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {businesses.map((biz: BusinessProfile, index: number) => (
+                    <TableRow key={biz.accountId}>
+                      <TableCell className="font-medium text-muted-foreground">
+                        {(page - 1) * itemsPerPage + index + 1}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <Link
+                          href={`/admin/business/${biz.accountId}`}
+                          className="hover:underline text-blue-600 hover:text-blue-800"
+                        >
+                          {biz.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{biz.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{biz.category}</Badge>
+                      </TableCell>
+                      <TableCell>{formatDateTime((biz as any).createdAt)}</TableCell>
+                      <TableCell>{getStatusBadge((biz as any).status || statusTab)}</TableCell>
+                    </TableRow>
+                  ))}
+                  {businesses.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center h-24">
+                        No businesses found matching your criteria.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {meta && meta.totalPages > 1 && (
+                <div className="flex items-center justify-end space-x-2 py-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(page - 1)}
+                    disabled={page <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    Page {page} of {meta.totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(page + 1)}
+                    disabled={page >= meta.totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -252,7 +377,7 @@ export default function AdminBusinessPage() {
               onClick={handleConfirmApprove}
               disabled={isPending}
             >
-              {isPending && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirm Approve
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -272,9 +397,10 @@ export default function AdminBusinessPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Textarea
-            placeholder='Reason for rejection...'
+            placeholder="Reason for rejection..."
             value={adminNotes}
             onChange={(e) => setAdminNotes(e.target.value)}
+            className="mt-4"
           />
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -282,35 +408,12 @@ export default function AdminBusinessPage() {
               onClick={handleConfirmReject}
               disabled={isPending}
             >
-              {isPending && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirm Reject
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* --- PHÂN TRANG --- */}
-      <div className='flex items-center justify-end space-x-2 py-4'>
-        <Button
-          variant='outline'
-          size='sm'
-          onClick={() => setPage(page - 1)}
-          disabled={!meta || meta.currentPage <= 1}
-        >
-          Previous
-        </Button>
-        <span className='text-sm text-muted-foreground'>
-          Page {meta?.currentPage || 1} of {meta?.totalPages || 1}
-        </span>
-        <Button
-          variant='outline'
-          size='sm'
-          onClick={() => setPage(page + 1)}
-          disabled={!meta || meta.currentPage >= meta.totalPages}
-        >
-          Next
-        </Button>
-      </div>
     </div>
   );
 }
