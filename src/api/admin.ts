@@ -21,6 +21,7 @@ import type {
   GetWalletExternalTransactionsParams,
   Event,
   GetEventsParams,
+  User,
 } from "@/types";
 
 export const getLocationRequestsForAdmin = async ({
@@ -371,4 +372,11 @@ export const getAllAccounts = async ({
     { params }
   );
   return data;
+};
+
+export const getAccountById = async (id: string): Promise<User> => {
+  const { data } = await axiosInstance.get<ApiResponse<User>>(
+    `/v1/admin/account/${id}`
+  );
+  return data.data;
 };
