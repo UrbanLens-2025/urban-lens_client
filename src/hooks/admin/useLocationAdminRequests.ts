@@ -2,19 +2,23 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getLocationRequestsForAdmin } from "@/api/admin";
+import { LocationStatus } from "@/types";
 
 export function useLocationAdminRequests(
   page: number,
-  search: string,
-  sortBy: string
+  limit: number,
+  search?: string,
+  status?: LocationStatus,
+  sortBy?: string
 ) {
   return useQuery({
-    queryKey: ["pendingLocationRequests", page, search, sortBy],
+    queryKey: ["locationRequests", page, limit, search, status, sortBy],
     queryFn: () =>
       getLocationRequestsForAdmin({
         page,
+        limit,
         search,
-        status: "AWAITING_ADMIN_REVIEW",
+        status,
         sortBy,
       }),
     placeholderData: (previousData) => previousData,

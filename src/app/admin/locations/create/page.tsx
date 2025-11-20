@@ -183,18 +183,13 @@ export default function CreatePublicLocationPage() {
   }
 
   return (
-    <div className="space-y-8 p-6 max-w-6xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Create Public Location</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Add a new public location to the platform
-          </p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">Create Public Location</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Add a new public location to the platform
+        </p>
       </div>
 
       {/* Step Indicator */}

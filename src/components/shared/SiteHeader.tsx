@@ -22,6 +22,7 @@ const routeLabels: Record<string, string> = {
   admin: "Admin",
   wallet: "Wallet",
   locations: "Locations",
+  "location-requests": "Location Requests",
   "location-bookings": "Location Bookings",
   requests: "Requests",
   events: "Events",
@@ -267,23 +268,23 @@ export function SiteHeader() {
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4 shrink-0"
         />
-        <nav className="flex items-center gap-1.5 min-w-0 flex-1" aria-label="Breadcrumb">
-          <ol className="flex items-center gap-1.5 min-w-0 flex-wrap">
+        <nav className="flex items-center gap-1 min-w-0 flex-1" aria-label="Breadcrumb">
+          <ol className="flex items-center gap-1 min-w-0 flex-wrap">
             {breadcrumbs.map((item, index) => {
               const isLast = index === breadcrumbs.length - 1;
               const Icon = item.icon;
 
               return (
-                <li key={index} className="flex items-center gap-1.5 min-w-0">
+                <li key={index} className="flex items-center gap-1 min-w-0">
                   {index > 0 && (
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mx-0.5" />
+                    <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0 mx-0.5" />
                   )}
                   {isLast ? (
-                    <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex items-center gap-1 min-w-0">
                       {Icon && (
-                        <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
                       )}
-                      <span className="text-sm font-semibold text-foreground truncate">
+                      <span className="text-xs font-semibold text-foreground truncate">
                         {item.label}
                       </span>
                     </div>
@@ -291,12 +292,12 @@ export function SiteHeader() {
                     <Link
                       href={item.href || "#"}
                       className={cn(
-                        "flex items-center gap-1.5 min-w-0 text-sm text-muted-foreground hover:text-foreground transition-colors",
+                        "flex items-center gap-1 min-w-0 text-xs text-muted-foreground hover:text-foreground transition-colors",
                         "truncate"
                       )}
                     >
                       {Icon && (
-                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        <Icon className="h-3 w-3 shrink-0" />
                       )}
                       <span className="truncate">{item.label}</span>
                     </Link>

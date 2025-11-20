@@ -16,6 +16,8 @@ import {
   IconBrandBooking,
   IconUsers,
   IconStar,
+  IconClipboardList,
+  IconPlus,
 } from "@tabler/icons-react";
 
 import {
@@ -45,7 +47,6 @@ const adminNavGroups = [
     groupLabel: 'User Management',
     items: [
       { title: 'All Accounts', url: '/admin/accounts', icon: IconUsers },
-      { title: 'Business Profiles', url: '/admin/business', icon: IconBriefcase },
       { title: 'Creator Profiles', url: '/admin/creators', icon: IconStar },
     ]
   },
@@ -53,14 +54,24 @@ const adminNavGroups = [
     groupLabel: 'Content Management',
     items: [
       { title: 'Locations', url: '/admin/locations', icon: IconMapPin },
+      { title: 'Add Public Location', url: '/admin/locations/create', icon: IconPlus },
       { title: 'Events', url: '/admin/events', icon: IconCalendar },
       { title: 'Tags', url: '/admin/tags', icon: IconTag },
+    ]
+  },
+  {
+    groupLabel: 'Review Requests',
+    items: [
+      { title: 'Location Requests', url: '/admin/location-requests', icon: IconClipboardList },
+      { title: 'Business Registrations', url: '/admin/business', icon: IconBriefcase },
+      { title: 'Wallet Withdrawals', url: '/admin/wallet-withdrawals', icon: IconWallet },
     ]
   },
   {
     groupLabel: 'Financial',
     items: [
       { title: 'Wallet', url: '/admin/wallet', icon: IconWallet },
+      { title: 'External Transactions', url: '/admin/wallet/external-transactions', icon: IconFileText },
     ]
   },
 ];

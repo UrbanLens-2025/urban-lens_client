@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -21,21 +22,32 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   IconSearch,
-  IconRefresh,
+  IconFilter,
   IconMapPin,
+  IconClock,
+  IconCheck,
+  IconX,
+  IconRefresh,
   IconBuildingStore,
   IconWorld,
-  IconEye,
 } from '@tabler/icons-react';
 import { Loader2 } from 'lucide-react';
-import { Location } from '@/types';
-import { useAllLocations } from '@/hooks/admin/useAllLocations';
+import { LocationRequest, LocationStatus } from '@/types';
+import { useLocationAdminRequests } from '@/hooks/admin/useLocationAdminRequests';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatShortDate } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 
-export default function LocationDashboardPage() {
+type StatusFilter = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export default function LocationRequestsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -44,6 +56,9 @@ export default function LocationDashboardPage() {
   // Initialize state from URL params or defaults
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    (searchParams.get('status') as StatusFilter) || 'PENDING'
+  );
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
   const itemsPerPage = 10;
 
@@ -57,6 +72,12 @@ export default function LocationDashboardPage() {
     } else {
       params.delete('search');
     }
+    
+    if (statusFilter !== 'PENDING') {
+      params.set('status', statusFilter);
+    } else {
+      params.delete('status');
+    }
 
     if (page > 1) {
       params.set('page', page.toString());
@@ -65,21 +86,29 @@ export default function LocationDashboardPage() {
     }
 
     router.replace(`${pathname}?${params.toString()}`);
-  }, [debouncedSearchTerm, page, pathname, router, searchParams]);
+  }, [debouncedSearchTerm, statusFilter, page, pathname, router, searchParams]);
 
-  // Data fetching for locations
-  const { data, isLoading, error } = useAllLocations(
+  // Map status filter to LocationStatus
+  const getRequestStatus = (): LocationStatus => {
+    if (statusFilter === 'PENDING') return 'AWAITING_ADMIN_REVIEW';
+    if (statusFilter === 'APPROVED') return 'APPROVED';
+    return 'REJECTED';
+  };
+
+  // Data fetching
+  const { data, isLoading, error } = useLocationAdminRequests(
     page,
     itemsPerPage,
     debouncedSearchTerm.trim() || undefined,
+    getRequestStatus(),
     'createdAt:DESC'
   );
 
-  const locations = data?.data || [];
+  const requests = data?.data || [];
   const meta = data?.meta;
 
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['allLocations'] });
+    queryClient.invalidateQueries({ queryKey: ['locationRequests'] });
   };
 
   // Calculate statistics
@@ -87,20 +116,20 @@ export default function LocationDashboardPage() {
     // TODO: Implement real statistics from API
     // Currently using mock data as the list API only returns paginated results
     return {
-      totalLocations: meta?.totalItems || 0,
-      businessLocations: 18, // Mock data - TODO: Get from API
-      publicLocations: 10, // Mock data - TODO: Get from API
-      visibleOnMap: 25, // Mock data - TODO: Get from API
+      total: meta?.totalItems || 0,
+      pending: 5,
+      approved: 1456,
+      rejected: 12,
     };
   }, [meta]);
 
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Location Management</h1>
+        <h1 className="text-3xl font-bold">Location Requests</h1>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600">Error loading locations. Please try again.</p>
+            <p className="text-red-600">Error loading location requests. Please try again.</p>
           </CardContent>
         </Card>
       </div>
@@ -109,76 +138,78 @@ export default function LocationDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Location Management</h1>
+        <h1 className="text-3xl font-bold">Location Requests</h1>
       </div>
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Locations</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
             <IconMapPin className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalLocations}</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
             <p className="text-xs text-muted-foreground">
-              Approved locations
+              All location requests
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Business Locations</CardTitle>
-            <IconBuildingStore className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <IconClock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.businessLocations}</div>
+            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
             <p className="text-xs text-muted-foreground">
-              Owned by businesses
+              Awaiting review
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Public Locations</CardTitle>
-            <IconWorld className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <IconCheck className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.publicLocations}</div>
+            <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
             <p className="text-xs text-muted-foreground">
-              Publicly accessible
+              Total approved
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Visible on Map</CardTitle>
-            <IconEye className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Rejected</CardTitle>
+            <IconX className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.visibleOnMap}</div>
+            <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
             <p className="text-xs text-muted-foreground">
-              Shown on map
+              Rejected requests
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>All Locations ({meta?.totalItems || 0})</span>
+            <span>
+              {statusFilter === 'PENDING' && `Pending Requests (${meta?.totalItems || 0})`}
+              {statusFilter === 'APPROVED' && `Approved Requests (${meta?.totalItems || 0})`}
+              {statusFilter === 'REJECTED' && `Rejected Requests (${meta?.totalItems || 0})`}
+            </span>
             <div className="flex items-center gap-2">
               <div className="relative">
                 <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search locations..."
+                  placeholder="Search requests..."
                   className="pl-8 w-[250px]"
                   value={searchTerm}
                   onChange={(e) => {
@@ -187,6 +218,25 @@ export default function LocationDashboardPage() {
                   }}
                 />
               </div>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value as StatusFilter);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <div className="flex items-center gap-2">
+                    <IconFilter className="h-4 w-4" />
+                    <SelectValue placeholder="Filter by Status" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="APPROVED">Approved</SelectItem>
+                  <SelectItem value="REJECTED">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
               <Button variant="outline" size="icon" onClick={refresh} disabled={isLoading}>
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -197,7 +247,7 @@ export default function LocationDashboardPage() {
             </div>
           </CardTitle>
           <CardDescription className="hidden">
-            Manage approved locations.
+            Review and manage location requests.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -212,79 +262,54 @@ export default function LocationDashboardPage() {
                   <TableRow>
                     <TableHead className="w-[50px]">#</TableHead>
                     <TableHead>Name</TableHead>
+                    <TableHead>Submitted By</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Address</TableHead>
-                    <TableHead>Visible</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>Business</TableHead>
+                    <TableHead>Submitted</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {locations.map((loc: Location, index: number) => (
-                    <TableRow key={loc.id}>
+                  {requests.map((req: LocationRequest, index: number) => (
+                    <TableRow key={req.id}>
                       <TableCell className="font-medium text-muted-foreground">
                         {(page - 1) * itemsPerPage + index + 1}
                       </TableCell>
-                      <TableCell className="font-medium max-w-[200px]">
-                        <a
-                          href={`/admin/locations/${loc.id}`}
-                          className="hover:underline text-blue-600 hover:text-blue-800 truncate block"
+                      <TableCell className="font-medium">
+                        <Link
+                          href={`/admin/locations/request/${req.id}`}
+                          className="hover:underline text-blue-600 hover:text-blue-800"
                         >
-                          {loc.name}
-                        </a>
+                          {req.name}
+                        </Link>
                       </TableCell>
                       <TableCell>
-                        {loc.business ? (
-                          <Badge 
-                            variant="outline" 
-                            className="flex items-center w-fit bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200"
-                          >
-                            <IconBuildingStore className="h-3 w-3 mr-1" />
-                            <a
-                              href={`/admin/business/${loc.business.accountId}`}
-                              className="hover:underline"
-                            >
-                              Business
-                            </a>
-                          </Badge>
+                        {req.createdBy
+                          ? `${req.createdBy.firstName} ${req.createdBy.lastName}`
+                          : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        {req.createdBy?.businessProfile ? (
+                          <div className="flex items-center gap-2">
+                            <IconBuildingStore className="h-4 w-4 text-muted-foreground" />
+                            <span>Business</span>
+                          </div>
                         ) : (
-                          <Badge 
-                            variant="outline" 
-                            className="flex items-center w-fit bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200"
-                          >
-                            <IconWorld className="h-3 w-3 mr-1" />
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <IconWorld className="h-4 w-4" />
                             <span>Public</span>
-                          </Badge>
+                          </div>
                         )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                        {loc.addressLine}
-                        {loc.addressLevel1 && `, ${loc.addressLevel1}`}
                       </TableCell>
                       <TableCell>
-                        {loc.isVisibleOnMap ? (
-                          <Badge 
-                            variant="outline" 
-                            className="flex items-center w-fit bg-green-100 text-green-700 hover:bg-green-100 border-green-200"
-                          >
-                            <IconEye className="h-3 w-3 mr-1" />
-                            Visible
-                          </Badge>
-                        ) : (
-                          <Badge 
-                            variant="outline" 
-                            className="flex items-center w-fit bg-gray-100 text-gray-700 hover:bg-gray-100 border-gray-200"
-                          >
-                            Hidden
-                          </Badge>
-                        )}
+                        {req.createdBy?.businessProfile?.name || 'N/A'}
                       </TableCell>
-                      <TableCell>{formatShortDate(loc.createdAt)}</TableCell>
+                      <TableCell>{formatShortDate(req.createdAt)}</TableCell>
                     </TableRow>
                   ))}
-                  {locations.length === 0 && (
+                  {requests.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center h-24">
-                        No locations found matching your criteria.
+                        No {statusFilter.toLowerCase()} requests found matching your criteria.
                       </TableCell>
                     </TableRow>
                   )}
@@ -322,3 +347,4 @@ export default function LocationDashboardPage() {
     </div>
   );
 }
+

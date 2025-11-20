@@ -1,16 +1,14 @@
-'use client'; // <-- Rất quan trọng: Phải là Client Component
+'use client';
 
 import type React from 'react';
-import { use, useMemo, useState } from 'react';
+import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 import { useLocationRequestByIdForAdmin } from '@/hooks/admin/useLocationRequestByIdForAdmin';
 import { useProcessLocationRequest } from '@/hooks/admin/useProcessLocationRequest';
-
-import { LocationRequest, Tag } from '@/types';
 
 import {
   Loader2,
@@ -20,14 +18,16 @@ import {
   User,
   FileText,
   ImageIcon,
-  Layers,
   Phone,
   Mail,
   Building,
   Globe,
   Tag as TagIcon,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { GoogleMapsPicker } from '@/components/shared/GoogleMapsPicker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { DisplayTags } from '@/components/shared/DisplayTags';
+import { formatShortDate } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 function InfoRow({
   label,
@@ -56,13 +58,13 @@ function InfoRow({
 }) {
   if (!value) return null;
   return (
-    <div className='flex gap-3'>
+    <div className='flex gap-3 py-2'>
       {Icon && (
-        <Icon className='h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5' />
+        <Icon className='h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5' />
       )}
-      <div className='flex-1'>
-        <p className='text-sm font-semibold text-muted-foreground'>{label}</p>
-        <div className='text-base text-foreground'>{value}</div>
+      <div className='flex-1 min-w-0'>
+        <p className='text-xs font-medium text-muted-foreground mb-0.5'>{label}</p>
+        <div className='text-sm text-foreground break-words'>{value}</div>
       </div>
     </div>
   );
@@ -93,8 +95,6 @@ export default function AdminLocationRequestDetailsPage({
     useProcessLocationRequest();
 
   const isLoading = isLoadingRequest;
-
-  // Tags are now direct Tag objects from the API
   const tags = request?.tags || [];
 
   const handleImageClick = (src: string, alt: string) => {
@@ -111,14 +111,18 @@ export default function AdminLocationRequestDetailsPage({
         onSuccess: () => {
           toast.success('Request approved!');
           queryClient.invalidateQueries({
-            queryKey: ['pendingLocationRequests'],
+            queryKey: ['locationRequests'],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ['locationAdminRequest'],
           });
           setShowApproveDialog(false);
-          router.push('/admin/locations');
+          router.push('/admin/location-requests');
         },
       }
     );
   };
+
   const handleReject = () => {
     if (!request) return;
     processRequest(
@@ -130,10 +134,13 @@ export default function AdminLocationRequestDetailsPage({
         onSuccess: () => {
           toast.success('Request rejected.');
           queryClient.invalidateQueries({
-            queryKey: ['pendingLocationRequests'],
+            queryKey: ['locationRequests'],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ['locationAdminRequest'],
           });
           setShowRejectDialog(false);
-          router.push('/admin/locations');
+          router.push('/admin/location-requests');
         },
       }
     );
@@ -146,6 +153,7 @@ export default function AdminLocationRequestDetailsPage({
       </div>
     );
   }
+
   if (isError || !request) {
     return (
       <div className='text-center py-20 text-red-500'>
@@ -154,7 +162,6 @@ export default function AdminLocationRequestDetailsPage({
     );
   }
 
-  // Parse tọa độ (string -> number) cho bản đồ
   const position = {
     lat: request.latitude,
     lng: request.longitude,
@@ -168,17 +175,18 @@ export default function AdminLocationRequestDetailsPage({
       : request.status === 'REJECTED'
       ? 'Rejected'
       : request.status;
-  const statusColor =
+
+  const statusVariant =
     request.status === 'AWAITING_ADMIN_REVIEW'
-      ? 'bg-yellow-100 text-yellow-800'
+      ? 'secondary'
       : request.status === 'APPROVED'
-      ? 'bg-green-100 text-green-800'
-      : request.status === 'REJECTED'
-      ? 'bg-red-100 text-red-800'
-      : 'bg-gray-100 text-gray-800';
+      ? 'default'
+      : 'destructive';
+
+  const isPending = request.status === 'AWAITING_ADMIN_REVIEW';
 
   return (
-    <div className='space-y-8 p-6'>
+    <div className='space-y-6'>
       {/* Header */}
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-4'>
@@ -187,209 +195,405 @@ export default function AdminLocationRequestDetailsPage({
           </Button>
           <div>
             <h1 className='text-3xl font-bold'>{request.name}</h1>
-            <Badge className={statusColor}>{statusBadge}</Badge>
+            <div className='flex items-center gap-2 mt-1'>
+              <Badge variant={statusVariant as any}>{statusBadge}</Badge>
+              <span className='text-sm text-muted-foreground'>
+                Submitted {formatShortDate(request.createdAt)}
+              </span>
+            </div>
           </div>
         </div>
-        {request.status === 'AWAITING_ADMIN_REVIEW' && (
-          <div className='space-x-2'>
-            <Button
-              variant='destructive'
-              onClick={() => setShowRejectDialog(true)}
-              disabled={isProcessing}
-            >
-              Reject
-            </Button>
-            <Button
-              className='bg-green-600 hover:bg-green-700'
-              onClick={() => setShowApproveDialog(true)}
-              disabled={isProcessing}
-            >
-              Approve
-            </Button>
-          </div>
-        )}
       </div>
 
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-        {/* LEFT COLUMN */}
-        <div className='lg:col-span-2 space-y-6'>
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <Layers /> Basic Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <InfoRow label='Description' value={request.description} />
+      {/* Review Instructions Banner */}
+      {isPending && (
+        <Card className='border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800'>
+          <CardContent className='pt-6'>
+            <div className='flex items-start gap-3'>
+              <AlertCircle className='h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0' />
+              <div className='flex-1'>
+                <h3 className='font-semibold text-blue-900 dark:text-blue-100 mb-1'>
+                  Review Required
+                </h3>
+                <p className='text-sm text-blue-800 dark:text-blue-200'>
+                  Please review all sections below carefully before making a decision. 
+                  Verify the location details, images, documents, and submitter information. 
+                  Action buttons are available at the bottom of the page.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Main Content - Top to Bottom Flow */}
+      <div className='space-y-6 max-w-4xl'>
+        {/* Request Overview */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Request Overview</CardTitle>
+            <CardDescription>
+              Basic information about this location request
+            </CardDescription>
+          </CardHeader>
+          <CardContent className='space-y-4'>
+            <InfoRow
+              label='Description'
+              value={request.description || 'No description provided'}
+              icon={FileText}
+            />
+            <Separator />
+            <div className='grid grid-cols-2 gap-4'>
+              <InfoRow
+                label='Request Type'
+                value={
+                  <Badge variant='outline' className='w-fit'>
+                    {request.type === 'BUSINESS_OWNED' ? (
+                      <><Building className='h-3 w-3 mr-1' /> Business Owned</>
+                    ) : (
+                      <><Globe className='h-3 w-3 mr-1' /> Public</>
+                    )}
+                  </Badge>
+                }
+              />
               <InfoRow
                 label='Radius'
                 value={`${request.radiusMeters} meters`}
+                icon={MapPin}
               />
-              <InfoRow label='Request Type' value={request.type} />
-            </CardContent>
-          </Card>
+            </div>
+            {tags.length > 0 && (
+              <>
+                <Separator />
+                <div className='flex gap-3 py-2'>
+                  <TagIcon className='h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5' />
+                  <div className='flex-1'>
+                    <p className='text-xs font-medium text-muted-foreground mb-2'>Tags</p>
+                    <DisplayTags tags={tags} maxCount={10} />
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Address Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className='flex items-center gap-2'>
+              <MapPin className='h-5 w-5' />
+              Address Information
+            </CardTitle>
+            <CardDescription>
+              Location address and coordinates
+            </CardDescription>
+          </CardHeader>
+          <CardContent className='space-y-4'>
+            <InfoRow label='Street Address' value={request.addressLine} />
+            <Separator />
+            <div className='grid grid-cols-2 gap-4'>
+              <InfoRow label='District' value={request.addressLevel1} />
+              <InfoRow label='City/Province' value={request.addressLevel2} />
+            </div>
+            <Separator />
+            <div className='grid grid-cols-2 gap-4'>
+              <InfoRow label='Latitude' value={request.latitude.toString()} />
+              <InfoRow label='Longitude' value={request.longitude.toString()} />
+            </div>
+            <Separator />
+            <div className='pt-2'>
+              <p className='text-xs font-medium text-muted-foreground mb-2'>Map Location</p>
+              <div className='h-64 rounded-lg overflow-hidden border'>
+                <GoogleMapsPicker
+                  position={position}
+                  onPositionChange={() => {}}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Location Images */}
+        {request.locationImageUrls && request.locationImageUrls.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className='flex items-center gap-2'>
-                <MapPin /> Address Information
+                <ImageIcon className='h-5 w-5' />
+                Location Images
               </CardTitle>
+              <CardDescription>
+                {request.locationImageUrls.length} image{request.locationImageUrls.length !== 1 ? 's' : ''} provided
+              </CardDescription>
             </CardHeader>
-            <CardContent className='space-y-4'>
-              <InfoRow label='Address' value={request.addressLine} />
-              <InfoRow label='District' value={request.addressLevel1} />
-              <InfoRow label='City/Province' value={request.addressLevel2} />
-              <InfoRow label='Latitude' value={request.latitude} />
-              <InfoRow label='Longitude' value={request.longitude} />
-            </CardContent>
-          </Card>
-          {request.locationImageUrls &&
-            request.locationImageUrls.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                    <ImageIcon /> Location Images
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className='grid grid-cols-2 gap-4'>
-                  {request.locationImageUrls.map((url, index) => (
+            <CardContent>
+              <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
+                {request.locationImageUrls.map((url, index) => (
+                  <div
+                    key={index}
+                    className='relative aspect-video rounded-lg overflow-hidden border cursor-pointer group'
+                    onClick={() => handleImageClick(url, `Location Image ${index + 1}`)}
+                  >
                     <img
-                      key={index}
                       src={url || '/placeholder.svg'}
                       alt={`Location ${index + 1}`}
-                      onClick={() =>
-                        handleImageClick(url, `Location ${index + 1}`)
-                      }
-                      className='w-full h-36 object-cover rounded-md border cursor-pointer'
+                      className='w-full h-full object-cover group-hover:opacity-90 transition-opacity'
                     />
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-          {request.adminNotes && (
-            <Card className='border-yellow-200 bg-yellow-50'>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Validation Documents */}
+        {request.locationValidationDocuments &&
+          request.locationValidationDocuments.length > 0 && (
+            <Card>
               <CardHeader>
-                <CardTitle className='text-yellow-900 flex items-center gap-2'>
-                  <FileText /> Admin Notes
+                <CardTitle className='flex items-center gap-2'>
+                  <FileText className='h-5 w-5' />
+                  Validation Documents
                 </CardTitle>
+                <CardDescription>
+                  Required documents for location validation
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className='text-yellow-900'>{request.adminNotes}</p>
+              <CardContent className='space-y-6'>
+                {request.locationValidationDocuments.map((doc, docIndex) => (
+                  <div key={docIndex} className='space-y-3'>
+                    {docIndex > 0 && <Separator />}
+                    <div>
+                      <p className='font-semibold text-sm mb-3'>
+                        {doc.documentType}
+                      </p>
+                      <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
+                        {doc.documentImageUrls.map((url, imgIndex) => (
+                          <div
+                            key={imgIndex}
+                            className='relative aspect-[4/3] rounded-lg overflow-hidden border cursor-pointer group'
+                            onClick={() =>
+                              handleImageClick(url, `${doc.documentType} - Document ${imgIndex + 1}`)
+                            }
+                          >
+                            <img
+                              src={url || '/placeholder.svg'}
+                              alt={`Document ${imgIndex + 1}`}
+                              className='w-full h-full object-cover group-hover:opacity-90 transition-opacity'
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           )}
 
-          {request.locationValidationDocuments &&
-            request.locationValidationDocuments.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                    <FileText /> Validation Documents
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className='space-y-6'>
-                  {request.locationValidationDocuments.map((doc, docIndex) => (
-                    <div
-                      key={docIndex}
-                      className='border-b pb-4 last:border-b-0'
-                    >
-                      <p className='font-semibold mb-3 text-sm'>
-                        {doc.documentType}
-                      </p>
-                      <div className='flex flex-wrap gap-4'>
-                        {doc.documentImageUrls.map((url, imgIndex) => (
-                          <img
-                            key={imgIndex}
-                            src={url || '/placeholder.svg'}
-                            alt={`Document ${imgIndex + 1}`}
-                            onClick={() =>
-                              handleImageClick(url, `Document ${imgIndex + 1}`)
-                            }
-                            className='w-48 h-48 object-cover rounded-md border cursor-pointer'
-                          />
-                        ))}
-                      </div>
+        {/* Submitter Information */}
+        {request.createdBy && (
+          <Card>
+            <CardHeader>
+              <CardTitle className='flex items-center gap-2'>
+                <User className='h-5 w-5' />
+                Submitter Information
+              </CardTitle>
+              <CardDescription>
+                Information about the person who submitted this request
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-4'>
+              <InfoRow
+                label='Full Name'
+                value={`${request.createdBy.firstName} ${request.createdBy.lastName}`}
+                icon={User}
+              />
+              <Separator />
+              <InfoRow
+                label='Email'
+                value={
+                  <a
+                    href={`mailto:${request.createdBy.email}`}
+                    className='text-primary hover:underline'
+                  >
+                    {request.createdBy.email}
+                  </a>
+                }
+                icon={Mail}
+              />
+              <Separator />
+              <InfoRow
+                label='Phone Number'
+                value={
+                  <a
+                    href={`tel:${request.createdBy.phoneNumber}`}
+                    className='text-primary hover:underline'
+                  >
+                    {request.createdBy.phoneNumber}
+                  </a>
+                }
+                icon={Phone}
+              />
+              {request.createdBy.businessProfile && (
+                <>
+                  <Separator />
+                  <div className='pt-2'>
+                    <div className='flex items-center gap-2 mb-3'>
+                      <Building className='h-4 w-4 text-muted-foreground' />
+                      <p className='text-sm font-semibold'>Business Profile</p>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-        </div>
-        {/* RIGHT COLUMN */}
-        <div className='space-y-6'>
-          {request.createdBy && (
-            <Card>
-              <CardHeader>
-                <CardTitle className='flex items-center gap-2'>
-                  <User /> Creator Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                <InfoRow
-                  label='Name'
-                  value={`${request.createdBy.firstName} ${request.createdBy.lastName}`}
-                />
-                <InfoRow
-                  label='Email'
-                  value={request.createdBy.email}
-                  icon={Mail}
-                />
-                <InfoRow
-                  label='Phone Number'
-                  value={request.createdBy.phoneNumber}
-                  icon={Phone}
-                />
-                {request.createdBy.businessProfile && (
-                  <div className='border-t pt-4 mt-4'>
-                    <p className='font-semibold text-sm mb-3 flex items-center gap-2'>
-                      <Building /> Business Profile
-                    </p>
-                    <div className='space-y-3 ml-3'>
+                    <div className='ml-6 space-y-3'>
                       <InfoRow
                         label='Business Name'
                         value={request.createdBy.businessProfile.name}
                       />
+                      <Separator />
                       <InfoRow
                         label='Business Email'
-                        value={request.createdBy.businessProfile.email}
+                        value={
+                          <a
+                            href={`mailto:${request.createdBy.businessProfile.email}`}
+                            className='text-primary hover:underline'
+                          >
+                            {request.createdBy.businessProfile.email}
+                          </a>
+                        }
                         icon={Mail}
                       />
+                      <Separator />
                       <InfoRow
                         label='Category'
-                        value={request.createdBy.businessProfile.category}
+                        value={
+                          <Badge variant='outline' className='w-fit'>
+                            {request.createdBy.businessProfile.category}
+                          </Badge>
+                        }
                       />
+                      {request.createdBy.businessProfile.accountId && (
+                        <>
+                          <Separator />
+                          <div className='pt-2'>
+                            <Link
+                              href={`/admin/accounts/${request.createdBy.businessProfile.accountId}`}
+                              className='text-sm text-primary hover:underline'
+                            >
+                              View Business Account →
+                            </Link>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Admin Notes (if exists) */}
+        {request.adminNotes && (
+          <Card className='border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800'>
+            <CardHeader>
+              <CardTitle className='text-yellow-900 dark:text-yellow-100 flex items-center gap-2'>
+                <AlertCircle className='h-5 w-5' />
+                Admin Notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className='text-yellow-900 dark:text-yellow-100'>{request.adminNotes}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Review Checklist */}
+        {isPending && (
+          <Card className='border-2 border-primary/20'>
+            <CardHeader>
+              <CardTitle className='flex items-center gap-2'>
+                <FileText className='h-5 w-5' />
+                Review Checklist
+              </CardTitle>
+              <CardDescription>
+                Verify the following before making your decision
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className='space-y-3'>
+                <div className='flex items-start gap-3'>
+                  <div className='h-5 w-5 rounded border-2 border-muted-foreground/30 mt-0.5 flex-shrink-0' />
+                  <div>
+                    <p className='text-sm font-medium'>Location Information</p>
+                    <p className='text-xs text-muted-foreground'>
+                      Verify name, description, address, and coordinates are accurate
+                    </p>
+                  </div>
+                </div>
+                <div className='flex items-start gap-3'>
+                  <div className='h-5 w-5 rounded border-2 border-muted-foreground/30 mt-0.5 flex-shrink-0' />
+                  <div>
+                    <p className='text-sm font-medium'>Location Images</p>
+                    <p className='text-xs text-muted-foreground'>
+                      Check that images clearly show the location and match the description
+                    </p>
+                  </div>
+                </div>
+                {request.locationValidationDocuments && request.locationValidationDocuments.length > 0 && (
+                  <div className='flex items-start gap-3'>
+                    <div className='h-5 w-5 rounded border-2 border-muted-foreground/30 mt-0.5 flex-shrink-0' />
+                    <div>
+                      <p className='text-sm font-medium'>Validation Documents</p>
+                      <p className='text-xs text-muted-foreground'>
+                        Review all required documents for completeness and validity
+                      </p>
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          )}
-
-          {request.tags && request.tags.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className='flex items-center gap-2'>
-                  <TagIcon /> Tags
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DisplayTags tags={tags} maxCount={4} />
-              </CardContent>
-            </Card>
-          )}
-          <Card className='sticky top-6'>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <MapPin /> Map
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='h-96 rounded-lg overflow-hidden'>
-              <GoogleMapsPicker
-                position={position}
-                onPositionChange={() => {}}
-              />
+                <div className='flex items-start gap-3'>
+                  <div className='h-5 w-5 rounded border-2 border-muted-foreground/30 mt-0.5 flex-shrink-0' />
+                  <div>
+                    <p className='text-sm font-medium'>Submitter Information</p>
+                    <p className='text-xs text-muted-foreground'>
+                      Confirm submitter details and business profile (if applicable)
+                    </p>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        </div>
+        )}
+
+        {/* Action Buttons - Sticky at Bottom */}
+        {isPending && (
+          <Card className='sticky bottom-6 border-2 border-primary/20 bg-background shadow-lg z-10'>
+            <CardContent className='pt-6'>
+              <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-3'>
+                <Button
+                  variant='destructive'
+                  onClick={() => setShowRejectDialog(true)}
+                  disabled={isProcessing}
+                  className='flex-1'
+                >
+                  <XCircle className='h-4 w-4 mr-2' />
+                  Reject Request
+                </Button>
+                <Button
+                  onClick={() => setShowApproveDialog(true)}
+                  disabled={isProcessing}
+                  className='flex-1 bg-green-600 hover:bg-green-700'
+                >
+                  <CheckCircle2 className='h-4 w-4 mr-2' />
+                  Approve Request
+                </Button>
+              </div>
+              {isProcessing && (
+                <div className='mt-3 flex items-center justify-center gap-2 text-xs text-muted-foreground'>
+                  <Loader2 className='h-3 w-3 animate-spin' />
+                  Processing your decision...
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Image Viewer */}
@@ -399,18 +603,23 @@ export default function AdminLocationRequestDetailsPage({
         open={isImageViewerOpen}
         onOpenChange={setIsImageViewerOpen}
       />
+
       {/* Approve Dialog */}
       <AlertDialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Approve this request?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will approve the location request and make it publicly available. This action cannot be undone.
+            </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogDescription>
-            This action will make the location public. Are you sure?
-          </AlertDialogDescription>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleApprove} disabled={isProcessing}>
+            <AlertDialogAction
+              onClick={handleApprove}
+              disabled={isProcessing}
+              className='bg-green-600 hover:bg-green-700'
+            >
               {isProcessing && (
                 <Loader2 className='mr-2 h-4 w-4 animate-spin' />
               )}
@@ -419,23 +628,31 @@ export default function AdminLocationRequestDetailsPage({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
       {/* Reject Dialog */}
       <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Reject this request?</AlertDialogTitle>
             <AlertDialogDescription>
-              Please provide a reason for rejection.
+              Please provide a reason for rejection. This note will be visible to the submitter.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <Textarea
-            placeholder='Reason...'
-            value={adminNotes}
-            onChange={(e) => setAdminNotes(e.target.value)}
-          />
+          <div className='py-4'>
+            <Textarea
+              placeholder='Enter rejection reason...'
+              value={adminNotes}
+              onChange={(e) => setAdminNotes(e.target.value)}
+              className='min-h-[100px]'
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReject} disabled={isProcessing}>
+            <AlertDialogAction
+              onClick={handleReject}
+              disabled={isProcessing || !adminNotes.trim()}
+              className='bg-red-600 hover:bg-red-700'
+            >
               {isProcessing && (
                 <Loader2 className='mr-2 h-4 w-4 animate-spin' />
               )}

@@ -22,3 +22,11 @@ export function formatDateTime(dateString: string) {
     minute: '2-digit',
   });
 }
+
+export function formatShortDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
