@@ -6,9 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useDebounce } from "use-debounce";
 
 import { useSignup } from "@/hooks/auth/useSignup";
 import { useUser } from "@/hooks/user/useUser";
+import { useCheckEmailExists } from "@/hooks/auth/useCheckEmailExists";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, AlertCircle, Store, Calendar } from "lucide-react";
+import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, AlertCircle, Store, Calendar, CheckCircle2 } from "lucide-react";
 
 const formSchema = z.object({
   firstName: z.string().min(1, { message: "First name is required." }),
@@ -100,6 +102,30 @@ export function SignupForm() {
 
   const { mutate: signup, isPending } = useSignup();
 
+  // Email validation with debounce
+  const emailValue = form.watch("email");
+  const [debouncedEmail] = useDebounce(emailValue, 500);
+  const { data: emailCheck, isLoading: isCheckingEmail } = useCheckEmailExists(
+    debouncedEmail || "",
+    !!debouncedEmail && debouncedEmail.includes("@")
+  );
+
+  const emailExists = emailCheck?.exists ?? null;
+  const isEmailValid = emailExists === false;
+  const isEmailInvalid = emailExists === true;
+
+  // Update form validation when email check completes
+  useEffect(() => {
+    if (emailExists === true && debouncedEmail && form.getValues("email") === debouncedEmail) {
+      form.setError("email", {
+        type: "manual",
+        message: "This email is already registered. Please use a different email or login.",
+      });
+    } else if (emailExists === false && debouncedEmail && form.getValues("email") === debouncedEmail) {
+      form.clearErrors("email");
+    }
+  }, [emailExists, debouncedEmail, form]);
+
   const formState = form.formState;
   const errors = formState.errors;
 
@@ -149,6 +175,14 @@ export function SignupForm() {
   }, [errors.password]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    // Check if email exists before submitting
+    if (emailExists === true) {
+      form.setError("email", {
+        type: "manual",
+        message: "This email is already registered. Please use a different email or login.",
+      });
+      return;
+    }
     // Prepend country code to phone number
     const phoneWithCode = `${countryCode}${values.phoneNumber}`;
     signup({ ...values, phoneNumber: phoneWithCode, role: role?? "USER" });
@@ -244,33 +278,59 @@ export function SignupForm() {
             <FormField
               control={form.control}
               name="email"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        placeholder="m@example.com" 
-                        className={`pl-9 ${fieldState.error ? 'pr-9 border-destructive focus-visible:border-destructive' : ''}`}
-                        {...field} 
-                      />
-                      {fieldState.error && (
-                        <Tooltip open={emailTooltipOpen} onOpenChange={setEmailTooltipOpen}>
-                          <TooltipTrigger asChild>
-                            <div className="absolute right-2.5 top-2.5 cursor-pointer">
-                              <AlertCircle className="h-4 w-4 text-destructive" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800 [&>svg]:!fill-red-100 dark:[&>svg]:!fill-red-950/50 [&>svg]:!bg-red-100 dark:[&>svg]:!bg-red-950/50">
-                            <p className="text-xs font-medium">{fieldState.error.message}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
-                  </FormControl>
-                </FormItem>
-              )}
+              render={({ field, fieldState }) => {
+                const showLoading = isCheckingEmail && debouncedEmail === field.value && field.value.includes("@");
+                const showSuccess = isEmailValid && !fieldState.error && debouncedEmail === field.value;
+                const showError = (isEmailInvalid || fieldState.error) && debouncedEmail === field.value;
+
+                return (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          placeholder="m@example.com" 
+                          className={`pl-9 ${
+                            showError 
+                              ? 'pr-9 border-destructive focus-visible:border-destructive' 
+                              : showSuccess
+                              ? 'pr-9 border-green-500 focus-visible:border-green-500'
+                              : showLoading
+                              ? 'pr-9'
+                              : ''
+                          }`}
+                          {...field} 
+                        />
+                        {showLoading && (
+                          <div className="absolute right-2.5 top-2.5">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
+                        {showSuccess && !showLoading && (
+                          <div className="absolute right-2.5 top-2.5">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          </div>
+                        )}
+                        {showError && !showLoading && (
+                          <Tooltip open={emailTooltipOpen} onOpenChange={setEmailTooltipOpen}>
+                            <TooltipTrigger asChild>
+                              <div className="absolute right-2.5 top-2.5 cursor-pointer">
+                                <AlertCircle className="h-4 w-4 text-destructive" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800 [&>svg]:!fill-red-100 dark:[&>svg]:!fill-red-950/50 [&>svg]:!bg-red-100 dark:[&>svg]:!bg-red-950/50">
+                              <p className="text-xs font-medium">
+                                {fieldState.error?.message || "This email is already registered."}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                );
+              }}
             />
 
             <FormField
