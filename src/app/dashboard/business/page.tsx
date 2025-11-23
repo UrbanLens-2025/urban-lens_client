@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, PlusCircle, Star, Eye, Building2, MapPin, Users, Calendar, Loader2 } from "lucide-react";
+import { ArrowUpRight, PlusCircle, Star, Eye, Building2, MapPin, Users, Calendar, Loader2, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useMyLocations } from "@/hooks/locations/useMyLocations";
 import { useOwnerLocationBookings } from "@/hooks/locations/useOwnerLocationBookings";
@@ -48,16 +48,99 @@ function StatCard({ title, value, change, icon: Icon, isLoading }: any) {
 
 function getStatusBadge(status: string) {
   const statusUpper = status?.toUpperCase();
-  if (statusUpper === "APPROVED" || statusUpper === "ACTIVE") {
-    return <Badge className="font-medium bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">APPROVED</Badge>;
+  
+  // Booking statuses
+  switch (statusUpper) {
+    case "PAYMENT_RECEIVED":
+      return (
+        <Badge
+          variant="outline"
+          className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700 font-medium"
+        >
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Payment Received
+        </Badge>
+      );
+    case "AWAITING_BUSINESS_PROCESSING":
+      return (
+        <Badge
+          variant="outline"
+          className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700 font-medium"
+        >
+          <Clock className="h-3 w-3 mr-1" />
+          Awaiting Processing
+        </Badge>
+      );
+    case "SOFT_LOCKED":
+      return (
+        <Badge
+          variant="outline"
+          className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-700 font-medium"
+        >
+          <Clock className="h-3 w-3 mr-1" />
+          Soft Locked
+        </Badge>
+      );
+    case "CANCELLED":
+      return (
+        <Badge
+          variant="outline"
+          className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700 font-medium"
+        >
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Cancelled
+        </Badge>
+      );
+    case "APPROVED":
+      return (
+        <Badge
+          variant="outline"
+          className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700 font-medium"
+        >
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Approved
+        </Badge>
+      );
+    case "REJECTED":
+      return (
+        <Badge
+          variant="outline"
+          className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700 font-medium"
+        >
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Rejected
+        </Badge>
+      );
+    case "PENDING":
+      return (
+        <Badge
+          variant="outline"
+          className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700 font-medium"
+        >
+          <Clock className="h-3 w-3 mr-1" />
+          Pending
+        </Badge>
+      );
+    case "ACTIVE":
+      return (
+        <Badge className="font-medium bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+          Active
+        </Badge>
+      );
+    default:
+      // Format unknown statuses in a user-friendly way
+      const formattedStatus = status
+        ? status
+            .split("_")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(" ")
+        : "Unknown";
+      return (
+        <Badge variant="secondary" className="font-medium">
+          {formattedStatus}
+        </Badge>
+      );
   }
-  if (statusUpper === "PENDING") {
-    return <Badge variant="secondary" className="font-medium">PENDING</Badge>;
-  }
-  if (statusUpper === "REJECTED") {
-    return <Badge variant="destructive" className="font-medium">REJECTED</Badge>;
-  }
-  return <Badge variant="secondary" className="font-medium">{status || "N/A"}</Badge>;
 }
 
 export default function BusinessDashboardPage() {
