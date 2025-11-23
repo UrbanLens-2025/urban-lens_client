@@ -26,6 +26,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { verifyOtp, resendOtp } from "@/api/auth";
+import { ModeSwitcher } from "@/components/shared/ModeSwitcher";
 
 const otpSchema = z.object({
   otpCode: z.string().regex(/^\d{4}$/, "OTP must be exactly 4 digits"),
@@ -174,7 +175,10 @@ export default function VerifyOtpPage() {
   }
 
   return (
-    <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+    <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10 relative">
+      <div className="absolute top-6 right-6 z-10">
+        <ModeSwitcher />
+      </div>
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-2">

@@ -43,6 +43,7 @@ import {
 import { Loader2, Plus, Trash2, User, Users, Contact, Globe, Mail, Phone, LogOut, ArrowRight, CheckCircle2, ExternalLink, Sparkles, UserCheck, Link2, FileText } from "lucide-react";
 import { Textarea } from "../ui/textarea";
 import { SingleFileUpload } from "../shared/SingleFileUpload";
+import { ModeSwitcher } from "../shared/ModeSwitcher";
 
 const socialLinkSchema = z.object({
   platform: z.string().min(1, "Required"),
@@ -221,15 +222,18 @@ export function CreatorOnboardingForm({ onLogout }: CreatorOnboardingFormProps) 
 
       {/* Right Column - Form Section */}
       <div className="w-full lg:w-1/2 flex flex-col relative">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={onLogout} 
-          className="absolute top-6 right-6 z-10 gap-2 text-muted-foreground hover:text-foreground"
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </Button>
+        <div className="absolute top-6 right-6 z-10 flex items-center gap-2">
+          <ModeSwitcher />
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onLogout} 
+            className="gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
+        </div>
 
         <div className="flex-1 flex flex-col justify-center overflow-y-auto">
           <div className="max-w-xl mx-auto px-6 py-10 lg:px-10 lg:py-12 w-full">

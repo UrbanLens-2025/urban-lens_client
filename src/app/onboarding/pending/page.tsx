@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { ModeSwitcher } from "@/components/shared/ModeSwitcher";
 
 export default function PendingPage() {
   const { user, isLoading } = useUser();
@@ -48,6 +49,7 @@ export default function PendingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center p-4">
       <div className="fixed top-4 right-4 z-50 flex gap-2">
+        <ModeSwitcher />
         <Button onClick={logout} variant="outline">
           <IconLogout className="h-4 w-4 mr-2" />
           Log out
