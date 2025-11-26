@@ -245,43 +245,12 @@ export function Step4ReviewPayment({
             <p className="text-base whitespace-pre-wrap">{formValues.eventDescription}</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {tags && tags.length > 0 && (
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Allow Ticketing</p>
-              <Badge variant={formValues.allowTickets ? "default" : "secondary"}>
-                {formValues.allowTickets ? "Yes" : "No"}
-              </Badge>
-            </div>
-            {tags && tags.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">Tags</p>
-                <DisplayTags tags={tags} maxCount={10} />
-              </div>
-            )}
-          </div>
-
-          {formValues.specialRequirements && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Special Requirements</p>
-              <p className="text-base whitespace-pre-wrap">{formValues.specialRequirements}</p>
+              <p className="text-sm font-medium text-muted-foreground mb-2">Tags</p>
+              <DisplayTags tags={tags} maxCount={10} />
             </div>
           )}
-
-          {formValues.eventValidationDocuments &&
-            formValues.eventValidationDocuments.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                  <FileText className="h-3 w-3" />
-                  Event Permit Documents
-                </p>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">
-                    {formValues.eventValidationDocuments[0]?.documentImageUrls?.length || 0}{" "}
-                    document{formValues.eventValidationDocuments[0]?.documentImageUrls?.length !== 1 ? 's' : ''} uploaded
-                  </Badge>
-                </div>
-              </div>
-            )}
 
           {formValues.social && formValues.social.length > 0 && (
             <div>
