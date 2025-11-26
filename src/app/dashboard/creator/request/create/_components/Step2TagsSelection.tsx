@@ -86,37 +86,6 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
         </div>
       </div>
 
-      {selectedTagIds.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {selectedTagIds.map((id: number) => {
-            const tag = tagCategories?.find((t: TagCategory) => t.id === id);
-            if (!tag) return null;
-            return (
-              <Badge
-                key={id}
-                style={{ backgroundColor: tag.color, color: "#fff" }}
-                className="pl-2 pr-1 py-1 flex items-center gap-1"
-              >
-                <span className="text-xs">{tag.icon}</span>
-                <span className="text-xs">{tag.name}</span>
-                <button
-                  onClick={() => toggleTag(id)}
-                  className="ml-1 rounded-full hover:bg-white/20 p-0.5"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            );
-          })}
-        </div>
-      )}
-
-      {form.formState.errors.tagIds && (
-        <div className="text-sm text-destructive">
-          {form.formState.errors.tagIds.message}
-        </div>
-      )}
-
       <div className="border-2 border-primary/10 rounded-lg p-4 space-y-3 bg-primary/5">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold flex items-center gap-1.5">
@@ -202,6 +171,31 @@ export function Step2TagsSelection({ form }: Step2TagsSelectionProps) {
           </p>
         )}
       </div>
+
+      {selectedTagIds.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedTagIds.map((id: number) => {
+            const tag = tagCategories?.find((t: TagCategory) => t.id === id);
+            if (!tag) return null;
+            return (
+              <Badge
+                key={id}
+                style={{ backgroundColor: tag.color, color: "#fff" }}
+                className="pl-2 pr-1 py-1 flex items-center gap-1"
+              >
+                <span className="text-xs">{tag.icon}</span>
+                <span className="text-xs">{tag.name}</span>
+                <button
+                  onClick={() => toggleTag(id)}
+                  className="ml-1 rounded-full hover:bg-white/20 p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            );
+          })}
+        </div>
+      )}
 
       {(!tagCategories || tagCategories.length === 0) && !isLoading && (
         <div className="text-center py-12">

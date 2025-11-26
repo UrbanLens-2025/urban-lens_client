@@ -4,7 +4,6 @@ import * as React from 'react';
 import {
   IconBriefcase,
   IconCalendar,
-  IconCalendarCheck,
   IconDashboard,
   IconHelp,
   IconInnerShadowTop,
@@ -90,7 +89,6 @@ const businessNav = [
 const creatorNav = [
   { title: "Overview", url: "/dashboard/creator", icon: IconCalendar },
   { title: "My Events", url: "/dashboard/creator/events", icon: IconCalendar },
-  { title: "Event Requests", url: "/dashboard/creator/request", icon: IconCalendarCheck },
   { title: "Wallet", url: "/dashboard/creator/wallet", icon: IconWallet },
 ];
 

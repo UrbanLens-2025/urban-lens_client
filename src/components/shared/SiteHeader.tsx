@@ -27,7 +27,6 @@ const routeLabels: Record<string, string> = {
   "location-bookings": "Location Bookings",
   requests: "Requests",
   events: "Events",
-  request: "Event Requests",
   missions: "Missions",
   vouchers: "Vouchers",
   announcements: "Announcements",

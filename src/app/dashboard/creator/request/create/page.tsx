@@ -67,20 +67,7 @@ const formSchema = z
       .number()
       .int("Must be a whole number")
       .positive("Must be greater than 0"),
-    allowTickets: z.boolean(),
-    specialRequirements: z
-      .string()
-      .min(1, "Special requirements are required")
-      .max(624, "Special requirements must not exceed 624 characters"),
     tagIds: z.array(z.number()).min(1, "Select at least 1 tag"),
-    eventValidationDocuments: z
-      .array(
-        z.object({
-          documentType: z.literal("EVENT_PERMIT"),
-          documentImageUrls: z.array(z.string().url()).min(1, "Upload at least 1 document"),
-        })
-      )
-      .min(1, "Upload at least 1 document"),
     social: z
       .array(
         z.object({
@@ -147,10 +134,7 @@ export default function CreateEventRequestPage() {
       eventName: "",
       eventDescription: "",
       expectedNumberOfParticipants: undefined,
-      allowTickets: true,
-      specialRequirements: "",
       tagIds: [],
-      eventValidationDocuments: [],
       social: [],
       venueType: "business",
       locationId: undefined,
@@ -167,8 +151,6 @@ export default function CreateEventRequestPage() {
           "eventName",
           "eventDescription",
           "expectedNumberOfParticipants",
-          "specialRequirements",
-          "eventValidationDocuments",
         ];
         break;
       case 2:
@@ -228,6 +210,24 @@ export default function CreateEventRequestPage() {
     return result;
   };
 
+  const isCurrentStepValid = () => {
+    const errors = form.formState.errors;
+    const values = form.getValues();
+    
+    switch (currentStep) {
+      case 1:
+        return !errors.eventName && !errors.eventDescription && !errors.expectedNumberOfParticipants &&
+               values.eventName && values.eventDescription && values.expectedNumberOfParticipants;
+      case 2:
+        return !errors.tagIds && values.tagIds && values.tagIds.length > 0;
+      case 3:
+        return !errors.locationId && !errors.dateRanges &&
+               values.locationId && values.dateRanges && values.dateRanges.length > 0;
+      default:
+        return true;
+    }
+  };
+
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
     if (isValid && currentStep < 4) {
@@ -268,6 +268,9 @@ export default function CreateEventRequestPage() {
         startDateTime: range.startDateTime.toISOString(),
         endDateTime: range.endDateTime.toISOString(),
       })),
+      // Provide default values for removed form fields that are still required in payload
+      allowTickets: false,
+      eventValidationDocuments: [],
     };
 
     // Remove optional fields that shouldn't be in payload
@@ -308,8 +311,6 @@ export default function CreateEventRequestPage() {
           "eventName",
           "eventDescription",
           "expectedNumberOfParticipants",
-          "specialRequirements",
-          "eventValidationDocuments",
         ];
         break;
       case 2:
@@ -379,7 +380,7 @@ export default function CreateEventRequestPage() {
           >
             Previous
           </Button>
-          <Button onClick={handleNext}>
+          <Button onClick={handleNext} disabled={!isCurrentStepValid()}>
             Next
           </Button>
         </div>
