@@ -300,9 +300,9 @@ export default function LocationForm({
     try {
       const { tagIds: newTagIds, ...rest } = values;
       
-      // Ensure tagIds is a valid array of numbers
+      // Ensure tagIds is a valid array of integers
       const validTagIds = Array.isArray(newTagIds) && newTagIds.length > 0
-        ? newTagIds.map(id => Number(id)).filter(id => !isNaN(id))
+        ? newTagIds.map(id => parseInt(String(id), 10)).filter(id => !isNaN(id) && Number.isInteger(id))
         : [];
 
       if (validTagIds.length === 0) {
@@ -317,7 +317,10 @@ export default function LocationForm({
       // Validate that all selected tag IDs exist in the available tag categories
       // Only send category IDs that are currently available and valid
       const availableTagIds = tagCategories?.map(tag => tag.id) || [];
-      const categoryIds = validTagIds.filter(id => availableTagIds.includes(id));
+      const categoryIds = validTagIds
+        .filter(id => availableTagIds.includes(id))
+        .map(id => Number.isInteger(id) ? id : parseInt(String(id), 10))
+        .filter(id => !isNaN(id) && Number.isInteger(id));
 
       if (categoryIds.length === 0) {
         form.setError("tagIds", {
