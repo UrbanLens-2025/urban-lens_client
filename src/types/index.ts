@@ -631,6 +631,8 @@ export interface BookableLocation {
   id: string;
   name: string;
   description: string;
+  latitude: string;
+  longitude: string;
   addressLine: string;
   addressLevel1: string;
   addressLevel2: string;
@@ -646,6 +648,11 @@ export interface GetBookableLocationsParams {
   limit?: number;
   sortBy?: string;
   search?: string;
+  startTime?: string;
+  endTime?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  maxCapacity?: number;
 }
 
 export interface ReferencedLocationBooking {

@@ -60,11 +60,14 @@ export function EventWelcomeModal({ eventId, eventName }: EventWelcomeModalProps
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          <div className="bg-muted/50 rounded-lg p-4 border">
+          <div className="bg-muted/50 rounded-lg p-4 border space-y-3">
             <p className="text-sm text-foreground leading-relaxed">
-              Your event has been successfully created based on your event request. 
-              We&apos;ve pre-filled the details to get you started quickly. You can review 
-              and customize everything to match your vision.
+              Your event is live in Draft using the details you just entered in the creation
+              form—name, description, attendee count, tags, and any supporting documents.
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Finish setting things up by adding visuals, refining the info, uploading any missing
+              compliance documents, and configuring tickets before you publish.
             </p>
           </div>
 

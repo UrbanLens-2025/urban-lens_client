@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, FileText, Tags, MapPin, CheckCircle2 } from "lucide-react";
+import { Check, FileText, Tags, FileCheck, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StepIndicatorProps {
@@ -10,8 +10,8 @@ interface StepIndicatorProps {
 const steps = [
   { number: 1, label: "Basic Info", icon: FileText },
   { number: 2, label: "Select Tags", icon: Tags },
-  { number: 3, label: "Location", icon: MapPin },
-  { number: 4, label: "Review & Payment", icon: CheckCircle2 },
+  { number: 3, label: "Documents", icon: FileCheck },
+  { number: 4, label: "Review", icon: CheckCircle2 },
 ];
 
 export function StepIndicator({ currentStep }: StepIndicatorProps) {

@@ -32,17 +32,84 @@ export const createEventRequest = async (
   return data.data;
 };
 
+export interface CreateEventPayload {
+  displayName: string;
+  description: string;
+  expectedNumberOfParticipants: number;
+  categoryIds: number[];
+  social?: {
+    platform: string;
+    url: string;
+    isMain: boolean;
+  }[];
+  eventValidationDocuments?: {
+    documentType: string;
+    documentImageUrls: string[];
+  }[];
+  startDate?: string;
+  endDate?: string;
+  coverUrl?: string;
+  avatarUrl?: string;
+}
+
+export const createEvent = async (
+  payload: CreateEventPayload
+): Promise<Event> => {
+  const { data } = await axiosInstance.post<ApiResponse<Event>>(
+    '/v1/creator/events',
+    payload
+  );
+  return data.data;
+};
+
 export const getBookableLocations = async ({
   page = 1,
   limit = 10,
   sortBy = 'name:ASC',
-  search
+  search,
+  startTime,
+  endTime,
+  minPrice,
+  maxPrice,
+  maxCapacity,
 }: GetBookableLocationsParams): Promise<PaginatedData<BookableLocation>> => {
   
   const params: any = { page, limit, sortBy };
+  
+  // Search parameters
   if (search) {
     params.search = search;
-    params.searchBy = ['name', 'addressLine'];
+    params.searchBy = ['name', 'addressLine', 'addressLevel1', 'addressLevel2'];
+  }
+  
+  // Date parameters (API expects startDate and endDate, not startTime/endTime)
+  if (startTime) {
+    params.startDate = startTime;
+  }
+  if (endTime) {
+    params.endDate = endTime;
+  }
+  
+  // Price filter: format as filter.bookingConfig.baseBookingPrice with operations
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    params['filter.bookingConfig.baseBookingPrice'] = [];
+    if (minPrice !== undefined) {
+      params['filter.bookingConfig.baseBookingPrice'].push(`$gte:${minPrice}`);
+    }
+    if (maxPrice !== undefined) {
+      if (minPrice !== undefined) {
+        // If both min and max, combine with $and
+        params['filter.bookingConfig.baseBookingPrice'].push(`$and:$lte:${maxPrice}`);
+      } else {
+        // If only max, use $lte directly
+        params['filter.bookingConfig.baseBookingPrice'].push(`$lte:${maxPrice}`);
+      }
+    }
+  }
+  
+  // Max capacity filter: format as filter.bookingConfig.maxCapacity with $gte operation
+  if (maxCapacity !== undefined) {
+    params['filter.bookingConfig.maxCapacity'] = [`$gte:${maxCapacity}`];
   }
 
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<BookableLocation>>>(
@@ -233,4 +300,32 @@ export const deleteTicket = async (
   await axiosInstance.delete<ApiResponse<void>>(
     `/v1/creator/events/${eventId}/tickets/${ticketId}`
   );
+};
+
+export interface AddLocationBookingPayload {
+  locationId: string;
+  dates: Array<{
+    startDateTime: string;
+    endDateTime: string;
+  }>;
+}
+
+export interface LocationBookingResponse {
+  id: string;
+  locationId: string;
+  dates: Array<{
+    startDateTime: string;
+    endDateTime: string;
+  }>;
+}
+
+export const addLocationBookingToEvent = async (
+  eventId: string,
+  payload: AddLocationBookingPayload
+): Promise<LocationBookingResponse> => {
+  const { data } = await axiosInstance.post<ApiResponse<LocationBookingResponse>>(
+    `/v1/creator/events/${eventId}/location-bookings`,
+    payload
+  );
+  return data.data;
 };

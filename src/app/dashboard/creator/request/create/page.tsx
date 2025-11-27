@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { useCreateEventRequest } from "@/hooks/events/useCreateEventRequest";
+import { useCreateEvent } from "@/hooks/events/useCreateEvent";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -15,7 +15,7 @@ import { AlertCircle, FileText } from "lucide-react";
 import { StepIndicator } from "./_components/StepIndicator";
 import { Step1BasicInfo } from "./_components/Step1BasicInfo";
 import { Step2TagsSelection } from "./_components/Step2TagsSelection";
-import { Step3LocationSelection } from "./_components/Step3LocationSelection";
+import { Step3Documents } from "./_components/Step3Documents";
 import { Step4ReviewPayment } from "./_components/Step4ReviewPayment";
 import { CreateEventRequestPayload } from "@/types";
 
@@ -67,7 +67,10 @@ const formSchema = z
       .number()
       .int("Must be a whole number")
       .positive("Must be greater than 0"),
-    tagIds: z.array(z.number()).min(1, "Select at least 1 tag"),
+    startDate: z.date().optional(),
+    endDate: z.date().optional(),
+    coverUrl: z.string().url("Invalid cover image URL").optional(),
+    avatarUrl: z.string().url("Invalid avatar image URL").optional(),
     social: z
       .array(
         z.object({
@@ -78,7 +81,20 @@ const formSchema = z
       )
       .optional(),
 
-    // Step 2 fields (step 3 after tags)
+    // Step 2 fields
+    tagIds: z.array(z.number()).min(1, "Select at least 1 tag"),
+
+    // Step 3 fields
+    eventValidationDocuments: z
+      .array(
+        z.object({
+          documentType: z.string().min(1, "Document type is required"),
+          documentImageUrls: z.array(z.string().url("Invalid image URL")).min(1, "At least one image is required"),
+        })
+      )
+      .optional(),
+
+    // Legacy fields (for backward compatibility)
     venueType: z.literal("business"),
     locationId: z.string().uuid("Invalid location ID").optional(),
     dateRanges: z.array(
@@ -86,19 +102,28 @@ const formSchema = z
         startDateTime: z.date(),
         endDateTime: z.date(),
       })
-    ).min(1, "Select at least one time slot for your event"),
+    ).optional(),
   })
   .superRefine((data, ctx) => {
-    // Conditional validation: locationId required
-    if (!data.locationId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Please select a location",
-        path: ["locationId"],
-      });
+    // Validate end date is after start date
+    if (data.startDate && data.endDate) {
+      if (data.endDate <= data.startDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "End date must be after start date",
+          path: ["endDate"],
+        });
+      }
+      if (data.startDate <= new Date()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Start date must be in the future",
+          path: ["startDate"],
+        });
+      }
     }
 
-    // Validate date ranges
+    // Legacy validation for dateRanges (if still used)
     if (data.dateRanges && data.dateRanges.length > 0) {
       for (const range of data.dateRanges) {
         if (range.endDateTime <= range.startDateTime) {
@@ -124,7 +149,7 @@ export type CreateEventRequestForm = z.infer<typeof formSchema>;
 export default function CreateEventRequestPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
-  const createEvent = useCreateEventRequest();
+  const createEvent = useCreateEvent();
 
   const form = useForm<CreateEventRequestForm>({
     resolver: zodResolver(formSchema),
@@ -134,8 +159,13 @@ export default function CreateEventRequestPage() {
       eventName: "",
       eventDescription: "",
       expectedNumberOfParticipants: undefined,
+      startDate: undefined,
+      endDate: undefined,
+      coverUrl: undefined,
+      avatarUrl: undefined,
       tagIds: [],
       social: [],
+      eventValidationDocuments: [],
       venueType: "business",
       locationId: undefined,
       dateRanges: [],
@@ -157,11 +187,8 @@ export default function CreateEventRequestPage() {
         fieldsToValidate = ["tagIds"];
         break;
       case 3:
-        fieldsToValidate = [
-          "locationId",
-          "dateRanges",
-        ];
-        break;
+        // Documents step - no validation for now
+        return true;
       case 4:
         // Validate entire form
         const isValid = await form.trigger();
@@ -210,6 +237,9 @@ export default function CreateEventRequestPage() {
     return result;
   };
 
+  // Watch form values for reactive validation
+  const eventValidationDocuments = form.watch("eventValidationDocuments");
+  
   const isCurrentStepValid = () => {
     const errors = form.formState.errors;
     const values = form.getValues();
@@ -221,8 +251,13 @@ export default function CreateEventRequestPage() {
       case 2:
         return !errors.tagIds && values.tagIds && values.tagIds.length > 0;
       case 3:
-        return !errors.locationId && !errors.dateRanges &&
-               values.locationId && values.dateRanges && values.dateRanges.length > 0;
+        // Documents step - Next button disabled if no valid documents (each document must have at least one image)
+        const documents = eventValidationDocuments || [];
+        if (documents.length === 0) {
+          return false;
+        }
+        // Check that each document has at least one image
+        return documents.every((doc) => doc.documentImageUrls && doc.documentImageUrls.length > 0);
       default:
         return true;
     }
@@ -238,6 +273,12 @@ export default function CreateEventRequestPage() {
     } else if (!isValid) {
       setShowValidationErrors(true);
     }
+  };
+
+  const handleSkipStep3 = () => {
+    setShowValidationErrors(false);
+    setCurrentStep(4);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handlePrevious = () => {
@@ -256,25 +297,20 @@ export default function CreateEventRequestPage() {
     }
 
     const values = form.getValues();
-    const { dateRanges, ...rest } = values;
 
-    // For custom venues, we still need a locationId - this might need backend handling
-    // For now, we'll submit what we have and let the backend decide
-    const payload: CreateEventRequestPayload = {
-      ...rest,
+    // Build payload according to new API structure
+    const payload = {
+      displayName: values.eventName,
+      description: values.eventDescription,
+      expectedNumberOfParticipants: values.expectedNumberOfParticipants,
+      categoryIds: values.tagIds,
       social: values.social || [],
-      locationId: values.locationId || "", // Will need to handle custom venues differently
-      dates: dateRanges.map((range) => ({
-        startDateTime: range.startDateTime.toISOString(),
-        endDateTime: range.endDateTime.toISOString(),
-      })),
-      // Provide default values for removed form fields that are still required in payload
-      allowTickets: false,
-      eventValidationDocuments: [],
+      eventValidationDocuments: values.eventValidationDocuments || [],
+      startDate: values.startDate?.toISOString(),
+      endDate: values.endDate?.toISOString(),
+      coverUrl: values.coverUrl,
+      avatarUrl: values.avatarUrl,
     };
-
-    // Remove optional fields that shouldn't be in payload
-    delete (payload as any).venueType;
 
     createEvent.mutate(payload);
   };
@@ -286,7 +322,7 @@ export default function CreateEventRequestPage() {
       case 2:
         return <Step2TagsSelection form={form} />;
       case 3:
-        return <Step3LocationSelection form={form} />;
+        return <Step3Documents form={form} />;
       case 4:
         return (
           <Step4ReviewPayment
@@ -294,6 +330,7 @@ export default function CreateEventRequestPage() {
             onSubmit={handleSubmit}
             isSubmitting={createEvent.isPending}
             onEditStep={setCurrentStep}
+            onBack={handlePrevious}
           />
         );
       default:
@@ -315,12 +352,6 @@ export default function CreateEventRequestPage() {
         break;
       case 2:
         fieldsToCheck = ["tagIds"];
-        break;
-      case 3:
-        fieldsToCheck = [
-          "locationId",
-          "dateRanges",
-        ];
         break;
     }
 
@@ -380,9 +411,20 @@ export default function CreateEventRequestPage() {
           >
             Previous
           </Button>
-          <Button onClick={handleNext} disabled={!isCurrentStepValid()}>
-            Next
-          </Button>
+          <div className="flex gap-2">
+            {currentStep === 3 && (
+              <Button
+                variant="ghost"
+                onClick={handleSkipStep3}
+                disabled={createEvent.isPending}
+              >
+                Skip this step
+              </Button>
+            )}
+            <Button onClick={handleNext} disabled={!isCurrentStepValid()}>
+              Next
+            </Button>
+          </div>
         </div>
       )}
     </div>
