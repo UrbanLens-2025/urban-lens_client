@@ -12,9 +12,12 @@ import {
   Calendar, 
   Users, 
   FileText, 
-  Globe
+  Globe,
+  Image as ImageIcon
 } from "lucide-react";
 import { CreateEventRequestForm } from "../page";
+import { DateTimePicker } from "./DateTimePicker";
+import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
 
 interface Step1BasicInfoProps {
   form: UseFormReturn<CreateEventRequestForm>;
@@ -146,6 +149,108 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
           </FormItem>
         )}
       />
+
+      <Separator />
+
+      {/* Start Date and End Date */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField
+          control={form.control}
+          name="startDate"
+          render={({ field }) => (
+            <FormItem>
+              <DateTimePicker
+                label="Start Date"
+                value={field.value}
+                onChange={field.onChange}
+                error={form.formState.errors.startDate?.message}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="endDate"
+          render={({ field }) => (
+            <FormItem>
+              <DateTimePicker
+                label="End Date"
+                value={field.value}
+                onChange={field.onChange}
+                error={form.formState.errors.endDate?.message}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <Separator />
+
+      {/* Cover Image and Avatar Image */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField
+          control={form.control}
+          name="coverUrl"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center gap-2">
+                <FormLabel className="flex items-center gap-1.5">
+                  <ImageIcon className="h-4 w-4 text-primary" />
+                  Cover Image
+                </FormLabel>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Upload a cover image for your event</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <FormControl>
+                <SingleFileUpload
+                  value={field.value || undefined}
+                  onChange={(url) => field.onChange(url || "")}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="avatarUrl"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center gap-2">
+                <FormLabel className="flex items-center gap-1.5">
+                  <ImageIcon className="h-4 w-4 text-primary" />
+                  Avatar Image
+                </FormLabel>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Upload an avatar image for your event</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <FormControl>
+                <SingleFileUpload
+                  value={field.value || undefined}
+                  onChange={(url) => field.onChange(url || "")}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
 
       <Separator />
 

@@ -29,6 +29,11 @@ interface EventTabContextType {
   };
   openEditEventTab: (eventName: string) => void;
   closeEditEventTab: () => void;
+  bookLocationTab: {
+    isOpen: boolean;
+  };
+  openBookLocationTab: () => void;
+  closeBookLocationTab: () => void;
 }
 
 const EventTabContext = createContext<EventTabContextType | undefined>(undefined);
@@ -68,6 +73,12 @@ export function EventTabProvider({ children }: { children: ReactNode }) {
   }>({
     isOpen: false,
     eventName: null,
+  });
+
+  const [bookLocationTab, setBookLocationTab] = useState<{
+    isOpen: boolean;
+  }>({
+    isOpen: false,
   });
 
   const openTicketDetailsTab = useCallback((ticketId: string, ticketName: string) => {
@@ -130,6 +141,18 @@ export function EventTabProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const openBookLocationTab = useCallback(() => {
+    setBookLocationTab({
+      isOpen: true,
+    });
+  }, []);
+
+  const closeBookLocationTab = useCallback(() => {
+    setBookLocationTab({
+      isOpen: false,
+    });
+  }, []);
+
   return (
     <EventTabContext.Provider
       value={{
@@ -145,6 +168,9 @@ export function EventTabProvider({ children }: { children: ReactNode }) {
         editEventTab,
         openEditEventTab,
         closeEditEventTab,
+        bookLocationTab,
+        openBookLocationTab,
+        closeBookLocationTab,
       }}
     >
       {children}

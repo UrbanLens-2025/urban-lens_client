@@ -22,6 +22,8 @@ import {
   UserCheck,
   Megaphone,
   CalendarDays,
+  MapPin,
+  Building2,
   X,
 } from "lucide-react";
 import {
@@ -64,6 +66,8 @@ function EventDetailLayoutContent({
     editEventTab,
     openEditEventTab,
     closeEditEventTab,
+    bookLocationTab,
+    closeBookLocationTab,
   } = useEventTabs();
   const [preventAutoOpenTicketId, setPreventAutoOpenTicketId] = useState<string | null>(null);
   const [preventAutoOpenTicketCreate, setPreventAutoOpenTicketCreate] = useState(false);
@@ -154,6 +158,11 @@ function EventDetailLayoutContent({
     // Check if edit event tab is open and active
     if (path === 'edit-event-tab' && editEventTab.isOpen) {
       return pathname === `/dashboard/creator/events/${eventId}/edit`;
+    }
+    
+    // Check if book location tab is open and active
+    if (path === 'book-location-tab' && bookLocationTab.isOpen) {
+      return pathname.includes('/location/book');
     }
     
     if (path === `/dashboard/creator/events/${eventId}`) {
@@ -333,13 +342,16 @@ function EventDetailLayoutContent({
 
   // Auto-open edit event tab when on edit event route
   useEffect(() => {
-    if (isEditEventRoute && !preventAutoOpenEditEvent && !editEventTabOpenedRef.current && event) {
-      editEventTabOpenedRef.current = true;
-      openEditEventTab(event.displayName);
+    if (isEditEventRoute && !preventAutoOpenEditEvent && event) {
+      // Only open if tab is not already open or if it's a different event name
+      if (!editEventTab.isOpen || editEventTab.eventName !== event.displayName) {
+        editEventTabOpenedRef.current = true;
+        openEditEventTab(event.displayName);
+      }
     } else if (!isEditEventRoute) {
       editEventTabOpenedRef.current = false;
     }
-  }, [isEditEventRoute, preventAutoOpenEditEvent, openEditEventTab, event]);
+  }, [isEditEventRoute, preventAutoOpenEditEvent, openEditEventTab, event, editEventTab.isOpen, editEventTab.eventName]);
 
   // Reset prevent flag when leaving edit event route
   useEffect(() => {
@@ -412,21 +424,6 @@ function EventDetailLayoutContent({
           </Button>
         </div>
 
-        {/* Edit Event Button - Overlay */}
-        <div className="absolute top-4 right-4 z-10">
-          <Button 
-            variant="default" 
-            size="icon" 
-            onClick={(e) => {
-              e.preventDefault();
-              openEditEventTab(event.displayName);
-              router.push(`/dashboard/creator/events/${eventId}/edit`);
-            }}
-            className="bg-background/98 border-2 border-foreground/30 shadow-2xl backdrop-blur-lg hover:bg-background min-w-[44px] min-h-[44px]"
-          >
-            <Edit className="h-5 w-5 text-foreground stroke-2" />
-          </Button>
-        </div>
       </div>
 
       {/* Main Content Container */}
@@ -520,34 +517,51 @@ function EventDetailLayoutContent({
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-4">
-              {/* Primary Actions */}
               <div className="flex flex-col sm:flex-row gap-2 flex-1">
                 {event.status === "DRAFT" && (
-                  <div className="w-full sm:w-auto">
-                    <Button
-                      onClick={handlePublishClick}
-                      disabled={publishEvent.isPending || !canPublish}
-                      className="w-full"
-                      size="lg"
-                    >
-                      {publishEvent.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Publishing...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4 mr-2" />
-                          Publish Event
-                        </>
+                  <>
+                    <div className="w-full sm:w-auto">
+                      <Button
+                        onClick={handlePublishClick}
+                        disabled={publishEvent.isPending || !canPublish}
+                        className="w-full"
+                        size="lg"
+                      >
+                        {publishEvent.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Publishing...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4 mr-2" />
+                            Publish Event
+                          </>
+                        )}
+                      </Button>
+                      {!canPublish && publishDisabledReason && (
+                        <p className="text-xs text-destructive mt-1">
+                          {publishDisabledReason}
+                        </p>
                       )}
-                    </Button>
-                    {!canPublish && publishDisabledReason && (
-                      <p className="text-xs text-destructive mt-1">
-                        {publishDisabledReason}
-                      </p>
-                    )}
-                  </div>
+                    </div>
+
+                    <div className="w-full sm:w-auto">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          openEditEventTab(event.displayName);
+                          router.push(`/dashboard/creator/events/${eventId}/edit`);
+                        }}
+                        className="w-full gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Edit Event
+                      </Button>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -583,6 +597,20 @@ function EventDetailLayoutContent({
               >
                 <Ticket className="h-4 w-4" />
                 Tickets
+              </Button>
+            </Link>
+            <Link href={`/dashboard/creator/events/${eventId}/location`}>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "gap-2 rounded-b-none border-b-2 transition-colors",
+                  isActiveTab(`/dashboard/creator/events/${eventId}/location`)
+                    ? "border-primary bg-muted"
+                    : "border-transparent hover:border-muted-foreground/50"
+                )}
+              >
+                <MapPin className="h-4 w-4" />
+                Location
               </Button>
             </Link>
             {canAccessAttendanceTab ? (
@@ -752,6 +780,42 @@ function EventDetailLayoutContent({
               </div>
             )}
 
+            {/* Dynamic Book Location Tab */}
+            {bookLocationTab.isOpen && (
+              <div className="relative flex items-center">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "rounded-b-none border-b-2 transition-colors pr-7",
+                    isActiveTab('book-location-tab')
+                      ? "border-primary bg-muted"
+                      : "border-transparent hover:border-muted-foreground/50"
+                  )}
+                  onClick={() => {
+                    router.push(`/dashboard/creator/events/${eventId}/location/book`);
+                  }}
+                >
+                  Book location
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeBookLocationTab();
+                    // If we're currently on the book location page, navigate back to location tab
+                    if (pathname.includes('/location/book')) {
+                      router.push(`/dashboard/creator/events/${eventId}/location`);
+                    }
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
             {/* Dynamic Edit Event Tab */}
             {editEventTab.isOpen && (
               <div className="relative flex items-center">
@@ -764,10 +828,16 @@ function EventDetailLayoutContent({
                       : "border-transparent hover:border-muted-foreground/50"
                   )}
                   onClick={() => {
+                    // Reset prevent flag to allow tab to stay open when navigating
+                    setPreventAutoOpenEditEvent(false);
+                    // Ensure tab is open if navigating to edit route
+                    if (event && (!editEventTab.isOpen || editEventTab.eventName !== event.displayName)) {
+                      openEditEventTab(event.displayName);
+                    }
                     router.push(`/dashboard/creator/events/${eventId}/edit`);
                   }}
                 >
-                  {editEventTab.eventName || 'Edit Event'}
+                  Edit event
                 </Button>
                 <Button
                   variant="ghost"
