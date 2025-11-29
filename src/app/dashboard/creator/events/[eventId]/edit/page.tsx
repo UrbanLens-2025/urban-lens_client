@@ -8,10 +8,11 @@ import { z } from "zod";
 import { useEventById } from "@/hooks/events/useEventById";
 import { useAddEventTags, useRemoveEventTags } from "@/hooks/events/useEventTags";
 import { updateEvent } from "@/api/events";
+import { useEventRequestById } from "@/hooks/events/useEventRequestById";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAllTags } from "@/hooks/tags/useAllTags";
-import { Tag } from "@/types";
+import { Tag, UpdateEventPayload } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -35,6 +37,7 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
+import { FileUpload } from "@/components/shared/FileUpload";
 import { DateTimePicker } from "@/app/dashboard/creator/request/create/_components/DateTimePicker";
 import {
   Loader2,
@@ -52,11 +55,10 @@ import {
   CalendarDays,
   Info,
   FileText,
-  Shield,
   Link2,
   CheckCircle2,
+  FileCheck,
 } from "lucide-react";
-import type { UpdateEventPayload } from "@/types";
 import { cn } from "@/lib/utils";
 
 const updateEventSchema = z.object({
@@ -69,6 +71,11 @@ const updateEventSchema = z.object({
     .string()
     .min(5, "Description must be at least 5 characters")
     .max(1024, "Description must not exceed 1024 characters")
+    .optional(),
+  expectedNumberOfParticipants: z
+    .number()
+    .int("Must be a whole number")
+    .positive("Must be greater than 0")
     .optional(),
   avatarUrl: z
     .union([
@@ -96,16 +103,6 @@ const updateEventSchema = z.object({
     .date()
     .optional()
     .nullable(),
-  refundPolicy: z
-    .string()
-    .nullable()
-    .or(z.literal("").transform(() => null))
-    .optional(),
-  termsAndConditions: z
-    .string()
-    .nullable()
-    .or(z.literal("").transform(() => null))
-    .optional(),
   social: z
     .array(
       z.object({
@@ -114,8 +111,14 @@ const updateEventSchema = z.object({
         isMain: z.boolean(),
       })
     )
-    .default([])
-    .nullable()
+    .optional(),
+  eventValidationDocuments: z
+    .array(
+      z.object({
+        documentType: z.string().min(1, "Document type is required"),
+        documentImageUrls: z.array(z.string().url("Invalid image URL")).min(1, "At least one image is required"),
+      })
+    )
     .optional(),
 }).refine(
   (data) => {
@@ -152,7 +155,7 @@ const sections = [
   { id: "tags", label: "Tags", icon: TagIcon },
   { id: "images", label: "Images", icon: ImageIcon },
   { id: "social", label: "Social Links", icon: Globe },
-  { id: "policies", label: "Policies", icon: Shield },
+  { id: "documents", label: "Documents", icon: FileCheck },
 ];
 
 // Helper component for field labels with tooltips
@@ -186,6 +189,7 @@ export default function EditEventPage({
   const removeEventTags = useRemoveEventTags();
 
   const { data: event, isLoading, isError } = useEventById(eventId);
+  const { data: eventRequest } = useEventRequestById(event?.referencedEventRequestId || null);
   const { data: allTags, isLoading: isLoadingTags } = useAllTags();
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -208,13 +212,13 @@ export default function EditEventPage({
     defaultValues: {
       displayName: "",
       description: "",
+      expectedNumberOfParticipants: undefined,
       avatarUrl: null,
       coverUrl: null,
       startDate: undefined,
       endDate: undefined,
-      refundPolicy: null,
-      termsAndConditions: null,
       social: [],
+      eventValidationDocuments: [],
     },
   });
 
@@ -224,17 +228,17 @@ export default function EditEventPage({
       form.reset({
         displayName: event.displayName || "",
         description: event.description || "",
+        expectedNumberOfParticipants: eventRequest?.expectedNumberOfParticipants || undefined,
         avatarUrl: event.avatarUrl || null,
         coverUrl: event.coverUrl || null,
         startDate: event.startDate ? new Date(event.startDate) : undefined,
         endDate: event.endDate ? new Date(event.endDate) : undefined,
-        refundPolicy: event.refundPolicy || null,
-        termsAndConditions: event.termsAndConditions || null,
         social: event.social || [],
+        eventValidationDocuments: eventRequest?.eventValidationDocuments || [],
       });
       setPendingTagIds(null);
     }
-  }, [event, form]);
+  }, [event, eventRequest, form]);
 
   // Track active section on scroll
   useEffect(() => {
@@ -260,6 +264,11 @@ export default function EditEventPage({
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "social",
+  });
+
+  const { fields: documentFields, append: appendDocument, remove: removeDocument } = useFieldArray({
+    control: form.control,
+    name: "eventValidationDocuments",
   });
 
   const socialLinks = form.watch("social") || [];
@@ -300,17 +309,18 @@ export default function EditEventPage({
       
       if (data.displayName !== undefined) payload.displayName = data.displayName;
       if (data.description !== undefined) payload.description = data.description;
+      if (data.expectedNumberOfParticipants !== undefined) payload.expectedNumberOfParticipants = data.expectedNumberOfParticipants;
       if (data.avatarUrl !== undefined) payload.avatarUrl = data.avatarUrl || null;
       if (data.coverUrl !== undefined) payload.coverUrl = data.coverUrl || null;
       if (data.startDate !== undefined) {
-        payload.startDate = data.startDate;
+        payload.startDate = data.startDate ? data.startDate.toISOString() : null;
       }
       if (data.endDate !== undefined) {
-        payload.endDate = data.endDate;
+        payload.endDate = data.endDate ? data.endDate.toISOString() : null;
       }
-      if (data.refundPolicy !== undefined) payload.refundPolicy = data.refundPolicy || null;
-      if (data.termsAndConditions !== undefined) payload.termsAndConditions = data.termsAndConditions || null;
-      if (data.social !== undefined) payload.social = data.social || null;
+      // social and eventValidationDocuments are full replacements (not partial updates)
+      if (data.social !== undefined) payload.social = data.social || [];
+      if (data.eventValidationDocuments !== undefined) payload.eventValidationDocuments = data.eventValidationDocuments || [];
 
       const updatedEvent = await updateEvent(eventId, payload);
       
@@ -508,6 +518,35 @@ export default function EditEventPage({
                                 {field.value?.length || 0}/1024 characters
                               </span>
                             </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="expectedNumberOfParticipants"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <FieldLabel
+                                label="Expected Number of Participants"
+                                tooltip="The estimated number of attendees for your event"
+                              />
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="e.g., 100"
+                                {...field}
+                                value={field.value || ""}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  field.onChange(value === "" ? undefined : parseInt(value, 10));
+                                }}
+                                className="h-11"
+                              />
+                            </FormControl>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -818,7 +857,7 @@ export default function EditEventPage({
 
                                             {filteredTags.length === 0 && searchTerms[groupName] && (
                                               <p className="text-xs text-muted-foreground text-center py-3">
-                                                No tags found for "{searchTerms[groupName]}"
+                                                No tags found for &quot;{searchTerms[groupName]}&quot;
                                               </p>
                                             )}
                                           </div>
@@ -1069,80 +1108,113 @@ export default function EditEventPage({
                   </Card>
                 </div>
 
-                {/* Policies */}
-                <div ref={(el) => {sectionRefs.current["policies"] = el}}>
+                {/* Documents */}
+                <div ref={(el) => {sectionRefs.current["documents"] = el}}>
                   <Card className="shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader>
                       <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-lg bg-amber-500/10">
-                          <Shield className="h-5 w-5 text-amber-500" />
+                        <div className="p-2 rounded-lg bg-purple-500/10">
+                          <FileCheck className="h-5 w-5 text-purple-500" />
                         </div>
                         <div>
-                          <CardTitle>Policies & Terms</CardTitle>
+                          <CardTitle>Event Validation Documents</CardTitle>
                           <CardDescription>
-                            Important legal information for attendees
+                            Upload required documents for event validation
                           </CardDescription>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                      <FormField
-                        control={form.control}
-                        name="refundPolicy"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              <FieldLabel
-                                label="Refund Policy"
-                                tooltip="Clearly state your refund and cancellation policy. This helps set expectations and reduces disputes."
-                              />
-                            </FormLabel>
-                            <FormDescription className="text-xs">
-                              Let attendees know if and when they can get refunds
-                            </FormDescription>
-                            <FormControl>
-                              <Textarea
-                                placeholder="e.g., Full refund available up to 7 days before the event. No refunds within 7 days of the event date."
-                                rows={4}
-                                {...field}
-                                value={field.value || ""}
-                                className="resize-none"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    <CardContent className="space-y-4">
+                      {documentFields.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <FileCheck className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                          <p className="text-sm">No documents uploaded yet</p>
+                          <p className="text-xs mt-1">Add documents to validate your event</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {documentFields.map((field, index) => (
+                            <div key={field.id} className="border-2 border-primary/10 rounded-lg p-4 space-y-4 bg-primary/5">
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-semibold flex items-center gap-2">
+                                  <FileCheck className="h-4 w-4 text-primary" />
+                                  Document {index + 1}
+                                </h3>
+                                {documentFields.length > 0 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeDocument(index)}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
 
-                      <Separator />
+                              <FormField
+                                control={form.control}
+                                name={`eventValidationDocuments.${index}.documentType`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Document Type</FormLabel>
+                                    <Select value={field.value} onValueChange={field.onChange}>
+                                      <FormControl>
+                                        <SelectTrigger className="border-primary/20 focus:border-primary/50">
+                                          <SelectValue placeholder="Select document type" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="EVENT_PERMIT">Event Permit</SelectItem>
+                                        <SelectItem value="TAX_REGISTRATION">Tax Registration</SelectItem>
+                                        <SelectItem value="HEALTH_PERMIT">Health Permit</SelectItem>
+                                        <SelectItem value="LIABILITY_INSURANCE">Liability Insurance</SelectItem>
+                                        <SelectItem value="ORGANIZER_ID">Organizer ID</SelectItem>
+                                        <SelectItem value="BUSINESS_LICENSE">Business License</SelectItem>
+                                        <SelectItem value="OTHER">Other</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
 
-                      <FormField
-                        control={form.control}
-                        name="termsAndConditions"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              <FieldLabel
-                                label="Terms and Conditions"
-                                tooltip="Any rules, restrictions, or requirements attendees must agree to. This may include age restrictions, dress codes, prohibited items, etc."
+                              <FormField
+                                control={form.control}
+                                name={`eventValidationDocuments.${index}.documentImageUrls`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Document Images</FormLabel>
+                                    <FormControl>
+                                      <FileUpload
+                                        value={field.value || []}
+                                        onChange={(urls) => field.onChange(urls)}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
                               />
-                            </FormLabel>
-                            <FormDescription className="text-xs">
-                              Rules and requirements for attending this event
-                            </FormDescription>
-                            <FormControl>
-                              <Textarea
-                                placeholder="e.g., All attendees must be 18+. No outside food or beverages allowed. Photography is permitted for personal use only."
-                                rows={4}
-                                {...field}
-                                value={field.value || ""}
-                                className="resize-none"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+
+                              {index < documentFields.length - 1 && <Separator />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => appendDocument({
+                          documentType: "EVENT_PERMIT",
+                          documentImageUrls: [],
+                        })}
+                        className="w-full border-primary/20 hover:border-primary/50"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Document
+                      </Button>
                     </CardContent>
                   </Card>
                 </div>

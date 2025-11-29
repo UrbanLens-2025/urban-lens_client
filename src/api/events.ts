@@ -329,3 +329,49 @@ export const addLocationBookingToEvent = async (
   );
   return data.data;
 };
+
+export const initiateLocationBookingPayment = async (
+  eventId: string,
+  locationBookingId: string
+): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>(
+    `/v1/creator/events/${eventId}/location-bookings/${locationBookingId}/payment`,
+    {}
+  );
+};
+
+export interface CancelLocationBookingPayload {
+  cancellationReason: string;
+}
+
+export const cancelLocationBooking = async (
+  eventId: string,
+  locationBookingId: string,
+  payload: CancelLocationBookingPayload
+): Promise<void> => {
+  await axiosInstance.delete<ApiResponse<void>>(
+    `/v1/creator/events/${eventId}/location-bookings/${locationBookingId}/cancel`,
+    { data: payload }
+  );
+};
+
+export const getLocationBookingsForEvent = async (eventId: string): Promise<LocationBooking[]> => {
+  const { data } = await axiosInstance.get<ApiResponse<LocationBooking[]>>(
+    `/v1/creator/events/${eventId}/location-bookings`
+  );
+  return data.data;
+};
+
+export interface CancelEventPayload {
+  cancellationReason: string;
+}
+
+export const cancelEvent = async (
+  eventId: string,
+  payload: CancelEventPayload
+): Promise<void> => {
+  await axiosInstance.delete<ApiResponse<void>>(
+    `/v1/creator/events/${eventId}/cancel`,
+    { data: payload }
+  );
+};

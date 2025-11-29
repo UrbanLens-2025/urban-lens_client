@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEventTickets } from "@/hooks/events/useEventTickets";
 import { useDeleteTicket } from "@/hooks/events/useDeleteTicket";
 import { useEventTabs } from "@/contexts/EventTabContext";
+import { useEventById } from "@/hooks/events/useEventById";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,8 +76,11 @@ export default function EventTicketsPage({
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
 
   const { data: tickets, isLoading } = useEventTickets(eventId);
+  const { data: event } = useEventById(eventId);
   const deleteTicket = useDeleteTicket();
   const { openTicketDetailsTab } = useEventTabs();
+  
+  const isEventCancelled = event?.status?.toUpperCase() === "CANCELLED";
 
   const formatCurrency = (amount: string, currency: string) => {
     const num = parseFloat(amount);
@@ -194,17 +198,19 @@ export default function EventTicketsPage({
                 Create and manage tickets for your event
               </CardDescription>
             </div>
-            <Button
-              className="w-full md:w-auto"
-              onClick={(e) => {
-                e.preventDefault();
-                openTicketCreateTab();
-                router.push(`/dashboard/creator/events/${eventId}/tickets/create`);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create New Ticket
-            </Button>
+            {!isEventCancelled && (
+              <Button
+                className="w-full md:w-auto"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openTicketCreateTab();
+                  router.push(`/dashboard/creator/events/${eventId}/tickets/create`);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create New Ticket
+              </Button>
+            )}
           </div>
         </CardHeader>
 
@@ -251,7 +257,7 @@ export default function EventTicketsPage({
                   ? "Create your first ticket to start selling" 
                   : "Try adjusting your search or filters"}
               </p>
-              {tickets?.length === 0 && (
+              {tickets?.length === 0 && !isEventCancelled && (
                 <Link href={`/dashboard/creator/ticket-form/create/${eventId}`}>
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />

@@ -8,9 +8,11 @@ import { usePublishEvent } from "@/hooks/events/usePublishEvent";
 import { useEventTickets } from "@/hooks/events/useEventTickets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageViewer } from "@/components/shared/ImageViewer";
 import { EventWelcomeModal } from "@/components/shared/EventWelcomeModal";
 import { EventTabProvider, useEventTabs } from "@/contexts/EventTabContext";
+import { useEventRequestById } from "@/hooks/events/useEventRequestById";
 import {
   Loader2,
   ArrowLeft,
@@ -25,6 +27,11 @@ import {
   MapPin,
   Building2,
   X,
+  Eye,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  Clock,
 } from "lucide-react";
 import {
   Tooltip,
@@ -98,17 +105,15 @@ function EventDetailLayoutContent({
     }
   };
 
-  // Check if event is ready to be published
-  const canPublish = event?.displayName && event?.startDate && event?.endDate && event?.locationId;
-  const publishDisabledReason = !event?.displayName 
-    ? "Event name is required" 
-    : !event?.startDate 
-    ? "Start date is required" 
-    : !event?.endDate 
-    ? "End date is required" 
-    : !event?.locationId 
-    ? "Location is required" 
-    : null;
+  
+  // Checklist items for publishing
+  const hasNameAndDescription = !!(event?.displayName && event?.description);
+  const hasDates = !!(event?.startDate && event?.endDate);
+  const hasLocation = !!event?.locationId;
+  const hasDocuments = !!(event?.eventValidationDocuments && event.eventValidationDocuments.length > 0);
+  
+  const isDraft = event?.status?.toUpperCase() === "DRAFT";
+  const canPublish = hasNameAndDescription && hasDates && hasLocation && hasDocuments;
 
   const formatCompactDateTime = (iso: string) => {
     const date = new Date(iso);
@@ -521,29 +526,35 @@ function EventDetailLayoutContent({
                 {event.status === "DRAFT" && (
                   <>
                     <div className="w-full sm:w-auto">
-                      <Button
-                        onClick={handlePublishClick}
-                        disabled={publishEvent.isPending || !canPublish}
-                        className="w-full"
-                        size="lg"
-                      >
-                        {publishEvent.isPending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Publishing...
-                          </>
-                        ) : (
-                          <>
-                            <Send className="h-4 w-4 mr-2" />
-                            Publish Event
-                          </>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="w-full">
+                            <Button
+                              onClick={handlePublishClick}
+                              disabled={publishEvent.isPending || !canPublish}
+                              className="w-full"
+                              size="lg"
+                            >
+                              {publishEvent.isPending ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Publishing...
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="h-4 w-4 mr-2" />
+                                  Publish Event
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </TooltipTrigger>
+                        {!canPublish && (
+                          <TooltipContent>
+                            <p>Complete all checklist items to publish your event</p>
+                          </TooltipContent>
                         )}
-                      </Button>
-                      {!canPublish && publishDisabledReason && (
-                        <p className="text-xs text-destructive mt-1">
-                          {publishDisabledReason}
-                        </p>
-                      )}
+                      </Tooltip>
                     </div>
 
                     <div className="w-full sm:w-auto">
@@ -567,6 +578,159 @@ function EventDetailLayoutContent({
             </div>
           </div>
         </div>
+
+        {/* Publishing Checklist - Show when event is DRAFT */}
+        {isDraft && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <FileText className="h-5 w-5 text-primary" />
+                Complete these steps to publish your event
+              </CardTitle>
+              <CardDescription>
+                Make sure all required information is provided before publishing
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  {hasNameAndDescription ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <p className={cn(
+                      "text-sm font-medium",
+                      hasNameAndDescription ? "text-foreground" : "text-muted-foreground"
+                    )}>
+                      Provide event name and description
+                    </p>
+                    {!hasNameAndDescription && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Add a name and description for your event
+                      </p>
+                    )}
+                  </div>
+                  {!hasNameAndDescription && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openEditEventTab(event.displayName);
+                        router.push(`/dashboard/creator/events/${eventId}/edit`);
+                      }}
+                    >
+                      Add
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-3">
+                  {hasDates ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <p className={cn(
+                      "text-sm font-medium",
+                      hasDates ? "text-foreground" : "text-muted-foreground"
+                    )}>
+                      Provide event start date time and end date time
+                    </p>
+                    {!hasDates && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Set when your event starts and ends
+                      </p>
+                    )}
+                  </div>
+                  {!hasDates && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openEditEventTab(event.displayName);
+                        router.push(`/dashboard/creator/events/${eventId}/edit`);
+                      }}
+                    >
+                      Add
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-3">
+                  {hasLocation ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <p className={cn(
+                      "text-sm font-medium",
+                      hasLocation ? "text-foreground" : "text-muted-foreground"
+                    )}>
+                      Book location for event
+                    </p>
+                    {!hasLocation && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Select and book a venue for your event
+                      </p>
+                    )}
+                  </div>
+                  {!hasLocation && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        router.push(`/dashboard/creator/events/${eventId}/location`);
+                      }}
+                    >
+                      Book
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-3">
+                  {hasDocuments ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <p className={cn(
+                      "text-sm font-medium",
+                      hasDocuments ? "text-foreground" : "text-muted-foreground"
+                    )}>
+                      Submit event documents
+                    </p>
+                    {!hasDocuments && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Upload required validation documents
+                      </p>
+                    )}
+                  </div>
+                  {!hasDocuments && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openEditEventTab(event.displayName);
+                        router.push(`/dashboard/creator/events/${eventId}/edit`);
+                      }}
+                    >
+                      Add
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tabs Navigation */}
         <div className="border-b">
@@ -882,18 +1046,53 @@ function EventDetailLayoutContent({
       <AlertDialog open={isPublishDialogOpen} onOpenChange={setIsPublishDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Publish Event</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
+            <AlertDialogTitle className="flex items-center gap-2 text-lg">
+              <Megaphone className="h-5 w-5 text-primary" />
+              Publish Event
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p className="text-sm">
                 Are you sure you want to publish this event? By publishing the event:
               </p>
-              <ul className="list-disc list-inside space-y-1 text-sm mt-2 ml-2">
-                <li>Users will be able to view and discover your event</li>
-                <li>Attendees can purchase tickets and register</li>
-                <li>The event will appear in public event listings</li>
-                <li>You'll be able to track attendance and manage registrations</li>
-              </ul>
-              <p className="mt-3 font-medium">
+              <div className="space-y-3 text-sm">
+                <div className="flex items-start gap-3">
+                  <Eye className="h-4 w-4 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Be discoverable</p>
+                    <p className="text-muted-foreground">
+                      Users will be able to view and discover your event.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Ticket className="h-4 w-4 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Enable ticket sales</p>
+                    <p className="text-muted-foreground">
+                      Attendees can purchase tickets and register.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Megaphone className="h-4 w-4 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Join public listings</p>
+                    <p className="text-muted-foreground">
+                      The event will appear in public event listings.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <UserCheck className="h-4 w-4 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Manage attendance</p>
+                    <p className="text-muted-foreground">
+                      Track attendance and manage registrations with live data.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <p className="mt-1 font-medium text-sm text-muted-foreground">
                 Once published, you can still edit event details, but the event will be visible to the public.
               </p>
             </AlertDialogDescription>

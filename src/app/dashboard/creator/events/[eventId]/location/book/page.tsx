@@ -21,20 +21,62 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAddLocationBooking } from "@/hooks/events/useAddLocationBooking";
 import type { BookableLocation } from "@/types";
+import { format, addDays, startOfDay, isSameDay } from "date-fns";
 
 const DEFAULT_CENTER = { lat: 10.8231, lng: 106.6297 }; // Ho Chi Minh City center
 
 // Component to handle map interactions
 type LocationWithCoords = BookableLocation & { latitude: number; longitude: number };
+type SlotSelection = { startDateTime: Date; endDateTime: Date };
+type DayRange = { start: Date; end: Date };
+
+const splitRangeIntoDailySlots = (rangeStart: Date, rangeEnd: Date): SlotSelection[] => {
+  const slots: SlotSelection[] = [];
+  const start = new Date(rangeStart);
+  const end = new Date(rangeEnd);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
+    return slots;
+  }
+
+  let cursor = startOfDay(start);
+  const lastDay = startOfDay(end);
+
+  while (cursor <= lastDay) {
+    const slotStart = new Date(cursor);
+    const slotEnd = new Date(cursor);
+
+    if (isSameDay(cursor, start)) {
+      slotStart.setTime(start.getTime());
+    } else {
+      slotStart.setHours(0, 0, 0, 0);
+    }
+
+    if (isSameDay(cursor, end)) {
+      slotEnd.setTime(end.getTime());
+    } else {
+      slotEnd.setHours(23, 59, 59, 999);
+    }
+
+    if (slotStart < slotEnd) {
+      slots.push({
+        startDateTime: new Date(slotStart),
+        endDateTime: new Date(slotEnd),
+      });
+    }
+
+    cursor = startOfDay(addDays(cursor, 1));
+  }
+
+  return slots;
+};
 
 function MapController({ 
   locations, 
   selectedLocationId,
-  initialCenter: _initialCenter 
 }: { 
   locations: LocationWithCoords[]; 
   selectedLocationId?: string;
-  initialCenter: { lat: number; lng: number };
 }) {
   const map = useMap();
   const hasInitialized = useRef(false);
@@ -83,17 +125,60 @@ function MapController({
 function LocationDetailsOverlay({ 
   location, 
   onClose,
-  eventId
+  eventId,
+  startTime,
+  endTime
 }: { 
   location: BookableLocation | null; 
   onClose: () => void;
   eventId: string;
+  startTime?: Date;
+  endTime?: Date;
 }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isAvailabilityExpanded, setIsAvailabilityExpanded] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [selectedSlots, setSelectedSlots] = useState<Array<{ startDateTime: Date; endDateTime: Date }>>([]);
+  const [selectedSlots, setSelectedSlots] = useState<SlotSelection[]>([]);
+  const collapsedSlotRanges = useMemo<DayRange[]>(() => {
+    if (selectedSlots.length === 0) return [];
+
+    const normalized: Array<{ start: Date; end: Date }> = selectedSlots
+      .map((slot) => ({
+        start: new Date(slot.startDateTime),
+        end: new Date(slot.endDateTime),
+      }))
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+    const ranges: DayRange[] = [];
+    let currentRange: { start: Date; end: Date; dateKey: string } | null = null;
+    const pushRange = (range: { start: Date; end: Date; dateKey: string } | null) => {
+      if (!range) return;
+      ranges.push({ start: range.start, end: range.end });
+    };
+
+    normalized.forEach((slot) => {
+      const dateKey = format(slot.start, "yyyy-MM-dd");
+
+      if (!currentRange || currentRange.dateKey !== dateKey) {
+        pushRange(currentRange);
+        currentRange = { start: slot.start, end: slot.end, dateKey };
+        return;
+      }
+
+      if (currentRange.end.getTime() === slot.start.getTime()) {
+        currentRange.end = slot.end;
+      } else {
+        pushRange(currentRange);
+        currentRange = { start: slot.start, end: slot.end, dateKey };
+      }
+    });
+
+    pushRange(currentRange);
+
+    return ranges;
+  }, [selectedSlots]);
+
   const router = useRouter();
   const addLocationBookingMutation = useAddLocationBooking(eventId);
 
@@ -402,6 +487,12 @@ function LocationDetailsOverlay({
       <div className="p-4 border-t bg-background">
         <Button
           onClick={() => {
+            // Pre-fill slots if startTime and endTime are provided
+            if (startTime && endTime) {
+              setSelectedSlots(splitRangeIntoDailySlots(startTime, endTime));
+            } else {
+              setSelectedSlots([]);
+            }
             setShowCalendar(true);
           }}
           disabled={isLoadingDetails}
@@ -424,6 +515,7 @@ function LocationDetailsOverlay({
               locationId={displayLocation.id}
               initialSlots={selectedSlots}
               onSlotsChange={setSelectedSlots}
+              initialWeekStart={startTime}
             />
           )}
           <div className="flex justify-end gap-2 pt-4 border-t">
@@ -438,13 +530,15 @@ function LocationDetailsOverlay({
             </Button>
             <Button
               onClick={async () => {
-                if (!displayLocation || selectedSlots.length === 0) return;
+                if (!displayLocation || collapsedSlotRanges.length === 0) return;
                 
-                // Map slots to API format
-                const dates = selectedSlots.map(slot => ({
-                  startDateTime: slot.startDateTime.toISOString(),
-                  endDateTime: slot.endDateTime.toISOString(),
+                // Map slots to API format (only the merged selections)
+                const dates = collapsedSlotRanges.map((slot) => ({
+                  startDateTime: slot.start.toISOString(),
+                  endDateTime: slot.end.toISOString(),
                 }));
+
+                // alert(JSON.stringify(dates));
 
                 addLocationBookingMutation.mutate(
                   {
@@ -453,13 +547,11 @@ function LocationDetailsOverlay({
                   },
                   {
                     onSuccess: () => {
-                      // Show success toast
                       toast.success("Booking created successfully");
-
-                      // Close dialog and redirect
                       setShowCalendar(false);
                       setSelectedSlots([]);
-                      router.push(`/dashboard/creator/events/${eventId}`);
+                      router.push(`/dashboard/creator/events/${eventId}/location`);
+                      router.refresh();
                     },
                   }
                 );
@@ -603,6 +695,7 @@ export default function BookLocationPage({
               label=""
               value={endTime}
               onChange={setEndTime}
+              defaultTime="11:59"
             />
           </div>
         </div>
@@ -705,7 +798,6 @@ export default function BookLocationPage({
                   <MapController 
                     locations={validLocations} 
                     selectedLocationId={selectedLocationId || undefined}
-                    initialCenter={initialCenter}
                   />
                   {validLocations.map((location) => {
                     const isSelected = selectedLocationId === location.id;
@@ -738,6 +830,8 @@ export default function BookLocationPage({
                 location={selectedLocation}
                 onClose={() => setSelectedLocationId(null)}
                 eventId={_eventId}
+                startTime={startTime}
+                endTime={endTime}
               />
             )}
           </div>
