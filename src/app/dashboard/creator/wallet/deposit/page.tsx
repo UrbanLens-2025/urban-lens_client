@@ -6,7 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useWallet } from "@/hooks/user/useWallet";
 import { useWalletDeposit } from "@/hooks/wallet/useWalletDeposit";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -24,7 +24,7 @@ import { Loader2, ArrowLeft, Landmark } from "lucide-react";
 
 const depositSchema = z.object({
   amount: z
-    .number({ invalid_type_error: "Amount is required" })
+    .number()
     .int("Amount must be a whole number")
     .positive("Amount must be greater than 0"),
   currency: z.string().min(1, "Currency is required"),
@@ -34,11 +34,12 @@ type DepositForm = z.infer<typeof depositSchema>;
 
 export default function WalletDepositPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: wallet } = useWallet();
   const deposit = useWalletDeposit();
 
   const form = useForm<DepositForm>({
-    resolver: zodResolver(depositSchema) as any,
+    resolver: zodResolver<DepositForm, unknown, DepositForm>(depositSchema),
     defaultValues: {
       amount: 100000,
       currency: wallet?.currency || "VND",
@@ -53,9 +54,13 @@ export default function WalletDepositPage() {
 
   const onSubmit = (data: DepositForm) => {
     const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-    const returnUrl = isLocalhost 
+    const providedReturnUrl = searchParams?.get("returnUrl");
+    const returnUrl = isLocalhost
       ? "https://google.com"
-      : `${window.location.origin}/dashboard/creator/wallet?tab=external`;
+      : providedReturnUrl && providedReturnUrl.length > 0
+        ? providedReturnUrl
+        : `${window.location.origin}/dashboard/creator/wallet?tab=external`;
+
     deposit.mutate({
       amount: data.amount,
       currency: data.currency,

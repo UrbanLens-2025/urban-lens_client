@@ -20,6 +20,7 @@ interface DateTimePickerProps {
   onChange: (date: Date | undefined) => void;
   error?: string;
   className?: string;
+  defaultTime?: string;
 }
 
 export function DateTimePicker({
@@ -28,14 +29,17 @@ export function DateTimePicker({
   onChange,
   error,
   className,
+  defaultTime = "00:00",
 }: DateTimePickerProps) {
+  const normalizedDefault =
+    /^\d{2}:\d{2}$/.test(defaultTime) ? defaultTime : "00:00";
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     value ? new Date(value) : undefined
   );
   const [timeString, setTimeString] = useState<string>(
     value
       ? `${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`
-      : "00:00"
+      : normalizedDefault
   );
 
   // Sync internal state with external value
@@ -47,9 +51,9 @@ export function DateTimePicker({
       );
     } else {
       setSelectedDate(undefined);
-      setTimeString("00:00");
+      setTimeString(normalizedDefault);
     }
-  }, [value]);
+  }, [value, normalizedDefault]);
 
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
@@ -75,19 +79,19 @@ export function DateTimePicker({
   };
 
   const displayValue = value
-    ? `${format(value, "PPP")} at ${format(value, "HH:mm")}`
+    ? format(value, "PPP")
     : undefined;
 
   return (
     <div className={cn("space-y-2", className)}>
       <Label>{label}</Label>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               className={cn(
-                "flex-1 justify-start text-left font-normal",
+                "flex-1 justify-start text-left font-normal min-w-[140px]",
                 !value && "text-muted-foreground",
                 error && "border-destructive"
               )}

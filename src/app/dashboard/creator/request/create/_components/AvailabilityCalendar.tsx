@@ -14,17 +14,32 @@ interface AvailabilityCalendarProps {
   onSlotsChange: (slots: Array<{ startDateTime: Date; endDateTime: Date }>) => void;
   initialSlots?: Array<{ startDateTime: Date; endDateTime: Date }>;
   locationId?: string;
+  initialWeekStart?: Date;
 }
 
 type CellStatus = "available" | "selected" | "dragging" | "past" | "booked" | "unavailable";
+
+const dayOfWeekToNumber: Record<string, number> = {
+  SUNDAY: 0,
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
+};
 
 export function AvailabilityCalendar({
   onSlotsChange,
   initialSlots = [],
   locationId,
+  initialWeekStart,
 }: AvailabilityCalendarProps) {
   // Week navigation state
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    if (initialWeekStart) {
+      return startOfWeek(startOfDay(initialWeekStart), { weekStartsOn: 1 });
+    }
     const today = startOfDay(new Date());
     return startOfWeek(today, { weekStartsOn: 1 }); // Monday as first day
   });
@@ -65,15 +80,6 @@ export function AvailabilityCalendar({
 
   // Transform weekly availability to actual date ranges for current week
   // Map dayOfWeek to date-fns day numbers (0 = Sunday, 1 = Monday, etc.)
-  const dayOfWeekToNumber: Record<string, number> = {
-    SUNDAY: 0,
-    MONDAY: 1,
-    TUESDAY: 2,
-    WEDNESDAY: 3,
-    THURSDAY: 4,
-    FRIDAY: 5,
-    SATURDAY: 6,
-  };
 
   // Create availability slots for the current week
   const availabilitySlots = useMemo(() => {
@@ -139,6 +145,166 @@ export function AvailabilityCalendar({
     return set;
   }, [bookedDatesData]);
 
+  // Validate and set initial slots once availability data is loaded
+  useEffect(() => {
+    if (hasValidatedInitialSlots || initialSlots.length === 0) return;
+    if (locationId && !weeklyAvailability) return; // Wait for availability data if locationId is provided
+    if (locationId && !bookedDatesData) return; // Wait for booked dates data if locationId is provided
+
+    // Helper function to normalize a slot according to weekly availability
+    const normalizeSlotByAvailability = (
+      slotStart: Date,
+      slotEnd: Date
+    ): Array<{ start: Date; end: Date }> => {
+      if (!locationId || !weeklyAvailability) {
+        // No normalization needed if no location or availability
+        return [{ start: slotStart, end: slotEnd }];
+      }
+
+      const normalized: Array<{ start: Date; end: Date }> = [];
+      let currentDay = startOfDay(slotStart);
+      const lastDay = startOfDay(slotEnd);
+
+      while (currentDay <= lastDay) {
+        const dayOfWeekNumber = getDay(currentDay);
+        const dayOfWeekName = Object.keys(dayOfWeekToNumber).find(
+          (key) => dayOfWeekToNumber[key] === dayOfWeekNumber
+        );
+
+        if (!dayOfWeekName) {
+          currentDay = addDays(currentDay, 1);
+          continue;
+        }
+
+        // Find availability for this day
+        const dayAvailability = weeklyAvailability.find(
+          (avail) => avail.dayOfWeek === dayOfWeekName
+        );
+
+        if (!dayAvailability) {
+          // No availability for this day, skip it
+          currentDay = addDays(currentDay, 1);
+          continue;
+        }
+
+        // Parse availability hours
+        const [availStartHour, availStartMinute] = dayAvailability.startTime
+          .split(":")
+          .map(Number);
+        const [availEndHour, availEndMinute] = dayAvailability.endTime
+          .split(":")
+          .map(Number);
+
+        // Create availability boundaries for this day
+        const dayAvailStart = new Date(currentDay);
+        dayAvailStart.setHours(availStartHour, availStartMinute, 0, 0);
+        const dayAvailEnd = new Date(currentDay);
+        dayAvailEnd.setHours(availEndHour, availEndMinute, 0, 0);
+
+        // Determine the actual start and end for this day
+        let daySlotStart: Date;
+        let daySlotEnd: Date;
+
+        if (isSameDay(currentDay, slotStart)) {
+          // First day: use the slot start, but clamp to availability
+          daySlotStart = new Date(Math.max(slotStart.getTime(), dayAvailStart.getTime()));
+        } else {
+          // Middle days: start at the beginning of availability
+          daySlotStart = new Date(dayAvailStart);
+        }
+
+        if (isSameDay(currentDay, slotEnd)) {
+          // Last day: use the slot end, but clamp to availability
+          daySlotEnd = new Date(Math.min(slotEnd.getTime(), dayAvailEnd.getTime()));
+        } else {
+          // Middle days: end at the end of availability
+          daySlotEnd = new Date(dayAvailEnd);
+        }
+
+        // Only add if the normalized slot is valid (start < end)
+        if (daySlotStart < daySlotEnd) {
+          normalized.push({ start: daySlotStart, end: daySlotEnd });
+        }
+
+        currentDay = addDays(currentDay, 1);
+      }
+
+      return normalized;
+    };
+
+    // Normalize and validate initial slots
+    const validSlots: string[] = [];
+    
+    initialSlots.forEach((slot) => {
+      const start = new Date(slot.startDateTime);
+      const end = new Date(slot.endDateTime);
+      
+      // Normalize the slot according to availability
+      const normalizedRanges = normalizeSlotByAvailability(start, end);
+      
+      // Process each normalized range
+      normalizedRanges.forEach((range) => {
+        // Generate all hour slots within the normalized range
+        let current = new Date(range.start);
+        while (current < range.end) {
+          const dateStart = startOfDay(current);
+          const dateKey = format(dateStart, "yyyy-MM-dd");
+          const timeKey = format(current, "HH:mm");
+          const key = `${dateKey}_${timeKey}`;
+          
+          // Check if date is in the past
+          const isDatePast = isBefore(dateStart, today);
+          const isTimePast = isSameDay(dateStart, today) && current.getHours() < new Date().getHours();
+          
+          if (isDatePast || isTimePast) {
+            current = addHours(current, 1);
+            continue; // Skip past slots
+          }
+          
+          // Check if booked
+          if (bookedSlotsSet.has(key)) {
+            current = addHours(current, 1);
+            continue; // Skip booked slots
+          }
+          
+          // Check if within availability hours (if locationId is provided)
+          if (locationId && !availabilitySlots.has(key)) {
+            current = addHours(current, 1);
+            continue; // Skip unavailable slots
+          }
+          
+          // Slot is valid
+          validSlots.push(key);
+          current = addHours(current, 1);
+        }
+      });
+    });
+    
+    // Only set slots if we have valid ones
+    const validSlotsSet = new Set(validSlots);
+    if (validSlots.length > 0) {
+      setSelectedSlots(validSlotsSet);
+    }
+    
+    // Notify parent of the normalized result
+    const normalizedSlotsForParent = Array.from(validSlotsSet).map((slotKey) => {
+      const [dateStr, timeStr] = slotKey.split("_");
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      const date = parseISO(dateStr);
+      date.setHours(hours, minutes, 0, 0);
+      const endDate = addHours(date, 1);
+      return {
+        startDateTime: date,
+        endDateTime: endDate,
+      };
+    });
+    
+    onSlotsChange(normalizedSlotsForParent);
+    
+    setHasValidatedInitialSlots(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSlots, weeklyAvailability, bookedDatesData, availabilitySlots, bookedSlotsSet, locationId, today]);
+
   // Week navigation functions
   const goToPreviousWeek = () => {
     setCurrentWeekStart((prev) => subWeeks(prev, 1));
@@ -154,16 +320,8 @@ export function AvailabilityCalendar({
   };
 
   // Track selected slots as Set of date+time string keys
-  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(
-    new Set(
-      initialSlots.map((slot) => {
-        const start = new Date(slot.startDateTime);
-        const dateKey = format(startOfDay(start), "yyyy-MM-dd");
-        const timeKey = format(start, "HH:mm");
-        return `${dateKey}_${timeKey}`;
-      })
-    )
-  );
+  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
+  const [hasValidatedInitialSlots, setHasValidatedInitialSlots] = useState(false);
 
   // Drag state management
   const [isDragging, setIsDragging] = useState(false);
@@ -759,7 +917,7 @@ export function AvailabilityCalendar({
           </div>
           {locationId && (
             <div className="text-xs text-gray-500 text-center italic">
-              Note: Time slots marked as "Not Available" are unavailable because the location owner hasn't made them available for booking.
+              Note: Time slots marked as &quot;Not Available&quot; are unavailable because the location owner hasn&apos;t made them available for booking.
             </div>
           )}
         </div>

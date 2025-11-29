@@ -906,6 +906,13 @@ export interface Event {
   termsAndConditions: string | null;
   referencedEventRequestId: string;
   tags: Tag[];
+  locationBookings?: LocationBooking[];
+  startDate?: string;
+  endDate?: string;
+  eventValidationDocuments?: {
+    documentType: string;
+    documentImageUrls: string[];
+  }[];
 }
 
 export interface GetEventsParams {
@@ -918,13 +925,16 @@ export interface GetEventsParams {
 export interface UpdateEventPayload {
   displayName?: string;
   description?: string;
+  expectedNumberOfParticipants?: number;
   avatarUrl?: string | null;
   coverUrl?: string | null;
-  startDate?: Date;
-  endDate?: Date;
-  refundPolicy?: string | null;
-  termsAndConditions?: string | null;
-  social?: SocialLink[] | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  social?: SocialLink[];
+  eventValidationDocuments?: {
+    documentType: string;
+    documentImageUrls: string[];
+  }[];
 }
 
 export interface AddEventTagsPayload {

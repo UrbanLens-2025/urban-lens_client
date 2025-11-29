@@ -27,6 +27,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useCreatorAnnouncements } from "@/hooks/announcements/useCreatorAnnouncements";
+import { useEventById } from "@/hooks/events/useEventById";
 import { format } from "date-fns";
 import Image from "next/image";
 
@@ -41,6 +42,7 @@ export default function EventAnnouncementsPage({
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
 
+  const { data: event } = useEventById(eventId);
   const {
     data: announcementsData,
     isLoading,
@@ -51,6 +53,8 @@ export default function EventAnnouncementsPage({
     limit,
     sortBy: "createdAt:DESC",
   });
+
+  const isEventCancelled = event?.status?.toUpperCase() === "CANCELLED";
 
   const formatDateTime = (iso: string) => {
     return format(new Date(iso), "MMM dd, yyyy 'at' h:mm a");
@@ -92,16 +96,18 @@ export default function EventAnnouncementsPage({
             Manage announcements for your event
           </p>
         </div>
-        <Button
-          onClick={(e) => {
-            e.preventDefault();
-            openAnnouncementTab('create');
-            router.push(`/dashboard/creator/events/${eventId}/announcements/new`);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Announcement
-        </Button>
+        {!isEventCancelled && (
+          <Button
+            onClick={(e) => {
+              e.preventDefault();
+              openAnnouncementTab('create');
+              router.push(`/dashboard/creator/events/${eventId}/announcements/new`);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Announcement
+          </Button>
+        )}
       </div>
 
       {/* Announcements Table */}
@@ -120,17 +126,19 @@ export default function EventAnnouncementsPage({
               <p className="text-sm mt-1">
                 Create your first announcement to share updates with attendees
               </p>
-              <Button
-                className="mt-4"
-                onClick={(e) => {
-                  e.preventDefault();
-                  openAnnouncementTab('create');
-                  router.push(`/dashboard/creator/events/${eventId}/announcements/new`);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Announcement
-              </Button>
+              {!isEventCancelled && (
+                <Button
+                  className="mt-4"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openAnnouncementTab('create');
+                    router.push(`/dashboard/creator/events/${eventId}/announcements/new`);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Announcement
+                </Button>
+              )}
             </div>
           ) : (
             <>

@@ -1,13 +1,14 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit, Ticket, Megaphone, Globe } from "lucide-react";
+import { Edit, Ticket, Megaphone, Globe, AlertCircle, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useEventTabs } from "@/contexts/EventTabContext";
 import { useEventById } from "@/hooks/events/useEventById";
+import { CancelEventDialog } from "./_components/CancelEventDialog";
 
 export default function EventSettingsPage({
   params,
@@ -18,6 +19,9 @@ export default function EventSettingsPage({
   const router = useRouter();
   const { openEditEventTab } = useEventTabs();
   const { data: event } = useEventById(eventId);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  
+  const isEventCancelled = event?.status?.toUpperCase() === "CANCELLED";
 
   return (
     <div className="space-y-6">
@@ -33,6 +37,7 @@ export default function EventSettingsPage({
             <Button 
               variant="outline" 
               className="w-full justify-start h-auto py-4"
+              disabled={isEventCancelled}
               onClick={(e) => {
                 e.preventDefault();
                 if (event) {
@@ -51,7 +56,7 @@ export default function EventSettingsPage({
             </Button>
 
             <Link href={`/dashboard/creator/events/${eventId}/tickets/create`}>
-              <Button variant="outline" className="w-full justify-start h-auto py-4">
+              <Button variant="outline" className="w-full justify-start h-auto py-4" disabled={isEventCancelled}>
                 <div className="flex items-start gap-3">
                   <Ticket className="h-5 w-5 mt-0.5 flex-shrink-0" />
                   <div className="text-left">
@@ -63,7 +68,7 @@ export default function EventSettingsPage({
             </Link>
 
             <Link href={`/dashboard/creator/events/${eventId}/announcements`}>
-              <Button variant="outline" className="w-full justify-start h-auto py-4">
+              <Button variant="outline" className="w-full justify-start h-auto py-4" disabled={isEventCancelled}>
                 <div className="flex items-start gap-3">
                   <Megaphone className="h-5 w-5 mt-0.5 flex-shrink-0" />
                   <div className="text-left">
@@ -86,6 +91,56 @@ export default function EventSettingsPage({
           </div>
         </CardContent>
       </Card>
+
+      {/* Danger Zone */}
+      {!isEventCancelled && (
+        <Card className="border-destructive/20">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-destructive/10">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+            </div>
+            <div>
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardDescription>
+                Irreversible and destructive actions
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="pt-2">
+            <div className="space-y-3">
+              <div>
+                <h4 className="text-sm font-semibold text-destructive mb-1">Cancel Event</h4>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Once you cancel an event, this action cannot be undone. All bookings and tickets will be cancelled, and refunds will be processed according to your refund policy.
+                </p>
+                <Button
+                  variant="destructive"
+                  size="default"
+                  onClick={() => setIsCancelDialogOpen(true)}
+                  className="w-full sm:w-auto"
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Cancel Event
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      )}
+
+      {/* Cancel Event Dialog */}
+      <CancelEventDialog
+        open={isCancelDialogOpen}
+        onOpenChange={setIsCancelDialogOpen}
+        eventId={eventId}
+        onCancelled={() => {
+          router.refresh();
+        }}
+      />
     </div>
   );
 }
