@@ -1163,3 +1163,88 @@ export interface MarkNotificationSeenResponse {
   success: boolean;
   message: string;
 }
+
+// Report Types
+export type ReportStatus = "PENDING" | "IN_PROGRESS" | "RESOLVED" | "REJECTED";
+export type ReportTargetType = "post" | "event" | "location";
+export type ResolutionAction = "DELETE" | "HIDE" | "WARN" | "NO_ACTION" | null;
+
+export interface ReportedReasonEntity {
+  key: string;
+  displayName: string;
+  description: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReferencedTargetPost {
+  postId: string;
+  content: string;
+  type: string;
+  rating: number | null;
+  imageUrls: string[];
+  locationId: string | null;
+  eventId: string | null;
+  visibility: string;
+  isVerified: boolean;
+  isHidden: boolean;
+  createdAt: string;
+  updatedAt: string;
+  authorId: string;
+}
+
+export interface ReferencedTargetEvent {
+  eventId: string;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  locationId: string | null;
+  // Add other event fields as needed
+}
+
+export interface ReferencedTargetLocation {
+  locationId: string;
+  name: string;
+  description: string | null;
+  // Add other location fields as needed
+}
+
+export interface Report {
+  id: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  reportedReasonKey: string;
+  title: string;
+  description: string;
+  attachedImageUrls: string[];
+  status: ReportStatus;
+  resolutionAction: ResolutionAction;
+  resolvedByType: string | null;
+  resolvedById: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  createdById: string;
+  createdBy: User;
+  updatedAt: string;
+  reportedReasonEntity: ReportedReasonEntity;
+  referencedTargetPost: ReferencedTargetPost | null;
+  referencedTargetEvent: ReferencedTargetEvent | null;
+  referencedTargetLocation: ReferencedTargetLocation | null;
+}
+
+export interface GetReportsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+  status?: ReportStatus;
+  targetType?: ReportTargetType;
+}
+
+export interface ProcessReportPayload {
+  status: "RESOLVED" | "REJECTED";
+  resolutionAction?: ResolutionAction;
+  adminNotes?: string; // Optional notes field if API supports it
+}

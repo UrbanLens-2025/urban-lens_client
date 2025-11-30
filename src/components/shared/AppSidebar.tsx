@@ -18,6 +18,7 @@ import {
   IconClipboardList,
   IconPlus,
   IconBell,
+  IconFlag,
 } from "@tabler/icons-react";
 
 import {
@@ -65,6 +66,7 @@ const adminNavGroups = [
     items: [
       { title: 'Location Requests', url: '/admin/location-requests', icon: IconClipboardList },
       { title: 'Business Registrations', url: '/admin/business', icon: IconBriefcase },
+      { title: 'Reports', url: '/admin/reports', icon: IconFlag },
       { title: 'Wallet Withdrawals', url: '/admin/wallet-withdrawals', icon: IconWallet },
     ]
   },
