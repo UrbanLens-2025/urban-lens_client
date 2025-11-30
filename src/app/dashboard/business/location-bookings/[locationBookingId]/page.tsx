@@ -303,85 +303,87 @@ export default function LocationBookingDetailPage({
           </Card>
 
           {/* Event Request Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText /> Event Request Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <InfoRow
-                label="Event Name"
-                value={booking.referencedEventRequest.eventName}
-              />
-              <InfoRow
-                label="Event Description"
-                value={booking.referencedEventRequest.eventDescription}
-              />
-              <InfoRow
-                label="Expected Participants"
-                value={
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    {booking.referencedEventRequest.expectedNumberOfParticipants}{" "}
-                    people
-                  </div>
-                }
-                icon={Users}
-              />
-              <InfoRow
-                label="Allow Tickets"
-                value={
-                  <Badge variant={booking.referencedEventRequest.allowTickets ? "default" : "outline"}>
-                    {booking.referencedEventRequest.allowTickets ? "Yes" : "No"}
-                  </Badge>
-                }
-              />
-              <InfoRow
-                label="Special Requirements"
-                value={booking.referencedEventRequest.specialRequirements}
-              />
-              <InfoRow
-                label="Event Status"
-                value={
-                  <Badge variant="outline">
-                    {booking.referencedEventRequest.status}
-                  </Badge>
-                }
-              />
-
-              {/* Event Validation Documents */}
-              {booking.referencedEventRequest.eventValidationDocuments &&
-                booking.referencedEventRequest.eventValidationDocuments.length >
-                  0 && (
-                  <div className="mt-6">
-                    <p className="text-sm font-semibold text-muted-foreground mb-3">
-                      Event Validation Documents
-                    </p>
-                    <div className="space-y-4">
-                      {booking.referencedEventRequest.eventValidationDocuments.map(
-                        (doc, docIndex) => (
-                          <div key={docIndex} className="space-y-2">
-                            <Badge variant="outline">{doc.documentType}</Badge>
-                            <div className="grid grid-cols-2 gap-2">
-                              {doc.documentImageUrls.map((url, imgIndex) => (
-                                <img
-                                  key={imgIndex}
-                                  src={url}
-                                  alt={`${doc.documentType} ${imgIndex + 1}`}
-                                  onClick={() => handleImageClick(url)}
-                                  className="w-full h-32 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity"
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        )
-                      )}
+          {booking.referencedEventRequest && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText /> Event Request Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <InfoRow
+                  label="Event Name"
+                  value={booking.referencedEventRequest.eventName}
+                />
+                <InfoRow
+                  label="Event Description"
+                  value={booking.referencedEventRequest.eventDescription}
+                />
+                <InfoRow
+                  label="Expected Participants"
+                  value={
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      {booking.referencedEventRequest.expectedNumberOfParticipants}{" "}
+                      people
                     </div>
-                  </div>
-                )}
-            </CardContent>
-          </Card>
+                  }
+                  icon={Users}
+                />
+                <InfoRow
+                  label="Allow Tickets"
+                  value={
+                    <Badge variant={booking.referencedEventRequest.allowTickets ? "default" : "outline"}>
+                      {booking.referencedEventRequest.allowTickets ? "Yes" : "No"}
+                    </Badge>
+                  }
+                />
+                <InfoRow
+                  label="Special Requirements"
+                  value={booking.referencedEventRequest.specialRequirements}
+                />
+                <InfoRow
+                  label="Event Status"
+                  value={
+                    <Badge variant="outline">
+                      {booking.referencedEventRequest.status}
+                    </Badge>
+                  }
+                />
+
+                {/* Event Validation Documents */}
+                {booking.referencedEventRequest.eventValidationDocuments &&
+                  booking.referencedEventRequest.eventValidationDocuments.length >
+                    0 && (
+                    <div className="mt-6">
+                      <p className="text-sm font-semibold text-muted-foreground mb-3">
+                        Event Validation Documents
+                      </p>
+                      <div className="space-y-4">
+                        {booking.referencedEventRequest.eventValidationDocuments.map(
+                          (doc, docIndex) => (
+                            <div key={docIndex} className="space-y-2">
+                              <Badge variant="outline">{doc.documentType}</Badge>
+                              <div className="grid grid-cols-2 gap-2">
+                                {doc.documentImageUrls.map((url, imgIndex) => (
+                                  <img
+                                    key={imgIndex}
+                                    src={url}
+                                    alt={`${doc.documentType} ${imgIndex + 1}`}
+                                    onClick={() => handleImageClick(url)}
+                                    className="w-full h-32 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity"
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Location Details */}
           <Card>

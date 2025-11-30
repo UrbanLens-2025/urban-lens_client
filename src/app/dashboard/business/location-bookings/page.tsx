@@ -21,18 +21,11 @@ import {
 } from "@/components/ui/select";
 import {
   CalendarDays,
-  Search,
   Loader2,
-  Eye,
-  MapPin,
-  User,
   DollarSign,
-  FileText,
   Clock,
   CheckCircle,
   AlertCircle,
-  Filter,
-  ArrowUpDown,
 } from "lucide-react";
 import { useState } from "react";
 import { useDebounce } from "use-debounce";
@@ -100,14 +93,35 @@ const formatCurrency = (amount: string) => {
   }).format(num);
 };
 
-const formatDateRange = (dates: { startDateTime: string; endDateTime: string }[]) => {
-  if (dates.length === 0) return "No dates";
-  if (dates.length === 1) {
-    const start = new Date(dates[0].startDateTime);
-    const end = new Date(dates[0].endDateTime);
-    return `${format(start, "MMM dd, yyyy HH:mm")} - ${format(end, "HH:mm")}`;
-  }
-  return `${dates.length} time slots`;
+const formatBookingDateRange = (dates: { startDateTime: string; endDateTime: string }[]) => {
+  if (!dates || dates.length === 0) return { from: "N/A", to: "N/A" };
+  
+  // Find the earliest startDateTime and latest endDateTime
+  const startDates = dates.map(d => new Date(d.startDateTime));
+  const endDates = dates.map(d => new Date(d.endDateTime));
+  
+  const earliestStart = new Date(Math.min(...startDates.map(d => d.getTime())));
+  const latestEnd = new Date(Math.max(...endDates.map(d => d.getTime())));
+  
+  return {
+    from: format(earliestStart, "MMM dd, yyyy"),
+    to: format(latestEnd, "MMM dd, yyyy")
+  };
+};
+
+const calculateTotalHours = (dates: { startDateTime: string; endDateTime: string }[]) => {
+  if (!dates || dates.length === 0) return 0;
+  
+  let totalMilliseconds = 0;
+  dates.forEach(date => {
+    const start = new Date(date.startDateTime);
+    const end = new Date(date.endDateTime);
+    totalMilliseconds += (end.getTime() - start.getTime());
+  });
+  
+  // Convert milliseconds to hours
+  const totalHours = totalMilliseconds / (1000 * 60 * 60);
+  return Math.round(totalHours * 10) / 10; // Round to 1 decimal place
 };
 
 export default function LocationBookingsPage() {
@@ -119,7 +133,7 @@ export default function LocationBookingsPage() {
 
   const { data: bookingsData, isLoading } = useOwnerLocationBookings({
     page,
-    limit: 20,
+    limit: 10,
     search: debouncedSearchTerm || undefined,
     sortBy,
     status: statusFilter,
@@ -138,260 +152,236 @@ export default function LocationBookingsPage() {
     ).length,
     totalRevenue: bookings
       .filter((b) => b.status?.toUpperCase() === "PAYMENT_RECEIVED")
-      .reduce((sum, b) => sum + parseFloat(b.amountToPay), 0),
+      .reduce((sum, b) => sum + parseFloat(b.amountToPay || "0"), 0),
   };
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-4">
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Bookings</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <CalendarDays className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalBookings}</div>
-            <p className="text-xs text-muted-foreground">All time bookings</p>
+            <div className="text-3xl font-bold">{stats.totalBookings.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              All location bookings
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Payment Received</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Confirmed</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-emerald-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.paymentReceived}</div>
-            <p className="text-xs text-muted-foreground">Confirmed bookings</p>
+            <div className="text-3xl font-bold text-emerald-600">{stats.paymentReceived.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Payment received
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Awaiting Processing</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <Clock className="h-4 w-4 text-amber-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.awaitingProcessing}</div>
-            <p className="text-xs text-muted-foreground">Pending action</p>
+            <div className="text-3xl font-bold text-amber-600">{stats.awaitingProcessing.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Awaiting your action
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-blue-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold text-blue-600">
               {formatCurrency(stats.totalRevenue.toString())}
             </div>
-            <p className="text-xs text-muted-foreground">From paid bookings</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              From confirmed bookings
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Bookings Table */}
       <Card>
-        <CardHeader className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle>All Bookings</CardTitle>
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-              <div className="relative sm:w-[260px]">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search bookings..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="pl-8"
-                />
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="justify-start gap-2 text-muted-foreground hover:text-foreground sm:w-auto"
-                onClick={() => {
-                  setSearch("");
-                  setStatusFilter("ALL");
-                  setSortBy("createdAt:DESC");
+        <CardContent className="pb-0 px-0">
+          {/* Modern Search Bar */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4 px-6">
+            <div className="relative flex-1">
+              <Input
+                placeholder="Search by event name, location, or creator..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
                   setPage(1);
                 }}
-              >
-                <ArrowUpDown className="h-4 w-4" />
-                Reset filters
-              </Button>
+                className="h-10 pl-4 pr-4 rounded-lg border-border/60"
+              />
             </div>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => {
+                setStatusFilter(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-10 sm:w-[200px] rounded-lg">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All statuses</SelectItem>
+                <SelectItem value="AWAITING_BUSINESS_PROCESSING">
+                  Awaiting Processing
+                </SelectItem>
+                <SelectItem value="PAYMENT_RECEIVED">Payment Received</SelectItem>
+                <SelectItem value="SOFT_LOCKED">Soft Locked</SelectItem>
+                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Filter className="h-4 w-4" /> Filters
-              </div>
-              <Select
-                value={statusFilter}
-                onValueChange={(value) => {
-                  setStatusFilter(value);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="sm:w-[220px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All statuses</SelectItem>
-                  <SelectItem value="AWAITING_BUSINESS_PROCESSING">
-                    Awaiting Processing
-                  </SelectItem>
-                  <SelectItem value="PAYMENT_RECEIVED">Payment Received</SelectItem>
-                  <SelectItem value="SOFT_LOCKED">Soft Locked</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={sortBy}
-                onValueChange={(value) => {
-                  setSortBy(value);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="sm:w-[240px]">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="createdAt:DESC">Newest first</SelectItem>
-                  <SelectItem value="createdAt:ASC">Oldest first</SelectItem>
-                  <SelectItem value="amountToPay:DESC">Amount high → low</SelectItem>
-                  <SelectItem value="amountToPay:ASC">Amount low → high</SelectItem>
-                  <SelectItem value="status:ASC">Status A → Z</SelectItem>
-                  <SelectItem value="status:DESC">Status Z → A</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Showing {bookings.length} of {meta?.totalItems ?? bookings.length} bookings
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : bookings.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No bookings found
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted py-12 text-center">
+              <div className="text-lg font-semibold">No bookings found</div>
+              <p className="mt-1.5 max-w-md text-sm text-muted-foreground">
+                Try adjusting your filters or wait for new bookings.
+              </p>
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Event Name</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Creator</TableHead>
-                    <TableHead>Dates</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created At</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {bookings.map((booking) => (
-                    <TableRow key={booking.id}>
-                      <TableCell className="font-medium">
-                        {booking.referencedEventRequest?.eventName || "N/A"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <div className="font-medium">{booking.location.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {booking.location.addressLine}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <div className="font-medium">
-                              {booking.createdBy.firstName} {booking.createdBy.lastName}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {booking.createdBy.email}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {formatDateRange(booking.dates)}
-                        </div>
-                        {booking.dates.length > 1 && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {booking.dates.length} slots
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-semibold text-green-600">
-                          {formatCurrency(booking.amountToPay)}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(booking.status)}</TableCell>
-                      <TableCell>
-                        {format(new Date(booking.createdAt), "MMM dd, yyyy HH:mm")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link href={`/dashboard/business/location-bookings/${booking.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
-                        </Link>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="border-b border-border/60 hover:bg-muted/50">
+                      <TableHead className="w-12 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 pl-6">#</TableHead>
+                      <TableHead className="min-w-[180px] max-w-[220px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">Requested By</TableHead>
+                      <TableHead className="min-w-[200px] max-w-[280px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">Location Name</TableHead>
+                      <TableHead className="min-w-[180px] max-w-[250px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">Booking Date</TableHead>
+                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[120px]">Total Hours Booked</TableHead>
+                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[140px]">Amount to Pay</TableHead>
+                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[130px]">Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {bookings.map((booking, index) => (
+                      <TableRow
+                        key={booking.id}
+                        className="border-b border-border/40 transition-colors hover:bg-muted/30"
+                      >
+                        <TableCell className="text-xs text-muted-foreground font-medium py-4 pl-6">
+                          {((meta?.currentPage ?? page) - 1) * 10 + index + 1}
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <Link
+                            href={`/dashboard/business/location-bookings/${booking.id}`}
+                            className="group cursor-pointer hover:underline"
+                          >
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-sm font-medium group-hover:text-primary transition-colors">
+                                {booking.createdBy.firstName} {booking.createdBy.lastName}
+                              </span>
+                              <span className="text-xs text-muted-foreground truncate max-w-[180px]">
+                                {booking.createdBy.email}
+                              </span>
+                            </div>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <span className="text-sm font-semibold leading-tight truncate">
+                            {booking.location.name}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          {(() => {
+                            const dateRange = formatBookingDateRange(booking.dates);
+                            return (
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-1.5 text-xs">
+                                  <span className="text-muted-foreground">From:</span>
+                                  <span className="font-medium text-foreground">{dateRange.from}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-xs">
+                                  <span className="text-muted-foreground">To:</span>
+                                  <span className="font-medium text-foreground">{dateRange.to}</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="text-sm font-medium">
+                            {calculateTotalHours(booking.dates)} hrs
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="text-sm font-semibold text-emerald-600">
+                            {formatCurrency(booking.amountToPay)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          {getStatusBadge(booking.status)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
               {/* Pagination */}
-              {meta && meta.totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">
-                    Showing {((page - 1) * (meta.itemsPerPage || 20)) + 1} to{" "}
-                    {Math.min(page * (meta.itemsPerPage || 20), meta.totalItems)} of{" "}
-                    {meta.totalItems} bookings
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-                      disabled={page === meta.totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
+              <div className="flex flex-col gap-2 border-t pt-3 pb-3 px-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-xs text-muted-foreground">
+                  Page {meta?.currentPage ?? page} of {meta?.totalPages ?? 1}
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={!meta || meta.currentPage <= 1}
+                  >
+                    Prev
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() =>
+                      setPage((p) =>
+                        meta ? Math.min(meta.totalPages, p + 1) : p + 1
+                      )
+                    }
+                    disabled={!meta || meta.currentPage >= meta.totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             </>
           )}
         </CardContent>

@@ -96,6 +96,7 @@ export function GoogleMapsPicker({
       defaultZoom={15}
       gestureHandling={"greedy"}
       disableDefaultUI={false}
+      streetViewControl={false}
       mapId="your-map-id"
       restriction={{
         latLngBounds: vietnamBounds,

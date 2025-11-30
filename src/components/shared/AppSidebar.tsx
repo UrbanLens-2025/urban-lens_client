@@ -75,15 +75,21 @@ const adminNavGroups = [
   },
 ];
 
-const businessNav = [
+const businessOverview = [
   { title: 'Overview', url: '/dashboard/business', icon: IconDashboard },
+  { title: 'Add location', url: '/dashboard/business/locations/create', icon: IconPlus },
+  { title: 'My Locations', url: '/dashboard/business/locations', icon: IconMapPin },
+  { title: 'Wallet', url: '/dashboard/business/wallet', icon: IconWallet },
+];
+
+const businessNavGroups = [
   {
-    title: 'My Locations',
-    url: '/dashboard/business/locations',
-    icon: IconMapPin,
+    groupLabel: 'Requests',
+    items: [
+      { title: 'Location Requests', url: '/dashboard/business/locations/requests', icon: IconClipboardList },
+      { title: 'Location Bookings', url: '/dashboard/business/location-bookings', icon: IconBrandBooking },
+    ]
   },
-  { title: "Location Bookings", url: "/dashboard/business/location-bookings", icon: IconBrandBooking },
-  { title: "Wallet", url: "/dashboard/business/wallet", icon: IconWallet },
 ];
 
 const creatorNav = [
@@ -140,9 +146,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         };
       case 'BUSINESS_OWNER':
         return {
-          navMain: businessNav,
-          navOverview: [],
-          navGroups: [],
+          navMain: [],
+          navOverview: businessOverview,
+          navGroups: businessNavGroups,
         };
       case 'EVENT_CREATOR':
         return {

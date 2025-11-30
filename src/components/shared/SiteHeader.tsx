@@ -192,8 +192,18 @@ function buildBreadcrumbs(
       return;
     }
 
-    // Skip "request" segment when it's under locations (since location requests are merged into locations page)
-    if ((segment === "request" || segment === "requests") && actualPrevSegment === "locations") {
+    // Handle location requests page - show as "Location Requests" with breadcrumb
+    if (segment === "requests" && actualPrevSegment === "locations") {
+      breadcrumbs.push({
+        label: "Location Requests",
+        icon: FileText,
+        href: isLast ? undefined : currentPath,
+      });
+      return;
+    }
+
+    // Skip "request" segment when it's under locations (for individual request detail pages)
+    if (segment === "request" && actualPrevSegment === "locations") {
       return;
     }
 
@@ -251,6 +261,25 @@ export function SiteHeader() {
           <div className="flex items-center gap-2 min-w-0">
             <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
             <h1 className="text-base font-semibold text-foreground truncate">Business Registrations</h1>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
+  // Handle business locations create page - show "Add Location"
+  if (pathname === "/dashboard/business/locations/create") {
+    return (
+      <header className="sticky top-0 z-[100] flex h-[var(--header-height)] rounded-t-lg shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-[var(--header-height)]">
+        <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
+          <SidebarTrigger className="-ml-1 shrink-0" />
+          <Separator
+            orientation="vertical"
+            className="mx-2 data-[orientation=vertical]:h-4 shrink-0"
+          />
+          <div className="flex items-center gap-2 min-w-0">
+            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+            <h1 className="text-base font-semibold text-foreground truncate">Add Location</h1>
           </div>
         </div>
       </header>

@@ -206,14 +206,6 @@ export default function BusinessDashboardPage() {
 
   return (
     <div className="space-y-8 pb-8 overflow-x-hidden">
-      <div className="flex justify-end">
-        <Link href="/dashboard/business/locations/create" className="shrink-0">
-          <Button className="shadow-md hover:shadow-lg transition-all">
-            <PlusCircle className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Add New Location</span><span className="sm:hidden">Add Location</span>
-          </Button>
-        </Link>
-      </div>
-
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Locations"

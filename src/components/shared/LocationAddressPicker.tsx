@@ -10,6 +10,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
+import { Card, CardContent } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 import {
   PlacesAutocomplete,
@@ -17,6 +19,7 @@ import {
 } from "@/components/shared/PlacesAutocomplete";
 import { getGeocode } from "use-places-autocomplete";
 import { toast } from "sonner";
+import { Search, MapPin, Building2, Globe, Maximize2 } from "lucide-react";
 
 const findAddressComponent = (
   components: google.maps.GeocoderAddressComponent[],
@@ -75,6 +78,7 @@ export function LocationAddressPicker() {
           lng: latLng.lng,
           components: results[0].address_components,
         });
+        toast.success("Address has been filled automatically");
       }
     } catch (error) {
       toast.error("Could not fetch address.");
@@ -95,7 +99,6 @@ export function LocationAddressPicker() {
         name="addressLine"
         render={() => (
           <FormItem>
-            <FormLabel className="text-sm">Search Address (or click the map)</FormLabel>
             <FormControl>
               <PlacesAutocomplete onAddressSelect={processPlaceDetails} />
             </FormControl>
@@ -103,7 +106,40 @@ export function LocationAddressPicker() {
           </FormItem>
         )}
       />
-      <div className="h-64 rounded-md overflow-hidden border relative">
+      <Card>
+        <CardContent>
+          <FormField
+            control={form.control}
+            name="radiusMeters"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center justify-between w-full mb-2">
+                  <FormLabel className="text-sm flex items-center gap-2">
+                    <Maximize2 className="h-4 w-4 text-muted-foreground" />
+                    How large is your location?
+                  </FormLabel>
+                  <span className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground tabular-nums">{field.value || 1}</span> meters
+                  </span>
+                </div>
+                <FormControl>
+                  <Slider
+                    min={1}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) => field.onChange(value[0])}
+                    defaultValue={[field.value]}
+                    value={[field.value || 1]}
+                    className="pt-1"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </CardContent>
+      </Card>
+      <div className="h-[600px] rounded-md overflow-hidden border relative">
         <GoogleMapsPicker
           position={markerPosition}
           onPositionChange={handlePositionChange}
@@ -111,47 +147,76 @@ export function LocationAddressPicker() {
           center={mapCenter}
         />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in-50">
-        <FormField
-          name="addressLevel2"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-sm">Province / City</FormLabel>
-              <FormControl>
-                <Input className="h-9" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          name="addressLevel1"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-sm">District / Ward</FormLabel>
-              <FormControl>
-                <Input className="h-9" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          name="addressLine"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem className="md:col-span-2">
-              <FormLabel className="text-sm">Street Address</FormLabel>
-              <FormControl>
-                <Input className="h-9" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
+    </div>
+  );
+}
+
+interface AddressFieldsProps {
+  editable?: boolean;
+}
+
+export function AddressFields({ editable = false }: AddressFieldsProps) {
+  const form = useFormContext();
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in-50">
+      <FormField
+        name="addressLine"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem className="md:col-span-2">
+            <FormLabel className="text-sm flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              Street Address
+            </FormLabel>
+            <FormControl>
+              <Input className="h-9" {...field} disabled={!editable} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        name="addressLevel2"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-sm flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              Province
+            </FormLabel>
+            <FormControl>
+              <Input className="h-9" {...field} disabled={!editable} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        name="addressLevel1"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-sm flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              District
+            </FormLabel>
+            <FormControl>
+              <Input className="h-9" {...field} disabled={!editable} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormItem className="md:col-span-2">
+        <FormLabel className="text-sm flex items-center gap-2">
+          <Globe className="h-4 w-4 text-muted-foreground" />
+          Country
+        </FormLabel>
+        <FormControl>
+          <Input className="h-9" value="Vietnam" disabled />
+        </FormControl>
+      </FormItem>
     </div>
   );
 }
