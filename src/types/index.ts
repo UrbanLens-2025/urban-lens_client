@@ -1115,3 +1115,51 @@ export interface UpdateCreatorAnnouncementPayload {
   imageUrl?: string | null;
   isHidden: boolean;
 }
+
+// Push Notification Types
+export interface RegisterDevicePayload {
+  token: string;
+}
+
+export interface RegisteredDevice {
+  id: string;
+  deviceToken: string;
+  deviceType: string;
+  deviceName?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type NotificationStatus = "SEEN" | "UNSEEN";
+export type NotificationType = "CUSTOM" | string;
+
+export interface NotificationPayload {
+  body: string;
+  title: string;
+  imageUrl?: string | null;
+}
+
+export interface Notification {
+  id: number;
+  createdAt: string;
+  type: NotificationType;
+  payload: NotificationPayload;
+  toUserId: string;
+  status: NotificationStatus;
+}
+
+export interface GetNotificationsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  status?: NotificationStatus;
+}
+
+export interface MarkNotificationsSeenPayload {
+  notificationId: string[];
+}
+
+export interface MarkNotificationSeenResponse {
+  success: boolean;
+  message: string;
+}

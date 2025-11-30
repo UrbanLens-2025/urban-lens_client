@@ -1,6 +1,7 @@
 "use client";
 
 import { type Icon } from "@tabler/icons-react";
+import { ReactNode } from "react";
 
 import {
   SidebarGroup,
@@ -19,6 +20,7 @@ export function NavMain({
     title: string;
     url: string;
     icon?: Icon;
+    badge?: ReactNode;
   }[];
 }) {
   const router = useRouter();
@@ -68,6 +70,7 @@ export function NavMain({
                     />
                   )}
                   <span className="transition-all duration-200">{item.title}</span>
+                  {item.badge}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );

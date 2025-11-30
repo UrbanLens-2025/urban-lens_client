@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/hooks/user/useUser";
 
 export function NavUser({
   user,
@@ -39,10 +40,21 @@ export function NavUser({
   const { isMobile } = useSidebar();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { user: currentUser } = useUser();
+  
   const logout = () => {
     localStorage.removeItem("token");
     queryClient.clear();
     router.push("/login");
+  };
+
+  const getNotificationsUrl = () => {
+    if (currentUser?.role === "BUSINESS_OWNER") {
+      return "/dashboard/business/notifications";
+    } else if (currentUser?.role === "EVENT_CREATOR") {
+      return "/dashboard/creator/notifications";
+    }
+    return "#";
   };
 
   return (
@@ -97,7 +109,14 @@ export function NavUser({
                 <IconCreditCard />
                 Billing
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const url = getNotificationsUrl();
+                  if (url !== "#") {
+                    router.push(url);
+                  }
+                }}
+              >
                 <IconNotification />
                 Notifications
               </DropdownMenuItem>

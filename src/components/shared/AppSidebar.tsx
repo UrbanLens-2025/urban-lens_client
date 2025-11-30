@@ -17,6 +17,7 @@ import {
   IconStar,
   IconClipboardList,
   IconPlus,
+  IconBell,
 } from "@tabler/icons-react";
 
 import {
@@ -36,6 +37,7 @@ import { Loader2 } from 'lucide-react';
 import { useUser } from '@/hooks/user/useUser';
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { NotificationBadge } from '@/components/notifications/NotificationBadge';
 
 const adminOverview = [
   { title: 'Overview', url: '/admin', icon: IconDashboard },
@@ -75,10 +77,16 @@ const adminNavGroups = [
   },
 ];
 
-const businessOverview = [
+const getBusinessOverview = () => [
   { title: 'Overview', url: '/dashboard/business', icon: IconDashboard },
   { title: 'Add location', url: '/dashboard/business/locations/create', icon: IconPlus },
   { title: 'My Locations', url: '/dashboard/business/locations', icon: IconMapPin },
+  { 
+    title: 'Notifications', 
+    url: '/dashboard/business/notifications', 
+    icon: IconBell,
+    badge: <NotificationBadge />,
+  },
   { title: 'Wallet', url: '/dashboard/business/wallet', icon: IconWallet },
 ];
 
@@ -92,9 +100,15 @@ const businessNavGroups = [
   },
 ];
 
-const creatorNav = [
+const getCreatorNav = () => [
   { title: "Overview", url: "/dashboard/creator", icon: IconCalendar },
   { title: "My Events", url: "/dashboard/creator/events", icon: IconCalendar },
+  { 
+    title: "Notifications", 
+    url: "/dashboard/creator/notifications", 
+    icon: IconBell,
+    badge: <NotificationBadge />,
+  },
   { title: "Wallet", url: "/dashboard/creator/wallet", icon: IconWallet },
 ];
 
@@ -147,12 +161,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       case 'BUSINESS_OWNER':
         return {
           navMain: [],
-          navOverview: businessOverview,
+          navOverview: getBusinessOverview(),
           navGroups: businessNavGroups,
         };
       case 'EVENT_CREATOR':
         return {
-          navMain: creatorNav,
+          navMain: getCreatorNav(),
           navOverview: [],
           navGroups: [],
         };
