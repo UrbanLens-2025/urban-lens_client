@@ -105,11 +105,22 @@ export default function EditVoucherPage({
     }
   }, [voucher, form]);
 
+  const voucherType = form.watch("voucherType");
+  const isPublicVoucher = voucherType === "public";
+
+  // Reset pricePoint to 0 when voucher type changes to "public"
+  useEffect(() => {
+    if (isPublicVoucher) {
+      form.setValue("pricePoint", 0);
+    }
+  }, [isPublicVoucher, form]);
+
   // 4. Hàm xử lý submit
   function onSubmit(values: FormValues) {
     const payload = {
       ...values,
       imageUrl: values.imageUrl || "",
+      pricePoint: isPublicVoucher ? 0 : values.pricePoint,
       startDate: values.startDate.toISOString(),
       endDate: values.endDate.toISOString(),
     };
@@ -203,7 +214,7 @@ export default function EditVoucherPage({
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="public">Public</SelectItem>
-                          <SelectItem value="private">Private</SelectItem>
+                          <SelectItem value="mission_only">Mission Only</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -220,7 +231,17 @@ export default function EditVoucherPage({
                     <FormItem>
                       <FormLabel>Price (Points)</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <Input 
+                          type="number" 
+                          {...field}
+                          value={isNaN(field.value) ? "" : (field.value ?? "")}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const numValue = value === "" ? 0 : Number(value);
+                            field.onChange(isNaN(numValue) ? 0 : numValue);
+                          }}
+                          disabled={isPublicVoucher}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -233,7 +254,16 @@ export default function EditVoucherPage({
                     <FormItem>
                       <FormLabel>Max Quantity</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <Input 
+                          type="number" 
+                          {...field}
+                          value={isNaN(field.value) ? "" : (field.value ?? "")}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const numValue = value === "" ? 0 : Number(value);
+                            field.onChange(isNaN(numValue) ? 0 : numValue);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -246,7 +276,16 @@ export default function EditVoucherPage({
                     <FormItem>
                       <FormLabel>Limit per User</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <Input 
+                          type="number" 
+                          {...field}
+                          value={isNaN(field.value) ? "" : (field.value ?? "")}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const numValue = value === "" ? 0 : Number(value);
+                            field.onChange(isNaN(numValue) ? 0 : numValue);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

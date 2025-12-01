@@ -36,20 +36,24 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { use } from "react";
+import { use, useEffect } from "react";
+import { CreateLocationVoucherPayload } from "@/types";
 
 // --- Zod Schema (Khớp với Payload) ---
 const voucherSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
   voucherCode: z.string().min(1, "Voucher code is required"),
-  imageUrl: z.string().url("Image URL is required"),
+  imageUrl: z.string().min(1, "Image URL is required").url("Image URL must be a valid URL"),
   pricePoint: z.number().min(0, "Price must be 0 or more"),
   maxQuantity: z.number().min(1, "Max quantity must be at least 1"),
   userRedeemedLimit: z.number().min(1, "Limit must be at least 1"),
   voucherType: z.string().min(1, "Type is required"),
-  startDate: z.date({ error: "Start date is required." }),
-  endDate: z.date({ error: "End date is required." }),
+  startDate: z.date({ required_error: "Start date is required." }),
+  endDate: z.date({ required_error: "End date is required." }),
+}).refine((data) => data.endDate > data.startDate, {
+  message: "End date must be after start date",
+  path: ["endDate"],
 });
 type FormValues = z.infer<typeof voucherSchema>;
 
@@ -71,7 +75,7 @@ export default function CreateVoucherPage({
       title: "",
       description: "",
       voucherCode: "",
-      imageUrl: undefined,
+      imageUrl: "",
       pricePoint: 0,
       maxQuantity: 100,
       userRedeemedLimit: 1,
@@ -79,10 +83,27 @@ export default function CreateVoucherPage({
     },
   });
 
+  const voucherType = form.watch("voucherType");
+  const isPublicVoucher = voucherType === "public";
+
+  // Reset pricePoint to 0 when voucher type changes to "public"
+  useEffect(() => {
+    if (isPublicVoucher) {
+      form.setValue("pricePoint", 0);
+    }
+  }, [isPublicVoucher, form]);
+
   function onSubmit(values: FormValues) {
     // Chuyển đổi Date objects thành ISO strings
-    const payload = {
-      ...values,
+    const payload: CreateLocationVoucherPayload = {
+      title: values.title,
+      description: values.description,
+      voucherCode: values.voucherCode,
+      imageUrl: values.imageUrl,
+      pricePoint: isPublicVoucher ? 0 : values.pricePoint,
+      maxQuantity: values.maxQuantity,
+      userRedeemedLimit: values.userRedeemedLimit,
+      voucherType: values.voucherType,
       startDate: values.startDate.toISOString(),
       endDate: values.endDate.toISOString(),
     };
@@ -166,7 +187,7 @@ export default function CreateVoucherPage({
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="public">Public</SelectItem>
-                          <SelectItem value="private">Private</SelectItem>
+                          <SelectItem value="mission_only">Mission Only</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -186,10 +207,13 @@ export default function CreateVoucherPage({
                         <Input
                           type="number"
                           {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) =>
-                            field.onChange(e.target.valueAsNumber)
-                          }
+                          value={isNaN(field.value) ? "" : (field.value ?? "")}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const numValue = value === "" ? 0 : Number(value);
+                            field.onChange(isNaN(numValue) ? 0 : numValue);
+                          }}
+                          disabled={isPublicVoucher}
                         />
                       </FormControl>
                       <FormMessage />
@@ -206,10 +230,12 @@ export default function CreateVoucherPage({
                         <Input
                           type="number"
                           {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) =>
-                            field.onChange(e.target.valueAsNumber)
-                          }
+                          value={isNaN(field.value) ? "" : (field.value ?? "")}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const numValue = value === "" ? 0 : Number(value);
+                            field.onChange(isNaN(numValue) ? 0 : numValue);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -226,10 +252,12 @@ export default function CreateVoucherPage({
                         <Input
                           type="number"
                           {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) =>
-                            field.onChange(e.target.valueAsNumber)
-                          }
+                          value={isNaN(field.value) ? "" : (field.value ?? "")}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const numValue = value === "" ? 0 : Number(value);
+                            field.onChange(isNaN(numValue) ? 0 : numValue);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />

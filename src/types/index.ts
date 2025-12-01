@@ -449,19 +449,6 @@ export interface CreateLocationVoucherPayload {
   endDate: string;
 }
 
-export interface CreateLocationVoucherPayload {
-  title: string;
-  description: string;
-  voucherCode: string;
-  imageUrl: string;
-  pricePoint: number;
-  maxQuantity: number;
-  userRedeemedLimit: number;
-  voucherType: string;
-  startDate: string;
-  endDate: string;
-}
-
 interface LocationForVoucher {
   id: string;
   name: string;
