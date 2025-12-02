@@ -199,8 +199,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }, [user]);
 
-  const isDashboardActive = pathname === dashboardUrl;
-
   if (isLoading || !user) {
     return (
       <Sidebar collapsible='icon' {...props}>
@@ -224,17 +222,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={() => router.push(dashboardUrl)}
-              isActive={isDashboardActive}
               className={cn(
-                "data-[slot=sidebar-menu-button]:!p-2 transition-all duration-200",
-                isDashboardActive
-                  ? "bg-[var(--sidebar-active-bg,theme(colors.sidebar.accent))] text-[var(--sidebar-active-text,theme(colors.sidebar.accent-foreground))] shadow-sm"
-                  : "hover:bg-sidebar-accent/50"
+                "data-[slot=sidebar-menu-button]:!p-2 transition-all duration-200 hover:bg-sidebar-accent/50"
               )}
             >
               <IconInnerShadowTop className={cn(
-                "!size-5 transition-transform duration-200",
-                isDashboardActive && "scale-110"
+                "!size-5 transition-transform duration-200"
               )} />
               <span className='text-base font-semibold transition-all duration-200'>
                 {dashboardTitle}
