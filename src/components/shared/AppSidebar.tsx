@@ -8,7 +8,6 @@ import {
   IconHelp,
   IconInnerShadowTop,
   IconMapPin,
-  IconSettings,
   IconTag,
   IconFileText,
   IconWallet,
@@ -83,12 +82,6 @@ const getBusinessOverview = () => [
   { title: 'Overview', url: '/dashboard/business', icon: IconDashboard },
   { title: 'Add location', url: '/dashboard/business/locations/create', icon: IconPlus },
   { title: 'My Locations', url: '/dashboard/business/locations', icon: IconMapPin },
-  { 
-    title: 'Notifications', 
-    url: '/dashboard/business/notifications', 
-    icon: IconBell,
-    badge: <NotificationBadge />,
-  },
   { title: 'Wallet', url: '/dashboard/business/wallet', icon: IconWallet },
 ];
 
@@ -105,18 +98,7 @@ const businessNavGroups = [
 const getCreatorNav = () => [
   { title: "Overview", url: "/dashboard/creator", icon: IconCalendar },
   { title: "My Events", url: "/dashboard/creator/events", icon: IconCalendar },
-  { 
-    title: "Notifications", 
-    url: "/dashboard/creator/notifications", 
-    icon: IconBell,
-    badge: <NotificationBadge />,
-  },
   { title: "Wallet", url: "/dashboard/creator/wallet", icon: IconWallet },
-];
-
-const navSecondary = [
-  { title: 'Settings', url: '#', icon: IconSettings },
-  { title: 'Toggle theme', url: '#theme-toggle', icon: IconHelp },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -178,6 +160,42 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           navOverview: [],
           navGroups: [],
         };
+    }
+  }, [user]);
+
+  const navSecondary = React.useMemo(() => {
+    if (!user) {
+      return [
+        { title: 'Toggle theme', url: '#theme-toggle', icon: IconHelp },
+      ];
+    }
+
+    switch (user.role) {
+      case 'BUSINESS_OWNER':
+        return [
+          {
+            title: 'Notifications',
+            url: '/dashboard/business/notifications',
+            icon: IconBell,
+            badge: <NotificationBadge />,
+          },
+          { title: 'Toggle theme', url: '#theme-toggle', icon: IconHelp },
+        ];
+      case 'EVENT_CREATOR':
+        return [
+          {
+            title: 'Notifications',
+            url: '/dashboard/creator/notifications',
+            icon: IconBell,
+            badge: <NotificationBadge />,
+          },
+          { title: 'Toggle theme', url: '#theme-toggle', icon: IconHelp },
+        ];
+      case 'ADMIN':
+      default:
+        return [
+          { title: 'Toggle theme', url: '#theme-toggle', icon: IconHelp },
+        ];
     }
   }, [user]);
 

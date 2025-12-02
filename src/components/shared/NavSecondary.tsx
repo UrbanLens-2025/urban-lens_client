@@ -4,6 +4,9 @@ import * as React from "react"
 import { type Icon } from "@tabler/icons-react"
 import { MoonIcon, SunIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
+import type { ReactNode } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 import {
   SidebarGroup,
@@ -21,9 +24,11 @@ export function NavSecondary({
     title: string
     url: string
     icon: Icon
+    badge?: ReactNode
   }[]
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   const { setTheme, resolvedTheme } = useTheme()
+  const pathname = usePathname()
 
   const toggleTheme = React.useCallback(() => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
@@ -50,16 +55,23 @@ export function NavSecondary({
               )
             }
 
+            const isActive =
+              item.url !== '#theme-toggle' && pathname.startsWith(item.url)
+
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   asChild
+                  isActive={isActive}
                   className="transition-all duration-200 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                 >
-                  <a href={item.url} className="flex items-center gap-2">
+                  <Link href={item.url} className="flex items-center gap-2">
                     <item.icon className="h-4 w-4 transition-transform duration-200" />
-                    <span className="transition-all duration-200">{item.title}</span>
-                  </a>
+                    <span className="transition-all duration-200 flex-1 text-left">
+                      {item.title}
+                    </span>
+                    {item.badge}
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )
