@@ -13,12 +13,14 @@ import { AppSidebar } from '@/components/shared/AppSidebar';
 import { SiteHeader } from '@/components/shared/SiteHeader';
 import { useUser } from '@/hooks/user/useUser';
 import { useOnboardingCheck } from '@/hooks/onboarding/useOnboardingCheck';
+import { useAutoRegisterDevice } from '@/hooks/notifications/useAutoRegisterDevice';
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
   useOnboardingCheck();
+  useAutoRegisterDevice(!!user && !isLoading);
 
   React.useEffect(() => {
     if (!isLoading && !user) {

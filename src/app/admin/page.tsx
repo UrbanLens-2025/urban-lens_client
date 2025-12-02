@@ -34,8 +34,12 @@ import {
   Settings,
   Filter,
 } from 'lucide-react';
-import StatsCard from '@/components/admin/stats-card';
 import { dashboardStats } from '@/constants/admin/dashboard-stats';
+import {
+  StatsCard,
+  DashboardHeader,
+  StatusBadge,
+} from '@/components/dashboard';
 
 function QuickActionCard({
   title,
@@ -75,8 +79,13 @@ function QuickActionCard({
 
 export default function AdminDashboardPage() {
   return (
-    <div className='space-y-8'>
-      {/* Header với tổng quan nhanh */}
+    <div className='space-y-8 pb-8 overflow-x-hidden'>
+      <DashboardHeader
+        title="Admin Dashboard"
+        description="Manage users, content, and system operations"
+      />
+
+      {/* Stats Grid */}
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'>
         {dashboardStats.map((stat: any) => (
           <StatsCard
@@ -86,6 +95,7 @@ export default function AdminDashboardPage() {
             change={stat.change}
             icon={stat.icon}
             color={stat.color}
+            variant="minimal"
           />
         ))}
       </div>
@@ -204,7 +214,7 @@ export default function AdminDashboardPage() {
                     <TableRow>
                       <TableCell>Nguyễn X</TableCell>
                       <TableCell>
-                        <Badge variant='destructive'>Khóa</Badge>
+                        <StatusBadge status="REJECTED" />
                       </TableCell>
                       <TableCell>Spam reviews</TableCell>
                       <TableCell>
@@ -216,7 +226,7 @@ export default function AdminDashboardPage() {
                     <TableRow>
                       <TableCell>Trần Y</TableCell>
                       <TableCell>
-                        <Badge variant='secondary'>Cảnh báo</Badge>
+                        <StatusBadge status="PENDING" />
                       </TableCell>
                       <TableCell>Nội dung không phù hợp</TableCell>
                       <TableCell>

@@ -1,10 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -14,134 +11,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, PlusCircle, Star, Eye, Building2, MapPin, Users, Calendar, Loader2, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { PlusCircle, Building2, Users, Calendar, Eye, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useMyLocations } from "@/hooks/locations/useMyLocations";
 import { useOwnerLocationBookings } from "@/hooks/locations/useOwnerLocationBookings";
-import { LocationStatus } from "@/types";
 import { format } from "date-fns";
-
-function StatCard({ title, value, change, icon: Icon, isLoading }: any) {
-  return (
-    <Card className="shadow-md hover:shadow-lg transition-shadow border-2 hover:border-primary/20">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b bg-muted/20">
-        <CardTitle className="text-sm font-semibold uppercase tracking-wide">{title}</CardTitle>
-        <div className="p-2 rounded-lg bg-primary/10">
-          <Icon className="h-4 w-4 text-primary" />
-        </div>
-      </CardHeader>
-      <CardContent className="pt-6">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-12">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <>
-            <div className="text-3xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">{value}</div>
-            {change && <p className="text-xs font-medium text-muted-foreground">{change}</p>}
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function getStatusBadge(status: string) {
-  const statusUpper = status?.toUpperCase();
-  
-  // Booking statuses
-  switch (statusUpper) {
-    case "PAYMENT_RECEIVED":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700 font-medium"
-        >
-          <CheckCircle className="h-3 w-3 mr-1" />
-          Payment Received
-        </Badge>
-      );
-    case "AWAITING_BUSINESS_PROCESSING":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700 font-medium"
-        >
-          <Clock className="h-3 w-3 mr-1" />
-          Awaiting Processing
-        </Badge>
-      );
-    case "SOFT_LOCKED":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-700 font-medium"
-        >
-          <Clock className="h-3 w-3 mr-1" />
-          Soft Locked
-        </Badge>
-      );
-    case "CANCELLED":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700 font-medium"
-        >
-          <AlertCircle className="h-3 w-3 mr-1" />
-          Cancelled
-        </Badge>
-      );
-    case "APPROVED":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700 font-medium"
-        >
-          <CheckCircle className="h-3 w-3 mr-1" />
-          Approved
-        </Badge>
-      );
-    case "REJECTED":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700 font-medium"
-        >
-          <AlertCircle className="h-3 w-3 mr-1" />
-          Rejected
-        </Badge>
-      );
-    case "PENDING":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700 font-medium"
-        >
-          <Clock className="h-3 w-3 mr-1" />
-          Pending
-        </Badge>
-      );
-    case "ACTIVE":
-      return (
-        <Badge className="font-medium bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-          Active
-        </Badge>
-      );
-    default:
-      // Format unknown statuses in a user-friendly way
-      const formattedStatus = status
-        ? status
-            .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(" ")
-        : "Unknown";
-      return (
-        <Badge variant="secondary" className="font-medium">
-          {formattedStatus}
-        </Badge>
-      );
-  }
-}
+import {
+  StatsCard,
+  DashboardSection,
+  DashboardHeader,
+  StatusBadge,
+} from "@/components/dashboard";
 
 export default function BusinessDashboardPage() {
   const router = useRouter();
@@ -206,131 +86,136 @@ export default function BusinessDashboardPage() {
 
   return (
     <div className="space-y-8 pb-8 overflow-x-hidden">
+      <DashboardHeader
+        title="Business Dashboard"
+        description="Manage your locations, bookings, and revenue"
+      />
+
+      {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
+        <StatsCard
           title="Total Locations"
           value={stats.totalLocations.toLocaleString()}
           change={`${stats.approvedLocations} approved`}
           icon={Building2}
           isLoading={isLoading}
+          color="primary"
         />
-        <StatCard
+        <StatsCard
           title="Total Check-ins"
           value={stats.totalCheckIns.toLocaleString()}
           change="All locations"
           icon={Users}
           isLoading={isLoading}
+          color="blue"
         />
-        <StatCard
+        <StatsCard
           title="Total Bookings"
           value={stats.totalBookings.toLocaleString()}
           change={`${stats.recentBookings} in last 30 days`}
           icon={Calendar}
           isLoading={isLoading}
+          color="purple"
         />
-        <StatCard
+        <StatsCard
           title="Total Revenue"
           value={stats.totalRevenue > 0 ? `₫${(stats.totalRevenue / 1000).toFixed(0)}K` : "₫0"}
           change="From completed bookings"
           icon={Eye}
           isLoading={isLoading}
+          color="green"
         />
       </div>
 
+      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <Card className="lg:col-span-3 shadow-lg border-2">
-          <CardHeader className="border-b bg-muted/20">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                My Locations
-              </CardTitle>
-              <Link href={"/dashboard/business/locations"}>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <ArrowUpRight className="h-4 w-4" />
-                </Button>
-              </Link>
+        <DashboardSection
+          title="My Locations"
+          icon={Building2}
+          action={{
+            label: "View all",
+            href: "/dashboard/business/locations",
+          }}
+          className="lg:col-span-3"
+          isEmpty={!isLoadingLocations && recentLocations.length === 0}
+          emptyState={{
+            icon: Building2,
+            title: "No locations yet",
+            description: "Get started by adding your first location",
+            action: {
+              label: "Add Your First Location",
+              href: "/dashboard/business/locations/create",
+            },
+          }}
+        >
+          {isLoadingLocations ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {isLoadingLocations ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : recentLocations.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm">No locations yet</p>
-                <Link href="/dashboard/business/locations/create">
-                  <Button variant="outline" size="sm" className="mt-4">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Your First Location
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="font-semibold">Name</TableHead>
-                    <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="font-semibold">Check-ins</TableHead>
-                    <TableHead className="font-semibold">Address</TableHead>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="font-semibold">Name</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Check-ins</TableHead>
+                  <TableHead className="font-semibold">Address</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentLocations.map((location) => (
+                  <TableRow
+                    key={location.id}
+                    className="hover:bg-muted/50 cursor-pointer"
+                    onClick={() => router.push(`/dashboard/business/locations/${location.id}`)}
+                  >
+                    <TableCell className="font-medium">{location.name}</TableCell>
+                    <TableCell>
+                      {location.isVisibleOnMap ? (
+                        <StatusBadge status="ACTIVE" />
+                      ) : (
+                        <Badge variant="secondary" className="font-medium">
+                          HIDDEN
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {parseInt(location.totalCheckIns || "0").toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {location.addressLine
+                        ? `${location.addressLine}, ${location.addressLevel2}`
+                        : "N/A"}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentLocations.map((location) => (
-                    <TableRow 
-                      key={location.id} 
-                      className="hover:bg-muted/50 cursor-pointer"
-                      onClick={() => router.push(`/dashboard/business/locations/${location.id}`)}
-                    >
-                      <TableCell className="font-medium">{location.name}</TableCell>
-                      <TableCell>
-                        {location.isVisibleOnMap ? (
-                          <Badge className="font-medium bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">ACTIVE</Badge>
-                        ) : (
-                          <Badge variant="secondary" className="font-medium">HIDDEN</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium">{parseInt(location.totalCheckIns || "0").toLocaleString()}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {location.addressLine ? `${location.addressLine}, ${location.addressLevel2}` : "N/A"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DashboardSection>
 
-        <Card className="lg:col-span-2 shadow-lg border-2">
-          <CardHeader className="border-b bg-muted/20">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                Recent Bookings
-              </CardTitle>
-              <Link href={"/dashboard/business/location-bookings"}>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <ArrowUpRight className="h-4 w-4" />
-                </Button>
-              </Link>
+        <DashboardSection
+          title="Recent Bookings"
+          icon={Calendar}
+          action={{
+            label: "View all",
+            href: "/dashboard/business/location-bookings",
+          }}
+          className="lg:col-span-2"
+          isEmpty={!isLoadingBookings && recentBookingsList.length === 0}
+          emptyState={{
+            icon: Calendar,
+            title: "No bookings yet",
+            description: "Bookings will appear here when creators book your locations",
+          }}
+        >
+          {isLoadingBookings ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-4">
-            {isLoadingBookings ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : recentBookingsList.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                <p className="text-sm">No bookings yet</p>
-              </div>
-            ) : (
-              recentBookingsList.map((booking) => (
+          ) : (
+            <div className="space-y-4">
+              {recentBookingsList.map((booking) => (
                 <Link
                   key={booking.id}
                   href={`/dashboard/business/location-bookings/${booking.id}`}
@@ -338,8 +223,10 @@ export default function BusinessDashboardPage() {
                 >
                   <div className="flex flex-col p-4 border-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors shadow-sm cursor-pointer">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="font-semibold text-sm">{booking.location?.name || "Location"}</p>
-                      {getStatusBadge(booking.status || "")}
+                      <p className="font-semibold text-sm">
+                        {booking.location?.name || "Location"}
+                      </p>
+                      <StatusBadge status={booking.status || ""} />
                     </div>
                     <p className="text-xs text-muted-foreground mb-1">
                       {format(new Date(booking.createdAt), "MMM dd, yyyy")}
@@ -349,10 +236,10 @@ export default function BusinessDashboardPage() {
                     </p>
                   </div>
                 </Link>
-              ))
-            )}
-          </CardContent>
-        </Card>
+              ))}
+            </div>
+          )}
+        </DashboardSection>
       </div>
     </div>
   );
