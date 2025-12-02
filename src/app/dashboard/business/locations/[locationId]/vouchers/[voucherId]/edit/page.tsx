@@ -213,8 +213,8 @@ export default function EditVoucherPage({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="public">Public</SelectItem>
-                          <SelectItem value="mission_only">Mission Only</SelectItem>
+                          <SelectItem value="public">Free Voucher</SelectItem>
+                          <SelectItem value="mission_only">Exchange Voucher</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

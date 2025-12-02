@@ -49,8 +49,8 @@ const voucherSchema = z.object({
   maxQuantity: z.number().min(1, "Max quantity must be at least 1"),
   userRedeemedLimit: z.number().min(1, "Limit must be at least 1"),
   voucherType: z.string().min(1, "Type is required"),
-  startDate: z.date({ required_error: "Start date is required." }),
-  endDate: z.date({ required_error: "End date is required." }),
+  startDate: z.date({ error: "Start date is required." }),
+  endDate: z.date({ error: "End date is required." }),
 }).refine((data) => data.endDate > data.startDate, {
   message: "End date must be after start date",
   path: ["endDate"],
@@ -186,8 +186,8 @@ export default function CreateVoucherPage({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="public">Public</SelectItem>
-                          <SelectItem value="mission_only">Mission Only</SelectItem>
+                          <SelectItem value="public">Free Voucher</SelectItem>
+                          <SelectItem value="mission_only">Exchange Voucher</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
