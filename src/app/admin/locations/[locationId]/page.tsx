@@ -29,7 +29,7 @@ import type React from 'react';
 import { ImageViewer } from '@/components/shared/ImageViewer';
 import { formatDate } from '@/lib/utils';
 import { locationStats } from '@/constants/admin/location-stats';
-import StatsCard from '@/components/admin/stats-card';
+import { StatsCard } from '@/components/dashboard';
 
 function InfoRow({
   label,
@@ -128,6 +128,7 @@ export default function AdminLocationDetailsPage({
             change={stat.change}
             icon={stat.icon}
             color={stat.color}
+            variant="minimal"
           />
         ))}
       </div>

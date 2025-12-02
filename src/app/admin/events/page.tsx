@@ -31,7 +31,7 @@ import {
 import { Event, SortState } from '@/types';
 import { useAllEvents } from '@/hooks/admin/useAllEvents';
 import Link from 'next/link';
-import StatsCard from '@/components/admin/stats-card';
+import { StatsCard } from '@/components/dashboard';
 import {
   IconCalendar,
   IconEye,
@@ -121,28 +121,28 @@ export default function AdminEventsPage() {
         value: eventsMeta?.totalItems?.toString() || '0',
         change: `${events.length} on this page`,
         icon: IconCalendar,
-        color: 'blue',
+        color: 'blue' as const,
       },
       {
         title: 'Published',
         value: published.toString(),
         change: 'Active events',
         icon: IconTrendingUp,
-        color: 'green',
+        color: 'green' as const,
       },
       {
         title: 'Draft',
         value: draft.toString(),
         change: 'Unpublished events',
         icon: IconCalendar,
-        color: 'orange',
+        color: 'orange' as const,
       },
       {
         title: 'Creators',
         value: uniqueCreators.toString(),
         change: 'Unique creators',
         icon: IconUsers,
-        color: 'purple',
+        color: 'purple' as const,
       },
     ];
   }, [events, eventsMeta]);
@@ -212,6 +212,7 @@ export default function AdminEventsPage() {
             change={stat.change}
             icon={stat.icon}
             color={stat.color}
+            variant="minimal"
           />
         ))}
       </div>
