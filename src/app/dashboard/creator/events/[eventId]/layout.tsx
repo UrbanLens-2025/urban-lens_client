@@ -5,6 +5,7 @@ import { use, useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useEventById } from "@/hooks/events/useEventById";
 import { usePublishEvent } from "@/hooks/events/usePublishEvent";
+import { useFinishEvent } from "@/hooks/events/useFinishEvent";
 import { useEventTickets } from "@/hooks/events/useEventTickets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -89,10 +90,12 @@ function EventDetailLayoutContent({
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState("");
   const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const [isFinishDialogOpen, setIsFinishDialogOpen] = useState(false);
 
   const { data: event, isLoading, isError } = useEventById(eventId);
   const { data: tickets } = useEventTickets(eventId);
   const publishEvent = usePublishEvent();
+  const finishEvent = useFinishEvent();
 
   const handlePublishClick = () => {
     setIsPublishDialogOpen(true);
@@ -104,6 +107,20 @@ function EventDetailLayoutContent({
       setIsPublishDialogOpen(false);
     }
   };
+
+  const handleFinishClick = () => {
+    setIsFinishDialogOpen(true);
+  };
+
+  const handleFinishConfirm = () => {
+    if (event && event.status === "PUBLISHED") {
+      finishEvent.mutate(eventId);
+      setIsFinishDialogOpen(false);
+    }
+  };
+
+  const isEventEnded = event?.endDate ? new Date(event.endDate) < new Date() : false;
+  const isPublished = event?.status?.toUpperCase() === "PUBLISHED";
 
   
   // Checklist items for publishing
@@ -519,6 +536,39 @@ function EventDetailLayoutContent({
                 </div>
               </div>
             </div>
+
+            {/* Finish Event Button - Show only if PUBLISHED */}
+            {isPublished && (
+              <div className="pt-4">
+                <Button
+                  onClick={handleFinishClick}
+                  disabled={finishEvent.isPending || !isEventEnded}
+                  variant="outline"
+                  size="lg"
+                  className={cn(
+                    "w-full sm:w-auto",
+                    !isEventEnded && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  {finishEvent.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Finishing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Finish Event
+                    </>
+                  )}
+                </Button>
+                {!isEventEnded && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    You can finish the event after the end date has passed.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-4">
@@ -1115,6 +1165,77 @@ function EventDetailLayoutContent({
                 <>
                   <Send className="h-4 w-4 mr-2" />
                   Publish Event
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Finish Event Confirmation Dialog */}
+      <AlertDialog open={isFinishDialogOpen} onOpenChange={setIsFinishDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-lg">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+              Finish Event
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p className="text-sm">
+                Are you sure you want to finish this event? By finishing the event:
+              </p>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-4 w-4 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Event status will change to FINISHED</p>
+                    <p className="text-muted-foreground">
+                      The event will no longer be active and ticket sales will stop.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Clock className="h-4 w-4 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Payment processing begins</p>
+                    <p className="text-muted-foreground">
+                      You will get paid after 1 week from the event end date.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <FileText className="h-4 w-4 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Final attendance records</p>
+                    <p className="text-muted-foreground">
+                      Attendance data will be finalized and cannot be modified.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <p className="mt-1 font-medium text-sm text-muted-foreground">
+                This action cannot be undone. Make sure all event activities are completed before finishing.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={finishEvent.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleFinishConfirm}
+              disabled={finishEvent.isPending}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {finishEvent.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Finishing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Confirm Finish
                 </>
               )}
             </AlertDialogAction>

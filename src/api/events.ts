@@ -375,3 +375,11 @@ export const cancelEvent = async (
     { data: payload }
   );
 };
+
+export const finishEvent = async (eventId: string): Promise<Event> => {
+  const { data } = await axiosInstance.post<ApiResponse<Event>>(
+    `/v1/creator/events/${eventId}/finish`,
+    {}
+  );
+  return data.data;
+};
