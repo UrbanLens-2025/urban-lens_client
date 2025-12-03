@@ -21,9 +21,8 @@ import {
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
-import { Loader2, CheckCircle2, MapPin, Image, FileCheck, ArrowLeft, ArrowRight, ChevronDown, Search, X, Plus, Trash2, Building2, FileText, Tag, Info, Pencil } from "lucide-react";
+import { Loader2, CheckCircle2, MapPin, Image, FileCheck, ArrowLeft, ArrowRight, ChevronDown, Plus, Trash2, Building2, FileText, Tag, Info, Pencil } from "lucide-react";
 import { FileUpload } from "@/components/shared/FileUpload";
-import { TagMultiSelect } from "@/components/shared/TagMultiSelect";
 import {
   Card,
   CardContent,
@@ -42,10 +41,9 @@ import { useAddTagsToRequest } from "@/hooks/locations/useAddTagsToRequest";
 import { useRemoveTagsFromRequest } from "@/hooks/locations/useRemoveTagsFromRequest";
 import { useQueryClient } from "@tanstack/react-query";
 import { DisplayTags } from "../shared/DisplayTags";
-import { useResolvedTags } from "@/hooks/tags/useResolvedTags";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useTagCategories } from "@/hooks/tags/useTagCategories";
-import type { TagCategory } from "@/types";
+import type { Tag, TagCategory } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -70,6 +68,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LocationTagsSelector } from "@/components/locations/LocationTagsSelector";
 
 // Document types with descriptions
 const DOCUMENT_TYPES = {
@@ -263,49 +262,35 @@ export default function LocationForm({
   const watchedValues = form.watch();
   const descriptionValue = form.watch("description");
 
-  const { resolvedTags: tags } = useResolvedTags(watchedValues.tagIds);
-  const { data: tagCategories, isLoading: isLoadingTags } = useTagCategories("LOCATION");
-  const [displayCount, setDisplayCount] = useState(20);
-  const [searchTerm, setSearchTerm] = useState("");
   const selectedTagIds = watchedValues.tagIds || [];
-
-  // Filter tags based on search term
-  const filteredTags = useMemo(() => {
-    if (!tagCategories) return [];
-    const term = searchTerm.toLowerCase();
-    return tagCategories.filter((tag) =>
-      tag.name.toLowerCase().includes(term) ||
-      tag.description.toLowerCase().includes(term)
-    );
-  }, [tagCategories, searchTerm]);
-
-  // Get displayed tags (paginated)
-  const INITIAL_DISPLAY_COUNT = 20;
-  const TAGS_PER_PAGE = 8;
-
-  // Reset display count when search term changes
-  useEffect(() => {
-    setDisplayCount(INITIAL_DISPLAY_COUNT);
-  }, [searchTerm]);
-  const displayedTags = useMemo(() => {
-    return filteredTags.slice(0, displayCount);
-  }, [filteredTags, displayCount]);
-
-  const hasMore = filteredTags.length > displayCount;
-
-  // Handle tag selection - allow multiple selections
-  const toggleTag = (tagId: number) => {
-    const isSelected = selectedTagIds.includes(tagId);
-    if (isSelected) {
-      form.setValue("tagIds", selectedTagIds.filter((id) => id !== tagId), { shouldValidate: true });
-    } else {
-      // Add to current selection (multiple allowed)
-      form.setValue("tagIds", [...selectedTagIds, tagId], { shouldValidate: true });
-    }
-  };
-
-  // Check if at least one tag is selected
   const hasLocationType = selectedTagIds.length > 0;
+
+  const { data: tagCategories } = useTagCategories("LOCATION");
+
+  const tags = useMemo(() => {
+    if (!tagCategories || !selectedTagIds.length) return [];
+    const categoriesById = new Map<number, TagCategory>();
+    tagCategories.forEach((cat) => categoriesById.set(cat.id, cat));
+
+    const mapped: Tag[] = [];
+    selectedTagIds.forEach((id: number) => {
+      const cat = categoriesById.get(id);
+      if (!cat) return;
+      mapped.push({
+        id: cat.id,
+        createdAt: "",
+        updatedAt: "",
+        deletedAt: null,
+        groupName: "LOCATION_CATEGORY",
+        displayName: cat.name,
+        color: cat.color,
+        icon: cat.icon,
+        isSelectable: true,
+      });
+    });
+
+    return mapped;
+  }, [tagCategories, selectedTagIds]);
 
   const handleNextStep = async () => {
     const fields = steps[currentStep].fields;
@@ -357,32 +342,7 @@ export default function LocationForm({
         return;
       }
 
-      // Validate that all selected tag IDs exist in the available tag categories
-      // Only send category IDs that are currently available and valid
-      const availableTagIds = tagCategories?.map(tag => tag.id) || [];
-      const categoryIds = validTagIds
-        .filter(id => availableTagIds.includes(id))
-        .map(id => Number.isInteger(id) ? id : parseInt(String(id), 10))
-        .filter(id => !isNaN(id) && Number.isInteger(id));
-
-      if (categoryIds.length === 0) {
-        form.setError("tagIds", {
-          type: "manual",
-          message: "Selected tags are not valid. Please select valid location types from the available options.",
-        });
-        // Clear invalid selections
-        form.setValue("tagIds", [], { shouldValidate: true });
-        await form.trigger("tagIds", { shouldFocus: true });
-        return;
-      }
-
-      if (categoryIds.length !== validTagIds.length) {
-        // Some tags were filtered out - update form and warn user
-        const invalidCount = validTagIds.length - categoryIds.length;
-        toast.warning(`${invalidCount} invalid tag${invalidCount > 1 ? 's' : ''} ${invalidCount > 1 ? 'were' : 'was'} removed. Please select valid location types.`);
-        // Update form with only valid tag IDs
-        form.setValue("tagIds", categoryIds, { shouldValidate: true });
-      }
+      const categoryIds = validTagIds;
 
       const payload = {
         ...rest,
@@ -421,7 +381,9 @@ export default function LocationForm({
 
         await Promise.all(mutationPromises);
       } else {
+        // Creation flow: delegate success handling (toast + navigation) to the mutation hook
         await createLocation(payload as any);
+        return;
       }
 
       if (isEditMode) {
@@ -429,10 +391,6 @@ export default function LocationForm({
         queryClient.invalidateQueries({ queryKey: ["locationRequests"] });
         queryClient.invalidateQueries({ queryKey: ["locationRequest", locationId] });
         router.push(`/dashboard/business/locations/${locationId}`);
-      } else {
-        toast.success("Location submitted successfully! It's now under review.");
-        queryClient.invalidateQueries({ queryKey: ["locationRequests"] });
-        router.push("/dashboard/business/locations?tab=requests");
       }
     } catch (err) {
       toast.error("An error occurred. Please try again.");
@@ -629,92 +587,30 @@ export default function LocationForm({
                       control={form.control}
                       render={({ field }) => (
                         <FormItem>
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <FormLabel className="text-sm flex items-center gap-2">
-                              <Tag className="h-4 w-4 text-muted-foreground" />
-                              Location categories
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="max-w-xs">Select one or more categories that best describe your location type. This helps event creators find locations that match their event needs. You can select multiple categories.</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </FormLabel>
-                            <div className="relative w-64">
-                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                type="text"
-                                placeholder="Search..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 h-8 text-sm"
-                              />
-                              {searchTerm.length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => setSearchTerm("")}
-                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          {isLoadingTags ? (
-                            <div className="flex items-center justify-center py-4">
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              <div className="flex flex-wrap gap-2">
-                                {displayedTags.map((tag: TagCategory) => {
-                                  const isSelected = selectedTagIds.includes(tag.id);
-                                  return (
-                                    <Badge
-                                      key={tag.id}
-                                      variant={isSelected ? "default" : "outline"}
-                                      style={
-                                        isSelected
-                                          ? { backgroundColor: tag.color, color: "#fff", borderColor: tag.color }
-                                          : { borderColor: tag.color, color: tag.color }
-                                      }
-                                      className={cn(
-                                        "cursor-pointer transition-all hover:shadow-md px-3 py-1.5 text-xs font-medium h-auto min-h-[32px]",
-                                        isSelected && "ring-2 ring-offset-1 ring-primary shadow-sm",
-                                        !isSelected && "hover:bg-muted/50 hover:scale-105"
-                                      )}
-                                      onClick={() => toggleTag(tag.id)}
-                                      title={tag.description}
-                                    >
-                                      <span className="mr-1.5 text-sm">{tag.icon}</span>
-                                      {tag.name}
-                                    </Badge>
-                                  );
-                                })}
-                              </div>
-                              {hasMore && (
-                                <div className="flex gap-2 pt-1">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setDisplayCount(prev => Math.min(prev + TAGS_PER_PAGE, filteredTags.length))}
-                                    className="h-8 text-xs"
-                                  >
-                                    <ChevronDown className="mr-1.5 h-4 w-4" />
-                                    Load more ({Math.min(TAGS_PER_PAGE, filteredTags.length - displayCount)} more)
-                                  </Button>
-                                </div>
-                              )}
-                              {filteredTags.length === 0 && searchTerm && (
-                                <p className="text-[10px] text-muted-foreground text-center py-1">
-                                  No tags found for &quot;{searchTerm}&quot;
+                          <FormLabel className="text-sm flex items-center gap-2 mb-2">
+                            <Tag className="h-4 w-4 text-muted-foreground" />
+                            Location categories
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs">
+                                  Select one or more categories that best describe your location type. This helps event creators find locations that match their event needs.
                                 </p>
-                              )}
-                            </div>
-                          )}
+                              </TooltipContent>
+                            </Tooltip>
+                          </FormLabel>
+                          <FormControl>
+                            <LocationTagsSelector
+                              value={field.value}
+                              onChange={(ids) =>
+                                form.setValue("tagIds", ids, { shouldValidate: true })
+                              }
+                              error={form.formState.errors.tagIds?.message}
+                              helperText="Select the location type and other relevant categories."
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}

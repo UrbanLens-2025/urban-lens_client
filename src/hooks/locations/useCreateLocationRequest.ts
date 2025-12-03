@@ -16,7 +16,7 @@ export function useCreateLocationRequest() {
     onSuccess: () => {
       toast.success("Location request submitted successfully for review!");
       queryClient.invalidateQueries({ queryKey: ['myLocationRequests'] });
-      router.push('/dashboard/business/locations');
+      router.push('/dashboard/business/locations/requests');
     },
 
     onError: (err) => {
