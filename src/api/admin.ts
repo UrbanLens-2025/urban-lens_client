@@ -380,3 +380,70 @@ export const getAccountById = async (id: string): Promise<User> => {
   );
   return data.data;
 };
+
+export interface ScheduledJob {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  jobType: string;
+  executeAt: string;
+  payload: Record<string, any>;
+  associatedId: string | null;
+}
+
+export interface GetScheduledJobsParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  searchBy?: string[];
+  status?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  jobType?: string;
+  sortBy?: string;
+}
+
+export const getScheduledJobs = async (
+  params: GetScheduledJobsParams
+): Promise<PaginatedData<ScheduledJob>> => {
+  const queryParams: any = {
+    page: params.page ?? 1,
+    limit: params.limit ?? 10,
+  };
+
+  if (params.search && params.searchBy) {
+    queryParams.search = params.search;
+    queryParams.searchBy = params.searchBy;
+  }
+
+  if (params.status) {
+    queryParams['filter.status'] = `$eq:${params.status}`;
+  }
+
+  if (params.jobType) {
+    queryParams['filter.jobType'] = `$eq:${params.jobType}`;
+  }
+
+  if (params.sortBy) {
+    queryParams.sortBy = params.sortBy;
+  }
+
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<ScheduledJob>>>(
+    '/v1/admin/scheduled-jobs',
+    { params: queryParams }
+  );
+
+  return data.data;
+};
+
+export const getScheduledJobTypes = async (): Promise<string[]> => {
+  const { data } = await axiosInstance.get<ApiResponse<string[]>>(
+    '/v1/admin/scheduled-jobs/types'
+  );
+  return data.data;
+};
+
+export const runScheduledJob = async (scheduledJobId: number): Promise<void> => {
+  await axiosInstance.put<ApiResponse<void>>(
+    `/v1/admin/scheduled-jobs/${scheduledJobId}/run`
+  );
+};

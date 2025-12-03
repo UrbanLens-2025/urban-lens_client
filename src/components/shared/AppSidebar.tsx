@@ -18,6 +18,8 @@ import {
   IconPlus,
   IconBell,
   IconFlag,
+  IconSettings,
+  IconClock,
 } from "@tabler/icons-react";
 
 import {
@@ -74,6 +76,12 @@ const adminNavGroups = [
     items: [
       { title: 'Wallet', url: '/admin/wallet', icon: IconWallet },
       { title: 'External Transactions', url: '/admin/wallet/external-transactions', icon: IconFileText },
+    ]
+  },
+  {
+    groupLabel: 'System Settings',
+    items: [
+      { title: 'Scheduled Jobs', url: '/admin/system/scheduled-jobs', icon: IconClock },
     ]
   },
 ];
