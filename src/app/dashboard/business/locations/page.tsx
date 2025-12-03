@@ -104,9 +104,11 @@ export default function MyLocationsPage() {
             View and manage your locations
           </p>
         </div>
-        <Button onClick={() => window.location.href = '/dashboard/business/locations/create'}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Location
+        <Button asChild>
+          <Link href="/dashboard/business/locations/create">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Location
+          </Link>
         </Button>
       </div>
 

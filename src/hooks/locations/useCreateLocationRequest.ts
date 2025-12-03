@@ -16,8 +16,9 @@ export function useCreateLocationRequest() {
     onSuccess: () => {
       toast.success("Location request submitted successfully for review!");
       queryClient.invalidateQueries({ queryKey: ['myLocationRequests'] });
-      // Go to top-level Location Requests page (not nested under Locations)
-      router.push('/dashboard/business/location-requests');
+      queryClient.invalidateQueries({ queryKey: ['myLocations'] });
+      // Navigate back to locations page without reload
+      router.push('/dashboard/business/locations');
     },
 
     onError: (err) => {
