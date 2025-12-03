@@ -108,8 +108,6 @@ const updateTicketSchema = z.object({
 
 type UpdateTicketForm = z.infer<typeof updateTicketSchema>;
 
-const currencies = ["VND", "USD", "EUR"];
-
 export default function EditTicketPage({
   params,
 }: {
@@ -322,7 +320,7 @@ export default function EditTicketPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                 <FormField
                   control={form.control}
                   name="price"
@@ -383,28 +381,12 @@ export default function EditTicketPage({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="currency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Currency *</FormLabel>
-                      <FormControl>
-                        <select
-                          {...field}
-                          className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {currencies.map((currency) => (
-                            <option key={currency} value={currency}>
-                              {currency}
-                            </option>
-                          ))}
-                        </select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div>
+                  <FormLabel>Currency</FormLabel>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {ticket.currency || "VND"}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>

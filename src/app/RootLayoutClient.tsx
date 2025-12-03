@@ -14,6 +14,7 @@ import { SiteHeader } from '@/components/shared/SiteHeader';
 import { useUser } from '@/hooks/user/useUser';
 import { useOnboardingCheck } from '@/hooks/onboarding/useOnboardingCheck';
 import { useAutoRegisterDevice } from '@/hooks/notifications/useAutoRegisterDevice';
+import { useBrowserNotifications } from '@/hooks/notifications/useBrowserNotifications';
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useUser();
@@ -21,6 +22,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   useOnboardingCheck();
   useAutoRegisterDevice(!!user && !isLoading);
+  // Enable browser notifications when user is authenticated
+  useBrowserNotifications(!!user && !isLoading);
 
   React.useEffect(() => {
     if (!isLoading && !user) {

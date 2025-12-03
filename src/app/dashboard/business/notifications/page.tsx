@@ -1,6 +1,7 @@
 "use client";
 
 import { NotificationList } from "@/components/notifications/NotificationList";
+import { BrowserNotificationPrompt } from "@/components/notifications/BrowserNotificationPrompt";
 
 export default function BusinessNotificationsPage() {
   return (
@@ -15,6 +16,9 @@ export default function BusinessNotificationsPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <NotificationList />
+        </div>
+        <div className="lg:col-span-1">
+          <BrowserNotificationPrompt />
         </div>
       </div>
     </div>
