@@ -37,10 +37,10 @@ export function NotificationItem({ notification, onMarkAsSeen }: NotificationIte
   return (
     <div
       className={cn(
-        "group relative flex items-start gap-4 p-4 rounded-xl border transition-all duration-200",
-        "hover:bg-accent/50 hover:border-accent-foreground/20 hover:shadow-sm",
+        "group relative flex items-start gap-3 p-3 rounded-lg border transition-all duration-200",
+        "hover:bg-accent/50 hover:border-accent-foreground/20",
         isUnseen
-          ? "bg-primary/5 border-primary/20 shadow-sm"
+          ? "bg-primary/5 border-primary/20"
           : "bg-background border-border/50",
         "cursor-pointer"
       )}
@@ -51,7 +51,7 @@ export function NotificationItem({ notification, onMarkAsSeen }: NotificationIte
       {/* Unread indicator dot */}
       {isUnseen && (
         <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2">
-          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
         </div>
       )}
 
@@ -62,86 +62,86 @@ export function NotificationItem({ notification, onMarkAsSeen }: NotificationIte
             <img
               src={notification.payload.imageUrl}
               alt={notification.payload.title}
-              className="w-14 h-14 rounded-xl object-cover ring-2 ring-background shadow-sm"
+              className="w-10 h-10 rounded-lg object-cover ring-1 ring-background"
             />
             {isUnseen && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary border-2 border-background" />
+              <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary border-2 border-background" />
             )}
           </div>
         ) : (
           <div
             className={cn(
-              "w-14 h-14 rounded-xl flex items-center justify-center transition-colors",
+              "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
               isUnseen
                 ? "bg-gradient-to-br from-primary/20 to-primary/10 text-primary"
                 : "bg-muted text-muted-foreground"
             )}
           >
-            <Bell className="h-6 w-6" />
+            <Bell className="h-4 w-4" />
           </div>
         )}
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-w-0 space-y-1.5">
-        <div className="flex items-start justify-between gap-3">
+      <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <h3
               className={cn(
-                "font-semibold text-base leading-tight mb-0.5",
+                "font-semibold text-sm leading-tight mb-0.5",
                 isUnseen ? "text-foreground" : "text-foreground/90"
               )}
             >
               {notification.payload.title}
             </h3>
-            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
               {notification.payload.body}
             </p>
           </div>
           
           {/* Actions */}
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             {isUnseen && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-7 w-7"
                 onClick={handleMarkAsSeen}
                 disabled={isPending}
                 title="Mark as read"
               >
                 {isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <CheckCircle2 className="h-4 w-4" />
+                  <CheckCircle2 className="h-3.5 w-3.5" />
                 )}
               </Button>
             )}
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-7 w-7"
               onClick={(e) => {
                 e.stopPropagation();
                 // TODO: Add dismiss/delete functionality
               }}
               title="Dismiss"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground font-medium">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-muted-foreground">
               {timeAgo}
             </span>
             {isUnseen && (
               <Badge
                 variant="secondary"
-                className="h-5 px-2 text-xs font-medium bg-primary/10 text-primary border-primary/20"
+                className="h-4 px-1.5 text-[10px] font-medium bg-primary/10 text-primary border-primary/20"
               >
                 New
               </Badge>

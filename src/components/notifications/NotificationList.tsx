@@ -98,91 +98,51 @@ export function NotificationList() {
 
   return (
     <Card className="border shadow-sm">
-      <CardHeader className="pb-4 border-b bg-muted/30">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
-                <Bell className="h-5 w-5 text-primary" />
-              </div>
-              {totalUnreadCount > 0 && (
-                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive flex items-center justify-center border-2 border-background">
-                  <span className="text-[10px] font-bold text-destructive-foreground">
-                    {totalUnreadCount > 9 ? "9+" : totalUnreadCount}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div>
-              <CardTitle className="text-xl font-bold tracking-tight">Notifications</CardTitle>
-              <CardDescription className="mt-1">
-                {totalUnreadCount > 0 ? (
-                  <span className="text-sm font-medium text-primary">
-                    {totalUnreadCount} unread {totalUnreadCount === 1 ? "notification" : "notifications"}
-                  </span>
-                ) : (
-                  <span className="text-sm">All caught up!</span>
-                )}
-              </CardDescription>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-lg"
-            onClick={handleRefresh}
-            disabled={isLoadingCurrent}
-            title="Refresh notifications"
-          >
-            <RefreshCw className={cn("h-4 w-4", isLoadingCurrent && "animate-spin")} />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6">
+      <CardContent className="p-4">
         <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-11 bg-muted/50 p-1 rounded-lg">
+          <TabsList className="grid w-full grid-cols-3 h-9 bg-muted/50 p-1 rounded-lg">
             <TabsTrigger 
               value="all" 
-              className="rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium text-sm"
+              className="rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium text-xs"
             >
               All
             </TabsTrigger>
             <TabsTrigger 
               value="unread" 
-              className="rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium text-sm relative"
+              className="rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium text-xs relative"
             >
               Unread
               {totalUnreadCount > 0 && (
-                <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold">
+                <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
                   {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
                 </span>
               )}
             </TabsTrigger>
             <TabsTrigger 
               value="read" 
-              className="rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium text-sm"
+              className="rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium text-xs"
             >
               Read
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="all" className="mt-6">
+          <TabsContent value="all" className="mt-3">
             {isLoadingCurrent ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                <p className="text-sm text-muted-foreground">Loading notifications...</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+                <p className="text-xs text-muted-foreground">Loading notifications...</p>
               </div>
             ) : notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                  <Bell className="h-8 w-8 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                  <Bell className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <h3 className="text-base font-semibold mb-1">No notifications</h3>
-                <p className="text-sm text-muted-foreground max-w-sm">
+                <h3 className="text-sm font-semibold mb-1">No notifications</h3>
+                <p className="text-xs text-muted-foreground max-w-sm">
                   You're all caught up! New notifications will appear here.
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5 max-h-[calc(100vh-280px)] overflow-y-auto">
                 {notifications.map((notification) => (
                   <NotificationItem
                     key={notification.id}
@@ -193,24 +153,24 @@ export function NotificationList() {
               </div>
             )}
           </TabsContent>
-          <TabsContent value="unread" className="mt-6">
+          <TabsContent value="unread" className="mt-3">
             {isLoadingCurrent ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                <p className="text-sm text-muted-foreground">Loading notifications...</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+                <p className="text-xs text-muted-foreground">Loading notifications...</p>
               </div>
             ) : notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
-                  <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3">
+                  <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
                 </div>
-                <h3 className="text-base font-semibold mb-1">All caught up!</h3>
-                <p className="text-sm text-muted-foreground max-w-sm">
+                <h3 className="text-sm font-semibold mb-1">All caught up!</h3>
+                <p className="text-xs text-muted-foreground max-w-sm">
                   You don't have any unread notifications right now.
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5 max-h-[calc(100vh-280px)] overflow-y-auto">
                 {notifications.map((notification) => (
                   <NotificationItem
                     key={notification.id}
@@ -221,24 +181,24 @@ export function NotificationList() {
               </div>
             )}
           </TabsContent>
-          <TabsContent value="read" className="mt-6">
+          <TabsContent value="read" className="mt-3">
             {isLoadingCurrent ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                <p className="text-sm text-muted-foreground">Loading notifications...</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+                <p className="text-xs text-muted-foreground">Loading notifications...</p>
               </div>
             ) : notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                  <Bell className="h-8 w-8 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                  <Bell className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <h3 className="text-base font-semibold mb-1">No read notifications</h3>
-                <p className="text-sm text-muted-foreground max-w-sm">
+                <h3 className="text-sm font-semibold mb-1">No read notifications</h3>
+                <p className="text-xs text-muted-foreground max-w-sm">
                   Notifications you've read will appear here.
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5 max-h-[calc(100vh-280px)] overflow-y-auto">
                 {notifications.map((notification) => (
                   <NotificationItem
                     key={notification.id}
@@ -252,9 +212,9 @@ export function NotificationList() {
         </Tabs>
 
         {meta && meta.totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6 pt-6 border-t">
-            <p className="text-sm text-muted-foreground font-medium">
-              Showing page {meta.currentPage} of {meta.totalPages} • {meta.totalItems} total
+          <div className="flex items-center justify-between mt-4 pt-3 border-t">
+            <p className="text-xs text-muted-foreground font-medium">
+              Page {meta.currentPage} of {meta.totalPages} • {meta.totalItems} total
             </p>
             <div className="flex gap-2">
               <Button
@@ -262,7 +222,7 @@ export function NotificationList() {
                 size="sm"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1 || isLoadingCurrent}
-                className="h-9"
+                className="h-8 text-xs"
               >
                 Previous
               </Button>
@@ -271,7 +231,7 @@ export function NotificationList() {
                 size="sm"
                 onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
                 disabled={page === meta.totalPages || isLoadingCurrent}
-                className="h-9"
+                className="h-8 text-xs"
               >
                 Next
               </Button>
