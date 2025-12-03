@@ -189,8 +189,8 @@ export default function EditTicketPage({
       isActive: data.isActive,
       tos: data.tos || null,
       totalQuantityAvailable: data.totalQuantityAvailable,
-      saleStartDate: new Date(data.saleStartDate).toISOString(),
-      saleEndDate: new Date(data.saleEndDate).toISOString(),
+      saleStartDate: new Date(data.saleStartDate),
+      saleEndDate: new Date(data.saleEndDate),
       minQuantityPerOrder: data.minQuantityPerOrder,
       maxQuantityPerOrder: data.maxQuantityPerOrder,
     };
