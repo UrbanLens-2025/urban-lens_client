@@ -41,6 +41,11 @@ interface LocationTabContextType {
   };
   openMissionDetailTab: (missionId: string, missionName: string) => void;
   closeMissionDetailTab: () => void;
+  announcementCreateTab: {
+    isOpen: boolean;
+  };
+  openAnnouncementCreateTab: () => void;
+  closeAnnouncementCreateTab: () => void;
   announcementDetailTab: {
     isOpen: boolean;
     announcementId: string | null;
@@ -103,6 +108,12 @@ export function LocationTabProvider({ children }: { children: ReactNode }) {
     isOpen: false,
     missionId: null,
     missionName: null,
+  });
+
+  const [announcementCreateTab, setAnnouncementCreateTab] = useState<{
+    isOpen: boolean;
+  }>({
+    isOpen: false,
   });
 
   const [announcementDetailTab, setAnnouncementDetailTab] = useState<{
@@ -203,6 +214,18 @@ export function LocationTabProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const openAnnouncementCreateTab = useCallback(() => {
+    setAnnouncementCreateTab({
+      isOpen: true,
+    });
+  }, []);
+
+  const closeAnnouncementCreateTab = useCallback(() => {
+    setAnnouncementCreateTab({
+      isOpen: false,
+    });
+  }, []);
+
   const openAnnouncementDetailTab = useCallback((announcementId: string, announcementName: string) => {
     setAnnouncementDetailTab({
       isOpen: true,
@@ -240,6 +263,9 @@ export function LocationTabProvider({ children }: { children: ReactNode }) {
         missionDetailTab,
         openMissionDetailTab,
         closeMissionDetailTab,
+        announcementCreateTab,
+        openAnnouncementCreateTab,
+        closeAnnouncementCreateTab,
         announcementDetailTab,
         openAnnouncementDetailTab,
         closeAnnouncementDetailTab,

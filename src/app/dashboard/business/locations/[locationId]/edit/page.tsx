@@ -29,6 +29,13 @@ import {
   ImagePlus,
   Tag,
   Save,
+  Layers,
+  Ticket,
+  Rocket,
+  CalendarDays,
+  Megaphone,
+  FilePenLine,
+  Clock,
 } from "lucide-react";
 import {
   Card,
@@ -47,6 +54,7 @@ import { useResolvedTags } from "@/hooks/tags/useResolvedTags";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { LocationTagsSelector } from "@/components/locations/LocationTagsSelector";
+import { cn } from "@/lib/utils";
 
 const updateLocationSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -171,36 +179,145 @@ export default function EditLocationPage({
 
   return (
     <div className="space-y-8 pb-16">
-      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <span>Back to location details</span>
+      {/* Tabs Navigation - Matching location detail page style */}
+      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+        <nav className="flex gap-0.5 overflow-x-auto scrollbar-hide scroll-smooth">
+          <Button
+            variant="ghost"
+            onClick={() =>
+              router.push(`/dashboard/business/locations/${locationId}`)
+            }
+            className={cn(
+              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
+              "hover:bg-muted/50 hover:border-muted-foreground/30",
+              "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Layers className={cn(
+              "h-4 w-4 transition-transform duration-200"
+            )} />
+            <span className="whitespace-nowrap">Overview</span>
+          </Button>
+          <Button
+            variant="ghost"
+            disabled
+            className={cn(
+              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto cursor-default",
+              "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
+            )}
+          >
+            <FilePenLine className={cn(
+              "h-4 w-4 transition-transform duration-200 scale-110"
+            )} />
+            <span className="whitespace-nowrap">Edit Details</span>
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() =>
+              router.push(`/dashboard/business/locations/${locationId}#vouchers`)
+            }
+            className={cn(
+              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
+              "hover:bg-muted/50 hover:border-muted-foreground/30",
+              "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Ticket className={cn(
+              "h-4 w-4 transition-transform duration-200"
+            )} />
+            <span className="whitespace-nowrap">Vouchers</span>
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() =>
+              router.push(`/dashboard/business/locations/${locationId}#missions`)
+            }
+            className={cn(
+              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
+              "hover:bg-muted/50 hover:border-muted-foreground/30",
+              "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Rocket className={cn(
+              "h-4 w-4 transition-transform duration-200"
+            )} />
+            <span className="whitespace-nowrap">Missions</span>
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() =>
+              router.push(`/dashboard/business/locations/${locationId}#booking`)
+            }
+            className={cn(
+              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
+              "hover:bg-muted/50 hover:border-muted-foreground/30",
+              "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <CalendarDays className={cn(
+              "h-4 w-4 transition-transform duration-200"
+            )} />
+            <span className="whitespace-nowrap">Booking & Availability</span>
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() =>
+              router.push(`/dashboard/business/locations/${locationId}#announcements`)
+            }
+            className={cn(
+              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
+              "hover:bg-muted/50 hover:border-muted-foreground/30",
+              "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Megaphone className={cn(
+              "h-4 w-4 transition-transform duration-200"
+            )} />
+            <span className="whitespace-nowrap">Announcements</span>
+          </Button>
+        </nav>
       </div>
 
+      {/* Location Header Section */}
       <section className="overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm">
-        <div className="flex flex-col gap-6 bg-muted/40 p-6 sm:p-8 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-3">
-            <Badge variant="secondary" className="w-fit bg-primary/10 text-primary">
-              Editing location
-            </Badge>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              <span>{location.addressLine}</span>
-              <span>•</span>
-              <span>
-                {location.addressLevel2}, {location.addressLevel1}
-              </span>
+        <div className="flex flex-col gap-6 bg-muted/40 p-6 sm:p-8 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-4 flex-1">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <Badge variant="secondary" className="w-fit bg-primary/10 text-primary border-primary/20">
+                    <FilePenLine className="h-3 w-3 mr-1.5" />
+                    Editing location
+                  </Badge>
+                </div>
+                <h1 className="text-3xl font-bold tracking-tight mb-2">
+                  {location.name}
+                </h1>
+                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">{location.addressLine}</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span className="hidden sm:inline">
+                    {location.addressLevel2}, {location.addressLevel1}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="text-sm text-muted-foreground md:text-right">
-            <p>
-              Last updated&nbsp;
-              <span className="font-medium text-foreground">
-                {new Date(location.updatedAt).toLocaleString()}
+          <div className="flex flex-col gap-2 text-sm text-muted-foreground md:text-right">
+            <div className="flex items-center gap-2 md:justify-end">
+              <Clock className="h-4 w-4" />
+              <span>
+                Last updated&nbsp;
+                <span className="font-medium text-foreground">
+                  {new Date(location.updatedAt).toLocaleString()}
+                </span>
               </span>
-            </p>
-            <p>Created {new Date(location.createdAt).toLocaleDateString()}</p>
+            </div>
+            <div className="flex items-center gap-2 md:justify-end">
+              <CalendarDays className="h-4 w-4" />
+              <span>Created {new Date(location.createdAt).toLocaleDateString()}</span>
+            </div>
           </div>
         </div>
       </section>

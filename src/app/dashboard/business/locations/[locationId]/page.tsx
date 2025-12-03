@@ -158,6 +158,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAnnouncements } from "@/hooks/announcements/useAnnouncements";
 import { useDeleteAnnouncement } from "@/hooks/announcements/useDeleteAnnouncement";
+import { useCreateAnnouncement } from "@/hooks/announcements/useCreateAnnouncement";
 import { formatDateTime } from "@/lib/utils";
 import { useLocationTabs } from "@/contexts/LocationTabContext";
 import { X, CheckCircle } from "lucide-react";
@@ -1819,9 +1820,183 @@ function EditLocationTab({ locationId }: { locationId: string }) {
   );
 }
 
+// Create Announcement Form Component
+const announcementCreateSchema = z.object({
+  title: z.string().min(3, "Title is required"),
+  description: z.string().min(10, "Description should be at least 10 characters"),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+  imageUrl: z.string().url("Please provide a valid URL").optional().or(z.literal("")),
+  isHidden: z.boolean(),
+});
+
+function CreateAnnouncementForm({ locationId, locationName, onSuccess }: { locationId: string; locationName: string; onSuccess: () => void }) {
+  const { mutate: createAnnouncement, isPending } = useCreateAnnouncement();
+  const { closeAnnouncementCreateTab } = useLocationTabs();
+  const queryClient = useQueryClient();
+
+  const form = useForm<z.infer<typeof announcementCreateSchema>>({
+    resolver: zodResolver(announcementCreateSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      imageUrl: "",
+      isHidden: false,
+    },
+  });
+
+  const onSubmit = (values: z.infer<typeof announcementCreateSchema>) => {
+    createAnnouncement(
+      {
+        title: values.title.trim(),
+        description: values.description.trim(),
+        startDate: new Date(values.startDate).toISOString(),
+        endDate: new Date(values.endDate).toISOString(),
+        imageUrl: values.imageUrl?.trim() ? values.imageUrl.trim() : undefined,
+        isHidden: values.isHidden,
+        locationId,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Announcement created successfully");
+          queryClient.invalidateQueries({ queryKey: ['announcements'] });
+          closeAnnouncementCreateTab();
+          onSuccess();
+        },
+        onError: (error: any) => {
+          toast.error(error?.message || "Failed to create announcement");
+        },
+      }
+    );
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5" />
+              Basic Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <FormField
+              name="title"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title *</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Announcement headline" className="h-11" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="description"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description *</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Share the announcement details"
+                      rows={6}
+                      className="resize-none"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                name="startDate"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Date *</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} className="h-11" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                name="endDate"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>End Date *</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} className="h-11" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              name="isHidden"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel>Hide announcement</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Hidden announcements will not appear to visitors until you publish them.
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="imageUrl"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Image (optional)</FormLabel>
+                  <FormControl>
+                    <SingleFileUpload value={field.value ?? undefined} onChange={field.onChange} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={closeAnnouncementCreateTab}>
+            Cancel
+          </Button>
+          <Button type="submit" size="lg" disabled={isPending}>
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Announcement
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
 // Announcements Tab Component
 function AnnouncementsTab({ locationId }: { locationId: string }) {
-  const { openAnnouncementDetailTab } = useLocationTabs();
+  const { openAnnouncementDetailTab, openAnnouncementCreateTab } = useLocationTabs();
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
@@ -1866,11 +2041,9 @@ function AnnouncementsTab({ locationId }: { locationId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end">
-        <Button asChild size="sm">
-          <Link href={`/dashboard/business/locations/${locationId}/announcements/new`}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create announcement
-          </Link>
+        <Button size="sm" onClick={openAnnouncementCreateTab}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Create announcement
         </Button>
       </div>
 
@@ -5507,13 +5680,23 @@ export default function LocationDetailsPage({
     openMissionCreateTab,
     closeMissionCreateTab,
     missionEditTab,
+    announcementCreateTab,
+    openAnnouncementCreateTab: openAnnouncementCreateTabFromContext,
+    closeAnnouncementCreateTab,
     openMissionEditTab,
     closeMissionEditTab,
     missionDetailTab,
     closeMissionDetailTab,
     announcementDetailTab,
+    openAnnouncementDetailTab,
     closeAnnouncementDetailTab,
   } = useLocationTabs();
+
+  // Wrap openAnnouncementCreateTab to switch to announcements tab when creating
+  const openAnnouncementCreateTab = useCallback(() => {
+    setActiveTab("announcements");
+    openAnnouncementCreateTabFromContext();
+  }, [openAnnouncementCreateTabFromContext]);
 
   // Remove any query parameters from URL (like ?tab=requests) when on location detail page
   useEffect(() => {
@@ -5869,6 +6052,42 @@ export default function LocationDetailsPage({
                   e.stopPropagation();
                   closeMissionEditTab();
                   setActiveTab("missions");
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+
+          {/* Dynamic Announcement Create Tab */}
+          {announcementCreateTab.isOpen && (
+            <div className="relative flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() => setActiveTab("announcements")}
+                className={cn(
+                  "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto pr-7",
+                  "hover:bg-muted/50 hover:border-muted-foreground/30",
+                  activeTab === "announcements"
+                    ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Megaphone className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  activeTab === "announcements" && "scale-110"
+                )} />
+                <span className="whitespace-nowrap">Create Announcement</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  closeAnnouncementCreateTab();
+                  setActiveTab("announcements");
                 }}
               >
                 <X className="h-3 w-3" />
@@ -6341,7 +6560,28 @@ export default function LocationDetailsPage({
               {activeTab === "booking" && <BookingAndAvailabilityTab locationId={location.id} />}
               {activeTab === "announcements" && (
                 <>
-                  {announcementDetailTab.isOpen && announcementDetailTab.announcementId ? (
+                  {announcementCreateTab.isOpen ? (
+                    <div className="space-y-8 p-6 max-w-4xl mx-auto">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <Button type="button" variant="outline" size="icon" onClick={closeAnnouncementCreateTab}>
+                            <ArrowLeft className="h-4 w-4" />
+                          </Button>
+                          <div>
+                            <h1 className="text-3xl font-bold">Create Announcement</h1>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Publish news and updates for {location.name}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <CreateAnnouncementForm 
+                        locationId={location.id} 
+                        locationName={location.name}
+                        onSuccess={() => setActiveTab("announcements")}
+                      />
+                    </div>
+                  ) : announcementDetailTab.isOpen && announcementDetailTab.announcementId ? (
                     <div className="space-y-6 p-6">
                       <AnnouncementDetailView 
                         announcementId={announcementDetailTab.announcementId}
