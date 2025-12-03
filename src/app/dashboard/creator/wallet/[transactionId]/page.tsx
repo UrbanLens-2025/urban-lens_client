@@ -527,7 +527,7 @@ export default function CreatorWalletTransactionDetailPage() {
                             <div className="rounded-full bg-primary/10 p-2">
                               {getActionIcon(e.action)}
                             </div>
-                            {index < transaction.timeline.length - 1 && (
+                            {transaction.timeline && index < transaction.timeline.length - 1 && (
                               <div className="w-0.5 h-full bg-border mt-2" />
                             )}
                           </div>
