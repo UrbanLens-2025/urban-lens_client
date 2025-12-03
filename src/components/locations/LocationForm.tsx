@@ -21,7 +21,7 @@ import {
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
-import { Loader2, CheckCircle2, MapPin, Image, FileCheck, ArrowLeft, ArrowRight, ChevronDown, Plus, Trash2, Building2, FileText, Tag, Info, Pencil } from "lucide-react";
+import { Loader2, CheckCircle2, MapPin, Image, FileCheck, ArrowLeft, ArrowRight, ChevronDown, Plus, Trash2, Building2, FileText, Tag as TagIcon, Info, Pencil } from "lucide-react";
 import { FileUpload } from "@/components/shared/FileUpload";
 import {
   Card,
@@ -169,12 +169,6 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
       <div className="text-sm">{value}</div>
     </div>
   );
-}
-
-interface LocationFormProps {
-  isEditMode: boolean;
-  initialData?: LocationRequest;
-  locationId?: string;
 }
 
 export default function LocationForm({
@@ -588,7 +582,7 @@ export default function LocationForm({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-sm flex items-center gap-2 mb-2">
-                            <Tag className="h-4 w-4 text-muted-foreground" />
+                            <TagIcon className="h-4 w-4 text-muted-foreground" />
                             Location categories
                             <Tooltip>
                               <TooltipTrigger asChild>
