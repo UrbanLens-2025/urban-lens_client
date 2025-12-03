@@ -3931,8 +3931,8 @@ const voucherCreateSchema = z.object({
   maxQuantity: z.number().min(1, "Max quantity must be at least 1"),
   userRedeemedLimit: z.number().min(1, "Limit must be at least 1"),
   voucherType: z.string().min(1, "Type is required"),
-  startDate: z.date({ required_error: "Start date is required", invalid_type_error: "Please select a valid start date" }),
-  endDate: z.date({ required_error: "End date is required", invalid_type_error: "Please select a valid end date" }),
+  startDate: z.date({ error: "Start date is required." }),
+  endDate: z.date({ error: "End date is required." }),
 }).refine((data) => data.endDate > data.startDate, {
   message: "End date must be after start date",
   path: ["endDate"],
@@ -3973,7 +3973,7 @@ function CreateVoucherForm({ locationId, locationName, onSuccess }: { locationId
       title: values.title.trim(),
       description: values.description.trim(),
       voucherCode: values.voucherCode.trim().toUpperCase(),
-      imageUrl: values.imageUrl?.trim() || undefined,
+      imageUrl: values.imageUrl?.trim() || "",
       pricePoint: isPublicVoucher ? 0 : values.pricePoint,
       maxQuantity: values.maxQuantity,
       userRedeemedLimit: values.userRedeemedLimit,
@@ -4371,7 +4371,7 @@ function EditVoucherForm({ locationId, voucherId, locationName, onSuccess }: { l
   const isPublicVoucher = voucherType === "public";
 
   // Only reset pricePoint when user changes voucher type to public, not on initial load
-  const prevVoucherTypeRef = useRef<string | undefined>();
+  const prevVoucherTypeRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (prevVoucherTypeRef.current !== undefined && voucherType === "public" && prevVoucherTypeRef.current !== "public") {
       form.setValue("pricePoint", 0, { shouldDirty: false });
@@ -5727,49 +5727,26 @@ export default function LocationDetailsPage({
   const { data: location, isLoading, isError } = useLocationById(locationId);
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [currentImageSrc, setCurrentImageSrc] = useState("");
-  const [currentImageAlt, setCurrentImageAlt] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
   
   const {
     voucherCreateTab,
-    openVoucherCreateTab,
     closeVoucherCreateTab,
     voucherEditTab,
-    openVoucherEditTab,
     closeVoucherEditTab,
     voucherDetailTab,
     closeVoucherDetailTab,
     missionCreateTab,
-    openMissionCreateTab,
     closeMissionCreateTab,
     missionEditTab,
-    announcementCreateTab,
-    openAnnouncementCreateTab: openAnnouncementCreateTabFromContext,
-    closeAnnouncementCreateTab,
-    openMissionEditTab,
     closeMissionEditTab,
     missionDetailTab,
     closeMissionDetailTab,
+    announcementCreateTab,
+    closeAnnouncementCreateTab,
     announcementDetailTab,
-    openAnnouncementDetailTab,
     closeAnnouncementDetailTab,
   } = useLocationTabs();
-
-  // Wrap openAnnouncementCreateTab to switch to announcements tab when creating
-  const openAnnouncementCreateTab = useCallback(() => {
-    setActiveTab("announcements");
-    openAnnouncementCreateTabFromContext();
-  }, [openAnnouncementCreateTabFromContext]);
-
-  // Remove any query parameters from URL (like ?tab=requests) when on location detail page
-  useEffect(() => {
-    if (searchParams.toString()) {
-      router.replace(pathname, { scroll: false });
-    }
-  }, [pathname, router, searchParams]);
 
   useEffect(() => {
     if (pathname.includes("/vouchers")) setActiveTab("vouchers");
@@ -5780,35 +5757,16 @@ export default function LocationDetailsPage({
     else setActiveTab("overview");
   }, [pathname]);
 
-  const heroImage = useMemo(
-    () => location?.imageUrl?.[0] ?? "",
-    [location?.imageUrl]
-  );
-
   const totalCheckIns = useMemo(() => {
     const parsed = Number(location?.totalCheckIns ?? "0");
     return Number.isNaN(parsed) ? 0 : parsed;
   }, [location?.totalCheckIns]);
 
-  const handleImageClick = (src: string, alt: string) => {
-    setCurrentImageSrc(src);
-    setCurrentImageAlt(alt);
-    setIsImageViewerOpen(true);
-  };
-
   if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="animate-spin" />
-      </div>
-    );
+    return null; // Layout handles loading state
   }
   if (isError || !location) {
-    return (
-      <div className="text-center py-20 text-red-500">
-        Error loading location details.
-      </div>
-    );
+    return null; // Layout handles error state
   }
 
   const position = {
@@ -5817,357 +5775,12 @@ export default function LocationDetailsPage({
   };
 
   return (
-    <div className="space-y-4 p-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon" onClick={() => router.push("/dashboard/business/locations")} className="h-8 w-8">
-          <ArrowLeft className="h-3.5 w-3.5" />
-          <span className="sr-only">Back</span>
-        </Button>
-        <p className="text-xs text-muted-foreground">Back to locations</p>
-      </div>
-
-      <section className="relative overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white shadow-lg">
-        {heroImage && (
-          <div className="absolute inset-0">
-            <img
-              src={heroImage}
-              alt={location.name}
-              className="h-full w-full object-cover opacity-70"
-            />
-            <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/60 to-black/20" />
-          </div>
-        )}
-
-        <div className="relative flex flex-col gap-4 p-4 sm:p-6">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-2 max-w-3xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="bg-white/35 backdrop-blur text-xs">
-                  {location.isVisibleOnMap ? (
-                    <span className="flex items-center gap-1.5">
-                      <Eye className="h-3 w-3" />
-                      Visible on map
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5">
-                      <EyeOff className="h-3 w-3" />
-                      Hidden from map
-                    </span>
-                  )}
-                </Badge>
-                <Badge variant="secondary" className="bg-white/35 backdrop-blur text-xs">
-                  Created {formatDate(location.createdAt)}
-                </Badge>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                  {location.name}
-                </h1>
-                <p className="mt-1.5 max-w-xl text-sm text-white/80">
-                  {location.description || "No description provided for this location."}
-                </p>
-              </div>
-              <div className="flex flex-col gap-1.5 text-sm text-white/90">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 flex-shrink-0" />
-                  <span className="font-medium">{location.addressLine}</span>
-                </div>
-                <div className="flex items-center gap-2 pl-6 text-xs text-white/70">
-                  <span>{location.addressLevel1}</span>
-                  <span>•</span>
-                  <span>{location.addressLevel2}</span>
-                </div>
-              </div>
-            </div>
-            <Button
-              onClick={() => setActiveTab("edit")}
-              className="bg-white/90 hover:bg-white text-foreground shadow-sm shrink-0"
-              size="sm"
-            >
-              <FilePenLine className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Tabs Navigation */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <nav className="flex gap-0.5 overflow-x-auto scrollbar-hide scroll-smooth">
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab("overview")}
-            className={cn(
-              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
-              "hover:bg-muted/50 hover:border-muted-foreground/30",
-              activeTab === "overview"
-                ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Layers className={cn(
-              "h-4 w-4 transition-transform duration-200",
-              activeTab === "overview" && "scale-110"
-            )} />
-            <span className="whitespace-nowrap">Overview</span>
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab("vouchers")}
-            className={cn(
-              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
-              "hover:bg-muted/50 hover:border-muted-foreground/30",
-              activeTab === "vouchers"
-                ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Ticket className={cn(
-              "h-4 w-4 transition-transform duration-200",
-              activeTab === "vouchers" && "scale-110"
-            )} />
-            <span className="whitespace-nowrap">Vouchers</span>
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab("missions")}
-            className={cn(
-              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
-              "hover:bg-muted/50 hover:border-muted-foreground/30",
-              activeTab === "missions"
-                ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Rocket className={cn(
-              "h-4 w-4 transition-transform duration-200",
-              activeTab === "missions" && "scale-110"
-            )} />
-            <span className="whitespace-nowrap">Missions</span>
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab("booking")}
-            className={cn(
-              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
-              "hover:bg-muted/50 hover:border-muted-foreground/30",
-              activeTab === "booking"
-                ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <CalendarDays className={cn(
-              "h-4 w-4 transition-transform duration-200",
-              activeTab === "booking" && "scale-110"
-            )} />
-            <span className="whitespace-nowrap">Booking & Availability</span>
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab("announcements")}
-            className={cn(
-              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
-              "hover:bg-muted/50 hover:border-muted-foreground/30",
-              activeTab === "announcements"
-                ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Megaphone className={cn(
-              "h-4 w-4 transition-transform duration-200",
-              activeTab === "announcements" && "scale-110"
-            )} />
-            <span className="whitespace-nowrap">Announcements</span>
-          </Button>
-          
-          {/* Dynamic Voucher Create Tab */}
-          {voucherCreateTab.isOpen && (
-            <div className="relative flex items-center">
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab("vouchers")}
-                className={cn(
-                  "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto pr-7",
-                  "hover:bg-muted/50 hover:border-muted-foreground/30",
-                  activeTab === "vouchers"
-                    ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <TicketPercent className={cn(
-                  "h-4 w-4 transition-transform duration-200",
-                  activeTab === "vouchers" && "scale-110"
-                )} />
-                <span className="whitespace-nowrap">Create Voucher</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  closeVoucherCreateTab();
-                  setActiveTab("vouchers");
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-
-          {/* Dynamic Voucher Edit Tab */}
-          {voucherEditTab.isOpen && (
-            <div className="relative flex items-center">
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab("vouchers")}
-                className={cn(
-                  "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto pr-7",
-                  "hover:bg-muted/50 hover:border-muted-foreground/30",
-                  activeTab === "vouchers"
-                    ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <TicketPercent className={cn(
-                  "h-4 w-4 transition-transform duration-200",
-                  activeTab === "vouchers" && "scale-110"
-                )} />
-                <span className="whitespace-nowrap">Edit Voucher</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  closeVoucherEditTab();
-                  setActiveTab("vouchers");
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-
-          {/* Dynamic Mission Create Tab */}
-          {missionCreateTab.isOpen && (
-            <div className="relative flex items-center">
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab("missions")}
-                className={cn(
-                  "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto pr-7",
-                  "hover:bg-muted/50 hover:border-muted-foreground/30",
-                  activeTab === "missions"
-                    ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Rocket className={cn(
-                  "h-4 w-4 transition-transform duration-200",
-                  activeTab === "missions" && "scale-110"
-                )} />
-                <span className="whitespace-nowrap">Create Mission</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  closeMissionCreateTab();
-                  setActiveTab("missions");
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-
-          {/* Dynamic Mission Edit Tab */}
-          {missionEditTab.isOpen && (
-            <div className="relative flex items-center">
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab("missions")}
-                className={cn(
-                  "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto pr-7",
-                  "hover:bg-muted/50 hover:border-muted-foreground/30",
-                  activeTab === "missions"
-                    ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Rocket className={cn(
-                  "h-4 w-4 transition-transform duration-200",
-                  activeTab === "missions" && "scale-110"
-                )} />
-                <span className="whitespace-nowrap">Edit Mission</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  closeMissionEditTab();
-                  setActiveTab("missions");
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-
-          {/* Dynamic Announcement Create Tab */}
-          {announcementCreateTab.isOpen && (
-            <div className="relative flex items-center">
-              <Button
-                variant="ghost"
-                onClick={() => setActiveTab("announcements")}
-                className={cn(
-                  "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto pr-7",
-                  "hover:bg-muted/50 hover:border-muted-foreground/30",
-                  activeTab === "announcements"
-                    ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Megaphone className={cn(
-                  "h-4 w-4 transition-transform duration-200",
-                  activeTab === "announcements" && "scale-110"
-                )} />
-                <span className="whitespace-nowrap">Create Announcement</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  closeAnnouncementCreateTab();
-                  setActiveTab("announcements");
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-        </nav>
-      </div>
-
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       {/* Tab Content */}
-      <div className="mt-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
-        {activeTab === "overview" && (
-          <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+            <TabsContent value="overview" className="mt-0">
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -6467,9 +6080,7 @@ export default function LocationDetailsPage({
                               <img
                                 src={url || "/placeholder.svg"}
                                 alt={`Location image ${index + 1}`}
-                                onClick={() =>
-                                  handleImageClick(url, `Location ${index + 1}`)
-                                }
+                                // Image viewer is handled in layout
                                 className="w-full h-24 object-cover rounded-md border cursor-pointer"
                               />
                               <p className="text-[10px] text-muted-foreground text-center">
@@ -6499,11 +6110,10 @@ export default function LocationDetailsPage({
                   </Card>
                 </div>
               </div>
-          </div>
-        )}
-        {activeTab === "vouchers" && (
-          <>
-            {voucherCreateTab.isOpen ? (
+              </div>
+            </TabsContent>
+            <TabsContent value="vouchers" className="mt-0">
+              {voucherCreateTab.isOpen ? (
               <div className="space-y-8 p-6 max-w-4xl mx-auto">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -6560,11 +6170,9 @@ export default function LocationDetailsPage({
             ) : (
               <VouchersTab locationId={location.id} />
             )}
-          </>
-        )}
-        {activeTab === "missions" && (
-          <>
-            {missionCreateTab.isOpen ? (
+            </TabsContent>
+            <TabsContent value="missions" className="mt-0">
+              {missionCreateTab.isOpen ? (
               <div className="space-y-8 p-6 max-w-4xl mx-auto">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -6621,12 +6229,12 @@ export default function LocationDetailsPage({
             ) : (
               <MissionsTab locationId={location.id} />
             )}
-          </>
-        )}
-              {activeTab === "booking" && <BookingAndAvailabilityTab locationId={location.id} />}
-              {activeTab === "announcements" && (
-                <>
-                  {announcementCreateTab.isOpen ? (
+            </TabsContent>
+            <TabsContent value="booking" className="mt-0">
+              <BookingAndAvailabilityTab locationId={location.id} />
+            </TabsContent>
+            <TabsContent value="announcements" className="mt-0">
+              {announcementCreateTab.isOpen ? (
                     <div className="space-y-8 p-6 max-w-4xl mx-auto">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -6658,19 +6266,14 @@ export default function LocationDetailsPage({
                         }}
                       />
                     </div>
-                  ) : (
-                    <AnnouncementsTab locationId={location.id} />
-                  )}
-                </>
+              ) : (
+                <AnnouncementsTab locationId={location.id} />
               )}
-              {activeTab === "edit" && <EditLocationTab locationId={location.id} />}
-      </div>
-      <ImageViewer
-        src={currentImageSrc}
-        alt={currentImageAlt}
-        open={isImageViewerOpen}
-        onOpenChange={setIsImageViewerOpen}
-      />
-    </div>
+            </TabsContent>
+            <TabsContent value="edit" className="mt-0">
+              <EditLocationTab locationId={location.id} />
+            </TabsContent>
+          </div>
+        </Tabs>
   );
 }
