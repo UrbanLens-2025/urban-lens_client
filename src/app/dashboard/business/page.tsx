@@ -22,6 +22,19 @@ import {
 } from "@/components/dashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  ChartContainer,
+  ChartTooltipContent,
+  ChartConfig,
+} from "@/components/ui/chart";
 
 export default function BusinessDashboardPage() {
   const router = useRouter();
@@ -83,6 +96,23 @@ export default function BusinessDashboardPage() {
   const recentBookingsList = bookings.slice(0, 3);
 
   const isLoading = isLoadingLocations || isLoadingBookings;
+
+  const topLocationsForChart = useMemo(() => {
+    return locations
+      .map((loc) => ({
+        name: loc.name || "Location",
+        checkIns: parseInt(loc.totalCheckIns || "0"),
+      }))
+      .sort((a, b) => b.checkIns - a.checkIns)
+      .slice(0, 5);
+  }, [locations]);
+
+  const locationChartConfig: ChartConfig = {
+    checkIns: {
+      label: "Check-ins",
+      color: "hsl(var(--primary))",
+    },
+  };
 
   return (
     <div className="space-y-6">
@@ -148,6 +178,59 @@ export default function BusinessDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Overview Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">
+            Check-ins by top locations
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-72">
+            {isLoadingLocations ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : topLocationsForChart.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Check-ins data will appear here once you have locations.
+              </p>
+            ) : (
+              <ChartContainer config={locationChartConfig} className="h-full w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={topLocationsForChart}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      className="stroke-muted"
+                    />
+                    <XAxis
+                      dataKey="name"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <RechartsTooltip
+                      cursor={{
+                        fill: "hsl(var(--muted))",
+                        opacity: 0.4,
+                      }}
+                      content={<ChartTooltipContent />}
+                    />
+                    <Bar
+                      dataKey="checkIns"
+                      fill="var(--color-checkIns)"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

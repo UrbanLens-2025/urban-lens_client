@@ -1,9 +1,8 @@
 "use client";
 
-import { CalendarDays, Users, MapPin, TrendingUp, PlusCircle } from "lucide-react";
+import { CalendarDays, Users, MapPin, TrendingUp } from "lucide-react";
 import { useMyEvents } from "@/hooks/events/useMyEvents";
 import { useMemo } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import {
@@ -12,6 +11,19 @@ import {
   DashboardHeader,
   ActivityItem,
 } from "@/components/dashboard";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  ChartContainer,
+  ChartTooltipContent,
+  ChartConfig,
+} from "@/components/ui/chart";
 
 export default function CreatorDashboardPage() {
   // Fetch events data
@@ -63,6 +75,26 @@ export default function CreatorDashboardPage() {
       }));
   }, [events]);
 
+  const statusBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {};
+    events.forEach((e) => {
+      const status = (e.status || "UNKNOWN").toUpperCase();
+      counts[status] = (counts[status] || 0) + 1;
+    });
+
+    return Object.entries(counts).map(([status, count]) => ({
+      status,
+      count,
+    }));
+  }, [events]);
+
+  const statusChartConfig: ChartConfig = {
+    count: {
+      label: "Events",
+      color: "hsl(var(--primary))",
+    },
+  };
+
   return (
     <div className="space-y-8 pb-8 overflow-x-hidden">
       <DashboardHeader
@@ -108,6 +140,62 @@ export default function CreatorDashboardPage() {
           color="amber"
           variant="minimal"
         />
+      </div>
+
+      {/* Overview Chart */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <DashboardSection
+          title="Events by status"
+          icon={TrendingUp}
+          className="lg:col-span-2"
+          isEmpty={!isLoading && statusBreakdown.length === 0}
+          emptyState={{
+            icon: CalendarDays,
+            title: "No events yet",
+            description: "Create your first event to see status analytics",
+          }}
+        >
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : statusBreakdown.length === 0 ? null : (
+            <div className="h-64">
+              <ChartContainer config={statusChartConfig} className="h-full w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={statusBreakdown}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      className="stroke-muted"
+                    />
+                    <XAxis
+                      dataKey="status"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <RechartsTooltip
+                      cursor={{
+                        fill: "hsl(var(--muted))",
+                        opacity: 0.4,
+                      }}
+                      content={<ChartTooltipContent />}
+                    />
+                    <Bar
+                      dataKey="count"
+                      fill="var(--color-count)"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </div>
+          )}
+        </DashboardSection>
+
+        <div className="hidden lg:block" />
       </div>
 
       {/* Main Content Grid */}

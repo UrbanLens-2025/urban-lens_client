@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -25,7 +26,6 @@ import {
   FileText,
   Bell,
   Activity,
-  BarChart3,
   CreditCard,
   Flag,
   UserCheck,
@@ -33,13 +33,39 @@ import {
   Search,
   Settings,
   Filter,
+  Loader2,
 } from 'lucide-react';
-import { dashboardStats } from '@/constants/admin/dashboard-stats';
+import {
+  Line,
+  LineChart,
+  CartesianGrid,
+  XAxis,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import {
   StatsCard,
   DashboardHeader,
   StatusBadge,
 } from '@/components/dashboard';
+import {
+  ChartContainer,
+  ChartTooltipContent,
+  ChartConfig,
+} from '@/components/ui/chart';
+import { useAllAccounts } from '@/hooks/admin/useAllAccounts';
+import { useAllLocations } from '@/hooks/admin/useAllLocations';
+import { useAllEvents } from '@/hooks/admin/useAllEvents';
+import { useReports } from '@/hooks/admin/useReports';
+import { useAdminExternalTransactions } from '@/hooks/admin/useAdminExternalTransactions';
+import { IconCurrencyDollar, IconCalendar, IconMapPin, IconUser, IconClock } from '@tabler/icons-react';
+
+const userGrowthConfig: ChartConfig = {
+  users: {
+    label: 'New users',
+    color: 'hsl(var(--primary))',
+  },
+};
 
 function QuickActionCard({
   title,
@@ -78,6 +104,191 @@ function QuickActionCard({
 }
 
 export default function AdminDashboardPage() {
+  const { data: accountsData, isLoading: isLoadingAccounts } = useAllAccounts({
+    page: 1,
+    limit: 200,
+    sortBy: ['createdAt:DESC'],
+  });
+
+  const { data: locationsData, isLoading: isLoadingLocations } = useAllLocations(
+    1,
+    1,
+    '',
+    'createdAt:DESC'
+  );
+
+  const { data: eventsData, isLoading: isLoadingEvents } = useAllEvents(
+    1,
+    '',
+    'startDate:ASC'
+  );
+
+  const { data: pendingReportsData, isLoading: isLoadingReports } = useReports({
+    page: 1,
+    limit: 20,
+    status: 'PENDING',
+  });
+
+  const {
+    data: recentReportsData,
+    isLoading: isLoadingRecentReports,
+  } = useReports({
+    page: 1,
+    limit: 200,
+    sortBy: 'createdAt:DESC',
+  });
+
+  const {
+    data: externalTransactionsData,
+    isLoading: isLoadingExternalTx,
+  } = useAdminExternalTransactions({
+    page: 1,
+    limit: 50,
+    sortBy: 'createdAt:DESC',
+  });
+
+  const isLoadingStats =
+    isLoadingAccounts ||
+    isLoadingLocations ||
+    isLoadingEvents ||
+    isLoadingReports ||
+    isLoadingExternalTx;
+
+  const dashboardStats = useMemo(() => {
+    const totalUsers = accountsData?.data.meta.totalItems ?? 0;
+    const totalLocations = locationsData?.meta.totalItems ?? 0;
+    const totalEvents = eventsData?.meta.totalItems ?? 0;
+    const pendingContent = pendingReportsData?.meta.totalItems ?? 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todayRevenueRaw =
+      externalTransactionsData?.data
+        .filter(
+          (tx) =>
+            tx.status === 'COMPLETED' &&
+            tx.direction === 'DEPOSIT' &&
+            new Date(tx.createdAt) >= today
+        )
+        .reduce((sum, tx) => sum + parseFloat(tx.amount || '0'), 0) ?? 0;
+
+    const todayRevenueLabel =
+      todayRevenueRaw > 0 ? `₫${todayRevenueRaw.toLocaleString()}` : '₫0';
+
+    return [
+      {
+        title: 'Total Users',
+        value: totalUsers.toLocaleString(),
+        change: 'All user accounts in the system',
+        icon: IconUser,
+        color: 'blue' as const,
+      },
+      {
+        title: 'Active Locations',
+        value: totalLocations.toLocaleString(),
+        change: 'Locations managed in the platform',
+        icon: IconMapPin,
+        color: 'green' as const,
+      },
+      {
+        title: 'Upcoming Events',
+        value: totalEvents.toLocaleString(),
+        change: 'Events visible to admins',
+        icon: IconCalendar,
+        color: 'purple' as const,
+      },
+      {
+        title: 'Today Revenue',
+        value: todayRevenueLabel,
+        change: 'Completed deposits today (approx.)',
+        icon: IconCurrencyDollar,
+        color: 'green' as const,
+      },
+      {
+        title: 'Pending Content',
+        value: pendingContent.toLocaleString(),
+        change: 'Reports waiting for review',
+        icon: IconClock,
+        color: 'orange' as const,
+      },
+    ];
+  }, [accountsData, locationsData, eventsData, pendingReportsData, externalTransactionsData]);
+
+  const userGrowthData = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const accounts = (accountsData?.data.data ?? []) as any[];
+    const countsByDay: Record<string, number> = {};
+
+    accounts.forEach((account) => {
+      if (!account.createdAt) return;
+      const createdAt = new Date(account.createdAt);
+      createdAt.setHours(0, 0, 0, 0);
+
+      const diffInDays =
+        (today.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (diffInDays < 0 || diffInDays > 6) return;
+
+      const key = createdAt.toISOString().slice(0, 10);
+      countsByDay[key] = (countsByDay[key] || 0) + 1;
+    });
+
+    const result: { period: string; users: number }[] = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const key = date.toISOString().slice(0, 10);
+      const label = date.toLocaleDateString('en-US', { weekday: 'short' });
+
+      result.push({
+        period: label,
+        users: countsByDay[key] || 0,
+      });
+    }
+
+    return result;
+  }, [accountsData]);
+
+  const contentStats = useMemo(() => {
+    const reports = recentReportsData?.data ?? [];
+    const now = new Date();
+    const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    let postsLast24h = 0;
+    let eventsLast24h = 0;
+    let locationsLast24h = 0;
+
+    reports.forEach((report: any) => {
+      const createdAt = new Date(report.createdAt);
+      if (createdAt < cutoff) return;
+
+      switch (report.targetType) {
+        case 'post':
+          postsLast24h += 1;
+          break;
+        case 'event':
+          eventsLast24h += 1;
+          break;
+        case 'location':
+          locationsLast24h += 1;
+          break;
+      }
+    });
+
+    const pendingContent = pendingReportsData?.meta.totalItems ?? 0;
+
+    return {
+      postsLast24h,
+      eventsLast24h,
+      locationsLast24h,
+      pendingContent,
+    };
+  }, [recentReportsData, pendingReportsData]);
+
   return (
     <div className='space-y-8 pb-8 overflow-x-hidden'>
       <DashboardHeader
@@ -87,7 +298,7 @@ export default function AdminDashboardPage() {
 
       {/* Stats Grid */}
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'>
-        {dashboardStats.map((stat: any) => (
+        {dashboardStats.map((stat) => (
           <StatsCard
             key={stat.title}
             title={stat.title}
@@ -95,6 +306,7 @@ export default function AdminDashboardPage() {
             change={stat.change}
             icon={stat.icon}
             color={stat.color}
+            isLoading={isLoadingStats}
             variant="minimal"
           />
         ))}
@@ -129,16 +341,40 @@ export default function AdminDashboardPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className='h-64 flex items-center justify-center bg-muted/20 rounded-lg'>
-                  <div className='text-center'>
-                    <BarChart3 className='h-12 w-12 mx-auto text-muted-foreground mb-2' />
-                    <p className='text-sm text-muted-foreground'>
-                      Biểu đồ tăng trưởng người dùng
-                    </p>
-                    <p className='text-xs text-muted-foreground'>
-                      +847 người dùng mới tuần này
-                    </p>
-                  </div>
+                <div className='h-64 bg-muted/20 rounded-lg p-2'>
+                  <ChartContainer config={userGrowthConfig} className="h-full w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={userGrowthData}>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          className="stroke-muted"
+                        />
+                        <XAxis
+                          dataKey="period"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          tick={{ fontSize: 11 }}
+                        />
+                        <RechartsTooltip
+                          cursor={{
+                            stroke: 'hsl(var(--muted-foreground))',
+                            strokeDasharray: '4 4',
+                          }}
+                          content={<ChartTooltipContent />}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="users"
+                          stroke="var(--color-users)"
+                          strokeWidth={2}
+                          dot={{ r: 3 }}
+                          activeDot={{ r: 5 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 </div>
               </CardContent>
             </Card>
@@ -281,29 +517,29 @@ export default function AdminDashboardPage() {
           <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
             <StatsCard
               title='Bài viết mới (24h)'
-              value='156'
-              change='+23% so với hôm qua'
+              value={contentStats.postsLast24h}
+              change='Bài viết bị báo cáo trong 24h qua'
               icon={FileText}
               color='blue'
             />
             <StatsCard
               title='Review mới (24h)'
-              value='89'
-              change='+12% so với hôm qua'
+              value={contentStats.locationsLast24h}
+              change='Địa điểm bị báo cáo trong 24h qua'
               icon={Star}
               color='green'
             />
             <StatsCard
               title='Video mới (24h)'
-              value='34'
-              change='+8% so với hôm qua'
+              value={contentStats.eventsLast24h}
+              change='Sự kiện bị báo cáo trong 24h qua'
               icon={Eye}
               color='purple'
             />
             <StatsCard
               title='Nội dung chờ duyệt'
-              value='23'
-              change='5 mới trong 2h'
+              value={contentStats.pendingContent}
+              change='Báo cáo chờ xử lý'
               icon={Clock}
               color='orange'
             />
@@ -322,52 +558,62 @@ export default function AdminDashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Loại</TableHead>
-                      <TableHead>Tiêu đề</TableHead>
-                      <TableHead>Người tạo</TableHead>
-                      <TableHead>Hành động</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>
-                        <Badge>Địa điểm</Badge>
-                      </TableCell>
-                      <TableCell>Quán Cà phê ABC</TableCell>
-                      <TableCell>Nguyễn A</TableCell>
-                      <TableCell>
-                        <div className='flex space-x-1'>
-                          <Button size='sm' variant='outline'>
-                            <CheckCircle className='h-3 w-3' />
-                          </Button>
-                          <Button size='sm' variant='outline'>
-                            <XCircle className='h-3 w-3' />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <Badge variant='secondary'>Sự kiện</Badge>
-                      </TableCell>
-                      <TableCell>Festival Âm nhạc</TableCell>
-                      <TableCell>Trần B</TableCell>
-                      <TableCell>
-                        <div className='flex space-x-1'>
-                          <Button size='sm' variant='outline'>
-                            <CheckCircle className='h-3 w-3' />
-                          </Button>
-                          <Button size='sm' variant='outline'>
-                            <XCircle className='h-3 w-3' />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                {isLoadingReports ? (
+                  <div className='flex items-center justify-center py-10'>
+                    <Loader2 className='h-5 w-5 animate-spin text-muted-foreground' />
+                  </div>
+                ) : !pendingReportsData || pendingReportsData.data.length === 0 ? (
+                  <p className='text-sm text-muted-foreground'>
+                    Hiện không có nội dung nào đang chờ duyệt.
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Loại</TableHead>
+                        <TableHead>Tiêu đề</TableHead>
+                        <TableHead>Người tạo</TableHead>
+                        <TableHead>Hành động</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingReportsData.data.slice(0, 5).map((report: any) => {
+                        const typeLabel =
+                          report.targetType === 'post'
+                            ? 'Bài viết'
+                            : report.targetType === 'event'
+                            ? 'Sự kiện'
+                            : 'Địa điểm';
+                        const reporterName =
+                          report.createdBy?.firstName || report.createdBy?.lastName
+                            ? `${report.createdBy?.firstName ?? ''} ${report.createdBy?.lastName ?? ''}`.trim()
+                            : report.createdBy?.email;
+
+                        return (
+                          <TableRow key={report.id}>
+                            <TableCell>
+                              <Badge variant={report.targetType === 'event' ? 'secondary' : 'default'}>
+                                {typeLabel}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{report.title}</TableCell>
+                            <TableCell>{reporterName}</TableCell>
+                            <TableCell>
+                              <div className='flex space-x-1'>
+                                <Button size='sm' variant='outline'>
+                                  <CheckCircle className='h-3 w-3' />
+                                </Button>
+                                <Button size='sm' variant='outline'>
+                                  <XCircle className='h-3 w-3' />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
 
@@ -380,65 +626,70 @@ export default function AdminDashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className='space-y-4'>
-                  {[
-                    {
-                      type: 'Bài viết',
-                      reason: 'Nội dung không phù hợp',
-                      status: 'pending',
-                      reporter: 'User123',
-                    },
-                    {
-                      type: 'Review',
-                      reason: 'Spam/Fake review',
-                      status: 'in-review',
-                      reporter: 'User456',
-                    },
-                    {
-                      type: 'Người dùng',
-                      reason: 'Hành vi quấy rối',
-                      status: 'resolved',
-                      reporter: 'User789',
-                    },
-                  ].map((report, i) => (
-                    <div key={i} className='p-3 border rounded-lg'>
-                      <div className='flex justify-between items-start mb-2'>
-                        <div>
-                          <Badge variant='outline'>{report.type}</Badge>
-                          <p className='text-sm font-medium mt-1'>
-                            {report.reason}
-                          </p>
-                          <p className='text-xs text-muted-foreground'>
-                            Báo cáo bởi: {report.reporter}
-                          </p>
+                {isLoadingRecentReports ? (
+                  <div className='flex items-center justify-center py-10'>
+                    <Loader2 className='h-5 w-5 animate-spin text-muted-foreground' />
+                  </div>
+                ) : !recentReportsData || recentReportsData.data.length === 0 ? (
+                  <p className='text-sm text-muted-foreground'>
+                    Chưa có báo cáo nào từ người dùng.
+                  </p>
+                ) : (
+                  <div className='space-y-4'>
+                    {recentReportsData.data.slice(0, 6).map((report: any) => {
+                      const typeLabel =
+                        report.targetType === 'post'
+                          ? 'Bài viết'
+                          : report.targetType === 'event'
+                          ? 'Sự kiện'
+                          : 'Địa điểm';
+
+                      const reporterName =
+                        report.createdBy?.firstName || report.createdBy?.lastName
+                          ? `${report.createdBy?.firstName ?? ''} ${report.createdBy?.lastName ?? ''}`.trim()
+                          : report.createdBy?.email;
+
+                      const statusVariant =
+                        report.status === 'PENDING'
+                          ? 'secondary'
+                          : report.status === 'IN_PROGRESS'
+                          ? 'default'
+                          : 'outline';
+
+                      const statusLabel =
+                        report.status === 'PENDING'
+                          ? 'Chờ xử lý'
+                          : report.status === 'IN_PROGRESS'
+                          ? 'Đang xem xét'
+                          : 'Đã xử lý';
+
+                      return (
+                        <div key={report.id} className='p-3 border rounded-lg'>
+                          <div className='flex justify-between items-start mb-2'>
+                            <div>
+                              <Badge variant='outline'>{typeLabel}</Badge>
+                              <p className='text-sm font-medium mt-1'>
+                                {report.title || report.reportedReasonEntity?.displayName}
+                              </p>
+                              <p className='text-xs text-muted-foreground'>
+                                Báo cáo bởi: {reporterName}
+                              </p>
+                            </div>
+                            <Badge variant={statusVariant}>{statusLabel}</Badge>
+                          </div>
+                          <div className='flex space-x-2'>
+                            <Button size='sm' variant='outline'>
+                              Xem chi tiết
+                            </Button>
+                            {report.status === 'PENDING' || report.status === 'IN_PROGRESS' ? (
+                              <Button size='sm'>Xử lý</Button>
+                            ) : null}
+                          </div>
                         </div>
-                        <Badge
-                          variant={
-                            report.status === 'pending'
-                              ? 'secondary'
-                              : report.status === 'in-review'
-                              ? 'default'
-                              : 'outline'
-                          }
-                        >
-                          {report.status === 'pending'
-                            ? 'Chờ xử lý'
-                            : report.status === 'in-review'
-                            ? 'Đang xem xét'
-                            : 'Đã xử lý'}
-                        </Badge>
-                      </div>
-                      <div className='flex space-x-2'>
-                        <Button size='sm' variant='outline'>
-                          Xem chi tiết
-                        </Button>
-                        {report.status !== 'resolved' && (
-                          <Button size='sm'>Xử lý</Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
