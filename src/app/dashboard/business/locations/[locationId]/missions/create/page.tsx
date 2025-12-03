@@ -18,7 +18,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, ArrowLeft, CalendarIcon } from "lucide-react";
+import { Loader2, ArrowLeft, CalendarIcon, Rocket } from "lucide-react";
+import { useLocationById } from "@/hooks/locations/useLocationById";
 import { FileUpload } from "@/components/shared/FileUpload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -60,6 +61,7 @@ export default function CreateMissionPage({
   const router = useRouter();
   const { mutate: createMission, isPending } =
     useCreateLocationMission(locationId);
+  const { data: location, isLoading: isLoadingLocation } = useLocationById(locationId);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(missionSchema),
@@ -84,19 +86,40 @@ export default function CreateMissionPage({
     createMission(payload);
   }
 
+  if (isLoadingLocation) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+    <div className="space-y-8 p-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button type="button" variant="outline" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Create Mission</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add a new mission for {location?.name || "this location"}
+            </p>
+          </div>
+        </div>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <Card className="max-w-2xl">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Basic Information */}
+          <Card>
             <CardHeader>
-              <CardTitle>Mission Details</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Rocket className="h-5 w-5" />
+                Basic Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
@@ -104,9 +127,9 @@ export default function CreateMissionPage({
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel>Mission Name *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g., Check-in 5 times" />
+                      <Input {...field} placeholder="e.g., Check-in 5 times" className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -118,11 +141,13 @@ export default function CreateMissionPage({
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Description *</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
-                        placeholder="Describe the mission..."
+                        placeholder="Describe what this mission includes..."
+                        rows={4}
+                        className="resize-none"
                       />
                     </FormControl>
                     <FormMessage />
@@ -297,7 +322,10 @@ export default function CreateMissionPage({
             </CardContent>
           </Card>
 
-          <div className="mt-8 flex justify-end">
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => router.back()}>
+              Cancel
+            </Button>
             <Button type="submit" size="lg" disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Mission

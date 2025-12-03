@@ -22,7 +22,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, ArrowLeft, CalendarIcon } from "lucide-react";
+import { Loader2, ArrowLeft, CalendarIcon, TicketPercent } from "lucide-react";
+import { useLocationById } from "@/hooks/locations/useLocationById";
 import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -66,6 +67,7 @@ export default function EditVoucherPage({
   // 1. Fetch dữ liệu hiện tại của voucher
   const { data: voucher, isLoading: isLoadingData } =
     useLocationVoucherById(voucherId);
+  const { data: location } = useLocationById(locationId);
 
   // 2. Chuẩn bị hook mutation
   const { mutate: updateVoucher, isPending: isUpdating } =
@@ -130,28 +132,50 @@ export default function EditVoucherPage({
   if (isLoadingData) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <Loader2 className="animate-spin" />
+        <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (!voucher) {
-    return <div>Voucher not found.</div>;
+    return (
+      <div className="space-y-6 p-6">
+        <div className="text-center py-20 text-red-500">
+          <p className="font-medium">Voucher not found</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Please try refreshing the page
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+    <div className="space-y-8 p-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button type="button" variant="outline" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Edit Voucher</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Update voucher details for {location?.name || "this location"}
+            </p>
+          </div>
+        </div>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <Card className="max-w-2xl">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Basic Information */}
+          <Card>
             <CardHeader>
-              <CardTitle>Voucher Details</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <TicketPercent className="h-5 w-5" />
+                Basic Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
@@ -159,9 +183,9 @@ export default function EditVoucherPage({
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel>Voucher Name *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder="e.g., 20% off drinks" className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -173,9 +197,14 @@ export default function EditVoucherPage({
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Description *</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea
+                        {...field}
+                        placeholder="Describe what this voucher includes..."
+                        rows={4}
+                        className="resize-none"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -188,10 +217,10 @@ export default function EditVoucherPage({
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Voucher Code</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
+                    <FormLabel>Voucher Code *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g., SUMMER20" className="h-11" />
+                    </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -202,13 +231,13 @@ export default function EditVoucherPage({
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Voucher Type</FormLabel>
+                      <FormLabel>Voucher Type *</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="h-11">
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>

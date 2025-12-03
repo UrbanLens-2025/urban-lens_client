@@ -19,7 +19,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, ArrowLeft, CalendarIcon } from "lucide-react";
+import { Loader2, ArrowLeft, CalendarIcon, TicketPercent } from "lucide-react";
+import { useLocationById } from "@/hooks/locations/useLocationById";
 import { SingleFileUpload } from "@/components/shared/SingleFileUpload"; // <-- Dùng component upload 1 file
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -66,6 +67,7 @@ export default function CreateVoucherPage({
   const router = useRouter();
   const { mutate: createVoucher, isPending } =
     useCreateLocationVoucher(locationId);
+  const { data: location, isLoading: isLoadingLocation } = useLocationById(locationId);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(voucherSchema),
@@ -110,19 +112,40 @@ export default function CreateVoucherPage({
     createVoucher(payload);
   }
 
+  if (isLoadingLocation) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+    <div className="space-y-8 p-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button type="button" variant="outline" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Create Voucher</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add a new voucher for {location?.name || "this location"}
+            </p>
+          </div>
+        </div>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <Card className="max-w-2xl">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Basic Information */}
+          <Card>
             <CardHeader>
-              <CardTitle>Voucher Details</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <TicketPercent className="h-5 w-5" />
+                Basic Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
@@ -130,9 +153,9 @@ export default function CreateVoucherPage({
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel>Voucher Name *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g., 20% off drinks" />
+                      <Input {...field} placeholder="e.g., 20% off drinks" className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -144,11 +167,13 @@ export default function CreateVoucherPage({
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Description *</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
-                        placeholder="Describe the voucher..."
+                        placeholder="Describe what this voucher includes..."
+                        rows={4}
+                        className="resize-none"
                       />
                     </FormControl>
                     <FormMessage />
@@ -157,31 +182,31 @@ export default function CreateVoucherPage({
               />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  name="voucherCode"
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Voucher Code</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="e.g., SUMMER20" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                name="voucherCode"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Voucher Code *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g., SUMMER20" className="h-11" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
                 <FormField
                   name="voucherType"
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Voucher Type</FormLabel>
+                      <FormLabel>Voucher Type *</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="h-11">
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
@@ -362,7 +387,10 @@ export default function CreateVoucherPage({
             </CardContent>
           </Card>
 
-          <div className="mt-8 flex justify-end">
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => router.back()}>
+              Cancel
+            </Button>
             <Button type="submit" size="lg" disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Voucher

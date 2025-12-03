@@ -91,7 +91,6 @@ import {
   CalendarDays as CalendarDaysIcon,
   Save,
   Clock,
-  Calendar,
   Pencil,
   ChevronLeft,
   ChevronRight,
@@ -100,6 +99,11 @@ import {
   Filter,
   ImagePlus,
   List,
+  CalendarIcon,
+  User,
+  Zap,
+  Ruler,
+  Star,
 } from "lucide-react";
 import type { LocationVoucher, LocationMission, SortState, Announcement } from "@/types";
 import { useForm } from "react-hook-form";
@@ -124,10 +128,18 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useUpdateLocation } from "@/hooks/locations/useUpdateLocation";
 import { FileUpload } from "@/components/shared/FileUpload";
+import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
 import { useAddTagsToLocation } from "@/hooks/tags/useAddTagsToLocation";
 import { useRemoveTagsFromLocation } from "@/hooks/tags/useRemoveTagsFromLocation";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCreateLocationVoucher } from "@/hooks/vouchers/useCreateLocationVoucher";
+import { useUpdateLocationVoucher } from "@/hooks/vouchers/useUpdateLocationVoucher";
+import { useLocationVoucherById } from "@/hooks/vouchers/useLocationVoucherById";
+import { useCreateLocationMission } from "@/hooks/missions/useCreateLocationMission";
+import { useUpdateLocationMission } from "@/hooks/missions/useUpdateLocationMission";
+import { useLocationMissionById } from "@/hooks/missions/useLocationMissionById";
+import { CreateLocationVoucherPayload } from "@/types";
 import { useResolvedTags } from "@/hooks/tags/useResolvedTags";
 import { LocationTagsSelector } from "@/components/locations/LocationTagsSelector";
 import { useWeeklyAvailabilities } from "@/hooks/availability/useWeeklyAvailabilities";
@@ -147,6 +159,14 @@ import { cn } from "@/lib/utils";
 import { useAnnouncements } from "@/hooks/announcements/useAnnouncements";
 import { useDeleteAnnouncement } from "@/hooks/announcements/useDeleteAnnouncement";
 import { formatDateTime } from "@/lib/utils";
+import { useLocationTabs } from "@/contexts/LocationTabContext";
+import { X, CheckCircle } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Tabs,
   TabsList,
@@ -154,7 +174,6 @@ import {
   TabsContent,
 } from "@/components/ui/tabs";
 import { useOwnerLocationBookings } from "@/hooks/locations/useOwnerLocationBookings";
-import { CheckCircle } from "lucide-react";
 import { startOfDay, startOfWeek, startOfMonth, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, format, isSameDay, isSameWeek, isSameMonth, eachDayOfInterval, eachWeekOfInterval, getDay, endOfWeek, endOfMonth } from "date-fns";
 
 function InfoRow({
@@ -192,6 +211,7 @@ function formatDate(dateString: string) {
 
 // Vouchers Tab Component - Memoized for performance
 const VouchersTab = React.memo(function VouchersTab({ locationId }: { locationId: string }) {
+  const { openVoucherCreateTab, openVoucherEditTab, openVoucherDetailTab } = useLocationTabs();
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
@@ -307,10 +327,8 @@ const VouchersTab = React.memo(function VouchersTab({ locationId }: { locationId
               <EyeIcon className="mr-2 h-4 w-4" /> View Details
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href={`/dashboard/business/locations/${voucher.locationId}/vouchers/${voucher.id}/edit`}>
+          <DropdownMenuItem onClick={() => openVoucherEditTab(voucher.id, voucher.title)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
-            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setVoucherToDelete(voucher)} className="text-red-500">
             <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -323,11 +341,9 @@ const VouchersTab = React.memo(function VouchersTab({ locationId }: { locationId
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end">
-        <Button asChild size="sm">
-          <Link href={`/dashboard/business/locations/${locationId}/vouchers/create`}>
+        <Button size="sm" onClick={openVoucherCreateTab}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Create voucher
-          </Link>
         </Button>
       </div>
 
@@ -430,7 +446,10 @@ const VouchersTab = React.memo(function VouchersTab({ locationId }: { locationId
                     filteredVouchers.map((voucher) => (
                       <TableRow key={voucher.id} className="hover:bg-muted/20">
                         <TableCell className="space-y-1">
-                          <div className="flex items-start gap-3">
+                          <div 
+                            className="flex items-start gap-3 cursor-pointer"
+                            onClick={() => openVoucherDetailTab(voucher.id, voucher.title)}
+                          >
                             <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-md border bg-muted">
                               {voucher.imageUrl ? (
                                 <img src={voucher.imageUrl} alt={voucher.title} className="h-full w-full object-cover" />
@@ -442,7 +461,7 @@ const VouchersTab = React.memo(function VouchersTab({ locationId }: { locationId
                             </div>
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold leading-tight">{voucher.title}</span>
+                                <span className="text-sm font-semibold leading-tight hover:text-primary transition-colors">{voucher.title}</span>
                                 <Badge variant="outline" className="text-[10px] uppercase">
                                   {voucher.voucherType.replace(/_/g, " ")}
                                 </Badge>
@@ -534,6 +553,7 @@ VouchersTab.displayName = "VouchersTab";
 
 // Missions Tab Component - Memoized for performance
 const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
+  const { openMissionCreateTab, openMissionEditTab, openMissionDetailTab } = useLocationTabs();
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
@@ -686,10 +706,8 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
               <EyeIcon className="mr-2 h-4 w-4" /> View Details
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href={`/dashboard/business/locations/${mission.locationId}/missions/${mission.id}/edit`}>
+          <DropdownMenuItem onClick={() => openMissionEditTab(mission.id, mission.title)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
-            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setMissionToDelete(mission)} className="text-red-500">
             <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -709,11 +727,9 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
             Manage and track your location missions
           </p>
         </div>
-        <Button asChild size="default" className="shrink-0">
-          <Link href={`/dashboard/business/locations/${locationId}/missions/create`}>
+        <Button size="default" className="shrink-0" onClick={openMissionCreateTab}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Create Mission
-          </Link>
         </Button>
       </div>
 
@@ -909,9 +925,12 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
                       missions.map((mission) => (
                         <TableRow key={mission.id} className="hover:bg-muted/30 transition-colors">
                           <TableCell className="py-4">
-                            <div className="space-y-1.5">
+                            <div 
+                              className="space-y-1.5 cursor-pointer"
+                              onClick={() => openMissionDetailTab(mission.id, mission.title)}
+                            >
                               <div className="flex items-center gap-2.5">
-                                <span className="font-semibold text-sm">{mission.title}</span>
+                                <span className="font-semibold text-sm hover:text-primary transition-colors">{mission.title}</span>
                                 <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 font-medium">
                                   {mission.metric}
                                 </Badge>
@@ -1218,7 +1237,7 @@ const BookingPreviewCard = React.memo(({
     <Card className="border-border/60 shadow-sm sticky top-4">
       <CardHeader className="pb-3 pt-4">
         <CardTitle className="flex items-center gap-2 text-sm">
-          <Calendar className="h-4 w-4" />
+          <CalendarDaysIcon className="h-4 w-4" />
           Preview
         </CardTitle>
       </CardHeader>
@@ -1802,6 +1821,7 @@ function EditLocationTab({ locationId }: { locationId: string }) {
 
 // Announcements Tab Component
 function AnnouncementsTab({ locationId }: { locationId: string }) {
+  const { openAnnouncementDetailTab } = useLocationTabs();
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
@@ -1923,7 +1943,10 @@ function AnnouncementsTab({ locationId }: { locationId: string }) {
                   {announcements.map((announcement) => (
                     <TableRow key={announcement.id} className="hover:bg-muted/20">
                       <TableCell>
-                        <div className="flex items-start gap-3">
+                        <div 
+                          className="flex items-start gap-3 cursor-pointer"
+                          onClick={() => openAnnouncementDetailTab(announcement.id, announcement.title)}
+                        >
                           {announcement.imageUrl ? (
                             <img
                               src={announcement.imageUrl}
@@ -1937,7 +1960,7 @@ function AnnouncementsTab({ locationId }: { locationId: string }) {
                           )}
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold text-sm leading-tight">
+                              <span className="font-semibold text-sm leading-tight hover:text-primary transition-colors">
                                 {announcement.title}
                               </span>
                             </div>
@@ -2074,10 +2097,10 @@ function BookingAndAvailabilityTab({ locationId }: { locationId: string }) {
         
         <TabsContent value="current" className="mt-6">
           <CurrentBookingTab locationId={locationId} />
-        </TabsContent>
+          </TabsContent>
         <TabsContent value="history" className="mt-6">
           <BookingHistoryTab locationId={locationId} />
-        </TabsContent>
+          </TabsContent>
       </Tabs>
     </div>
   );
@@ -3716,6 +3739,1746 @@ function AvailabilityTab({ locationId }: { locationId: string }) {
   );
 }
 
+// Voucher Create Form Component
+const voucherCreateSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  voucherCode: z.string().min(1, "Voucher code is required"),
+  imageUrl: z.string().min(1, "Image URL is required").url("Image URL must be a valid URL"),
+  pricePoint: z.number().min(0, "Price must be 0 or more"),
+  maxQuantity: z.number().min(1, "Max quantity must be at least 1"),
+  userRedeemedLimit: z.number().min(1, "Limit must be at least 1"),
+  voucherType: z.string().min(1, "Type is required"),
+  startDate: z.date({ error: "Start date is required." }),
+  endDate: z.date({ error: "End date is required." }),
+}).refine((data) => data.endDate > data.startDate, {
+  message: "End date must be after start date",
+  path: ["endDate"],
+});
+
+function CreateVoucherForm({ locationId, locationName, onSuccess }: { locationId: string; locationName: string; onSuccess: () => void }) {
+  const { mutate: createVoucher, isPending } = useCreateLocationVoucher(locationId);
+  const queryClient = useQueryClient();
+  const { closeVoucherCreateTab } = useLocationTabs();
+
+  const form = useForm<z.infer<typeof voucherCreateSchema>>({
+    resolver: zodResolver(voucherCreateSchema),
+    mode: "onChange",
+    reValidateMode: "onBlur",
+    defaultValues: {
+      title: "",
+      description: "",
+      voucherCode: "",
+      imageUrl: "",
+      pricePoint: 0,
+      maxQuantity: 100,
+      userRedeemedLimit: 1,
+      voucherType: "public",
+    },
+  });
+
+  const voucherType = form.watch("voucherType");
+  const isPublicVoucher = voucherType === "public";
+
+  useEffect(() => {
+    if (isPublicVoucher) {
+      form.setValue("pricePoint", 0);
+    }
+  }, [isPublicVoucher, form]);
+
+  function onSubmit(values: z.infer<typeof voucherCreateSchema>) {
+    const payload: CreateLocationVoucherPayload = {
+      title: values.title,
+      description: values.description,
+      voucherCode: values.voucherCode,
+      imageUrl: values.imageUrl,
+      pricePoint: isPublicVoucher ? 0 : values.pricePoint,
+      maxQuantity: values.maxQuantity,
+      userRedeemedLimit: values.userRedeemedLimit,
+      voucherType: values.voucherType,
+      startDate: values.startDate.toISOString(),
+      endDate: values.endDate.toISOString(),
+    };
+    createVoucher(payload, {
+      onSuccess: () => {
+        toast.success("Voucher created successfully");
+        queryClient.invalidateQueries({ queryKey: ['locationVouchers', locationId] });
+        closeVoucherCreateTab();
+        onSuccess();
+      },
+      onError: (error: any) => {
+        toast.error(error?.message || "Failed to create voucher");
+      },
+    });
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TicketPercent className="h-5 w-5" />
+              Basic Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <FormField
+              name="title"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Voucher Name *</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="e.g., 20% off drinks" className="h-11" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="description"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description *</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Describe what this voucher includes..."
+                      rows={4}
+                      className="resize-none"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                name="voucherCode"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Voucher Code *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g., SUMMER20" className="h-11" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="voucherType"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Voucher Type *</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="public">Free Voucher</SelectItem>
+                        <SelectItem value="mission_only">Exchange Voucher</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                name="pricePoint"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Price (Points)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={isNaN(field.value) ? "" : (field.value ?? "")}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const numValue = value === "" ? 0 : Number(value);
+                          field.onChange(isNaN(numValue) ? 0 : numValue);
+                        }}
+                        disabled={isPublicVoucher}
+                        className="h-11"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="maxQuantity"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Max Quantity</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={isNaN(field.value) ? "" : (field.value ?? "")}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const numValue = value === "" ? 0 : Number(value);
+                          field.onChange(isNaN(numValue) ? 0 : numValue);
+                        }}
+                        className="h-11"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="userRedeemedLimit"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Limit per User</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={isNaN(field.value) ? "" : (field.value ?? "")}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const numValue = value === "" ? 0 : Number(value);
+                          field.onChange(isNaN(numValue) ? 0 : numValue);
+                        }}
+                        className="h-11"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                name="startDate"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Start Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "pl-3 text-left font-normal h-11",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="endDate"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>End Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "pl-3 text-left font-normal h-11",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              name="imageUrl"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Voucher Image</FormLabel>
+                  <FormControl>
+                    <SingleFileUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={closeVoucherCreateTab}>
+            Cancel
+          </Button>
+          <Button type="submit" size="lg" disabled={isPending}>
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Voucher
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+// Voucher Edit Form Component
+const voucherEditSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  voucherCode: z.string().min(1, "Voucher code is required"),
+  imageUrl: z.string().url("Image URL is required").nullable(),
+  pricePoint: z.number().min(0, "Price must be 0 or more"),
+  maxQuantity: z.number().min(1, "Max quantity must be at least 1"),
+  userRedeemedLimit: z.number().min(1, "Limit must be at least 1"),
+  voucherType: z.string().min(1, "Type is required"),
+  startDate: z.date({ error: "Start date is required." }),
+  endDate: z.date({ error: "End date is required." }),
+});
+
+function EditVoucherForm({ locationId, voucherId, locationName, onSuccess }: { locationId: string; voucherId: string; locationName: string; onSuccess: () => void }) {
+  const { data: voucher, isLoading: isLoadingData } = useLocationVoucherById(voucherId);
+  const { mutate: updateVoucher, isPending: isUpdating } = useUpdateLocationVoucher();
+  const queryClient = useQueryClient();
+  const { closeVoucherEditTab } = useLocationTabs();
+
+  const form = useForm<z.infer<typeof voucherEditSchema>>({
+    resolver: zodResolver(voucherEditSchema),
+    mode: "onChange",
+    reValidateMode: "onBlur",
+    defaultValues: {
+      title: "",
+      description: "",
+      voucherCode: "",
+      imageUrl: null,
+      pricePoint: 0,
+      maxQuantity: 1,
+      userRedeemedLimit: 1,
+      voucherType: "public",
+    },
+  });
+
+  useEffect(() => {
+    if (voucher) {
+      form.reset({
+        title: voucher.title,
+        description: voucher.description,
+        voucherCode: voucher.voucherCode,
+        imageUrl: voucher.imageUrl || null,
+        pricePoint: voucher.pricePoint,
+        maxQuantity: voucher.maxQuantity,
+        userRedeemedLimit: voucher.userRedeemedLimit,
+        voucherType: voucher.voucherType,
+        startDate: new Date(voucher.startDate),
+        endDate: new Date(voucher.endDate),
+      });
+    }
+  }, [voucher, form]);
+
+  const voucherType = form.watch("voucherType");
+  const isPublicVoucher = voucherType === "public";
+
+  useEffect(() => {
+    if (isPublicVoucher) {
+      form.setValue("pricePoint", 0);
+    }
+  }, [isPublicVoucher, form]);
+
+  function onSubmit(values: z.infer<typeof voucherEditSchema>) {
+    const payload = {
+      ...values,
+      imageUrl: values.imageUrl || "",
+      pricePoint: isPublicVoucher ? 0 : values.pricePoint,
+      startDate: values.startDate.toISOString(),
+      endDate: values.endDate.toISOString(),
+    };
+    updateVoucher({ locationId, voucherId, payload }, {
+      onSuccess: () => {
+        toast.success("Voucher updated successfully");
+        queryClient.invalidateQueries({ queryKey: ['locationVouchers', locationId] });
+        closeVoucherEditTab();
+        onSuccess();
+      },
+      onError: (error: any) => {
+        toast.error(error?.message || "Failed to update voucher");
+      },
+    });
+  }
+
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!voucher) {
+    return (
+      <div className="text-center py-12 text-red-500">
+        <p className="font-medium">Voucher not found</p>
+      </div>
+    );
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TicketPercent className="h-5 w-5" />
+              Basic Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <FormField
+              name="title"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Voucher Name *</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="e.g., 20% off drinks" className="h-11" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="description"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description *</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Describe what this voucher includes..."
+                      rows={4}
+                      className="resize-none"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                name="voucherCode"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Voucher Code *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g., SUMMER20" className="h-11" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="voucherType"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Voucher Type *</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="public">Free Voucher</SelectItem>
+                        <SelectItem value="mission_only">Exchange Voucher</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                name="pricePoint"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Price (Points)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={isNaN(field.value) ? "" : (field.value ?? "")}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const numValue = value === "" ? 0 : Number(value);
+                          field.onChange(isNaN(numValue) ? 0 : numValue);
+                        }}
+                        disabled={isPublicVoucher}
+                        className="h-11"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="maxQuantity"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Max Quantity</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={isNaN(field.value) ? "" : (field.value ?? "")}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const numValue = value === "" ? 0 : Number(value);
+                          field.onChange(isNaN(numValue) ? 0 : numValue);
+                        }}
+                        className="h-11"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="userRedeemedLimit"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Limit per User</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={isNaN(field.value) ? "" : (field.value ?? "")}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const numValue = value === "" ? 0 : Number(value);
+                          field.onChange(isNaN(numValue) ? 0 : numValue);
+                        }}
+                        className="h-11"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                name="startDate"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Start Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "pl-3 text-left font-normal h-11",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="endDate"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>End Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "pl-3 text-left font-normal h-11",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              name="imageUrl"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Voucher Image</FormLabel>
+                  <FormControl>
+                    <SingleFileUpload
+                      value={field.value || ""}
+                      onChange={(value) => field.onChange(value || null)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={closeVoucherEditTab}>
+            Cancel
+          </Button>
+          <Button type="submit" size="lg" disabled={isUpdating}>
+            {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+// Mission Create Form Component
+const missionCreateSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  metric: z.string().min(1, "Metric is required"),
+  target: z.number().min(1, "Target must be at least 1"),
+  reward: z.number().min(1, "Reward must be at least 1"),
+  startDate: z.date({ error: "Start date is required." }),
+  endDate: z.date({ error: "End date is required." }),
+  imageUrls: z
+    .array(z.string().url())
+    .min(1, "At least one image is required."),
+});
+
+function CreateMissionForm({ locationId, locationName, onSuccess }: { locationId: string; locationName: string; onSuccess: () => void }) {
+  const { mutate: createMission, isPending } = useCreateLocationMission(locationId);
+  const queryClient = useQueryClient();
+  const { closeMissionCreateTab } = useLocationTabs();
+
+  const form = useForm<z.infer<typeof missionCreateSchema>>({
+    resolver: zodResolver(missionCreateSchema),
+    mode: "onChange",
+    reValidateMode: "onBlur",
+    defaultValues: {
+      title: "",
+      description: "",
+      metric: "order_count",
+      target: 1,
+      reward: 0,
+      imageUrls: [],
+    },
+  });
+
+  function onSubmit(values: z.infer<typeof missionCreateSchema>) {
+    const payload = {
+      ...values,
+      startDate: values.startDate.toISOString(),
+      endDate: values.endDate.toISOString(),
+    };
+    createMission(payload, {
+      onSuccess: () => {
+        toast.success("Mission created successfully");
+        queryClient.invalidateQueries({ queryKey: ['locationMissions', locationId] });
+        closeMissionCreateTab();
+        onSuccess();
+      },
+      onError: (error: any) => {
+        toast.error(error?.message || "Failed to create mission");
+      },
+    });
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Rocket className="h-5 w-5" />
+              Basic Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <FormField
+              name="title"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mission Name *</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="e.g., Check-in 5 times" className="h-11" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="description"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description *</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Describe what this mission includes..."
+                      rows={4}
+                      className="resize-none"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                name="metric"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Metric</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="order_count">Order Count</SelectItem>
+                        <SelectItem value="check_in_count">Check-in Count</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="target"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Target</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                        className="h-11"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="reward"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reward (Points)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                        className="h-11"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                name="startDate"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Start Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "pl-3 text-left font-normal h-11",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="endDate"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>End Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "pl-3 text-left font-normal h-11",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              name="imageUrls"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mission Images</FormLabel>
+                  <FormControl>
+                    <FileUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={closeMissionCreateTab}>
+            Cancel
+          </Button>
+          <Button type="submit" size="lg" disabled={isPending}>
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Mission
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+// Mission Edit Form Component
+const missionEditSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  metric: z.string().min(1, "Metric is required"),
+  target: z.number().min(1, "Target must be at least 1"),
+  reward: z.number().min(1, "Reward must be at least 1"),
+  startDate: z.date({ error: "Start date is required." }),
+  endDate: z.date({ error: "End date is required." }),
+  imageUrls: z
+    .array(z.string().url())
+    .min(1, "At least one image is required."),
+});
+
+function EditMissionForm({ locationId, missionId, locationName, onSuccess }: { locationId: string; missionId: string; locationName: string; onSuccess: () => void }) {
+  const { data: mission, isLoading: isLoadingData } = useLocationMissionById(missionId);
+  const { mutate: updateMission, isPending: isUpdating } = useUpdateLocationMission();
+  const queryClient = useQueryClient();
+  const { closeMissionEditTab } = useLocationTabs();
+
+  const form = useForm<z.infer<typeof missionEditSchema>>({
+    resolver: zodResolver(missionEditSchema),
+    mode: "onChange",
+    reValidateMode: "onBlur",
+    defaultValues: {
+      title: "",
+      description: "",
+      metric: "",
+      target: 1,
+      reward: 1,
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      imageUrls: [],
+    },
+  });
+
+  useEffect(() => {
+    if (mission) {
+      form.reset({
+        title: mission.title ?? "",
+        description: mission.description ?? "",
+        metric: mission.metric ?? "",
+        target: mission.target ?? 1,
+        reward: mission.reward ?? 1,
+        startDate: mission.startDate ? new Date(mission.startDate) : new Date(),
+        endDate: mission.endDate
+          ? new Date(mission.endDate)
+          : new Date(Date.now() + 24 * 60 * 60 * 1000),
+        imageUrls: Array.isArray(mission.imageUrls) ? mission.imageUrls : [],
+      });
+    }
+  }, [mission, form]);
+
+  function onSubmit(values: z.infer<typeof missionEditSchema>) {
+    const payload = {
+      ...values,
+      startDate: values.startDate.toISOString(),
+      endDate: values.endDate.toISOString(),
+    };
+    updateMission({ missionId, payload }, {
+      onSuccess: () => {
+        toast.success("Mission updated successfully");
+        queryClient.invalidateQueries({ queryKey: ['locationMissions', locationId] });
+        closeMissionEditTab();
+        onSuccess();
+      },
+      onError: (error: any) => {
+        toast.error(error?.message || "Failed to update mission");
+      },
+    });
+  }
+
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!mission) {
+    return (
+      <div className="text-center py-12 text-red-500">
+        <p className="font-medium">Mission not found</p>
+      </div>
+    );
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Rocket className="h-5 w-5" />
+              Basic Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <FormField
+              name="title"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mission Name *</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="e.g., Check-in 5 times" className="h-11" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="description"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description *</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Describe what this mission includes..."
+                      rows={4}
+                      className="resize-none"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                name="metric"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Metric</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="order_count">Order Count</SelectItem>
+                        <SelectItem value="check_in_count">Check-in Count</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="target"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Target</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                        className="h-11"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="reward"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reward (Points)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                        className="h-11"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                name="startDate"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Start Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "pl-3 text-left font-normal h-11",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="endDate"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>End Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "pl-3 text-left font-normal h-11",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              name="imageUrls"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mission Images</FormLabel>
+                  <FormControl>
+                    <FileUpload
+                      value={field.value ?? []}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={closeMissionEditTab}>
+            Cancel
+          </Button>
+          <Button type="submit" size="lg" disabled={isUpdating}>
+            {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+// Voucher Detail View Component
+function VoucherDetailView({ voucherId, locationId, onClose }: { voucherId: string; locationId: string; onClose: () => void }) {
+  const { data: voucher, isLoading, isError } = useLocationVoucherById(voucherId);
+  const { openVoucherEditTab } = useLocationTabs();
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState("");
+
+  const handleImageClick = (src: string) => {
+    setCurrentImageSrc(src);
+    setIsImageViewerOpen(true);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (isError || !voucher) {
+    return (
+      <div className="text-center py-12 text-red-500">
+        <p className="font-medium">Voucher not found</p>
+      </div>
+    );
+  }
+
+  const position = {
+    lat: voucher.location?.latitude,
+    lng: voucher.location?.longitude,
+  };
+
+  const now = new Date();
+  const isExpired = new Date(voucher.endDate) < now;
+  const isScheduled = new Date(voucher.startDate) > now;
+  const isActive = !isExpired && !isScheduled;
+
+  function InfoRow({ label, value, icon: Icon }: { label: string; value: React.ReactNode; icon?: React.ComponentType<{ className?: string }> }) {
+    if (value === undefined || value === null || value === "") return null;
+    return (
+      <div className="flex gap-3 mb-4">
+        {Icon && <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />}
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+          <div className="text-base text-foreground break-words">{value}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <Button variant="outline" size="icon" onClick={onClose}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Badge variant="outline">{voucher.voucherCode}</Badge>
+          {isActive && <Badge className="bg-green-600">Active</Badge>}
+          {isScheduled && <Badge variant="outline">Scheduled</Badge>}
+          {isExpired && <Badge variant="secondary">Expired</Badge>}
+        </div>
+        <Button onClick={() => openVoucherEditTab(voucher.id, voucher.title)}>
+          <Edit className="mr-2 h-4 w-4" /> Edit Voucher
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Ticket /> Voucher Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <InfoRow label="Description" value={voucher.description} />
+              <InfoRow label="Type" value={voucher.voucherType} icon={Layers} />
+              <InfoRow label="Price" value={`${voucher.pricePoint} points`} icon={Star} />
+              <InfoRow label="Max Quantity" value={voucher.maxQuantity} icon={Zap} />
+              <InfoRow label="Limit Per User" value={voucher.userRedeemedLimit} icon={User} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDaysIcon /> Duration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <InfoRow label="Start Date" value={format(new Date(voucher.startDate), "PPP p")} />
+              <InfoRow label="End Date" value={format(new Date(voucher.endDate), "PPP p")} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock /> Metadata
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <InfoRow label="Created At" value={format(new Date(voucher.createdAt), "PPP p")} />
+              <InfoRow label="Updated At" value={format(new Date(voucher.updatedAt), "PPP p")} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon /> Voucher Image
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <img
+                src={voucher.imageUrl}
+                alt={voucher.title}
+                className="w-full max-w-sm h-auto object-cover rounded-md border cursor-pointer"
+                onClick={() => handleImageClick(voucher.imageUrl)}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-1 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building /> Associated Location
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <InfoRow label="Location Name" value={voucher.location?.name} />
+              <InfoRow label="Address" value={voucher.location?.addressLine} />
+              <InfoRow label="District/Ward" value={voucher.location?.addressLevel1} />
+              <InfoRow label="Province/City" value={voucher.location?.addressLevel2} />
+              <InfoRow label="Radius (m)" value={voucher.location?.radiusMeters} icon={Ruler} />
+              <InfoRow label="Visible on Map" value={voucher.location?.isVisibleOnMap ? "Yes" : "No"} icon={EyeIcon} />
+              {voucher.location?.imageUrl?.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm font-semibold text-muted-foreground">Location Images</p>
+                  <div className="flex flex-wrap gap-3">
+                    {voucher.location?.imageUrl.map((url: string) => (
+                      <img
+                        key={url}
+                        src={url}
+                        alt="Location"
+                        onClick={() => handleImageClick(url)}
+                        className="w-24 h-24 rounded-md border object-cover cursor-pointer"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="sticky top-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin /> Location Map
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="h-80 rounded-lg overflow-hidden">
+              <GoogleMapsPicker position={position} onPositionChange={() => {}} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <ImageViewer
+        src={currentImageSrc}
+        alt={voucher.title}
+        open={isImageViewerOpen}
+        onOpenChange={setIsImageViewerOpen}
+      />
+    </div>
+  );
+}
+
+// Mission Detail View Component
+function MissionDetailView({ missionId, locationId, onClose }: { missionId: string; locationId: string; onClose: () => void }) {
+  const { data: mission, isLoading, isError } = useLocationMissionById(missionId);
+  const { openMissionEditTab } = useLocationTabs();
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState("");
+  const [currentImageAlt, setCurrentImageAlt] = useState("");
+
+  const handleImageClick = (src: string, alt: string) => {
+    setCurrentImageSrc(src);
+    setCurrentImageAlt(alt);
+    setIsImageViewerOpen(true);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (isError || !mission) {
+    return (
+      <div className="text-center py-12 text-red-500">
+        <p className="font-medium">Mission not found</p>
+      </div>
+    );
+  }
+
+  const position = {
+    lat: mission.location?.latitude,
+    lng: mission.location?.longitude,
+  };
+
+  const now = new Date();
+  const isExpired = new Date(mission.endDate) < now;
+  const isScheduled = new Date(mission.startDate) > now;
+  const isActive = !isExpired && !isScheduled;
+
+  function InfoRow({ label, value, icon: Icon }: { label: string; value: React.ReactNode; icon?: React.ComponentType<{ className?: string }> }) {
+    if (!value) return null;
+    return (
+      <div className="flex gap-3">
+        {Icon && <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />}
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+          <div className="text-base text-foreground">{value}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={onClose}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          {isActive && <Badge className="bg-green-600">Active</Badge>}
+          {isScheduled && <Badge variant="outline">Scheduled</Badge>}
+          {isExpired && <Badge variant="secondary">Completed</Badge>}
+        </div>
+        <Button onClick={() => openMissionEditTab(mission.id, mission.title)}>Edit Mission</Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layers /> Mission Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <InfoRow label="Description" value={mission.description} />
+              <InfoRow label="Metric (How to complete)" value={<Badge variant="outline">{mission.metric}</Badge>} icon={Zap} />
+              <InfoRow label="Target" value={mission.target} icon={Zap} />
+              <InfoRow label="Reward" value={`${mission.reward} points`} icon={Star} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDaysIcon /> Duration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <InfoRow label="Start Date" value={format(new Date(mission.startDate), "PPP p")} />
+              <InfoRow label="End Date" value={format(new Date(mission.endDate), "PPP p")} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon /> Mission Images
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              {mission.imageUrls.map((url, index) => (
+                <img
+                  key={index}
+                  src={url}
+                  alt={`Mission image ${index + 1}`}
+                  className="w-40 h-40 object-cover rounded-md border cursor-pointer"
+                  onClick={() => handleImageClick(url, `Mission image ${index + 1}`)}
+                />
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-1 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building /> Associated Location
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <InfoRow label="Address" value={mission.location?.addressLine} />
+              <InfoRow label="District/Ward" value={mission.location?.addressLevel1 || "N/A"} />
+              <InfoRow label="Province/City" value={mission.location?.addressLevel2 || "N/A"} />
+              <InfoRow label="Service Radius" value={`${mission.location?.radiusMeters} meters`} />
+            </CardContent>
+          </Card>
+
+          <Card className="sticky top-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin /> Location Map
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="h-80 rounded-lg overflow-hidden">
+              <GoogleMapsPicker position={position} onPositionChange={() => {}} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <ImageViewer
+        src={currentImageSrc}
+        alt={currentImageAlt}
+        open={isImageViewerOpen}
+        onOpenChange={setIsImageViewerOpen}
+      />
+    </div>
+  );
+}
+
+// Announcement Detail View Component
+function AnnouncementDetailView({ announcementId, locationId, onClose }: { announcementId: string; locationId: string; onClose: () => void }) {
+  const { data: announcements } = useAnnouncements({
+    page: 1,
+    limit: 1000,
+    locationId,
+  });
+  const announcement = announcements?.data?.find((a) => a.id === announcementId);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState("");
+
+  const handleImageClick = (src: string) => {
+    setCurrentImageSrc(src);
+    setIsImageViewerOpen(true);
+  };
+
+  if (!announcement) {
+    return (
+      <div className="text-center py-12 text-red-500">
+        <p className="font-medium">Announcement not found</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={onClose}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Badge variant="outline" className={announcement.isHidden ? "border-border bg-muted/40 text-muted-foreground" : ""}>
+            {announcement.isHidden ? "Hidden" : "Visible"}
+          </Badge>
+        </div>
+        <Button asChild>
+          <Link href={`/dashboard/business/locations/${locationId}/announcements/${announcement.id}/edit`}>
+            <Edit className="mr-2 h-4 w-4" /> Edit Announcement
+          </Link>
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Megaphone /> Announcement Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">Title</p>
+                <p className="text-base text-foreground">{announcement.title}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">Description</p>
+                <p className="text-base text-foreground">{announcement.description}</p>
+              </div>
+              {announcement.imageUrl && (
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground mb-2">Image</p>
+                  <img
+                    src={announcement.imageUrl}
+                    alt={announcement.title}
+                    className="w-full max-w-md h-auto object-cover rounded-md border cursor-pointer"
+                    onClick={() => handleImageClick(announcement.imageUrl!)}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDaysIcon /> Schedule
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">Start Date</p>
+                <p className="text-base text-foreground">{announcement.startDate ? formatDateTime(announcement.startDate) : "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">End Date</p>
+                <p className="text-base text-foreground">{announcement.endDate ? formatDateTime(announcement.endDate) : "—"}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock /> Metadata
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">Created</p>
+                <p className="text-base text-foreground">{formatDateTime(announcement.createdAt)}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">Updated</p>
+                <p className="text-base text-foreground">{formatDateTime(announcement.updatedAt)}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <ImageViewer
+        src={currentImageSrc}
+        alt={announcement.title}
+        open={isImageViewerOpen}
+        onOpenChange={setIsImageViewerOpen}
+      />
+    </div>
+  );
+}
+
 export default function LocationDetailsPage({
   params,
 }: {
@@ -3730,6 +5493,27 @@ export default function LocationDetailsPage({
   const [currentImageSrc, setCurrentImageSrc] = useState("");
   const [currentImageAlt, setCurrentImageAlt] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+  
+  const {
+    voucherCreateTab,
+    openVoucherCreateTab,
+    closeVoucherCreateTab,
+    voucherEditTab,
+    openVoucherEditTab,
+    closeVoucherEditTab,
+    voucherDetailTab,
+    closeVoucherDetailTab,
+    missionCreateTab,
+    openMissionCreateTab,
+    closeMissionCreateTab,
+    missionEditTab,
+    openMissionEditTab,
+    closeMissionEditTab,
+    missionDetailTab,
+    closeMissionDetailTab,
+    announcementDetailTab,
+    closeAnnouncementDetailTab,
+  } = useLocationTabs();
 
   // Remove any query parameters from URL (like ?tab=requests) when on location detail page
   useEffect(() => {
@@ -3947,6 +5731,150 @@ export default function LocationDetailsPage({
             )} />
             <span className="whitespace-nowrap">Announcements</span>
           </Button>
+          
+          {/* Dynamic Voucher Create Tab */}
+          {voucherCreateTab.isOpen && (
+            <div className="relative flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() => setActiveTab("vouchers")}
+                className={cn(
+                  "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto pr-7",
+                  "hover:bg-muted/50 hover:border-muted-foreground/30",
+                  activeTab === "vouchers"
+                    ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <TicketPercent className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  activeTab === "vouchers" && "scale-110"
+                )} />
+                <span className="whitespace-nowrap">Create Voucher</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  closeVoucherCreateTab();
+                  setActiveTab("vouchers");
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+
+          {/* Dynamic Voucher Edit Tab */}
+          {voucherEditTab.isOpen && (
+            <div className="relative flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() => setActiveTab("vouchers")}
+                className={cn(
+                  "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto pr-7",
+                  "hover:bg-muted/50 hover:border-muted-foreground/30",
+                  activeTab === "vouchers"
+                    ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <TicketPercent className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  activeTab === "vouchers" && "scale-110"
+                )} />
+                <span className="whitespace-nowrap">Edit Voucher</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  closeVoucherEditTab();
+                  setActiveTab("vouchers");
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+
+          {/* Dynamic Mission Create Tab */}
+          {missionCreateTab.isOpen && (
+            <div className="relative flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() => setActiveTab("missions")}
+                className={cn(
+                  "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto pr-7",
+                  "hover:bg-muted/50 hover:border-muted-foreground/30",
+                  activeTab === "missions"
+                    ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Rocket className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  activeTab === "missions" && "scale-110"
+                )} />
+                <span className="whitespace-nowrap">Create Mission</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  closeMissionCreateTab();
+                  setActiveTab("missions");
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+
+          {/* Dynamic Mission Edit Tab */}
+          {missionEditTab.isOpen && (
+            <div className="relative flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() => setActiveTab("missions")}
+                className={cn(
+                  "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto pr-7",
+                  "hover:bg-muted/50 hover:border-muted-foreground/30",
+                  activeTab === "missions"
+                    ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Rocket className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  activeTab === "missions" && "scale-110"
+                )} />
+                <span className="whitespace-nowrap">Edit Mission</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  closeMissionEditTab();
+                  setActiveTab("missions");
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
         </nav>
       </div>
 
@@ -4015,7 +5943,7 @@ export default function LocationDetailsPage({
                       Last Updated
                     </CardTitle>
                     <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
-                      <Calendar className="h-4 w-4 text-amber-600" />
+                      <CalendarDaysIcon className="h-4 w-4 text-amber-600" />
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -4222,7 +6150,7 @@ export default function LocationDetailsPage({
                   <Card className="border-border/60 shadow-sm">
                     <CardHeader className="pb-3 pt-4">
                       <CardTitle className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4" />
+                        <CalendarDaysIcon className="h-4 w-4" />
                         Metadata
                       </CardTitle>
                     </CardHeader>
@@ -4288,11 +6216,148 @@ export default function LocationDetailsPage({
               </div>
           </div>
         )}
-        {activeTab === "vouchers" && <VouchersTab locationId={location.id} />}
-        {activeTab === "missions" && <MissionsTab locationId={location.id} />}
-        {activeTab === "booking" && <BookingAndAvailabilityTab locationId={location.id} />}
-        {activeTab === "announcements" && <AnnouncementsTab locationId={location.id} />}
-        {activeTab === "edit" && <EditLocationTab locationId={location.id} />}
+        {activeTab === "vouchers" && (
+          <>
+            {voucherCreateTab.isOpen ? (
+              <div className="space-y-8 p-6 max-w-4xl mx-auto">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Button type="button" variant="outline" size="icon" onClick={closeVoucherCreateTab}>
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div>
+                      <h1 className="text-3xl font-bold">Create Voucher</h1>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Add a new voucher for {location.name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <CreateVoucherForm 
+                  locationId={location.id} 
+                  locationName={location.name}
+                  onSuccess={() => setActiveTab("vouchers")}
+                />
+              </div>
+            ) : voucherEditTab.isOpen && voucherEditTab.voucherId ? (
+              <div className="space-y-8 p-6 max-w-4xl mx-auto">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Button type="button" variant="outline" size="icon" onClick={closeVoucherEditTab}>
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div>
+                      <h1 className="text-3xl font-bold">Edit Voucher</h1>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Update voucher details for {location.name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <EditVoucherForm 
+                  locationId={location.id}
+                  voucherId={voucherEditTab.voucherId}
+                  locationName={location.name}
+                  onSuccess={() => setActiveTab("vouchers")}
+                />
+              </div>
+            ) : voucherDetailTab.isOpen && voucherDetailTab.voucherId ? (
+              <div className="space-y-6 p-6">
+                <VoucherDetailView 
+                  voucherId={voucherDetailTab.voucherId}
+                  locationId={location.id}
+                  onClose={() => {
+                    closeVoucherDetailTab();
+                    setActiveTab("vouchers");
+                  }}
+                />
+              </div>
+            ) : (
+              <VouchersTab locationId={location.id} />
+            )}
+          </>
+        )}
+        {activeTab === "missions" && (
+          <>
+            {missionCreateTab.isOpen ? (
+              <div className="space-y-8 p-6 max-w-4xl mx-auto">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Button type="button" variant="outline" size="icon" onClick={closeMissionCreateTab}>
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div>
+                      <h1 className="text-3xl font-bold">Create Mission</h1>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Add a new mission for {location.name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <CreateMissionForm 
+                  locationId={location.id}
+                  locationName={location.name}
+                  onSuccess={() => setActiveTab("missions")}
+                />
+              </div>
+            ) : missionEditTab.isOpen && missionEditTab.missionId ? (
+              <div className="space-y-8 p-6 max-w-4xl mx-auto">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Button type="button" variant="outline" size="icon" onClick={closeMissionEditTab}>
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div>
+                      <h1 className="text-3xl font-bold">Edit Mission</h1>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Update mission details for {location.name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <EditMissionForm 
+                  locationId={location.id}
+                  missionId={missionEditTab.missionId}
+                  locationName={location.name}
+                  onSuccess={() => setActiveTab("missions")}
+                />
+              </div>
+            ) : missionDetailTab.isOpen && missionDetailTab.missionId ? (
+              <div className="space-y-6 p-6">
+                <MissionDetailView 
+                  missionId={missionDetailTab.missionId}
+                  locationId={location.id}
+                  onClose={() => {
+                    closeMissionDetailTab();
+                    setActiveTab("missions");
+                  }}
+                />
+              </div>
+            ) : (
+              <MissionsTab locationId={location.id} />
+            )}
+          </>
+        )}
+              {activeTab === "booking" && <BookingAndAvailabilityTab locationId={location.id} />}
+              {activeTab === "announcements" && (
+                <>
+                  {announcementDetailTab.isOpen && announcementDetailTab.announcementId ? (
+                    <div className="space-y-6 p-6">
+                      <AnnouncementDetailView 
+                        announcementId={announcementDetailTab.announcementId}
+                        locationId={location.id}
+                        onClose={() => {
+                          closeAnnouncementDetailTab();
+                          setActiveTab("announcements");
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <AnnouncementsTab locationId={location.id} />
+                  )}
+                </>
+              )}
+              {activeTab === "edit" && <EditLocationTab locationId={location.id} />}
       </div>
       <ImageViewer
         src={currentImageSrc}
