@@ -33,7 +33,6 @@ export function useUpdateLocationVoucher() {
         updatedVoucher
       );
       
-      router.back();
       router.refresh();
     },
     onError: (err: Error) => {

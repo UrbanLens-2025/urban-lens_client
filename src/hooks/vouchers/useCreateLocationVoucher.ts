@@ -18,7 +18,7 @@ export function useCreateLocationVoucher(locationId: string) {
       toast.success("New voucher created successfully!");
       queryClient.invalidateQueries({ queryKey: ['locationVouchers', { locationId }] });
       
-      router.back();
+      router.refresh();
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to create voucher.");

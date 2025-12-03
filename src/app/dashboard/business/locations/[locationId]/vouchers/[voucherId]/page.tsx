@@ -143,7 +143,11 @@ export default function VoucherDetailsPage({
             </CardHeader>
             <CardContent className="space-y-4">
               <InfoRow label="Description" value={voucher.description} />
-              <InfoRow label="Type" value={voucher.voucherType} icon={Layers} />
+              <InfoRow 
+                label="Type" 
+                value={voucher.voucherType === "public" ? "Free Voucher" : voucher.voucherType === "mission_only" ? "Exchange Voucher" : voucher.voucherType} 
+                icon={Layers} 
+              />
               <InfoRow
                 label="Price"
                 value={`${voucher.pricePoint} points`}

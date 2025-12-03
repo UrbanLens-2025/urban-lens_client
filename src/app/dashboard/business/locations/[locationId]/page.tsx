@@ -162,6 +162,15 @@ import { useCreateAnnouncement } from "@/hooks/announcements/useCreateAnnounceme
 import { formatDateTime } from "@/lib/utils";
 import { useLocationTabs } from "@/contexts/LocationTabContext";
 import { X, CheckCircle } from "lucide-react";
+
+// Helper function to format voucher type for display
+const formatVoucherType = (voucherType: string): string => {
+  const typeMap: Record<string, string> = {
+    public: "Free Voucher",
+    mission_only: "Exchange Voucher",
+  };
+  return typeMap[voucherType] || voucherType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+};
 import {
   Popover,
   PopoverContent,
@@ -463,8 +472,8 @@ const VouchersTab = React.memo(function VouchersTab({ locationId }: { locationId
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-semibold leading-tight hover:text-primary transition-colors">{voucher.title}</span>
-                                <Badge variant="outline" className="text-[10px] uppercase">
-                                  {voucher.voucherType.replace(/_/g, " ")}
+                                <Badge variant="outline" className="text-[10px]">
+                                  {formatVoucherType(voucher.voucherType)}
                                 </Badge>
                               </div>
                               {voucher.description && (
@@ -1862,8 +1871,8 @@ function CreateAnnouncementForm({ locationId, locationName, onSuccess }: { locat
         onSuccess: () => {
           toast.success("Announcement created successfully");
           queryClient.invalidateQueries({ queryKey: ['announcements'] });
-          closeAnnouncementCreateTab();
-          onSuccess();
+          onSuccess(); // Set active tab first
+          closeAnnouncementCreateTab(); // Then close create tab
         },
         onError: (error: any) => {
           toast.error(error?.message || "Failed to create announcement");
@@ -3917,13 +3926,13 @@ const voucherCreateSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
   voucherCode: z.string().min(1, "Voucher code is required"),
-  imageUrl: z.string().min(1, "Image URL is required").url("Image URL must be a valid URL"),
+  imageUrl: z.string().url("Please provide a valid image URL").optional().or(z.literal("")),
   pricePoint: z.number().min(0, "Price must be 0 or more"),
   maxQuantity: z.number().min(1, "Max quantity must be at least 1"),
   userRedeemedLimit: z.number().min(1, "Limit must be at least 1"),
   voucherType: z.string().min(1, "Type is required"),
-  startDate: z.date({ error: "Start date is required." }),
-  endDate: z.date({ error: "End date is required." }),
+  startDate: z.date({ required_error: "Start date is required", invalid_type_error: "Please select a valid start date" }),
+  endDate: z.date({ required_error: "End date is required", invalid_type_error: "Please select a valid end date" }),
 }).refine((data) => data.endDate > data.startDate, {
   message: "End date must be after start date",
   path: ["endDate"],
@@ -3936,8 +3945,8 @@ function CreateVoucherForm({ locationId, locationName, onSuccess }: { locationId
 
   const form = useForm<z.infer<typeof voucherCreateSchema>>({
     resolver: zodResolver(voucherCreateSchema),
-    mode: "onChange",
-    reValidateMode: "onBlur",
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: {
       title: "",
       description: "",
@@ -3961,10 +3970,10 @@ function CreateVoucherForm({ locationId, locationName, onSuccess }: { locationId
 
   function onSubmit(values: z.infer<typeof voucherCreateSchema>) {
     const payload: CreateLocationVoucherPayload = {
-      title: values.title,
-      description: values.description,
-      voucherCode: values.voucherCode,
-      imageUrl: values.imageUrl,
+      title: values.title.trim(),
+      description: values.description.trim(),
+      voucherCode: values.voucherCode.trim().toUpperCase(),
+      imageUrl: values.imageUrl?.trim() || undefined,
       pricePoint: isPublicVoucher ? 0 : values.pricePoint,
       maxQuantity: values.maxQuantity,
       userRedeemedLimit: values.userRedeemedLimit,
@@ -3976,8 +3985,8 @@ function CreateVoucherForm({ locationId, locationName, onSuccess }: { locationId
       onSuccess: () => {
         toast.success("Voucher created successfully");
         queryClient.invalidateQueries({ queryKey: ['locationVouchers', locationId] });
-        closeVoucherCreateTab();
-        onSuccess();
+        onSuccess(); // Set active tab first
+        closeVoucherCreateTab(); // Then close create tab
       },
       onError: (error: any) => {
         toast.error(error?.message || "Failed to create voucher");
@@ -4146,94 +4155,147 @@ function CreateVoucherForm({ locationId, locationName, onSuccess }: { locationId
               <FormField
                 name="startDate"
                 control={form.control}
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Start Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal h-11",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const hasError = !!form.formState.errors.startDate;
+                  return (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className={cn(hasError && "text-destructive")}>
+                        Start Date *
+                      </FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              type="button"
+                              className={cn(
+                                "pl-3 text-left font-normal h-11 w-full justify-start",
+                                !field.value && "text-muted-foreground",
+                                hasError && "border-destructive focus-visible:ring-destructive"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span className="text-muted-foreground">Select start date</span>
+                              )}
+                              <CalendarIcon className={cn(
+                                "ml-auto h-4 w-4",
+                                hasError ? "text-destructive" : "opacity-50"
+                              )} />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => {
+                              field.onChange(date);
+                              if (date && form.getValues("endDate") && date >= form.getValues("endDate")) {
+                                form.setError("endDate", {
+                                  type: "manual",
+                                  message: "End date must be after start date"
+                                });
+                              } else {
+                                form.clearErrors("endDate");
+                              }
+                            }}
+                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 name="endDate"
                 control={form.control}
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>End Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal h-11",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const hasError = !!form.formState.errors.endDate;
+                  const startDate = form.getValues("startDate");
+                  return (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className={cn(hasError && "text-destructive")}>
+                        End Date *
+                      </FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              type="button"
+                              className={cn(
+                                "pl-3 text-left font-normal h-11 w-full justify-start",
+                                !field.value && "text-muted-foreground",
+                                hasError && "border-destructive focus-visible:ring-destructive"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span className="text-muted-foreground">Select end date</span>
+                              )}
+                              <CalendarIcon className={cn(
+                                "ml-auto h-4 w-4",
+                                hasError ? "text-destructive" : "opacity-50"
+                              )} />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => {
+                              const today = new Date(new Date().setHours(0, 0, 0, 0));
+                              if (date < today) return true;
+                              if (startDate && date <= startDate) return true;
+                              return false;
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </div>
 
             <FormField
               name="imageUrl"
               control={form.control}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Voucher Image</FormLabel>
-                  <FormControl>
-                    <SingleFileUpload
-                      value={field.value}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const hasError = !!form.formState.errors.imageUrl;
+                return (
+                  <FormItem>
+                    <FormLabel className={cn(hasError && "text-destructive")}>
+                      Voucher Image
+                      <span className="text-muted-foreground font-normal ml-1 text-xs">(optional)</span>
+                    </FormLabel>
+                    <FormDescription className="text-xs text-muted-foreground mb-2">
+                      Upload an image to showcase your voucher. This helps attract more customers.
+                    </FormDescription>
+                    <FormControl>
+                      <div className={cn(
+                        hasError && "rounded-md border border-destructive p-1"
+                      )}>
+                        <SingleFileUpload
+                          value={field.value || undefined}
+                          onChange={(url) => field.onChange(url || "")}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
           </CardContent>
         </Card>
@@ -4298,21 +4360,24 @@ function EditVoucherForm({ locationId, voucherId, locationName, onSuccess }: { l
         pricePoint: voucher.pricePoint,
         maxQuantity: voucher.maxQuantity,
         userRedeemedLimit: voucher.userRedeemedLimit,
-        voucherType: voucher.voucherType,
+        voucherType: voucher.voucherType || "public",
         startDate: new Date(voucher.startDate),
         endDate: new Date(voucher.endDate),
-      });
+      }, { keepDefaultValues: false });
     }
   }, [voucher, form]);
 
   const voucherType = form.watch("voucherType");
   const isPublicVoucher = voucherType === "public";
 
+  // Only reset pricePoint when user changes voucher type to public, not on initial load
+  const prevVoucherTypeRef = useRef<string | undefined>();
   useEffect(() => {
-    if (isPublicVoucher) {
-      form.setValue("pricePoint", 0);
+    if (prevVoucherTypeRef.current !== undefined && voucherType === "public" && prevVoucherTypeRef.current !== "public") {
+      form.setValue("pricePoint", 0, { shouldDirty: false });
     }
-  }, [isPublicVoucher, form]);
+    prevVoucherTypeRef.current = voucherType;
+  }, [voucherType, form]);
 
   function onSubmit(values: z.infer<typeof voucherEditSchema>) {
     const payload = {
@@ -4326,8 +4391,8 @@ function EditVoucherForm({ locationId, voucherId, locationName, onSuccess }: { l
       onSuccess: () => {
         toast.success("Voucher updated successfully");
         queryClient.invalidateQueries({ queryKey: ['locationVouchers', locationId] });
-        closeVoucherEditTab();
-        onSuccess();
+        onSuccess(); // Set active tab first
+        closeVoucherEditTab(); // Then close edit tab
       },
       onError: (error: any) => {
         toast.error(error?.message || "Failed to update voucher");
@@ -4417,11 +4482,12 @@ function EditVoucherForm({ locationId, voucherId, locationName, onSuccess }: { l
                     <FormLabel>Voucher Type *</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
+                      key={field.value || "default"}
                     >
                       <FormControl>
                         <SelectTrigger className="h-11">
-                          <SelectValue />
+                          <SelectValue placeholder="Select voucher type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -4661,8 +4727,8 @@ function CreateMissionForm({ locationId, locationName, onSuccess }: { locationId
       onSuccess: () => {
         toast.success("Mission created successfully");
         queryClient.invalidateQueries({ queryKey: ['locationMissions', locationId] });
-        closeMissionCreateTab();
-        onSuccess();
+        onSuccess(); // Set active tab first
+        closeMissionCreateTab(); // Then close create tab
       },
       onError: (error: any) => {
         toast.error(error?.message || "Failed to create mission");
@@ -4952,8 +5018,8 @@ function EditMissionForm({ locationId, missionId, locationName, onSuccess }: { l
       onSuccess: () => {
         toast.success("Mission updated successfully");
         queryClient.invalidateQueries({ queryKey: ['locationMissions', locationId] });
-        closeMissionEditTab();
-        onSuccess();
+        onSuccess(); // Set active tab first
+        closeMissionEditTab(); // Then close edit tab
       },
       onError: (error: any) => {
         toast.error(error?.message || "Failed to update mission");
@@ -5274,7 +5340,7 @@ function VoucherDetailView({ voucherId, locationId, onClose }: { voucherId: stri
             </CardHeader>
             <CardContent className="space-y-4">
               <InfoRow label="Description" value={voucher.description} />
-              <InfoRow label="Type" value={voucher.voucherType} icon={Layers} />
+              <InfoRow label="Type" value={formatVoucherType(voucher.voucherType)} icon={Layers} />
               <InfoRow label="Price" value={`${voucher.pricePoint} points`} icon={Star} />
               <InfoRow label="Max Quantity" value={voucher.maxQuantity} icon={Zap} />
               <InfoRow label="Limit Per User" value={voucher.userRedeemedLimit} icon={User} />
