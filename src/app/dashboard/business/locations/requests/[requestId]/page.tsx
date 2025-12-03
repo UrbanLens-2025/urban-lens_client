@@ -117,6 +117,20 @@ export default function LocationRequestDetailsPage({
     );
   }
 
+   // If this request has already resulted in an approved location,
+   // show a lightweight redirect state instead of the full detail UI
+   // to avoid a flash before navigating to the location detail page.
+  if (request.status === "APPROVED" && approvedLocation) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          Opening your approved location details…
+        </p>
+      </div>
+    );
+  }
+
   const position = {
     lat: request.latitude,
     lng: request.longitude,
@@ -127,10 +141,10 @@ export default function LocationRequestDetailsPage({
       {/* Header */}
       <div className="space-y-4">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => router.push("/dashboard/business/locations?tab=requests")}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => router.push("/dashboard/business/location-requests")}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>

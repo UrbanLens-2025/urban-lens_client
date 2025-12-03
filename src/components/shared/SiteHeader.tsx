@@ -193,17 +193,13 @@ function buildBreadcrumbs(
     }
 
     // Handle location requests page - show as "Location Requests" with breadcrumb
+    // Business: /dashboard/business/locations/requests[/...]
     if (segment === "requests" && actualPrevSegment === "locations") {
       breadcrumbs.push({
         label: "Location Requests",
         icon: FileText,
         href: isLast ? undefined : currentPath,
       });
-      return;
-    }
-
-    // Skip "request" segment when it's under locations (for individual request detail pages)
-    if (segment === "request" && actualPrevSegment === "locations") {
       return;
     }
 

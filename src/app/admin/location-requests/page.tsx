@@ -271,7 +271,7 @@ export default function LocationRequestsPage() {
                       </TableCell>
                       <TableCell className="font-medium">
                         <Link
-                          href={`/admin/locations/request/${req.id}`}
+                          href={`/admin/location-requests/${req.id}`}
                           className="hover:underline text-blue-600 hover:text-blue-800"
                         >
                           {req.name}

@@ -81,7 +81,7 @@ function RequestActions({
         className="h-9 w-9 hover:bg-muted/80 transition-colors"
         asChild
       >
-        <Link href={`/dashboard/business/locations/request/${requestId}`}>
+        <Link href={`/dashboard/business/locations/requests/${requestId}`}>
           <Eye className="h-4 w-4" />
         </Link>
       </Button>
@@ -358,7 +358,7 @@ export default function MyLocationRequestsPage() {
                       </TableCell>
                       <TableCell className="py-4">
                         <Link
-                          href={`/dashboard/business/locations/request/${request.id}`}
+                          href={`/dashboard/business/locations/requests/${request.id}`}
                           className="group cursor-pointer hover:underline"
                         >
                           <span className="text-sm font-semibold leading-tight truncate group-hover:text-primary transition-colors">

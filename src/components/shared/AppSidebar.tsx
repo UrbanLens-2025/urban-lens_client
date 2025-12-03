@@ -89,7 +89,7 @@ const businessNavGroups = [
   {
     groupLabel: 'Requests',
     items: [
-      { title: 'Location Requests', url: '/dashboard/business/locations/requests', icon: IconClipboardList },
+      { title: 'Location Requests', url: '/dashboard/business/location-requests', icon: IconClipboardList },
       { title: 'Location Bookings', url: '/dashboard/business/location-bookings', icon: IconBrandBooking },
     ]
   },
