@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useDebounce } from "use-debounce";
 import {
@@ -361,9 +362,26 @@ export default function MyLocationRequestsPage() {
                           href={`/dashboard/business/locations/requests/${request.id}`}
                           className="group cursor-pointer hover:underline"
                         >
-                          <span className="text-sm font-semibold leading-tight truncate group-hover:text-primary transition-colors">
-                            {request.name}
-                          </span>
+                          <div className="flex items-center gap-3">
+                            {request.locationImageUrls && request.locationImageUrls.length > 0 ? (
+                              <div className="relative h-10 w-10 flex-shrink-0 rounded-md overflow-hidden border border-border">
+                                <Image
+                                  src={request.locationImageUrls[0]}
+                                  alt={request.name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="40px"
+                                />
+                              </div>
+                            ) : (
+                              <div className="h-10 w-10 flex-shrink-0 rounded-md bg-muted border border-border flex items-center justify-center">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            )}
+                            <span className="text-sm font-semibold leading-tight truncate group-hover:text-primary transition-colors">
+                              {request.name}
+                            </span>
+                          </div>
                         </Link>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground py-4">

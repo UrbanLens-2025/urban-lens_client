@@ -26,6 +26,7 @@ import { useState, useMemo } from "react";
 import { useDebounce } from "use-debounce";
 import { useMyLocations } from "@/hooks/locations/useMyLocations";
 import Link from "next/link";
+import Image from "next/image";
 import type { Location } from "@/types";
 
 const getStatusLabel = (isVisible: boolean) => {
@@ -263,11 +264,28 @@ export default function MyLocationsPage() {
                         </TableCell>
                         <TableCell className="py-4">
                           <Link href={`/dashboard/business/locations/${location.id}`} className="hover:underline">
-                            <div className="flex flex-col gap-1">
-                              <span className="font-semibold text-foreground hover:text-primary transition-colors">{location.name}</span>
-                              <span className="text-xs text-muted-foreground font-mono">
-                                {location.id.substring(0, 8)}...
-                              </span>
+                            <div className="flex items-center gap-3">
+                              {location.imageUrl && location.imageUrl.length > 0 ? (
+                                <div className="relative h-10 w-10 flex-shrink-0 rounded-md overflow-hidden border border-border">
+                                  <Image
+                                    src={location.imageUrl[0]}
+                                    alt={location.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="40px"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="h-10 w-10 flex-shrink-0 rounded-md bg-muted border border-border flex items-center justify-center">
+                                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              )}
+                              <div className="flex flex-col gap-1 min-w-0">
+                                <span className="font-semibold text-foreground hover:text-primary transition-colors truncate">{location.name}</span>
+                                <span className="text-xs text-muted-foreground font-mono">
+                                  {location.id.substring(0, 8)}...
+                                </span>
+                              </div>
                             </div>
                           </Link>
                         </TableCell>
