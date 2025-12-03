@@ -17,11 +17,11 @@ import { useMyLocations } from "@/hooks/locations/useMyLocations";
 import { useOwnerLocationBookings } from "@/hooks/locations/useOwnerLocationBookings";
 import { format } from "date-fns";
 import {
-  StatsCard,
   DashboardSection,
-  DashboardHeader,
   StatusBadge,
 } from "@/components/dashboard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function BusinessDashboardPage() {
   const router = useRouter();
@@ -85,46 +85,68 @@ export default function BusinessDashboardPage() {
   const isLoading = isLoadingLocations || isLoadingBookings;
 
   return (
-    <div className="space-y-8 pb-8 overflow-x-hidden">
-      <DashboardHeader
-        title="Business Dashboard"
-        description="Manage your locations, bookings, and revenue"
-      />
+    <div className="space-y-6">
+      {/* Title Section */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Business Dashboard</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage your locations, bookings, and revenue
+          </p>
+        </div>
+        <Button onClick={() => router.push('/dashboard/business/locations/create')}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Location
+        </Button>
+      </div>
 
-      {/* Stats Grid */}
+      {/* Quick Statistics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title="Total Locations"
-          value={stats.totalLocations.toLocaleString()}
-          change={`${stats.approvedLocations} approved`}
-          icon={Building2}
-          isLoading={isLoading}
-          color="primary"
-        />
-        <StatsCard
-          title="Total Check-ins"
-          value={stats.totalCheckIns.toLocaleString()}
-          change="All locations"
-          icon={Users}
-          isLoading={isLoading}
-          color="blue"
-        />
-        <StatsCard
-          title="Total Bookings"
-          value={stats.totalBookings.toLocaleString()}
-          change={`${stats.recentBookings} in last 30 days`}
-          icon={Calendar}
-          isLoading={isLoading}
-          color="purple"
-        />
-        <StatsCard
-          title="Total Revenue"
-          value={stats.totalRevenue > 0 ? `₫${(stats.totalRevenue / 1000).toFixed(0)}K` : "₫0"}
-          change="From completed bookings"
-          icon={Eye}
-          isLoading={isLoading}
-          color="green"
-        />
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Locations</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalLocations}</div>
+            <p className="text-xs text-muted-foreground">{stats.approvedLocations} approved</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Check-ins</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalCheckIns.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">All locations</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalBookings.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">{stats.recentBookings} in last 30 days</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {stats.totalRevenue > 0 ? `₫${(stats.totalRevenue / 1000).toFixed(0)}K` : "₫0"}
+            </div>
+            <p className="text-xs text-muted-foreground">From completed bookings</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main Content Grid */}

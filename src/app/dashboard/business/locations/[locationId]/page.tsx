@@ -38,7 +38,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { DisplayTags } from "@/components/shared/DisplayTags";
 import React from "react";
 import { ImageViewer } from "@/components/shared/ImageViewer";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocationVouchers } from "@/hooks/vouchers/useLocationVouchers";
 import { useLocationMissions } from "@/hooks/missions/useLocationMissions";
 import { useDeleteLocationVoucher } from "@/hooks/vouchers/useDeleteLocationVoucher";
@@ -100,6 +99,7 @@ import {
   Building2,
   Filter,
   ImagePlus,
+  List,
 } from "lucide-react";
 import type { LocationVoucher, LocationMission, SortState, Announcement } from "@/types";
 import { useForm } from "react-hook-form";
@@ -147,6 +147,14 @@ import { cn } from "@/lib/utils";
 import { useAnnouncements } from "@/hooks/announcements/useAnnouncements";
 import { useDeleteAnnouncement } from "@/hooks/announcements/useDeleteAnnouncement";
 import { formatDateTime } from "@/lib/utils";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
+import { useOwnerLocationBookings } from "@/hooks/locations/useOwnerLocationBookings";
+import { CheckCircle } from "lucide-react";
 import { startOfDay, startOfWeek, startOfMonth, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, format, isSameDay, isSameWeek, isSameMonth, eachDayOfInterval, eachWeekOfInterval, getDay, endOfWeek, endOfMonth } from "date-fns";
 
 function InfoRow({
@@ -2041,34 +2049,335 @@ function AnnouncementsTab({ locationId }: { locationId: string }) {
 
 // Booking & Availability Tab Component with Subtabs
 function BookingAndAvailabilityTab({ locationId }: { locationId: string }) {
-  const [subTab, setSubTab] = useState("availability");
+  const [subTab, setSubTab] = useState("current");
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <div className="flex items-center gap-2 text-lg font-semibold">
+          <MapPin className="h-5 w-5 text-primary" />
+          <span>Venue Booking</span>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Current booking status and venue details
+        </p>
+      </div>
+
+      <Tabs value={subTab} onValueChange={setSubTab} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="current">Current Booking</TabsTrigger>
+          <TabsTrigger value="history">
+            <List className="h-4 w-4 mr-2" />
+            Booking History
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="current" className="mt-6">
+          <CurrentBookingTab locationId={locationId} />
+        </TabsContent>
+        <TabsContent value="history" className="mt-6">
+          <BookingHistoryTab locationId={locationId} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// Current Booking Tab Component
+function CurrentBookingTab({ locationId }: { locationId: string }) {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [debouncedSearchTerm] = useDebounce(search, 300);
+
+  const { data: bookingsData, isLoading } = useOwnerLocationBookings({
+    page,
+    limit: 10,
+    search: debouncedSearchTerm || undefined,
+    sortBy: "createdAt:DESC",
+    status: "ALL",
+  });
+
+  const allBookings = bookingsData?.data || [];
+  // Filter for current bookings (not cancelled, not in the past) and filter by locationId
+  const currentBookings = allBookings.filter((booking) => {
+    if (booking.locationId !== locationId) return false;
+    if (booking.status?.toUpperCase() === "CANCELLED") return false;
+    // Check if any date is in the future
+    const hasFutureDate = booking.dates?.some((dateSlot) => {
+      const endDate = new Date(dateSlot.endDateTime);
+      return endDate >= new Date();
+    });
+    return hasFutureDate;
+  });
+
+  const getStatusBadge = (status: string) => {
+    const statusUpper = status?.toUpperCase();
+    switch (statusUpper) {
+      case "PAYMENT_RECEIVED":
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Payment Received
+          </Badge>
+        );
+      case "AWAITING_BUSINESS_PROCESSING":
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700">
+            <Clock className="h-3 w-3 mr-1" />
+            Awaiting Processing
+          </Badge>
+        );
+      case "SOFT_LOCKED":
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-700">
+            <Clock className="h-3 w-3 mr-1" />
+            Soft Locked
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline">
+            {status?.charAt(0).toUpperCase() + status?.slice(1).toLowerCase() || status}
+          </Badge>
+        );
+    }
+  };
+
+  const formatCurrency = (amount: string) => {
+    const num = parseFloat(amount);
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(num);
+  };
+
+  const formatBookingDateRange = (dates: { startDateTime: string; endDateTime: string }[]) => {
+    if (!dates || dates.length === 0) return { from: "N/A", to: "N/A" };
+    
+    const startDates = dates.map(d => new Date(d.startDateTime));
+    const endDates = dates.map(d => new Date(d.endDateTime));
+    
+    const earliestStart = new Date(Math.min(...startDates.map(d => d.getTime())));
+    const latestEnd = new Date(Math.max(...endDates.map(d => d.getTime())));
+    
+    return {
+      from: format(earliestStart, "MMM dd, yyyy"),
+      to: format(latestEnd, "MMM dd, yyyy")
+    };
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (currentBookings.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <CalendarDays className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-lg font-medium text-muted-foreground">No current bookings</p>
+          <p className="text-sm text-muted-foreground mt-1">There are no active or upcoming bookings for this location.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <Tabs value={subTab} onValueChange={setSubTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-muted/30">
-          <TabsTrigger value="availability" className="text-xs">
-            Availability
-          </TabsTrigger>
-          <TabsTrigger value="booking-config" className="text-xs">
-            Booking Config
-          </TabsTrigger>
-          <TabsTrigger value="calendar" className="text-xs">
-            Calendar
-          </TabsTrigger>
-        </TabsList>
-        <div className="mt-4">
-          <TabsContent value="availability" className="mt-0">
-            <AvailabilityTab locationId={locationId} />
-          </TabsContent>
-          <TabsContent value="booking-config" className="mt-0">
-            <BookingConfigTab locationId={locationId} />
-          </TabsContent>
-          <TabsContent value="calendar" className="mt-0">
-            <BookingCalendarTab locationId={locationId} />
-          </TabsContent>
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search bookings..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
         </div>
-      </Tabs>
+      </div>
+
+      <div className="space-y-4">
+        {currentBookings.map((booking) => {
+          const dateRange = formatBookingDateRange(booking.dates);
+          return (
+            <Card key={booking.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg mb-2">{booking.referencedEventRequest?.eventName || "Unnamed Event"}</CardTitle>
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {getStatusBadge(booking.status || "")}
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <CalendarDays className="h-4 w-4" />
+                        <span>{dateRange.from} - {dateRange.to}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <DollarSign className="h-4 w-4" />
+                        <span>{formatCurrency(booking.amountToPay || "0")}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/dashboard/business/location-bookings/${booking.id}`}>
+                      View Details
+                    </Link>
+                  </Button>
+                </div>
+              </CardHeader>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Booking History Tab Component
+function BookingHistoryTab({ locationId }: { locationId: string }) {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [debouncedSearchTerm] = useDebounce(search, 300);
+
+  const { data: bookingsData, isLoading } = useOwnerLocationBookings({
+    page,
+    limit: 10,
+    search: debouncedSearchTerm || undefined,
+    sortBy: "createdAt:DESC",
+    status: "ALL",
+  });
+
+  const allBookings = bookingsData?.data || [];
+  // Filter for past bookings (cancelled or dates in the past) and filter by locationId
+  const historyBookings = allBookings.filter((booking) => {
+    if (booking.locationId !== locationId) return false;
+    if (booking.status?.toUpperCase() === "CANCELLED") return true;
+    // Check if all dates are in the past
+    const allPastDates = booking.dates?.every((dateSlot) => {
+      const endDate = new Date(dateSlot.endDateTime);
+      return endDate < new Date();
+    });
+    return allPastDates;
+  });
+
+  const getStatusBadge = (status: string) => {
+    const statusUpper = status?.toUpperCase();
+    switch (statusUpper) {
+      case "PAYMENT_RECEIVED":
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Payment Received
+          </Badge>
+        );
+      case "CANCELLED":
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Cancelled
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline">
+            {status?.charAt(0).toUpperCase() + status?.slice(1).toLowerCase() || status}
+          </Badge>
+        );
+    }
+  };
+
+  const formatCurrency = (amount: string) => {
+    const num = parseFloat(amount);
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(num);
+  };
+
+  const formatBookingDateRange = (dates: { startDateTime: string; endDateTime: string }[] | undefined) => {
+    if (!dates || dates.length === 0) return { from: "N/A", to: "N/A" };
+    
+    const startDates = dates.map(d => new Date(d.startDateTime));
+    const endDates = dates.map(d => new Date(d.endDateTime));
+    
+    const earliestStart = new Date(Math.min(...startDates.map(d => d.getTime())));
+    const latestEnd = new Date(Math.max(...endDates.map(d => d.getTime())));
+    
+    return {
+      from: format(earliestStart, "MMM dd, yyyy"),
+      to: format(latestEnd, "MMM dd, yyyy")
+    };
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (historyBookings.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <List className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-lg font-medium text-muted-foreground">No booking history</p>
+          <p className="text-sm text-muted-foreground mt-1">There are no past bookings for this location.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search booking history..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {historyBookings.map((booking) => {
+          const dateRange = formatBookingDateRange(booking.dates);
+          return (
+            <Card key={booking.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg mb-2">{booking.referencedEventRequest?.eventName || "Unnamed Event"}</CardTitle>
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {getStatusBadge(booking.status || "")}
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <CalendarDays className="h-4 w-4" />
+                        <span>{dateRange.from} - {dateRange.to}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <DollarSign className="h-4 w-4" />
+                        <span>{formatCurrency(booking.amountToPay || "0")}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/dashboard/business/location-bookings/${booking.id}`}>
+                      View Details
+                    </Link>
+                  </Button>
+                </div>
+              </CardHeader>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -3550,49 +3859,101 @@ export default function LocationDetailsPage({
         </div>
       </section>
 
-      <Card className="border-border/60 shadow-sm">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <CardHeader className="pb-3 pt-4 border-b bg-muted/20">
-            <TabsList className="grid w-full grid-cols-5 h-auto p-1 bg-transparent">
-              <TabsTrigger 
-                value="overview" 
-                className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <Layers className="h-3.5 w-3.5" />
-                Overview
-              </TabsTrigger>
-              <TabsTrigger 
-                value="vouchers" 
-                className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <Ticket className="h-3.5 w-3.5" />
-                Vouchers
-              </TabsTrigger>
-              <TabsTrigger 
-                value="missions" 
-                className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <Rocket className="h-3.5 w-3.5" />
-                Missions
-              </TabsTrigger>
-              <TabsTrigger 
-                value="booking" 
-                className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <CalendarDays className="h-3.5 w-3.5" />
-                Booking & Availability
-              </TabsTrigger>
-              <TabsTrigger 
-                value="announcements" 
-                className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <Megaphone className="h-3.5 w-3.5" />
-                Announcements
-              </TabsTrigger>
-            </TabsList>
-          </CardHeader>
-          <CardContent className="pt-4 pb-4">
-            <TabsContent value="overview" className="mt-0 space-y-4">
+      {/* Tabs Navigation */}
+      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+        <nav className="flex gap-0.5 overflow-x-auto scrollbar-hide scroll-smooth">
+          <Button
+            variant="ghost"
+            onClick={() => setActiveTab("overview")}
+            className={cn(
+              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
+              "hover:bg-muted/50 hover:border-muted-foreground/30",
+              activeTab === "overview"
+                ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Layers className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              activeTab === "overview" && "scale-110"
+            )} />
+            <span className="whitespace-nowrap">Overview</span>
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setActiveTab("vouchers")}
+            className={cn(
+              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
+              "hover:bg-muted/50 hover:border-muted-foreground/30",
+              activeTab === "vouchers"
+                ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Ticket className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              activeTab === "vouchers" && "scale-110"
+            )} />
+            <span className="whitespace-nowrap">Vouchers</span>
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setActiveTab("missions")}
+            className={cn(
+              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
+              "hover:bg-muted/50 hover:border-muted-foreground/30",
+              activeTab === "missions"
+                ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Rocket className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              activeTab === "missions" && "scale-110"
+            )} />
+            <span className="whitespace-nowrap">Missions</span>
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setActiveTab("booking")}
+            className={cn(
+              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
+              "hover:bg-muted/50 hover:border-muted-foreground/30",
+              activeTab === "booking"
+                ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <CalendarDays className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              activeTab === "booking" && "scale-110"
+            )} />
+            <span className="whitespace-nowrap">Booking & Availability</span>
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setActiveTab("announcements")}
+            className={cn(
+              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
+              "hover:bg-muted/50 hover:border-muted-foreground/30",
+              activeTab === "announcements"
+                ? "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Megaphone className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              activeTab === "announcements" && "scale-110"
+            )} />
+            <span className="whitespace-nowrap">Announcements</span>
+          </Button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      <div className="mt-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+        {activeTab === "overview" && (
+          <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -3925,25 +4286,14 @@ export default function LocationDetailsPage({
                   </Card>
                 </div>
               </div>
-            </TabsContent>
-            <TabsContent value="vouchers" className="mt-0">
-              {activeTab === "vouchers" && <VouchersTab locationId={location.id} />}
-            </TabsContent>
-            <TabsContent value="missions" className="mt-0">
-              {activeTab === "missions" && <MissionsTab locationId={location.id} />}
-            </TabsContent>
-            <TabsContent value="booking" className="mt-0">
-              {activeTab === "booking" && <BookingAndAvailabilityTab locationId={location.id} />}
-            </TabsContent>
-            <TabsContent value="announcements" className="mt-0">
-              {activeTab === "announcements" && <AnnouncementsTab locationId={location.id} />}
-            </TabsContent>
-            <TabsContent value="edit" className="mt-0">
-              {activeTab === "edit" && <EditLocationTab locationId={location.id} />}
-            </TabsContent>
-          </CardContent>
-        </Tabs>
-      </Card>
+          </div>
+        )}
+        {activeTab === "vouchers" && <VouchersTab locationId={location.id} />}
+        {activeTab === "missions" && <MissionsTab locationId={location.id} />}
+        {activeTab === "booking" && <BookingAndAvailabilityTab locationId={location.id} />}
+        {activeTab === "announcements" && <AnnouncementsTab locationId={location.id} />}
+        {activeTab === "edit" && <EditLocationTab locationId={location.id} />}
+      </div>
       <ImageViewer
         src={currentImageSrc}
         alt={currentImageAlt}
