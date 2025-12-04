@@ -907,6 +907,24 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
   };
 
   function MissionActions({ mission }: { mission: LocationMission }) {
+    const handleGenerateQRCodeForMission = () => {
+      generateQRCode(
+        { missionId: mission.id },
+        {
+          onSuccess: (data) => {
+            setGeneratedQRCode({
+              qrCodeData: data.qrCodeData,
+              qrCodeUrl: data.qrCodeUrl,
+              expiresAt: data.expiresAt,
+              id: data.id,
+              isUsed: data.isUsed,
+            });
+            toast.success("QR code generated successfully!");
+          },
+        }
+      );
+    };
+
     return (
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
@@ -922,6 +940,20 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openMissionEditTab(mission.id, mission.title)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={handleGenerateQRCodeForMission}
+            disabled={isGeneratingQR}
+          >
+            {isGeneratingQR ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...
+              </>
+            ) : (
+              <>
+                <QrCode className="mr-2 h-4 w-4" /> Generate QR Code
+              </>
+            )}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setMissionToDelete(mission)} className="text-red-500">
             <Trash2 className="mr-2 h-4 w-4" /> Delete

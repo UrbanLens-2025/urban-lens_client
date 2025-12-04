@@ -62,13 +62,6 @@ import { Input } from "@/components/ui/input";
 import { useDeleteLocationMission } from "@/hooks/missions/useDeleteLocationMission";
 import { useGenerateOneTimeQRCode } from "@/hooks/missions/useGenerateOneTimeQRCode";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -79,9 +72,13 @@ import { toast } from "sonner";
 function MissionActions({
   mission,
   onDeleteClick,
+  onGenerateQRCode,
+  isGeneratingQR,
 }: {
   mission: LocationMission;
   onDeleteClick: () => void;
+  onGenerateQRCode: () => void;
+  isGeneratingQR: boolean;
 }) {
   return (
     <DropdownMenu modal={false}>
@@ -104,6 +101,20 @@ function MissionActions({
           >
             <Edit className="mr-2 h-4 w-4" /> Edit
           </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={onGenerateQRCode}
+          disabled={isGeneratingQR}
+        >
+          {isGeneratingQR ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...
+            </>
+          ) : (
+            <>
+              <QrCode className="mr-2 h-4 w-4" /> Generate QR Code
+            </>
+          )}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onDeleteClick} className="text-red-500">
           <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -129,7 +140,6 @@ export default function ManageMissionsPage({
   });
 
   const [missionToDelete, setMissionToDelete] = useState<LocationMission | null>(null);
-  const [selectedMissionId, setSelectedMissionId] = useState<string>("");
   const [generatedQRCode, setGeneratedQRCode] = useState<{
     qrCodeData: string;
     qrCodeUrl: string;
@@ -260,9 +270,9 @@ export default function ManageMissionsPage({
     });
   };
 
-  const handleGenerateQRCode = () => {
+  const handleGenerateQRCode = (missionId: string) => {
     generateQRCode(
-      selectedMissionId ? { missionId: selectedMissionId } : undefined,
+      { missionId },
       {
         onSuccess: (data) => {
           setGeneratedQRCode({
@@ -376,61 +386,6 @@ export default function ManageMissionsPage({
         </Card>
       </div>
 
-      {/* QR Code Generator */}
-      <Card className="border-border/60 shadow-sm bg-gradient-to-br from-background to-muted/20">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <QrCode className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-base font-semibold">Generate One-Time QR Code</CardTitle>
-              <CardDescription className="text-xs mt-0.5">
-                Create a QR code for a specific mission
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                Select Mission
-              </label>
-              <Select value={selectedMissionId} onValueChange={setSelectedMissionId}>
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Select a mission" />
-                </SelectTrigger>
-                <SelectContent>
-                  {missions.map((mission) => (
-                    <SelectItem key={mission.id} value={mission.id}>
-                      {mission.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              onClick={handleGenerateQRCode}
-              disabled={isGeneratingQR || !selectedMissionId}
-              className="h-10"
-            >
-              {isGeneratingQR ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <QrCode className="mr-2 h-4 w-4" />
-                  Generate QR Code
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* --- Missions Table --- */}
       <Card className="border-border/60 shadow-sm">
         <CardHeader>
@@ -514,6 +469,8 @@ export default function ManageMissionsPage({
                           <MissionActions
                             mission={mission}
                             onDeleteClick={() => setMissionToDelete(mission)}
+                            onGenerateQRCode={() => handleGenerateQRCode(mission.id)}
+                            isGeneratingQR={isGeneratingQR}
                           />
                         </TableCell>
                       </TableRow>

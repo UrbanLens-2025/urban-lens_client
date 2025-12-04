@@ -27,6 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
+import { DateTimePickerField } from "@/components/shared/DateTimePickerField";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useCreatorAnnouncementById } from "@/hooks/announcements/useCreatorAnnouncementById";
 import { useUpdateCreatorAnnouncement } from "@/hooks/announcements/useUpdateCreatorAnnouncement";
@@ -201,7 +202,12 @@ export default function EditCreatorAnnouncementPage({
                       <FormItem>
                         <FormLabel>Start at</FormLabel>
                         <FormControl>
-                          <Input type="datetime-local" value={field.value} onChange={field.onChange} />
+                          <DateTimePickerField
+                            value={field.value}
+                            onChange={field.onChange}
+                            error={form.formState.errors.startDate?.message}
+                            minDate={new Date()}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -215,7 +221,12 @@ export default function EditCreatorAnnouncementPage({
                       <FormItem>
                         <FormLabel>End at</FormLabel>
                         <FormControl>
-                          <Input type="datetime-local" value={field.value} onChange={field.onChange} />
+                          <DateTimePickerField
+                            value={field.value}
+                            onChange={field.onChange}
+                            error={form.formState.errors.endDate?.message}
+                            minDate={field.value ? new Date(field.value) : new Date()}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
