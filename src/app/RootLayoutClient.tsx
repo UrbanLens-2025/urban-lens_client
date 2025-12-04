@@ -199,6 +199,9 @@ export default function RootLayoutClient({
     pathname.startsWith('/signup') ||
     pathname.startsWith('/verify') ||
     pathname.startsWith('/onboarding');
+  
+  // Public pages that don't require authentication
+  const isPublicPage = pathname.startsWith('/sepay-return');
 
   return (
     <ThemeProvider
@@ -210,7 +213,7 @@ export default function RootLayoutClient({
       <ActiveThemeProvider>
         <Providers>
           <GoogleMapsProvider>
-            {isAuthPage ? (
+            {isAuthPage || isPublicPage ? (
               <>{children}</>
             ) : (
               <>
