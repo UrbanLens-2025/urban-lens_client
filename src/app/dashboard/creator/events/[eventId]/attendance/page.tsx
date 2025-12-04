@@ -7,6 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Loader2,
   Users,
   Ticket,
@@ -203,151 +211,118 @@ export default function EventAttendancePage({
               </p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {attendances.map((attendance) => (
-                <div
-                  key={attendance.id}
-                  className="border rounded-lg p-4 space-y-4 hover:bg-muted/50 transition-colors"
-                >
-                  {/* Order Header */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg">
-                          Order: {attendance.order.orderNumber}
-                        </h3>
-                        <Badge variant={getOrderStatusVariant(attendance.order.status)}>
-                          {attendance.order.status}
-                        </Badge>
-                        <Badge
-                          variant={getAttendanceStatusVariant(attendance.status)}
-                          className="ml-2"
-                        >
-                          {attendance.status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {formatDateTime(attendance.order.createdAt)}
+            <div className="overflow-hidden rounded-lg border border-border/60">
+              <Table>
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead>Order</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Tickets</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {attendances.map((attendance) => (
+                    <TableRow key={attendance.id} className="hover:bg-muted/20">
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-semibold text-sm">
+                            {attendance.order.orderNumber}
+                          </div>
+                          {attendance.order.referencedTransactionId && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <CreditCard className="h-3 w-3" />
+                              <span className="font-mono">
+                                {attendance.order.referencedTransactionId.slice(0, 8)}...
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-4 w-4" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {attendance.order.createdBy.avatarUrl ? (
+                            <Image
+                              src={attendance.order.createdBy.avatarUrl}
+                              alt={attendance.order.createdBy.firstName}
+                              width={32}
+                              height={32}
+                              className="rounded-full border"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border">
+                              <User className="h-4 w-4 text-primary" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-medium text-sm">
+                              {attendance.order.createdBy.firstName}{" "}
+                              {attendance.order.createdBy.lastName}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Mail className="h-3 w-3" />
+                            <span className="text-xs">{attendance.order.createdBy.email}</span>
+                          </div>
+                          {attendance.order.createdBy.phoneNumber && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Phone className="h-3 w-3" />
+                              <span className="text-xs">{attendance.order.createdBy.phoneNumber}</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {attendance.order.orderDetails.map((detail) => (
+                            <div key={detail.id} className="text-sm">
+                              <div className="font-medium">
+                                {detail.ticketSnapshot.displayName}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Qty: {detail.quantity} × {formatCurrency(detail.unitPrice, detail.currency)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-semibold">
                           {formatCurrency(
                             attendance.order.totalPaymentAmount,
                             attendance.order.currency
                           )}
                         </div>
-                        {attendance.order.referencedTransactionId && (
-                          <div className="flex items-center gap-1">
-                            <CreditCard className="h-4 w-4" />
-                            <span className="font-mono text-xs">
-                              {attendance.order.referencedTransactionId.slice(0, 8)}...
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Customer Info */}
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <div className="flex items-center gap-3">
-                      {attendance.order.createdBy.avatarUrl ? (
-                        <Image
-                          src={attendance.order.createdBy.avatarUrl}
-                          alt={attendance.order.createdBy.firstName}
-                          width={48}
-                          height={48}
-                          className="rounded-full border"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center border">
-                          <User className="h-6 w-6 text-primary" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant={getOrderStatusVariant(attendance.order.status)} className="w-fit text-xs">
+                            {attendance.order.status}
+                          </Badge>
+                          <Badge
+                            variant={getAttendanceStatusVariant(attendance.status)}
+                            className="w-fit text-xs"
+                          >
+                            {attendance.status}
+                          </Badge>
                         </div>
-                      )}
-                      <div className="flex-1">
-                        <div className="font-semibold">
-                          {attendance.order.createdBy.firstName}{" "}
-                          {attendance.order.createdBy.lastName}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">
+                          {formatDateTime(attendance.order.createdAt)}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {attendance.order.createdBy.email}
-                          </div>
-                          {attendance.order.createdBy.phoneNumber && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {attendance.order.createdBy.phoneNumber}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Order Details / Tickets */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-sm text-muted-foreground">
-                      Tickets Purchased
-                    </h4>
-                    <div className="space-y-2">
-                      {attendance.order.orderDetails.map((detail) => (
-                        <div
-                          key={detail.id}
-                          className="flex items-start gap-4 p-3 bg-background border rounded-lg"
-                        >
-                          {detail.ticket.imageUrl && (
-                            <div className="relative w-16 h-16 rounded-lg overflow-hidden border flex-shrink-0">
-                              <Image
-                                src={detail.ticket.imageUrl}
-                                alt={detail.ticketSnapshot.displayName}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1">
-                                <div className="font-semibold">
-                                  {detail.ticketSnapshot.displayName}
-                                </div>
-                                <div className="text-sm text-muted-foreground mt-1">
-                                  {detail.ticketSnapshot.description}
-                                </div>
-                                <div className="flex items-center gap-4 mt-2 text-sm">
-                                  <div className="flex items-center gap-1">
-                                    <Ticket className="h-3 w-3" />
-                                    Quantity: {detail.quantity}
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <DollarSign className="h-3 w-3" />
-                                    {formatCurrency(
-                                      detail.unitPrice,
-                                      detail.currency
-                                    )}{" "}
-                                    each
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <FileText className="h-3 w-3" />
-                                    Subtotal:{" "}
-                                    {formatCurrency(
-                                      detail.subTotal,
-                                      detail.currency
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
 
