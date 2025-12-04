@@ -26,7 +26,6 @@ import { Button } from "@/components/ui/button";
 import {
   Loader2,
   PlusCircle,
-  ArrowLeft,
   MoreHorizontal,
   Edit,
   Trash2,
@@ -236,22 +235,15 @@ export default function ManageMissionsPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <span>Back to location</span>
-      </div>
       {/* --- Header --- */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-1 items-start justify-between gap-4 md:items-center">
-          <Button asChild>
-            <Link href={`/dashboard/business/locations/${locationId}/missions/create`}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create mission
-            </Link>
-          </Button>
-        </div>
+        <div className="flex-1"></div>
+        <Button asChild>
+          <Link href={`/dashboard/business/locations/${locationId}/missions/create`}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Create mission
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

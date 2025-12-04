@@ -9,7 +9,6 @@ import Link from "next/link";
 // --- Import UI Components ---
 import {
   Loader2,
-  ArrowLeft,
   Calendar,
   MapPin,
   Building,
@@ -105,9 +104,6 @@ export default function MissionDetailsPage({
       {/* --- Header --- */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
           {isActive && <Badge className="bg-green-600">Active</Badge>}
           {isScheduled && <Badge variant="outline">Scheduled</Badge>}
           {isExpired && <Badge variant="secondary">Completed</Badge>}

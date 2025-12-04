@@ -30,7 +30,7 @@ import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
 import { useAnnouncementById } from "@/hooks/announcements/useAnnouncementById";
 import { useLocationById } from "@/hooks/locations/useLocationById";
 import { useUpdateAnnouncement } from "@/hooks/announcements/useUpdateAnnouncement";
-import { Loader2, ArrowLeft, CalendarDays, Clock, MapPin } from "lucide-react";
+import { Loader2, CalendarDays, Clock, MapPin } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
 const announcementSchema = z.object({
@@ -128,9 +128,6 @@ export default function EditAnnouncementPage({
     <div className="space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
           <span>
             <Link href="/dashboard/business/locations" className="text-muted-foreground hover:underline">
               Locations

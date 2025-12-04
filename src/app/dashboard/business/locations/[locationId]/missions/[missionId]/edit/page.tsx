@@ -23,7 +23,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, ArrowLeft, CalendarIcon, ExternalLink, Sparkles, Target, Trophy } from "lucide-react";
+import { Loader2, CalendarIcon, ExternalLink, Sparkles, Target, Trophy } from "lucide-react";
 import { FileUpload } from "@/components/shared/FileUpload";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -182,12 +182,6 @@ export default function EditMissionPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <span>Back to missions</span>
-      </div>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
         <div className="flex flex-1 flex-col gap-4 md:flex-row md:items-center md:justify-between">

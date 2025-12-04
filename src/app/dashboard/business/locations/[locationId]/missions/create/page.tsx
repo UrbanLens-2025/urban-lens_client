@@ -18,7 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, ArrowLeft, CalendarIcon, Rocket } from "lucide-react";
+import { Loader2, CalendarIcon, Rocket } from "lucide-react";
 import { useLocationById } from "@/hooks/locations/useLocationById";
 import { FileUpload } from "@/components/shared/FileUpload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,16 +98,11 @@ export default function CreateMissionPage({
     <div className="space-y-8 p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button type="button" variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Create Mission</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Add a new mission for {location?.name || "this location"}
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold">Create Mission</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Add a new mission for {location?.name || "this location"}
+          </p>
         </div>
       </div>
 

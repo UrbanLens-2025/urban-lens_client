@@ -11,7 +11,6 @@ import { useLocationVoucherById } from "@/hooks/vouchers/useLocationVoucherById"
 // --- Import UI Components ---
 import {
   Loader2,
-  ArrowLeft,
   Calendar,
   MapPin,
   Building,
@@ -111,9 +110,6 @@ export default function VoucherDetailsPage({
       {/* --- Header --- */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4 flex-wrap">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
           <Badge variant="outline">
             {voucher.voucherCode}
           </Badge>

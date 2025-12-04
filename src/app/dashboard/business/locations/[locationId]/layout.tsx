@@ -144,7 +144,7 @@ function LocationDetailLayoutContent({
     
     // Check if announcement create tab is open and active
     if (path === 'announcement-create' && announcementCreateTab.isOpen) {
-      return pathname.includes('/announcements/create');
+      return pathname.includes('/announcements/new');
     }
     
     if (path === `/dashboard/business/locations/${locationId}`) {
@@ -170,6 +170,7 @@ function LocationDetailLayoutContent({
   const isMissionCreateRoute = pathname.includes('/missions/create');
   const isMissionEditRoute = pathname.includes('/missions/') && pathname.includes('/edit');
   const isAnnouncementRoute = pathname.includes('/announcements/') && pathname !== `/dashboard/business/locations/${locationId}/announcements`;
+  const isAnnouncementCreateRoute = pathname.includes('/announcements/new');
   const isEditLocationRoute = pathname === `/dashboard/business/locations/${locationId}/edit`;
 
   // Memoize heroImage before conditional returns (Rules of Hooks)
@@ -210,12 +211,13 @@ function LocationDetailLayoutContent({
 
   // Auto-open announcement create tab when on announcement create route
   useEffect(() => {
-    if (announcementCreateTab.isOpen && pathname.includes('/announcements/create') && !announcementCreateTabOpenedRef.current) {
+    if (isAnnouncementCreateRoute && !announcementCreateTabOpenedRef.current) {
       announcementCreateTabOpenedRef.current = true;
-    } else if (!pathname.includes('/announcements/create')) {
+      openAnnouncementCreateTab();
+    } else if (!isAnnouncementCreateRoute) {
       announcementCreateTabOpenedRef.current = false;
     }
-  }, [pathname, announcementCreateTab.isOpen]);
+  }, [isAnnouncementCreateRoute, openAnnouncementCreateTab]);
 
   if (isLoading) {
     return (
@@ -608,7 +610,7 @@ function LocationDetailLayoutContent({
                       : "border-transparent hover:border-muted-foreground/50"
                   )}
                   onClick={() => {
-                    router.push(`/dashboard/business/locations/${locationId}/announcements/create`);
+                    router.push(`/dashboard/business/locations/${locationId}/announcements/new`);
                   }}
                 >
                   Create Announcement
@@ -620,7 +622,7 @@ function LocationDetailLayoutContent({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    const wasOnCreatePage = announcementCreateTab.isOpen && pathname.includes('/announcements/create');
+                    const wasOnCreatePage = isAnnouncementCreateRoute;
                     closeAnnouncementCreateTab();
                     if (wasOnCreatePage) {
                       requestAnimationFrame(() => {

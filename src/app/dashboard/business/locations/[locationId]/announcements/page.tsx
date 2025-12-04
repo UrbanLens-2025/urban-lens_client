@@ -9,7 +9,6 @@ import {
   Trash2,
   Filter,
   Loader2,
-  ArrowLeft,
   Building2,
 } from "lucide-react";
 import {
@@ -120,13 +119,7 @@ export default function LocationAnnouncementsPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <Button variant="outline" size="icon" onClick={() => history.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-foreground">Announcements</span>
-        </div>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-end">
         <Button asChild disabled={isLoadingLocation}>
           <Link href={`/dashboard/business/locations/${locationId}/announcements/new`}>
             <PlusCircle className="mr-2 h-4 w-4" /> Create announcement

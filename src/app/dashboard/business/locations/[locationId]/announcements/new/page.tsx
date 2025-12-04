@@ -29,7 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
 import { useLocationById } from "@/hooks/locations/useLocationById";
 import { useCreateAnnouncement } from "@/hooks/announcements/useCreateAnnouncement";
-import { Loader2, ArrowLeft, MapPin } from "lucide-react";
+import { Loader2, MapPin } from "lucide-react";
 
 const announcementSchema = z.object({
   title: z.string().min(3, "Title is required"),
@@ -108,34 +108,6 @@ export default function NewAnnouncementPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <span>
-            <Link href="/dashboard/business/locations" className="text-muted-foreground hover:underline">
-              Locations
-            </Link>
-            <span className="px-1">/</span>
-            <Link
-              href={`/dashboard/business/locations/${locationId}`}
-              className="text-muted-foreground hover:underline"
-            >
-              {location.name}
-            </Link>
-            <span className="px-1">/</span>
-            <Link
-              href={`/dashboard/business/locations/${locationId}/announcements`}
-              className="text-muted-foreground hover:underline"
-            >
-              Announcements
-            </Link>
-            <span className="px-1">/</span>
-            <span className="text-foreground">Create</span>
-          </span>
-        </div>
-      </div>
 
       <Card className="border-border/60 shadow-sm">
         <CardHeader>

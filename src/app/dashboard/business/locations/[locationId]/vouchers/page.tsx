@@ -36,7 +36,6 @@ import {
 import {
   Loader2,
   PlusCircle,
-  ArrowLeft,
   MoreHorizontal,
   Edit,
   Trash2,
@@ -252,13 +251,6 @@ export default function ManageVouchersPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <span>Back to location</span>
-      </div>
-
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex-1"></div>
         <Button asChild>

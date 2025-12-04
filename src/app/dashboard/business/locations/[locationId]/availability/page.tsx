@@ -833,16 +833,6 @@ export default function AvailabilityPage({
 
   return (
     <div className="space-y-6">
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => router.back()}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span>Back to location</span>
-        </div>
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
