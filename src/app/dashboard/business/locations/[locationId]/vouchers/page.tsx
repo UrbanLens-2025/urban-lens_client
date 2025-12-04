@@ -46,6 +46,7 @@ import {
   Target,
   CalendarDays,
   Sparkles,
+  QrCode,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -253,12 +254,20 @@ export default function ManageVouchersPage({
     <div className="space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex-1"></div>
-        <Button asChild>
-          <Link href={`/dashboard/business/locations/${locationId}/vouchers/create`}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create voucher
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/dashboard/business/locations/${locationId}/vouchers/verify`}>
+              <QrCode className="mr-2 h-4 w-4" />
+              Verify Voucher
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href={`/dashboard/business/locations/${locationId}/vouchers/create`}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create voucher
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

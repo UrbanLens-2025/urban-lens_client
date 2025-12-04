@@ -79,3 +79,23 @@ export const deleteLocationVoucher = async ({
   );
   return data;
 };
+
+export interface VerifyVoucherCodePayload {
+  userVoucherCode: string;
+}
+
+export interface VerifyVoucherCodeResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+export const verifyVoucherCode = async (
+  payload: VerifyVoucherCodePayload
+): Promise<VerifyVoucherCodeResponse> => {
+  const { data } = await axiosInstance.post<ApiResponse<VerifyVoucherCodeResponse>>(
+    `/v1/business/location-voucher/verify-code`,
+    payload
+  );
+  return data.data;
+};
