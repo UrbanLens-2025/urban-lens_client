@@ -80,6 +80,7 @@ export default function CreateMissionPage({
   function onSubmit(values: FormValues) {
     const payload = {
       ...values,
+      metric: values.metric || "order_count", // Ensure metric is always included
       startDate: values.startDate.toISOString(),
       endDate: values.endDate.toISOString(),
     };
@@ -150,35 +151,20 @@ export default function CreateMissionPage({
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  name="metric"
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Metric</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="order_count">
-                            Order Count
-                          </SelectItem>
-                          <SelectItem value="check_in_count">
-                            Check-in Count
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Hidden metric field - required for form validation */}
+              <FormField
+                name="metric"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="hidden">
+                    <FormControl>
+                      <Input type="hidden" {...field} value="order_count" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   name="target"
                   control={form.control}

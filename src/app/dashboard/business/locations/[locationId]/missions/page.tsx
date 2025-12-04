@@ -39,7 +39,9 @@ import {
   QrCode,
   Copy,
   Download,
+  Rocket,
 } from "lucide-react";
+import Image from "next/image";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -445,18 +447,37 @@ export default function ManageMissionsPage({
                   {missions.length > 0 ? (
                     missions.map((mission) => (
                       <TableRow key={mission.id} className="hover:bg-muted/20">
-                        <TableCell className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm">{mission.title}</span>
-                            <Badge variant="outline" className="text-[10px]">
-                              {mission.metric}
-                            </Badge>
+                        <TableCell>
+                          <div className="flex items-start gap-3 min-w-[300px] max-w-[500px]">
+                            {mission.imageUrls && mission.imageUrls.length > 0 ? (
+                              <div className="relative h-12 w-12 flex-shrink-0 rounded-md overflow-hidden border border-border">
+                                <Image
+                                  src={mission.imageUrls[0]}
+                                  alt={mission.title}
+                                  fill
+                                  className="object-cover"
+                                  sizes="48px"
+                                />
+                              </div>
+                            ) : (
+                              <div className="h-12 w-12 flex-shrink-0 rounded-md bg-muted border border-border flex items-center justify-center">
+                                <Rocket className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="space-y-2 flex-1 min-w-0">
+                              <div className="flex items-start gap-2">
+                                <span className="font-semibold text-sm leading-tight">{mission.title}</span>
+                                <Badge variant="outline" className="text-[10px] shrink-0">
+                                  {mission.metric}
+                                </Badge>
+                              </div>
+                              {mission.description && (
+                                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                                  {mission.description}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          {mission.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1">
-                              {mission.description}
-                            </p>
-                          )}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground space-y-1">
                           <div>{missionMetricLabel(mission.metric)}</div>
