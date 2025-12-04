@@ -182,6 +182,7 @@ export default function ReportDetailPage({
     const colors: Record<string, string> = {
       [PostReportResolutionActions.NO_ACTION_TAKEN]: 'bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-950 dark:text-gray-300',
       [PostReportResolutionActions.MALICIOUS_REPORT]: 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300',
+      [PostReportResolutionActions.BAN_POST]: 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950 dark:text-purple-300',
       [LocationReportResolutionActions.NO_ACTION_TAKEN]: 'bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-950 dark:text-gray-300',
       [LocationReportResolutionActions.MALICIOUS_REPORT]: 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300',
       [EventReportResolutionActions.CANCEL_EVENT]: 'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950 dark:text-orange-300',
@@ -191,6 +192,7 @@ export default function ReportDetailPage({
     const labels: Record<string, string> = {
       [PostReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
       [PostReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
+      [PostReportResolutionActions.BAN_POST]: 'Ban Post',
       [LocationReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
       [LocationReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
       [EventReportResolutionActions.CANCEL_EVENT]: 'Cancel Event',
@@ -212,6 +214,7 @@ export default function ReportDetailPage({
         return [
           PostReportResolutionActions.NO_ACTION_TAKEN,
           PostReportResolutionActions.MALICIOUS_REPORT,
+          PostReportResolutionActions.BAN_POST,
         ];
       case 'location':
         return [
@@ -833,6 +836,7 @@ export default function ReportDetailPage({
                     const labels: Record<ReportResolutionActions, string> = {
                       [PostReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
                       [PostReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
+                      [PostReportResolutionActions.BAN_POST]: 'Ban Post',
                       [LocationReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
                       [LocationReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
                       [EventReportResolutionActions.CANCEL_EVENT]: 'Cancel Event',

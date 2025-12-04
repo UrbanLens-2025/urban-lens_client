@@ -211,6 +211,7 @@ export default function ReportsPage() {
         return [
           PostReportResolutionActions.NO_ACTION_TAKEN,
           PostReportResolutionActions.MALICIOUS_REPORT,
+          PostReportResolutionActions.BAN_POST,
         ];
       case 'location':
         return [
@@ -649,6 +650,7 @@ export default function ReportsPage() {
                     const labels: Record<ReportResolutionActions, string> = {
                       [PostReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
                       [PostReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
+                      [PostReportResolutionActions.BAN_POST]: 'Ban Post',
                       [LocationReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
                       [LocationReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
                       [EventReportResolutionActions.CANCEL_EVENT]: 'Cancel Event',
