@@ -29,7 +29,8 @@ export function useCompleteProcessingWithdraw() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (transactionId: string) => completeProcessingWithdrawTransaction(transactionId),
+    mutationFn: ({ transactionId, proofOfTransferImages, transferBankTransactionId }: { transactionId: string; proofOfTransferImages: string[]; transferBankTransactionId: string }) =>
+      completeProcessingWithdrawTransaction(transactionId, proofOfTransferImages, transferBankTransactionId),
     onSuccess: () => {
       toast.success("Transaction processing completed successfully");
       queryClient.invalidateQueries({ queryKey: ['adminExternalTransactionDetail'] });

@@ -21,6 +21,8 @@ interface DateTimePickerProps {
   error?: string;
   className?: string;
   defaultTime?: string;
+  eventStartDate?: Date;
+  eventEndDate?: Date;
 }
 
 export function DateTimePicker({
@@ -30,6 +32,8 @@ export function DateTimePicker({
   error,
   className,
   defaultTime = "00:00",
+  eventStartDate,
+  eventEndDate,
 }: DateTimePickerProps) {
   const normalizedDefault =
     /^\d{2}:\d{2}$/.test(defaultTime) ? defaultTime : "00:00";
@@ -109,6 +113,26 @@ export function DateTimePicker({
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 return date < today;
+              }}
+              modifiers={{
+                eventStart: eventStartDate ? (date: Date) => {
+                  const eventStart = new Date(eventStartDate);
+                  eventStart.setHours(0, 0, 0, 0);
+                  const compareDate = new Date(date);
+                  compareDate.setHours(0, 0, 0, 0);
+                  return compareDate.getTime() === eventStart.getTime();
+                } : undefined,
+                eventEnd: eventEndDate ? (date: Date) => {
+                  const eventEnd = new Date(eventEndDate);
+                  eventEnd.setHours(0, 0, 0, 0);
+                  const compareDate = new Date(date);
+                  compareDate.setHours(0, 0, 0, 0);
+                  return compareDate.getTime() === eventEnd.getTime();
+                } : undefined,
+              }}
+              modifiersClassNames={{
+                eventStart: "bg-red-100 dark:bg-red-900/30 border-2 border-red-500 text-red-700 dark:text-red-400 font-semibold",
+                eventEnd: "bg-red-100 dark:bg-red-900/30 border-2 border-red-500 text-red-700 dark:text-red-400 font-semibold",
               }}
               initialFocus
             />

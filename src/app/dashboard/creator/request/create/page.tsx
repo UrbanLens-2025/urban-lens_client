@@ -105,8 +105,28 @@ const formSchema = z
     ).optional(),
   })
   .superRefine((data, ctx) => {
-    // Validate end date is after start date
-    if (data.startDate && data.endDate) {
+    // If either date has a value, both must have values
+    const hasStartDate = !!data.startDate;
+    const hasEndDate = !!data.endDate;
+    
+    if (hasStartDate && !hasEndDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "End date is required when start date is provided",
+        path: ["endDate"],
+      });
+    }
+    
+    if (!hasStartDate && hasEndDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Start date is required when end date is provided",
+        path: ["startDate"],
+      });
+    }
+    
+    // Validate end date is after start date (only if both are provided)
+    if (hasStartDate && hasEndDate) {
       if (data.endDate <= data.startDate) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -181,6 +201,8 @@ export default function CreateEventRequestPage() {
           "eventName",
           "eventDescription",
           "expectedNumberOfParticipants",
+          "startDate",
+          "endDate",
         ];
         break;
       case 2:
@@ -246,8 +268,17 @@ export default function CreateEventRequestPage() {
     
     switch (currentStep) {
       case 1:
-        return !errors.eventName && !errors.eventDescription && !errors.expectedNumberOfParticipants &&
-               values.eventName && values.eventDescription && values.expectedNumberOfParticipants;
+        // Check required fields
+        const basicFieldsValid = !errors.eventName && !errors.eventDescription && !errors.expectedNumberOfParticipants &&
+                                 values.eventName && values.eventDescription && values.expectedNumberOfParticipants;
+        
+        // Check date fields: if both empty, valid; if either has value, both must be valid
+        const hasStartDate = !!values.startDate;
+        const hasEndDate = !!values.endDate;
+        const datesValid = (!hasStartDate && !hasEndDate) || // Both empty is valid
+                          (hasStartDate && hasEndDate && !errors.startDate && !errors.endDate); // Both provided and no errors
+        
+        return basicFieldsValid && datesValid;
       case 2:
         return !errors.tagIds && values.tagIds && values.tagIds.length > 0;
       case 3:

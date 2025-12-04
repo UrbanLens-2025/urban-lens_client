@@ -45,6 +45,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Play, Ban, AlertTriangle } from "lucide-react";
+import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
 
 const formatCurrency = (amount: string, currency: string = "VND") => {
   const num = parseFloat(amount);
@@ -152,6 +153,7 @@ export default function AdminTransactionDetailPage({
     title: string;
     description: string;
     requiresReason?: boolean;
+    requiresProof?: boolean;
     onConfirm: () => void;
   }>({
     open: false,
@@ -159,10 +161,13 @@ export default function AdminTransactionDetailPage({
     title: "",
     description: "",
     requiresReason: false,
+    requiresProof: false,
     onConfirm: () => {},
   });
   const [rejectionReason, setRejectionReason] = useState("");
   const [failureReason, setFailureReason] = useState("");
+  const [proofOfTransferUrl, setProofOfTransferUrl] = useState<string | undefined>(undefined);
+  const [transferBankTransactionId, setTransferBankTransactionId] = useState("");
 
   const handleStartProcessing = () => {
     setConfirmDialog({
@@ -178,15 +183,15 @@ export default function AdminTransactionDetailPage({
   };
 
   const handleCompleteProcessing = () => {
+    setProofOfTransferUrl(undefined);
+    setTransferBankTransactionId("");
     setConfirmDialog({
       open: true,
       action: "complete",
       title: "Complete Processing Transaction",
       description: "Are you sure you want to mark this transaction as completed? This will mark it as TRANSFERRED and unlock the funds.",
-      onConfirm: () => {
-        completeProcessing.mutate(transactionId);
-        setConfirmDialog({ ...confirmDialog, open: false });
-      },
+      requiresProof: true,
+      onConfirm: () => {}, // Will be handled by handleConfirmAction
     });
   };
 
@@ -235,6 +240,19 @@ export default function AdminTransactionDetailPage({
       markFailed.mutate({ transactionId, failureReason: currentReason });
       setConfirmDialog({ ...confirmDialog, open: false });
       setFailureReason("");
+    } else if (confirmDialog.action === "complete") {
+      if (!proofOfTransferUrl || !transferBankTransactionId.trim()) {
+        toast.error("Please provide proof of transfer and transfer transaction ID");
+        return;
+      }
+      completeProcessing.mutate({
+        transactionId,
+        proofOfTransferImages: [proofOfTransferUrl],
+        transferBankTransactionId: transferBankTransactionId.trim(),
+      });
+      setConfirmDialog({ ...confirmDialog, open: false });
+      setProofOfTransferUrl(undefined);
+      setTransferBankTransactionId("");
     } else {
       confirmDialog.onConfirm();
     }
@@ -719,6 +737,8 @@ export default function AdminTransactionDetailPage({
            setConfirmDialog({ ...confirmDialog, open: false });
            setRejectionReason("");
            setFailureReason("");
+           setProofOfTransferUrl(undefined);
+           setTransferBankTransactionId("");
          }
        }}>
          <DialogContent className="sm:max-w-[500px]">
@@ -755,6 +775,37 @@ export default function AdminTransactionDetailPage({
                </p>
              </div>
            )}
+           {confirmDialog.requiresProof && (
+             <div className="space-y-4 py-4">
+               <div className="space-y-2">
+                 <Label htmlFor="proofOfTransfer">
+                   Proof of Transfer *
+                 </Label>
+                 <p className="text-xs text-muted-foreground mb-2">
+                   Upload an image showing the transfer success message from the bank
+                 </p>
+                 <SingleFileUpload
+                   value={proofOfTransferUrl}
+                   onChange={(url) => setProofOfTransferUrl(url)}
+                 />
+               </div>
+               <div className="space-y-2">
+                 <Label htmlFor="transferBankTransactionId">
+                   Transfer Transaction ID *
+                 </Label>
+                 <Input
+                   id="transferBankTransactionId"
+                   placeholder="Enter the bank transfer transaction ID"
+                   value={transferBankTransactionId}
+                   onChange={(e) => setTransferBankTransactionId(e.target.value)}
+                   disabled={isActionLoading}
+                 />
+                 <p className="text-xs text-muted-foreground">
+                   Enter the transaction ID from your bank transfer confirmation
+                 </p>
+               </div>
+             </div>
+           )}
            <DialogFooter>
              <Button
                variant="outline"
@@ -762,6 +813,8 @@ export default function AdminTransactionDetailPage({
                  setConfirmDialog({ ...confirmDialog, open: false });
                  setRejectionReason("");
                  setFailureReason("");
+                 setProofOfTransferUrl(undefined);
+                 setTransferBankTransactionId("");
                }}
                disabled={isActionLoading}
              >
@@ -777,7 +830,10 @@ export default function AdminTransactionDetailPage({
                    !rejectionReason.trim()) ||
                  (confirmDialog.requiresReason &&
                    confirmDialog.action === "failed" &&
-                   !failureReason.trim())
+                   !failureReason.trim()) ||
+                 (confirmDialog.requiresProof &&
+                   confirmDialog.action === "complete" &&
+                   (!proofOfTransferUrl || !transferBankTransactionId.trim()))
                }
              >
                {isActionLoading ? (
