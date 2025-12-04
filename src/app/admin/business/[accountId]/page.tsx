@@ -421,30 +421,93 @@ export default function AdminBusinessDetailsPage({
         icon={FileText}
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InfoField
-              label="License Number"
-              value={businessProfile?.licenseNumber}
-              icon={FileText}
-              highlight
-            />
-            <InfoField
-              label="License Type"
-              value={businessProfile?.licenseType}
-            />
-          </div>
-          <InfoField
-            label="License Expiration Date"
-            value={formatDate(businessProfile?.licenseExpirationDate)}
-            icon={Calendar}
-          />
-          {businessProfile?.licenseExpirationDate && (
-            <div className="p-3 rounded-lg bg-muted/50 border">
-              <p className="text-xs text-muted-foreground">
-                Please verify the license number and expiration date are valid
-                and match official records
-              </p>
+          {/* Licenses List */}
+          {businessProfile?.licenses && businessProfile.licenses.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Business Licenses</h4>
+                <Badge variant="outline">{businessProfile.licenses.length} license{businessProfile.licenses.length !== 1 ? 's' : ''}</Badge>
+              </div>
+              <div className="space-y-3">
+                {businessProfile.licenses.map((license: any, index: number) => (
+                  <Card key={index} className="border">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold">
+                          {license.licenseType?.replace(/_/g, ' ') || 'License'}
+                        </CardTitle>
+                        {license.documentImageUrls && license.documentImageUrls.length > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {license.documentImageUrls.length} document{license.documentImageUrls.length !== 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {license.documentImageUrls && license.documentImageUrls.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {license.documentImageUrls.map((url: string, imgIndex: number) => (
+                            <div
+                              key={imgIndex}
+                              className="relative aspect-video rounded-lg overflow-hidden border cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => handleImageClick(url)}
+                            >
+                              <img
+                                src={url}
+                                alt={`License document ${imgIndex + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No documents uploaded</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
+          ) : (
+            <div className="p-4 rounded-lg border border-dashed bg-muted/30 text-center">
+              <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+              <p className="text-sm text-muted-foreground">No licenses uploaded</p>
+            </div>
+          )}
+
+          {/* Legacy License Fields */}
+          {(businessProfile?.licenseNumber || businessProfile?.licenseType || businessProfile?.licenseExpirationDate) && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <InfoField
+                    label="License Number"
+                    value={businessProfile?.licenseNumber}
+                    icon={FileText}
+                    highlight
+                  />
+                  <InfoField
+                    label="License Type"
+                    value={businessProfile?.licenseType}
+                  />
+                </div>
+                <InfoField
+                  label="License Expiration Date"
+                  value={formatDate(businessProfile?.licenseExpirationDate)}
+                  icon={Calendar}
+                />
+                {businessProfile?.licenseExpirationDate && (
+                  <div className="p-3 rounded-lg bg-muted/50 border">
+                    <p className="text-xs text-muted-foreground">
+                      Please verify the license number and expiration date are valid
+                      and match official records
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </ValidationSection>
