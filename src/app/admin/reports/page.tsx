@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -56,8 +55,6 @@ import {
   IconCheck,
   IconX,
   IconRefresh,
-  IconEye,
-  IconTrash,
   IconAlertTriangle,
 } from '@tabler/icons-react';
 import { Loader2 } from 'lucide-react';
@@ -193,15 +190,17 @@ export default function ReportsPage() {
     queryClient.invalidateQueries({ queryKey: ['adminReports'] });
   };
 
-  // Calculate statistics
+  // Calculate statistics from actual reports data
   const stats = useMemo(() => {
+    const allReports = reports;
     return {
       total: meta?.totalItems || 0,
-      pending: 0, // TODO: Get from API
-      resolved: 0, // TODO: Get from API
-      rejected: 0, // TODO: Get from API
+      pending: allReports.filter((r) => r.status === 'PENDING').length,
+      inProgress: allReports.filter((r) => r.status === 'IN_PROGRESS').length,
+      resolved: allReports.filter((r) => r.status === 'RESOLVED').length,
+      rejected: allReports.filter((r) => r.status === 'REJECTED').length,
     };
-  }, [meta]);
+  }, [reports, meta]);
 
   const handleProcessReport = () => {
     if (!selectedReport) return;
@@ -271,51 +270,73 @@ export default function ReportsPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
-            <IconFlag className="h-4 w-4 text-muted-foreground" />
+            <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
+              <IconFlag className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               All reports
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-yellow-500 hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setStatusFilter('PENDING'); setPage(1); }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <IconClock className="h-4 w-4 text-yellow-600" />
+            <div className="h-8 w-8 rounded-full bg-yellow-100 dark:bg-yellow-950 flex items-center justify-center">
+              <IconClock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.pending}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Awaiting review
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setStatusFilter('IN_PROGRESS'); setPage(1); }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Resolved</CardTitle>
-            <IconCheck className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
+              <IconAlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.resolved}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.inProgress}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Being processed
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setStatusFilter('RESOLVED'); setPage(1); }}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Resolved</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
+              <IconCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.resolved}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Successfully resolved
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-red-500 hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setStatusFilter('REJECTED'); setPage(1); }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Rejected</CardTitle>
-            <IconX className="h-4 w-4 text-red-600" />
+            <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center">
+              <IconX className="h-4 w-4 text-red-600 dark:text-red-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.rejected}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">{stats.rejected}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Rejected reports
             </p>
           </CardContent>
@@ -325,15 +346,36 @@ export default function ReportsPage() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
-          <CardDescription>Filter reports by status, type, or search</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <IconFilter className="h-5 w-5" />
+                Filters
+              </CardTitle>
+              <CardDescription className="mt-1">Filter reports by status, type, or search</CardDescription>
+            </div>
+            {(statusFilter !== 'all' || typeFilter !== 'all' || searchTerm) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStatusFilter('all');
+                  setTypeFilter('all');
+                  setSearchTerm('');
+                  setPage(1);
+                }}
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
               <Input
-                placeholder="Search reports..."
+                placeholder="Search by title, description, or reporter..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
@@ -360,7 +402,7 @@ export default function ReportsPage() {
             <Select
               value={typeFilter}
               onValueChange={(value) => {
-                setTypeFilter(value as ReportType | 'all');
+                setTypeFilter(value as ReportTargetType | 'all');
                 setPage(1);
               }}
             >
@@ -407,34 +449,25 @@ export default function ReportsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
+                      <TableHead className="w-12">#</TableHead>
+                      <TableHead>Reporter</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Reason</TableHead>
-                      <TableHead>Reporter</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {reports.map((report) => (
-                      <TableRow key={report.id}>
-                        <TableCell className="font-mono text-xs">
-                          {report.id.slice(0, 8)}...
-                        </TableCell>
-                        <TableCell>{getTypeBadge(report.targetType)}</TableCell>
-                        <TableCell>
-                          <div className="max-w-[200px]">
-                            <p className="font-medium text-sm truncate">{report.title}</p>
-                            <p className="text-xs text-muted-foreground line-clamp-1">
-                              {report.description}
-                            </p>
-                            {report.reportedReasonEntity && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Reason: {report.reportedReasonEntity.displayName}
-                              </p>
-                            )}
-                          </div>
+                    {reports.map((report, index) => {
+                      const orderNumber = (page - 1) * itemsPerPage + index + 1;
+                      return (
+                      <TableRow 
+                        key={report.id}
+                        className="hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/admin/reports/${report.id}`)}
+                      >
+                        <TableCell className="text-muted-foreground font-medium">
+                          {orderNumber}
                         </TableCell>
                         <TableCell>
                           {report.createdBy ? (
@@ -442,7 +475,7 @@ export default function ReportsPage() {
                               <p className="text-sm font-medium">
                                 {report.createdBy.firstName} {report.createdBy.lastName}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-muted-foreground truncate max-w-[150px]">
                                 {report.createdBy.email}
                               </p>
                             </div>
@@ -450,63 +483,51 @@ export default function ReportsPage() {
                             <span className="text-sm text-muted-foreground">Unknown</span>
                           )}
                         </TableCell>
+                        <TableCell>{getTypeBadge(report.targetType)}</TableCell>
+                        <TableCell>
+                          <div className="max-w-[250px]">
+                            <p className="font-medium text-sm truncate">{report.title}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                              {report.description}
+                            </p>
+                            {report.reportedReasonEntity && (
+                              <div className="mt-1.5">
+                                <Badge variant="secondary" className="text-xs">
+                                  {report.reportedReasonEntity.displayName}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>{getStatusBadge(report.status)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {formatShortDate(report.createdAt)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Link href={`/admin/reports/${report.id}`}>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="View details"
-                              >
-                                <IconEye className="h-4 w-4" />
-                              </Button>
-                            </Link>
-                            {report.status === 'PENDING' || report.status === 'IN_PROGRESS' ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                              onClick={() => {
-                                setSelectedReport(report);
-                                setProcessStatus('RESOLVED');
-                                setResolutionAction('');
-                                setAdminNotes('');
-                                setIsProcessDialogOpen(true);
-                              }}
-                                title="Process report"
-                              >
-                                <IconCheck className="h-4 w-4 text-green-600" />
-                              </Button>
-                            ) : null}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setSelectedReport(report);
-                                setIsDeleteDialogOpen(true);
-                              }}
-                              title="Delete report"
-                            >
-                              <IconTrash className="h-4 w-4 text-red-600" />
-                            </Button>
+                          <div className="flex flex-col">
+                            <span>{formatShortDate(report.createdAt)}</span>
+                            {report.resolvedAt && (
+                              <span className="text-xs text-muted-foreground/70 mt-0.5">
+                                Resolved: {formatShortDate(report.resolvedAt)}
+                              </span>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
 
               {/* Pagination */}
               {meta && meta.totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t">
                   <p className="text-sm text-muted-foreground">
-                    Showing page {meta.currentPage} of {meta.totalPages} • {meta.totalItems} total
+                    Showing <span className="font-medium text-foreground">{(meta.currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+                    <span className="font-medium text-foreground">
+                      {Math.min(meta.currentPage * itemsPerPage, meta.totalItems)}
+                    </span>{' '}
+                    of <span className="font-medium text-foreground">{meta.totalItems}</span> reports
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -515,6 +536,32 @@ export default function ReportsPage() {
                     >
                       Previous
                     </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, meta.totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (meta.totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (meta.currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (meta.currentPage >= meta.totalPages - 2) {
+                          pageNum = meta.totalPages - 4 + i;
+                        } else {
+                          pageNum = meta.currentPage - 2 + i;
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={pageNum === meta.currentPage ? 'default' : 'outline'}
+                            size="sm"
+                            className="w-8 h-8 p-0"
+                            onClick={() => setPage(pageNum)}
+                            disabled={isLoading}
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
