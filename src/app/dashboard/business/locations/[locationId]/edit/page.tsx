@@ -29,13 +29,9 @@ import {
   ImagePlus,
   Tag,
   Save,
-  Layers,
-  Ticket,
-  Rocket,
-  CalendarDays,
-  Megaphone,
   FilePenLine,
   Clock,
+  CalendarDays,
 } from "lucide-react";
 import {
   Card,
@@ -179,105 +175,6 @@ export default function EditLocationPage({
 
   return (
     <div className="space-y-8 pb-16">
-      {/* Tabs Navigation - Matching location detail page style */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <nav className="flex gap-0.5 overflow-x-auto scrollbar-hide scroll-smooth">
-          <Button
-            variant="ghost"
-            onClick={() =>
-              router.push(`/dashboard/business/locations/${locationId}`)
-            }
-            className={cn(
-              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
-              "hover:bg-muted/50 hover:border-muted-foreground/30",
-              "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Layers className={cn(
-              "h-4 w-4 transition-transform duration-200"
-            )} />
-            <span className="whitespace-nowrap">Overview</span>
-          </Button>
-          <Button
-            variant="ghost"
-            disabled
-            className={cn(
-              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto cursor-default",
-              "border-primary bg-muted/80 text-foreground font-medium shadow-sm"
-            )}
-          >
-            <FilePenLine className={cn(
-              "h-4 w-4 transition-transform duration-200 scale-110"
-            )} />
-            <span className="whitespace-nowrap">Edit Details</span>
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() =>
-              router.push(`/dashboard/business/locations/${locationId}#vouchers`)
-            }
-            className={cn(
-              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
-              "hover:bg-muted/50 hover:border-muted-foreground/30",
-              "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Ticket className={cn(
-              "h-4 w-4 transition-transform duration-200"
-            )} />
-            <span className="whitespace-nowrap">Vouchers</span>
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() =>
-              router.push(`/dashboard/business/locations/${locationId}#missions`)
-            }
-            className={cn(
-              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
-              "hover:bg-muted/50 hover:border-muted-foreground/30",
-              "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Rocket className={cn(
-              "h-4 w-4 transition-transform duration-200"
-            )} />
-            <span className="whitespace-nowrap">Missions</span>
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() =>
-              router.push(`/dashboard/business/locations/${locationId}#booking`)
-            }
-            className={cn(
-              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
-              "hover:bg-muted/50 hover:border-muted-foreground/30",
-              "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <CalendarDays className={cn(
-              "h-4 w-4 transition-transform duration-200"
-            )} />
-            <span className="whitespace-nowrap">Booking & Availability</span>
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() =>
-              router.push(`/dashboard/business/locations/${locationId}#announcements`)
-            }
-            className={cn(
-              "gap-2 rounded-b-none border-b-2 transition-all duration-200 relative min-w-fit px-4 py-2.5 h-auto",
-              "hover:bg-muted/50 hover:border-muted-foreground/30",
-              "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Megaphone className={cn(
-              "h-4 w-4 transition-transform duration-200"
-            )} />
-            <span className="whitespace-nowrap">Announcements</span>
-          </Button>
-        </nav>
-      </div>
-
       {/* Location Header Section */}
       <section className="overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm">
         <div className="flex flex-col gap-6 bg-muted/40 p-6 sm:p-8 md:flex-row md:items-center md:justify-between">

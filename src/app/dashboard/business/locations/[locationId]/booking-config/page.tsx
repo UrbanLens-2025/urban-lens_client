@@ -73,6 +73,9 @@ export default function LocationBookingConfigPage({
 }) {
   const { locationId } = use(params);
   const router = useRouter();
+  const pathname = usePathname();
+  const isBookingConfig = pathname.includes("/booking-config");
+  const isAvailability = pathname.includes("/availability");
   const { data: locationsData } = useMyLocations(1, "");
   const location = locationsData?.data?.find((loc) => loc.id === locationId);
   const { data: existingConfig, isLoading: isLoadingConfig, error: configError } =
@@ -161,10 +164,6 @@ export default function LocationBookingConfigPage({
       </div>
     );
   }
-
-  const pathname = usePathname();
-  const isBookingConfig = pathname.includes("/booking-config");
-  const isAvailability = pathname.includes("/availability");
 
   return (
     <div className="space-y-6 p-6">
