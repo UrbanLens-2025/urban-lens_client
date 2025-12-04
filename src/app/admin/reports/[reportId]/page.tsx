@@ -33,7 +33,7 @@ import { useReportById } from '@/hooks/admin/useReportById';
 import { useProcessReport } from '@/hooks/admin/useProcessReport';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
-import { ReportTargetType } from '@/types';
+import { ReportTargetType, ScheduledJobStatus, ReportResolutionActions, PostReportResolutionActions, LocationReportResolutionActions, EventReportResolutionActions } from '@/types';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -102,6 +102,43 @@ function getStatusBadge(status: string) {
   }
 }
 
+function getScheduledJobStatusBadge(status: ScheduledJobStatus | null | undefined) {
+  if (!status) return null;
+  
+  switch (status) {
+    case ScheduledJobStatus.PENDING:
+      return (
+        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700">
+          <IconClock className="h-3 w-3 mr-1" />
+          Job Pending
+        </Badge>
+      );
+    case ScheduledJobStatus.PROCESSING:
+      return (
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-700">
+          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          Processing
+        </Badge>
+      );
+    case ScheduledJobStatus.COMPLETED:
+      return (
+        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700">
+          <IconCheck className="h-3 w-3 mr-1" />
+          Job Completed
+        </Badge>
+      );
+    case ScheduledJobStatus.FAILED:
+      return (
+        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700">
+          <IconX className="h-3 w-3 mr-1" />
+          Job Failed
+        </Badge>
+      );
+    default:
+      return null;
+  }
+}
+
 function getTypeBadge(type: ReportTargetType) {
   const colors: Record<ReportTargetType, string> = {
     post: 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950 dark:text-purple-300',
@@ -127,7 +164,7 @@ export default function ReportDetailPage({
   const { mutate: processReport, isPending: isProcessing } = useProcessReport();
   const [isProcessDialogOpen, setIsProcessDialogOpen] = useState(false);
   const [processStatus, setProcessStatus] = useState<'RESOLVED' | 'REJECTED'>('RESOLVED');
-  const [resolutionAction, setResolutionAction] = useState<'DELETE' | 'HIDE' | 'WARN' | 'NO_ACTION' | ''>('');
+  const [resolutionAction, setResolutionAction] = useState<ReportResolutionActions | ''>('');
   const [adminNotes, setAdminNotes] = useState('');
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [selectedImageSource, setSelectedImageSource] = useState<'attached' | 'post' | null>(null);
@@ -143,27 +180,69 @@ export default function ReportDetailPage({
   const getResolutionActionBadge = (action: string | null) => {
     if (!action) return null;
     const colors: Record<string, string> = {
-      DELETE: 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300',
-      HIDE: 'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950 dark:text-orange-300',
-      WARN: 'bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300',
-      NO_ACTION: 'bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-950 dark:text-gray-300',
+      [PostReportResolutionActions.NO_ACTION_TAKEN]: 'bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-950 dark:text-gray-300',
+      [PostReportResolutionActions.MALICIOUS_REPORT]: 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300',
+      [LocationReportResolutionActions.NO_ACTION_TAKEN]: 'bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-950 dark:text-gray-300',
+      [LocationReportResolutionActions.MALICIOUS_REPORT]: 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300',
+      [EventReportResolutionActions.CANCEL_EVENT]: 'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950 dark:text-orange-300',
+      [EventReportResolutionActions.NO_ACTION_TAKEN]: 'bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-950 dark:text-gray-300',
+      [EventReportResolutionActions.MALICIOUS_REPORT]: 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300',
+    };
+    const labels: Record<string, string> = {
+      [PostReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
+      [PostReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
+      [LocationReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
+      [LocationReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
+      [EventReportResolutionActions.CANCEL_EVENT]: 'Cancel Event',
+      [EventReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
+      [EventReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
     };
     return (
       <Badge variant="outline" className={colors[action] || ''}>
-        {action.replace('_', ' ')}
+        {labels[action] || action.replace(/_/g, ' ')}
       </Badge>
     );
   };
 
+  const getAvailableResolutionActions = (): ReportResolutionActions[] => {
+    if (!report) return [];
+    
+    switch (report.targetType) {
+      case 'post':
+        return [
+          PostReportResolutionActions.NO_ACTION_TAKEN,
+          PostReportResolutionActions.MALICIOUS_REPORT,
+        ];
+      case 'location':
+        return [
+          LocationReportResolutionActions.NO_ACTION_TAKEN,
+          LocationReportResolutionActions.MALICIOUS_REPORT,
+        ];
+      case 'event':
+        return [
+          EventReportResolutionActions.CANCEL_EVENT,
+          EventReportResolutionActions.NO_ACTION_TAKEN,
+          EventReportResolutionActions.MALICIOUS_REPORT,
+        ];
+      default:
+        return [];
+    }
+  };
+
   const handleProcessReport = () => {
     if (!report) return;
+    
+    if (!resolutionAction) {
+      toast.error('Please select a resolution action');
+      return;
+    }
     
     processReport(
       {
         reportId: report.id,
         payload: {
           status: processStatus,
-          resolutionAction: resolutionAction || undefined,
+          resolutionAction: resolutionAction as ReportResolutionActions,
           adminNotes: adminNotes.trim() || undefined,
         },
       },
@@ -171,6 +250,7 @@ export default function ReportDetailPage({
         onSuccess: () => {
           setIsProcessDialogOpen(false);
           setAdminNotes('');
+          setResolutionAction('');
           toast.success('Report processed successfully');
         },
       }
@@ -229,6 +309,7 @@ export default function ReportDetailPage({
               <div className="flex items-center gap-3">
                 <h1 className="text-3xl font-bold tracking-tight">Report Details</h1>
                 {getStatusBadge(report.status)}
+                {getScheduledJobStatusBadge(report.scheduledJobStatus)}
               </div>
               <div className="flex items-center gap-2 mt-2">
                 <p className="text-muted-foreground text-sm">
@@ -738,23 +819,36 @@ export default function ReportDetailPage({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Resolution Action (Optional)</Label>
+              <Label>Resolution Action <span className="text-destructive">*</span></Label>
               <Select
                 value={resolutionAction}
-                onValueChange={(value) => setResolutionAction(value as typeof resolutionAction)}
+                onValueChange={(value) => setResolutionAction(value as ReportResolutionActions)}
+                required
               >
-                <SelectTrigger>
+                <SelectTrigger className={!resolutionAction ? "border-destructive" : ""}>
                   <SelectValue placeholder="Select action" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="NO_ACTION">No Action</SelectItem>
-                  <SelectItem value="DELETE">Delete Content</SelectItem>
-                  <SelectItem value="HIDE">Hide Content</SelectItem>
-                  <SelectItem value="WARN">Warn User</SelectItem>
+                  {getAvailableResolutionActions().map((action) => {
+                    const labels: Record<ReportResolutionActions, string> = {
+                      [PostReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
+                      [PostReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
+                      [LocationReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
+                      [LocationReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
+                      [EventReportResolutionActions.CANCEL_EVENT]: 'Cancel Event',
+                      [EventReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
+                      [EventReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
+                    };
+                    return (
+                      <SelectItem key={action} value={action}>
+                        {labels[action]}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Choose an action to take on the reported content
+                Choose an action to take on the reported content (required)
               </p>
             </div>
             <div className="space-y-2">
@@ -784,7 +878,7 @@ export default function ReportDetailPage({
             </Button>
             <Button
               onClick={handleProcessReport}
-              disabled={isProcessing}
+              disabled={isProcessing || !resolutionAction}
               className={processStatus === 'RESOLVED' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
             >
               {isProcessing ? (

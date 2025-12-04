@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axiosInstance from "./axios-config";
+import { ScheduledJobStatus } from "@/types";
 import type {
   ApiResponse,
   PaginatedData,
@@ -385,7 +386,7 @@ export interface ScheduledJob {
   id: number;
   createdAt: string;
   updatedAt: string;
-  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  status: ScheduledJobStatus;
   jobType: string;
   executeAt: string;
   payload: Record<string, any>;
@@ -397,7 +398,7 @@ export interface GetScheduledJobsParams {
   limit?: number;
   search?: string;
   searchBy?: string[];
-  status?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  status?: ScheduledJobStatus;
   jobType?: string;
   sortBy?: string;
 }

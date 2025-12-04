@@ -52,8 +52,8 @@ export const processReport = async (
   reportId: string,
   payload: ProcessReportPayload
 ): Promise<Report> => {
-  const { data } = await axiosInstance.patch<ApiResponse<Report>>(
-    `/v1/admin/report/${reportId}`,
+  const { data } = await axiosInstance.post<ApiResponse<Report>>(
+    `/v1/admin/report/${reportId}/process`,
     payload
   );
   return data.data;

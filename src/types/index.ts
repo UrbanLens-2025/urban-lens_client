@@ -1152,9 +1152,42 @@ export interface MarkNotificationSeenResponse {
 }
 
 // Report Types
+export enum ScheduledJobStatus {
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+}
+
 export type ReportStatus = "PENDING" | "IN_PROGRESS" | "RESOLVED" | "REJECTED";
 export type ReportTargetType = "post" | "event" | "location";
-export type ResolutionAction = "DELETE" | "HIDE" | "WARN" | "NO_ACTION" | null;
+
+export enum PostReportResolutionActions {
+  NO_ACTION_TAKEN = 'NO_ACTION_TAKEN',
+  MALICIOUS_REPORT = 'MALICIOUS_REPORT',
+}
+
+export enum LocationReportResolutionActions {
+  NO_ACTION_TAKEN = 'NO_ACTION_TAKEN',
+  MALICIOUS_REPORT = 'MALICIOUS_REPORT',
+}
+
+export enum EventReportResolutionActions {
+  CANCEL_EVENT = 'CANCEL_EVENT',
+  NO_ACTION_TAKEN = 'NO_ACTION_TAKEN',
+  MALICIOUS_REPORT = 'MALICIOUS_REPORT',
+}
+
+export const ReportResolutionActions = {
+  ...PostReportResolutionActions,
+  ...LocationReportResolutionActions,
+  ...EventReportResolutionActions,
+};
+
+export type ReportResolutionActions =
+  (typeof ReportResolutionActions)[keyof typeof ReportResolutionActions];
+
+export type ResolutionAction = ReportResolutionActions | null;
 
 export interface ReportedReasonEntity {
   key: string;
@@ -1207,6 +1240,7 @@ export interface Report {
   description: string;
   attachedImageUrls: string[];
   status: ReportStatus;
+  scheduledJobStatus?: ScheduledJobStatus | null;
   resolutionAction: ResolutionAction;
   resolvedByType: string | null;
   resolvedById: string | null;
@@ -1232,6 +1266,6 @@ export interface GetReportsParams {
 
 export interface ProcessReportPayload {
   status: "RESOLVED" | "REJECTED";
-  resolutionAction?: ResolutionAction;
+  resolutionAction: ReportResolutionActions; // Required: must be NO_ACTION_TAKEN, MALICIOUS_REPORT, or CANCEL_EVENT
   adminNotes?: string; // Optional notes field if API supports it
 }

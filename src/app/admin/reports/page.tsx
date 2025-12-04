@@ -58,12 +58,13 @@ import {
   IconAlertTriangle,
 } from '@tabler/icons-react';
 import { Loader2 } from 'lucide-react';
-import { Report, ReportStatus, ReportTargetType } from '@/types';
+import { Report, ReportStatus, ReportTargetType, ReportResolutionActions, PostReportResolutionActions, LocationReportResolutionActions, EventReportResolutionActions } from '@/types';
 import { useReports } from '@/hooks/admin/useReports';
 import { useProcessReport, useDeleteReport } from '@/hooks/admin/useProcessReport';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatShortDate, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 
 function getStatusBadge(status: ReportStatus) {
   switch (status) {
@@ -134,7 +135,7 @@ export default function ReportsPage() {
   const [isProcessDialogOpen, setIsProcessDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [processStatus, setProcessStatus] = useState<'RESOLVED' | 'REJECTED'>('RESOLVED');
-  const [resolutionAction, setResolutionAction] = useState<'DELETE' | 'HIDE' | 'WARN' | 'NO_ACTION' | ''>('');
+  const [resolutionAction, setResolutionAction] = useState<ReportResolutionActions | ''>('');
   const [adminNotes, setAdminNotes] = useState('');
   const itemsPerPage = 10;
 
@@ -202,15 +203,45 @@ export default function ReportsPage() {
     };
   }, [reports, meta]);
 
+  const getAvailableResolutionActions = (targetType?: ReportTargetType): ReportResolutionActions[] => {
+    if (!targetType) return [];
+    
+    switch (targetType) {
+      case 'post':
+        return [
+          PostReportResolutionActions.NO_ACTION_TAKEN,
+          PostReportResolutionActions.MALICIOUS_REPORT,
+        ];
+      case 'location':
+        return [
+          LocationReportResolutionActions.NO_ACTION_TAKEN,
+          LocationReportResolutionActions.MALICIOUS_REPORT,
+        ];
+      case 'event':
+        return [
+          EventReportResolutionActions.CANCEL_EVENT,
+          EventReportResolutionActions.NO_ACTION_TAKEN,
+          EventReportResolutionActions.MALICIOUS_REPORT,
+        ];
+      default:
+        return [];
+    }
+  };
+
   const handleProcessReport = () => {
     if (!selectedReport) return;
+    
+    if (!resolutionAction) {
+      toast.error('Please select a resolution action');
+      return;
+    }
     
     processReport(
       {
         reportId: selectedReport.id,
         payload: {
           status: processStatus,
-          resolutionAction: resolutionAction || undefined,
+          resolutionAction: resolutionAction as ReportResolutionActions,
           adminNotes: adminNotes.trim() || undefined,
         },
       },
@@ -604,19 +635,32 @@ export default function ReportsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Resolution Action (Optional)</Label>
+              <Label>Resolution Action <span className="text-destructive">*</span></Label>
               <Select
                 value={resolutionAction}
-                onValueChange={(value) => setResolutionAction(value as typeof resolutionAction)}
+                onValueChange={(value) => setResolutionAction(value as ReportResolutionActions)}
+                required
               >
-                <SelectTrigger>
+                <SelectTrigger className={!resolutionAction ? "border-destructive" : ""}>
                   <SelectValue placeholder="Select action" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="NO_ACTION">No Action</SelectItem>
-                  <SelectItem value="DELETE">Delete</SelectItem>
-                  <SelectItem value="HIDE">Hide</SelectItem>
-                  <SelectItem value="WARN">Warn</SelectItem>
+                  {getAvailableResolutionActions(selectedReport?.targetType).map((action) => {
+                    const labels: Record<ReportResolutionActions, string> = {
+                      [PostReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
+                      [PostReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
+                      [LocationReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
+                      [LocationReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
+                      [EventReportResolutionActions.CANCEL_EVENT]: 'Cancel Event',
+                      [EventReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
+                      [EventReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
+                    };
+                    return (
+                      <SelectItem key={action} value={action}>
+                        {labels[action]}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -644,7 +688,7 @@ export default function ReportsPage() {
             </Button>
             <Button
               onClick={handleProcessReport}
-              disabled={isProcessing}
+              disabled={isProcessing || !resolutionAction}
             >
               {isProcessing ? (
                 <>
