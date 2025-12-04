@@ -542,13 +542,11 @@ function EventDetailLayoutContent({
               <div className="pt-4">
                 <Button
                   onClick={handleFinishClick}
-                  disabled={finishEvent.isPending || !isEventEnded}
+                  // TODO: Re-add `!isEventEnded` validation once found a way to demo
+                  disabled={finishEvent.isPending}
                   variant="outline"
                   size="lg"
-                  className={cn(
-                    "w-full sm:w-auto",
-                    !isEventEnded && "opacity-50 cursor-not-allowed"
-                  )}
+                  className="w-full sm:w-auto"
                 >
                   {finishEvent.isPending ? (
                     <>
@@ -562,11 +560,12 @@ function EventDetailLayoutContent({
                     </>
                   )}
                 </Button>
-                {!isEventEnded && (
+                {/* TODO: Re-add this message once validation is restored */}
+                {/* {!isEventEnded && (
                   <p className="text-xs text-muted-foreground mt-2">
                     You can finish the event after the end date has passed.
                   </p>
-                )}
+                )} */}
               </div>
             )}
 

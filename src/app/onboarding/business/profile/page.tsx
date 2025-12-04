@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
+import { deregisterDevice } from "@/api/notifications";
+import { getFCMToken } from "@/lib/firebase";
 
 export default function BusinessProfilePage() {
   const { user, isLoading } = useUser();
@@ -45,7 +47,17 @@ export default function BusinessProfilePage() {
     return null;
   }
 
-  const logout = () => {
+  const logout = async () => {
+    // Deregister FCM token before logging out
+    try {
+      const fcmToken = await getFCMToken();
+      if (fcmToken) {
+        await deregisterDevice({ token: fcmToken });
+      }
+    } catch (error) {
+      console.error("Failed to deregister FCM device:", error);
+    }
+
     localStorage.removeItem("token");
     queryClient.clear();
     router.push("/login");

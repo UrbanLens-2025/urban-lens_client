@@ -27,6 +27,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/user/useUser";
+import { deregisterDevice } from "@/api/notifications";
+import { getFCMToken } from "@/lib/firebase";
 
 export function NavUser({
   user,
@@ -42,7 +44,17 @@ export function NavUser({
   const router = useRouter();
   const { user: currentUser } = useUser();
   
-  const logout = () => {
+  const logout = async () => {
+    // Deregister FCM token before logging out
+    try {
+      const fcmToken = await getFCMToken();
+      if (fcmToken) {
+        await deregisterDevice({ token: fcmToken });
+      }
+    } catch (error) {
+      console.error("Failed to deregister FCM device:", error);
+    }
+
     localStorage.removeItem("token");
     queryClient.clear();
     router.push("/login");

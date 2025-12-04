@@ -21,6 +21,15 @@ export const registerDevice = async (
   return data.data;
 };
 
+// Device Deregistration (works for both Business Owner and Event Creator)
+export const deregisterDevice = async (
+  payload: RegisterDevicePayload
+): Promise<void> => {
+  await axiosInstance.delete("/v1/private/notifications/deregister-device", {
+    data: payload,
+  });
+};
+
 // Get Notifications (works for both Business Owner and Event Creator)
 export const getNotifications = async (
   params: GetNotificationsParams

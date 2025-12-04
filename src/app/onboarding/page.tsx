@@ -9,6 +9,8 @@ import { CreatorOnboardingForm } from "@/components/onboarding/CreatorOnboarding
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { IconLogout } from "@tabler/icons-react";
+import { deregisterDevice } from "@/api/notifications";
+import { getFCMToken } from "@/lib/firebase";
 
 export default function OnboardingPage() {
   const { user, isLoading } = useUser();
@@ -33,7 +35,17 @@ export default function OnboardingPage() {
     );
   }
 
-  const logout = () => {
+  const logout = async () => {
+    // Deregister FCM token before logging out
+    try {
+      const fcmToken = await getFCMToken();
+      if (fcmToken) {
+        await deregisterDevice({ token: fcmToken });
+      }
+    } catch (error) {
+      console.error("Failed to deregister FCM device:", error);
+    }
+
     localStorage.removeItem("token");
     queryClient.clear();
     router.push("/login");

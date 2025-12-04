@@ -11,6 +11,8 @@ import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ModeSwitcher } from "@/components/shared/ModeSwitcher";
+import { deregisterDevice } from "@/api/notifications";
+import { getFCMToken } from "@/lib/firebase";
 
 export default function PendingPage() {
   const { user, isLoading } = useUser();
@@ -40,7 +42,17 @@ export default function PendingPage() {
     );
   }
 
-  const logout = () => {
+  const logout = async () => {
+    // Deregister FCM token before logging out
+    try {
+      const fcmToken = await getFCMToken();
+      if (fcmToken) {
+        await deregisterDevice({ token: fcmToken });
+      }
+    } catch (error) {
+      console.error("Failed to deregister FCM device:", error);
+    }
+
     localStorage.removeItem("token");
     queryClient.clear();
     router.push("/login");

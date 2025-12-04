@@ -30,7 +30,9 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/hooks/user/useUser";
-import { UserSettingsModal } from "../settings/UserSettingsModal";
+import { UserSettingsModal } from "@/components/settings/UserSettingsModal";
+import { deregisterDevice } from "@/api/notifications";
+import { getFCMToken } from "@/lib/firebase";
 
 const navItems = [
   { href: "/", icon: Home, label: "Home" },
@@ -101,7 +103,17 @@ export function Navbar() {
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  const logout = () => {
+  const logout = async () => {
+    // Deregister FCM token before logging out
+    try {
+      const fcmToken = await getFCMToken();
+      if (fcmToken) {
+        await deregisterDevice({ token: fcmToken });
+      }
+    } catch (error) {
+      console.error("Failed to deregister FCM device:", error);
+    }
+
     localStorage.removeItem("token");
     queryClient.clear();
     router.push("/login");

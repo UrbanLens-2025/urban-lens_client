@@ -2,13 +2,15 @@
 
 import { useEffect } from "react";
 import { registerDevice } from "@/api/notifications";
+import { getFCMToken } from "@/lib/firebase";
 
 /**
- * Automatically registers the current browser as a notification device.
+ * Automatically registers the current browser as a notification device using Firebase Cloud Messaging.
  *
- * - Generates a stable `deviceToken` stored in localStorage.
- * - Calls the secure `/v1/private/notifications/register-device` endpoint once.
- * - Marks `deviceRegistered` in localStorage on success.
+ * - Requests notification permission from the browser.
+ * - Gets FCM token from Firebase.
+ * - Always sends the token to `/v1/private/notifications/register-device` on every login.
+ * - Backend handles duplicates gracefully (returns 200 if token already exists).
  *
  * This hook is meant to be used in authenticated areas of the app only.
  */
@@ -20,26 +22,36 @@ export function useAutoRegisterDevice(enabled: boolean) {
     const authToken = localStorage.getItem("token");
     if (!authToken) return;
 
-    const registered = localStorage.getItem("deviceRegistered") === "true";
-    let deviceToken = localStorage.getItem("deviceToken");
+    const registerFCMDevice = async () => {
+      try {
+        // Request notification permission
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          console.warn("Notification permission not granted");
+          return;
+        }
 
-    // Ensure we always have a stable device token
-    if (!deviceToken) {
-      deviceToken = `web_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-      localStorage.setItem("deviceToken", deviceToken);
-    }
+        // Get FCM token
+        const fcmToken = await getFCMToken();
+        if (!fcmToken) {
+          console.warn("Failed to get FCM token");
+          return;
+        }
 
-    if (registered || !deviceToken) return;
+        // Always register the device with the backend on every login
+        // Backend handles duplicates gracefully (returns 200 if token exists)
+        await registerDevice({ token: fcmToken });
 
-    registerDevice({ token: deviceToken })
-      .then(() => {
         localStorage.setItem("deviceRegistered", "true");
-      })
-      .catch((error) => {
+
+        console.log("FCM device registered successfully");
+      } catch (error) {
         // Keep this silent for UX; surfaced only in console for debugging.
         // Registration can be attempted again on future visits.
-        // eslint-disable-next-line no-console
-        console.error("Failed to register notification device", error);
-      });
+        console.error("Failed to register FCM device:", error);
+      }
+    };
+
+    registerFCMDevice();
   }, [enabled]);
 }
