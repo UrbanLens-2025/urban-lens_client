@@ -240,11 +240,6 @@ function LocationDetailLayoutContent({
     ? (location.description.length > 150 ? location.description.substring(0, 150) + "..." : location.description)
     : null;
 
-  // Limit tags to show
-  const MAX_VISIBLE_TAGS = 4;
-  const visibleTags = location.tags?.slice(0, MAX_VISIBLE_TAGS) || [];
-  const remainingTagsCount = (location.tags?.length || 0) - MAX_VISIBLE_TAGS;
-
   return (
     <div className="space-y-0">
       {/* Cover Banner */}
@@ -328,7 +323,7 @@ function LocationDetailLayoutContent({
                   </p>
                 )}
 
-                {/* Address and Tags Information */}
+                {/* Address Information */}
                 <div className="flex flex-wrap items-center gap-3 pt-2">
                   {/* Address */}
                   <div className="flex items-center gap-2 text-sm bg-muted/50 px-3 py-1.5 rounded-lg">
@@ -345,32 +340,6 @@ function LocationDetailLayoutContent({
                       </>
                     )}
                   </div>
-
-                  {/* Limited Tags */}
-                  {visibleTags.length > 0 && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {visibleTags.map((tag) => (
-                        <Badge
-                          key={tag.id}
-                          variant="secondary"
-                          style={{
-                            backgroundColor: `${tag.color}15`,
-                            borderColor: tag.color,
-                            color: tag.color,
-                          }}
-                          className="text-xs border"
-                        >
-                          <span className="mr-1">{tag.icon}</span>
-                          {tag.displayName}
-                        </Badge>
-                      ))}
-                      {remainingTagsCount > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{remainingTagsCount} more
-                        </Badge>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -392,31 +361,6 @@ function LocationDetailLayoutContent({
                   Edit Location
                 </Button>
               </div>
-            </div>
-
-            {/* Location Metadata */}
-            <div className="flex flex-wrap items-center gap-4 pt-2 text-sm text-muted-foreground">
-              {location.createdAt && (
-                <div className="flex items-center gap-1.5">
-                  <CalendarDays className="h-3.5 w-3.5" />
-                  <span className="font-medium">Created:</span>
-                  <span>{formatCompactDateTime(location.createdAt)}</span>
-                </div>
-              )}
-              {location.radiusMeters && (
-                <div className="flex items-center gap-1.5">
-                  <Ruler className="h-3.5 w-3.5" />
-                  <span className="font-medium">Service Radius:</span>
-                  <span>{location.radiusMeters}m</span>
-                </div>
-              )}
-              {location.totalCheckIns !== undefined && (
-                <div className="flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5" />
-                  <span className="font-medium">Total Check-ins:</span>
-                  <span>{Number(location.totalCheckIns || 0).toLocaleString()}</span>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -511,7 +455,6 @@ function LocationDetailLayoutContent({
                     router.push(`/dashboard/business/locations/${locationId}/vouchers/create`);
                   }}
                 >
-                  <TicketPercent className="h-4 w-4 mr-2" />
                   Create Voucher
                 </Button>
                 <Button
@@ -552,7 +495,6 @@ function LocationDetailLayoutContent({
                     }
                   }}
                 >
-                  <TicketPercent className="h-4 w-4 mr-2" />
                   Edit Voucher
                 </Button>
                 <Button
@@ -591,7 +533,6 @@ function LocationDetailLayoutContent({
                     router.push(`/dashboard/business/locations/${locationId}/missions/create`);
                   }}
                 >
-                  <Rocket className="h-4 w-4 mr-2" />
                   Create Mission
                 </Button>
                 <Button
@@ -632,7 +573,6 @@ function LocationDetailLayoutContent({
                     }
                   }}
                 >
-                  <Rocket className="h-4 w-4 mr-2" />
                   Edit Mission
                 </Button>
                 <Button
@@ -671,7 +611,6 @@ function LocationDetailLayoutContent({
                     router.push(`/dashboard/business/locations/${locationId}/announcements/create`);
                   }}
                 >
-                  <Megaphone className="h-4 w-4 mr-2" />
                   Create Announcement
                 </Button>
                 <Button

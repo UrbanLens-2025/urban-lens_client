@@ -162,6 +162,24 @@ import { useCreateAnnouncement } from "@/hooks/announcements/useCreateAnnounceme
 import { formatDateTime } from "@/lib/utils";
 import { useLocationTabs } from "@/contexts/LocationTabContext";
 import { X, CheckCircle } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  Pie,
+  PieChart,
+  Cell,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
+import {
+  ChartContainer,
+  ChartTooltipContent,
+  ChartConfig,
+} from "@/components/ui/chart";
 
 // Helper function to format voucher type for display
 const formatVoucherType = (voucherType: string): string => {
@@ -217,6 +235,192 @@ function formatDate(dateString: string) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+// Visualization Components
+const COLORS = {
+  active: "hsl(142, 76%, 36%)",
+  scheduled: "hsl(38, 92%, 50%)",
+  expired: "hsl(0, 84%, 60%)",
+  completed: "hsl(217, 91%, 60%)",
+  primary: "hsl(var(--primary))",
+};
+
+function VoucherStatusChart({ vouchers }: { vouchers: LocationVoucher[] }) {
+  const data = useMemo(() => {
+    const now = new Date();
+    const counts = { active: 0, scheduled: 0, expired: 0 };
+    vouchers.forEach((voucher) => {
+      const start = new Date(voucher.startDate);
+      const end = new Date(voucher.endDate);
+      if (start > now) counts.scheduled += 1;
+      else if (end < now) counts.expired += 1;
+      else counts.active += 1;
+    });
+    return [
+      { name: "Active", value: counts.active, color: COLORS.active },
+      { name: "Scheduled", value: counts.scheduled, color: COLORS.scheduled },
+      { name: "Expired", value: counts.expired, color: COLORS.expired },
+    ].filter((item) => item.value > 0);
+  }, [vouchers]);
+
+  const chartConfig: ChartConfig = {
+    value: {
+      label: "Vouchers",
+      color: COLORS.primary,
+    },
+  };
+
+  if (data.length === 0) {
+    return (
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
+        No voucher data available
+      </div>
+    );
+  }
+
+  return (
+    <ChartContainer config={chartConfig} className="h-64">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
+            outerRadius={80}
+            fill="#8884d8"
+            dataKey="value"
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <RechartsTooltip content={<ChartTooltipContent />} />
+        </PieChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  );
+}
+
+function MissionStatusChart({ missions }: { missions: LocationMission[] }) {
+  const data = useMemo(() => {
+    const now = new Date();
+    const counts = { active: 0, scheduled: 0, completed: 0 };
+    missions.forEach((mission) => {
+      const start = new Date(mission.startDate);
+      const end = new Date(mission.endDate);
+      if (start > now) counts.scheduled += 1;
+      else if (end < now) counts.completed += 1;
+      else counts.active += 1;
+    });
+    return [
+      { name: "Active", value: counts.active, color: COLORS.active },
+      { name: "Scheduled", value: counts.scheduled, color: COLORS.scheduled },
+      { name: "Completed", value: counts.completed, color: COLORS.completed },
+    ].filter((item) => item.value > 0);
+  }, [missions]);
+
+  const chartConfig: ChartConfig = {
+    value: {
+      label: "Missions",
+      color: COLORS.primary,
+    },
+  };
+
+  if (data.length === 0) {
+    return (
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
+        No mission data available
+      </div>
+    );
+  }
+
+  return (
+    <ChartContainer config={chartConfig} className="h-64">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
+            outerRadius={80}
+            fill="#8884d8"
+            dataKey="value"
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <RechartsTooltip content={<ChartTooltipContent />} />
+        </PieChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  );
+}
+
+function ActivityOverviewChart({ 
+  vouchers, 
+  missions 
+}: { 
+  vouchers: LocationVoucher[]; 
+  missions: LocationMission[] 
+}) {
+  const data = useMemo(() => {
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const date = subMonths(new Date(), 5 - i);
+      const monthStart = startOfMonth(date);
+      const monthEnd = endOfMonth(date);
+      const monthLabel = format(date, "MMM yyyy");
+      
+      const voucherCount = vouchers.filter((v) => {
+        const created = new Date(v.createdAt);
+        return created >= monthStart && created <= monthEnd;
+      }).length;
+
+      const missionCount = missions.filter((m) => {
+        const created = new Date(m.createdAt);
+        return created >= monthStart && created <= monthEnd;
+      }).length;
+
+      return {
+        month: monthLabel,
+        vouchers: voucherCount,
+        missions: missionCount,
+      };
+    });
+    return months;
+  }, [vouchers, missions]);
+
+  const chartConfig: ChartConfig = {
+    vouchers: {
+      label: "Vouchers",
+      color: "hsl(var(--chart-1))",
+    },
+    missions: {
+      label: "Missions",
+      color: "hsl(var(--chart-2))",
+    },
+  };
+
+  return (
+    <ChartContainer config={chartConfig} className="h-64">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="month" />
+          <YAxis />
+          <RechartsTooltip content={<ChartTooltipContent />} />
+          <Legend />
+          <Bar dataKey="vouchers" fill="var(--color-vouchers)" />
+          <Bar dataKey="missions" fill="var(--color-missions)" />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  );
 }
 
 // Vouchers Tab Component - Memoized for performance
@@ -5729,6 +5933,24 @@ export default function LocationDetailsPage({
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState("overview");
   
+  // Fetch all vouchers and missions for visualizations
+  const { data: allVouchersResponse } = useLocationVouchers({
+    locationId,
+    page: 1,
+    limit: 1000,
+    sortBy: "createdAt:DESC",
+  });
+  
+  const { data: allMissionsResponse } = useLocationMissions({
+    locationId,
+    page: 1,
+    limit: 1000,
+    sortBy: "createdAt:DESC",
+  });
+
+  const allVouchers = allVouchersResponse?.data || [];
+  const allMissions = allMissionsResponse?.data || [];
+  
   const {
     voucherCreateTab,
     closeVoucherCreateTab,
@@ -5853,6 +6075,39 @@ export default function LocationDetailsPage({
                 </Card>
               </div>
 
+              {/* Visualizations Section */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">Voucher Status</CardTitle>
+                    <CardDescription>Distribution of voucher status</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <VoucherStatusChart vouchers={allVouchers} />
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">Mission Status</CardTitle>
+                    <CardDescription>Distribution of mission status</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <MissionStatusChart missions={allMissions} />
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-border/60 shadow-sm md:col-span-2 lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="text-base">Activity Overview</CardTitle>
+                    <CardDescription>Vouchers & Missions created over time</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ActivityOverviewChart vouchers={allVouchers} missions={allMissions} />
+                  </CardContent>
+                </Card>
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* LEFT COLUMN: DETAILS */}
                 <div className="space-y-4">
@@ -5875,26 +6130,6 @@ export default function LocationDetailsPage({
                           label="Category"
                           value={location.business?.category || "N/A"}
                         />
-                        <InfoRow
-                          label="Total Check-ins"
-                          value={location.totalCheckIns || "0"}
-                        />
-                        <InfoRow
-                          label="Visibility"
-                          value={
-                            location.isVisibleOnMap ? (
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs">Visible on map</span>
-                                <Eye className="h-3.5 w-3.5 text-green-600" />
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs">Hidden from map</span>
-                                <EyeOff className="h-3.5 w-3.5 text-gray-400" />
-                              </div>
-                            )
-                          }
-                        />
                       </div>
                       
                       {/* Divider */}
@@ -5915,14 +6150,6 @@ export default function LocationDetailsPage({
                               value={location.addressLevel2 || "N/A"}
                             />
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <InfoRow label="Latitude" value={typeof location.latitude === 'number' ? location.latitude.toFixed(8) : String(location.latitude || 'N/A')} />
-                            <InfoRow label="Longitude" value={typeof location.longitude === 'number' ? location.longitude.toFixed(8) : String(location.longitude || 'N/A')} />
-                          </div>
-                          <InfoRow
-                            label="Service Radius"
-                            value={`${location.radiusMeters} meters`}
-                          />
                         </div>
                       </div>
                     </CardContent>
@@ -5942,124 +6169,6 @@ export default function LocationDetailsPage({
                       </CardContent>
                     </Card>
                   )}
-
-                  {/* Business Information */}
-                  {location.business && (
-                    <Card className="border-border/60 shadow-sm">
-                      <CardHeader className="pb-3 pt-4">
-                        <CardTitle className="flex items-center gap-2 text-sm">
-                          <Building className="h-4 w-4" />
-                          Business Information
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3 pt-0 pb-4">
-                        <div className="flex items-start gap-3">
-                          {location.business.avatar && (
-                            <img
-                              src={location.business.avatar || "/placeholder.svg"}
-                              alt={location.business.name}
-                              className="w-12 h-12 rounded-md object-cover"
-                            />
-                          )}
-                          <div className="flex-1">
-                            <p className="font-semibold text-sm">
-                              {location.business.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {location.business.description}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2 pt-3 border-t">
-                          {location.business.email && (
-                            <InfoRow
-                              label="Email"
-                              value={location.business.email}
-                              icon={Mail}
-                            />
-                          )}
-                          {location.business.phone && (
-                            <InfoRow
-                              label="Phone"
-                              value={location.business.phone}
-                              icon={Phone}
-                            />
-                          )}
-                          {location.business.website && (
-                            <InfoRow
-                              label="Website"
-                              value={
-                                <a
-                                  href={location.business.website}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline text-xs"
-                                >
-                                  {location.business.website}
-                                </a>
-                              }
-                              icon={Globe}
-                            />
-                          )}
-                        </div>
-
-                        {location.business.licenseNumber && (
-                          <div className="space-y-2 pt-3 border-t">
-                            <InfoRow
-                              label="License Type"
-                              value={location.business.licenseType}
-                            />
-                            <InfoRow
-                              label="License Number"
-                              value={location.business.licenseNumber}
-                            />
-                            <InfoRow
-                              label="License Expiration"
-                              value={formatDate(
-                                location.business.licenseExpirationDate
-                              )}
-                            />
-                          </div>
-                        )}
-
-                        <div className="pt-3 border-t">
-                          <InfoRow
-                            label="Status"
-                            value={
-                              <Badge
-                                variant={
-                                  location.business.status === "APPROVED"
-                                    ? "default"
-                                    : "secondary"
-                                }
-                                className="text-xs"
-                              >
-                                {location.business.status}
-                              </Badge>
-                            }
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Metadata */}
-                  <Card className="border-border/60 shadow-sm">
-                    <CardHeader className="pb-3 pt-4">
-                      <CardTitle className="flex items-center gap-2 text-sm">
-                        <CalendarDaysIcon className="h-4 w-4" />
-                        Metadata
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 pt-0 pb-4">
-                      <InfoRow label="Created" value={formatDate(location.createdAt)} />
-                      <InfoRow
-                        label="Last Updated"
-                        value={formatDate(location.updatedAt)}
-                      />
-                    </CardContent>
-                  </Card>
                 </div>
 
                 {/* RIGHT COLUMN: MAP AND IMAGES */}
