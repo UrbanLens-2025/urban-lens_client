@@ -1,8 +1,10 @@
 "use client";
 
 import { use, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -160,8 +162,43 @@ export default function LocationBookingConfigPage({
     );
   }
 
+  const pathname = usePathname();
+  const isBookingConfig = pathname.includes("/booking-config");
+  const isAvailability = pathname.includes("/availability");
+
   return (
     <div className="space-y-6 p-6">
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-2 border-b">
+        <Link
+          href={`/dashboard/business/locations/${locationId}/booking-config`}
+          className={cn(
+            "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[1px]",
+            isBookingConfig
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            Booking Settings
+          </div>
+        </Link>
+        <Link
+          href={`/dashboard/business/locations/${locationId}/availability`}
+          className={cn(
+            "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[1px]",
+            isAvailability
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Availability
+          </div>
+        </Link>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Form */}
