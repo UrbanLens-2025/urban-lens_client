@@ -189,10 +189,11 @@ export default function CreateMissionPage({
                         <Input
                           type="number"
                           {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) =>
-                            field.onChange(e.target.valueAsNumber)
-                          }
+                          value={field.value != null && !isNaN(field.value) ? field.value : ""}
+                          onChange={(e) => {
+                            const value = e.target.valueAsNumber;
+                            field.onChange(isNaN(value) ? undefined : value);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -209,10 +210,11 @@ export default function CreateMissionPage({
                         <Input
                           type="number"
                           {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) =>
-                            field.onChange(e.target.valueAsNumber)
-                          }
+                          value={field.value != null && !isNaN(field.value) ? field.value : ""}
+                          onChange={(e) => {
+                            const value = e.target.valueAsNumber;
+                            field.onChange(isNaN(value) ? undefined : value);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />

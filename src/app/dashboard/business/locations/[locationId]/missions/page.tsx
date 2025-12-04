@@ -36,6 +36,9 @@ import {
   Trophy,
   CalendarDays,
   Sparkles,
+  QrCode,
+  Copy,
+  Download,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -57,6 +60,21 @@ import { Badge } from "@/components/ui/badge";
 import { useDebounce } from "use-debounce";
 import { Input } from "@/components/ui/input";
 import { useDeleteLocationMission } from "@/hooks/missions/useDeleteLocationMission";
+import { useGenerateOneTimeQRCode } from "@/hooks/missions/useGenerateOneTimeQRCode";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 function MissionActions({
   mission,
@@ -111,6 +129,14 @@ export default function ManageMissionsPage({
   });
 
   const [missionToDelete, setMissionToDelete] = useState<LocationMission | null>(null);
+  const [selectedMissionId, setSelectedMissionId] = useState<string>("");
+  const [generatedQRCode, setGeneratedQRCode] = useState<{
+    qrCodeData: string;
+    qrCodeUrl: string;
+    expiresAt: string;
+    id: string;
+    isUsed: boolean;
+  } | null>(null);
 
   const {
     data: response,
@@ -124,6 +150,7 @@ export default function ManageMissionsPage({
   });
 
   const { mutate: deleteMission, isPending: isDeleting } = useDeleteLocationMission(locationId);
+  const { mutate: generateQRCode, isPending: isGeneratingQR } = useGenerateOneTimeQRCode(locationId);
 
   const missions = response?.data || [];
   const meta = response?.meta;
@@ -233,6 +260,59 @@ export default function ManageMissionsPage({
     });
   };
 
+  const handleGenerateQRCode = () => {
+    generateQRCode(
+      selectedMissionId ? { missionId: selectedMissionId } : undefined,
+      {
+        onSuccess: (data) => {
+          setGeneratedQRCode({
+            qrCodeData: data.qrCodeData,
+            qrCodeUrl: data.qrCodeUrl,
+            expiresAt: data.expiresAt,
+            id: data.id,
+            isUsed: data.isUsed,
+          });
+          toast.success("QR code generated successfully!");
+        },
+      }
+    );
+  };
+
+  const handleCopyQRCode = () => {
+    if (generatedQRCode?.qrCodeData) {
+      navigator.clipboard.writeText(generatedQRCode.qrCodeData);
+      toast.success("QR code data copied to clipboard!");
+    }
+  };
+
+  const handleDownloadQRCode = () => {
+    if (!generatedQRCode) return;
+    
+    // Generate QR code image from data using a QR code API service
+    const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(generatedQRCode.qrCodeData)}`;
+    
+    const link = document.createElement("a");
+    link.href = qrCodeImageUrl;
+    link.download = `qr-code-${locationId}-${Date.now()}.png`;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("QR code downloaded!");
+  };
+
+  const getQRCodeImageUrl = () => {
+    if (!generatedQRCode) return null;
+    
+    // If qrCodeUrl is provided, use it; otherwise generate from qrCodeData
+    if (generatedQRCode.qrCodeUrl) {
+      return generatedQRCode.qrCodeUrl;
+    }
+    
+    // Generate QR code image from data using a QR code API service
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(generatedQRCode.qrCodeData)}`;
+  };
+
   return (
     <div className="space-y-8">
       {/* --- Header --- */}
@@ -295,6 +375,61 @@ export default function ManageMissionsPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* QR Code Generator */}
+      <Card className="border-border/60 shadow-sm bg-gradient-to-br from-background to-muted/20">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <QrCode className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold">Generate One-Time QR Code</CardTitle>
+              <CardDescription className="text-xs mt-0.5">
+                Create a QR code for a specific mission
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Select Mission
+              </label>
+              <Select value={selectedMissionId} onValueChange={setSelectedMissionId}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Select a mission" />
+                </SelectTrigger>
+                <SelectContent>
+                  {missions.map((mission) => (
+                    <SelectItem key={mission.id} value={mission.id}>
+                      {mission.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={handleGenerateQRCode}
+              disabled={isGeneratingQR || !selectedMissionId}
+              className="h-10"
+            >
+              {isGeneratingQR ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <QrCode className="mr-2 h-4 w-4" />
+                  Generate QR Code
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* --- Missions Table --- */}
       <Card className="border-border/60 shadow-sm">
@@ -446,6 +581,79 @@ export default function ManageMissionsPage({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* QR Code Display Dialog */}
+      <Dialog open={!!generatedQRCode} onOpenChange={(open) => !open && setGeneratedQRCode(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5" />
+              One-Time QR Code
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex justify-center p-4 bg-muted/30 rounded-lg">
+              {generatedQRCode && getQRCodeImageUrl() && (
+                <img
+                  src={getQRCodeImageUrl() || ""}
+                  alt="QR Code"
+                  className="w-64 h-64 object-contain"
+                />
+              )}
+            </div>
+            {generatedQRCode && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">QR Code Data</label>
+                  <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
+                    <code className="flex-1 text-xs break-all">{generatedQRCode.qrCodeData}</code>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={handleCopyQRCode}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Expires at:</span>
+                    <span className="font-medium">
+                      {new Date(generatedQRCode.expiresAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge variant={generatedQRCode.isUsed ? "destructive" : "default"}>
+                      {generatedQRCode.isUsed ? "Used" : "Active"}
+                    </Badge>
+                  </div>
+                </div>
+              </>
+            )}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={handleDownloadQRCode}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={handleCopyQRCode}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy Data
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
