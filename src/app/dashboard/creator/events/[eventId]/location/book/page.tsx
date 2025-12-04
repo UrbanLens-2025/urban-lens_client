@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Building2, Loader2, MapPin as MapPinIcon, ArrowLeft, Mail, Phone, Star, ChevronLeft, ChevronRight, Calendar, Search, ChevronDown, DollarSign, Clock, ChevronUp } from "lucide-react";
 import { useBookableLocations } from "@/hooks/events/useBookableLocations";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
+import { useEventById } from "@/hooks/events/useEventById";
 import { APIProvider, Map, AdvancedMarker, Pin, useMap } from "@vis.gl/react-google-maps";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -572,7 +573,8 @@ export default function BookLocationPage({
 }: {
   params: Promise<{ eventId: string }>;
 }) {
-  const { eventId: _eventId } = use(params);
+  const { eventId } = use(params);
+  const { data: eventDetail } = useEventById(eventId);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [startTime, setStartTime] = useState<Date | undefined>(undefined);
@@ -685,6 +687,8 @@ export default function BookLocationPage({
               label=""
               value={startTime}
               onChange={setStartTime}
+              eventStartDate={eventDetail?.startDate ? new Date(eventDetail.startDate) : undefined}
+              eventEndDate={eventDetail?.endDate ? new Date(eventDetail.endDate) : undefined}
             />
           </div>
 
@@ -696,6 +700,8 @@ export default function BookLocationPage({
               value={endTime}
               onChange={setEndTime}
               defaultTime="11:59"
+              eventStartDate={eventDetail?.startDate ? new Date(eventDetail.startDate) : undefined}
+              eventEndDate={eventDetail?.endDate ? new Date(eventDetail.endDate) : undefined}
             />
           </div>
         </div>
@@ -829,7 +835,7 @@ export default function BookLocationPage({
               <LocationDetailsOverlay
                 location={selectedLocation}
                 onClose={() => setSelectedLocationId(null)}
-                eventId={_eventId}
+                eventId={eventId}
                 startTime={startTime}
                 endTime={endTime}
               />

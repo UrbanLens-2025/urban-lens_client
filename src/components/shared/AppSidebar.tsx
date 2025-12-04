@@ -105,6 +105,7 @@ const businessNavGroups = [
 
 const getCreatorNav = () => [
   { title: "Overview", url: "/dashboard/creator", icon: IconCalendar },
+  { title: "Create event", url: "/dashboard/creator/request/create", icon: IconPlus },
   { title: "My Events", url: "/dashboard/creator/events", icon: IconCalendar },
   { title: "Wallet", url: "/dashboard/creator/wallet", icon: IconWallet },
 ];

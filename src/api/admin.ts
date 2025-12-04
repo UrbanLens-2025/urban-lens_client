@@ -258,10 +258,16 @@ export const startProcessingWithdrawTransaction = async (
 };
 
 export const completeProcessingWithdrawTransaction = async (
-  transactionId: string
+  transactionId: string,
+  proofOfTransferImages: string[],
+  transferBankTransactionId: string
 ): Promise<WalletExternalTransaction> => {
   const { data } = await axiosInstance.post<ApiResponse<WalletExternalTransaction>>(
-    `/v1/admin/wallet/transactions/external/${transactionId}/complete-processing`
+    `/v1/admin/wallet/transactions/external/${transactionId}/complete-processing`,
+    {
+      proofOfTransferImages,
+      transferBankTransactionId,
+    }
   );
   return data.data;
 };
