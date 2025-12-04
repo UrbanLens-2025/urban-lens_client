@@ -17,7 +17,6 @@ const firebaseConfig = {
 
 };
 
-
 const VAPID_KEY = "BOTzgWgyVvJFfrplTV_8nPPE-PkHtOFG0trakzA-wn0dX8KNAHXW0dDlblystVTkXa0MJ1jW-vvy_4D3ejeuob8";
 
 // Initialize Firebase (only once)
@@ -38,7 +37,18 @@ export async function getFCMToken(): Promise<string | null> {
     const messaging = getMessaging(app);
     const token = await getToken(messaging, { vapidKey: VAPID_KEY });
     return token;
-  } catch (error) {
+  } catch (error: any) {
+    // Handle permission-related errors gracefully (expected behavior)
+    if (
+      error?.code === "messaging/permission-blocked" ||
+      error?.code === "messaging/permission-default" ||
+      error?.code === "messaging/permission-denied"
+    ) {
+      // Permission was blocked/denied - this is expected behavior, no need to log
+      return null;
+    }
+    
+    // Log other unexpected errors
     console.error("Error getting FCM token:", error);
     return null;
   }
