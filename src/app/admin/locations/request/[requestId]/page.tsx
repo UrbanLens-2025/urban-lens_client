@@ -505,63 +505,6 @@ export default function AdminLocationRequestDetailsPage({
           </Card>
         )}
 
-        {/* Review Checklist */}
-        {isPending && (
-          <Card className='border-2 border-primary/20'>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <FileText className='h-5 w-5' />
-                Review Checklist
-              </CardTitle>
-              <CardDescription>
-                Verify the following before making your decision
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className='space-y-3'>
-                <div className='flex items-start gap-3'>
-                  <div className='h-5 w-5 rounded border-2 border-muted-foreground/30 mt-0.5 flex-shrink-0' />
-                  <div>
-                    <p className='text-sm font-medium'>Location Information</p>
-                    <p className='text-xs text-muted-foreground'>
-                      Verify name, description, address, and coordinates are accurate
-                    </p>
-                  </div>
-                </div>
-                <div className='flex items-start gap-3'>
-                  <div className='h-5 w-5 rounded border-2 border-muted-foreground/30 mt-0.5 flex-shrink-0' />
-                  <div>
-                    <p className='text-sm font-medium'>Location Images</p>
-                    <p className='text-xs text-muted-foreground'>
-                      Check that images clearly show the location and match the description
-                    </p>
-                  </div>
-                </div>
-                {request.locationValidationDocuments && request.locationValidationDocuments.length > 0 && (
-                  <div className='flex items-start gap-3'>
-                    <div className='h-5 w-5 rounded border-2 border-muted-foreground/30 mt-0.5 flex-shrink-0' />
-                    <div>
-                      <p className='text-sm font-medium'>Validation Documents</p>
-                      <p className='text-xs text-muted-foreground'>
-                        Review all required documents for completeness and validity
-                      </p>
-                    </div>
-                  </div>
-                )}
-                <div className='flex items-start gap-3'>
-                  <div className='h-5 w-5 rounded border-2 border-muted-foreground/30 mt-0.5 flex-shrink-0' />
-                  <div>
-                    <p className='text-sm font-medium'>Submitter Information</p>
-                    <p className='text-xs text-muted-foreground'>
-                      Confirm submitter details and business profile (if applicable)
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Action Buttons - Sticky at Bottom */}
         {isPending && (
           <Card className='sticky bottom-6 border-2 border-primary/20 bg-background shadow-lg z-10'>
