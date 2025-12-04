@@ -18,6 +18,7 @@ import {
   XCircle,
   User,
   ScanLine,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,6 +45,9 @@ export default function QRScanPage({
     width: number;
     height: number;
   } | null>(null);
+  const [availableCameras, setAvailableCameras] = useState<{ id: string; label: string }[]>([]);
+  const [currentCameraId, setCurrentCameraId] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
 
   const { data: event, isLoading: isLoadingEvent } = useEventById(eventId);
   const confirmAttendance = useConfirmAttendance(eventId);
@@ -181,7 +185,7 @@ export default function QRScanPage({
     return { width: isMobile ? 280 : 300, height: isMobile ? 280 : 300 };
   };
 
-  const initializeScanner = async () => {
+  const initializeScanner = async (cameraIdToUse?: string | null) => {
     // Check if element exists and is visible
     const element = document.getElementById("qr-reader");
     if (!element) {
@@ -211,16 +215,31 @@ export default function QRScanPage({
       const devices = await Html5Qrcode.getCameras();
       
       if (devices && devices.length) {
-        // Try to use back camera first, fallback to first available
-        const backCamera = devices.find(
-          (device) => device.label.toLowerCase().includes("back") || 
-                      device.label.toLowerCase().includes("rear") ||
-                      device.label.toLowerCase().includes("environment")
-        );
-        const cameraId = backCamera?.id || devices[0].id;
+        // Store available cameras for switching
+        setAvailableCameras(devices);
+        
+        let selectedCameraId: string;
+        
+        if (cameraIdToUse) {
+          // Use the provided camera ID
+          selectedCameraId = cameraIdToUse;
+        } else if (currentCameraId) {
+          // Use the currently selected camera
+          selectedCameraId = currentCameraId;
+        } else {
+          // Try to use back camera first, fallback to first available
+          const backCamera = devices.find(
+            (device) => device.label.toLowerCase().includes("back") || 
+                        device.label.toLowerCase().includes("rear") ||
+                        device.label.toLowerCase().includes("environment")
+          );
+          selectedCameraId = backCamera?.id || devices[0].id;
+        }
+        
+        setCurrentCameraId(selectedCameraId);
 
         await html5QrCode.start(
-          cameraId,
+          selectedCameraId,
           {
             fps: 10,
             qrbox: qrBoxSize,
@@ -237,7 +256,7 @@ export default function QRScanPage({
       } else {
         // Fallback to facingMode if no devices found
         await html5QrCode.start(
-          { facingMode: "environment" },
+          { facingMode },
           {
             fps: 10,
             qrbox: qrBoxSize,
@@ -276,6 +295,44 @@ export default function QRScanPage({
       if (html5QrCodeRef.current) {
         html5QrCodeRef.current = null;
       }
+    }
+  };
+
+  const switchCamera = async () => {
+    if (!html5QrCodeRef.current || !isScanning) {
+      return;
+    }
+
+    try {
+      // Stop current scanner
+      await html5QrCodeRef.current.stop();
+      html5QrCodeRef.current.clear();
+      html5QrCodeRef.current = null;
+
+      // Find current camera index
+      const currentIndex = availableCameras.findIndex(cam => cam.id === currentCameraId);
+      
+      if (currentIndex === -1 || availableCameras.length <= 1) {
+        // Try switching by facing mode if no camera ID or only one camera
+        setFacingMode(prev => prev === "environment" ? "user" : "environment");
+        setIsStarting(true);
+        setTimeout(() => {
+          initializeScanner();
+        }, 300);
+        return;
+      }
+
+      // Switch to next camera
+      const nextIndex = (currentIndex + 1) % availableCameras.length;
+      const nextCameraId = availableCameras[nextIndex].id;
+      
+      setIsStarting(true);
+      setTimeout(() => {
+        initializeScanner(nextCameraId);
+      }, 300);
+    } catch (error) {
+      console.error("Error switching camera:", error);
+      toast.error("Failed to switch camera. Please try again.");
     }
   };
 
@@ -543,10 +600,24 @@ export default function QRScanPage({
                     Scanning...
                   </span>
                 </div>
-                <Button onClick={stopScanner} variant="outline" size="sm">
-                  <CameraOff className="h-4 w-4 mr-2" />
-                  Stop Scanner
-                </Button>
+                <div className="flex items-center gap-2">
+                  {availableCameras.length > 1 && (
+                    <Button 
+                      onClick={switchCamera} 
+                      variant="outline" 
+                      size="sm"
+                      disabled={isStarting}
+                      title="Switch camera"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Switch Camera
+                    </Button>
+                  )}
+                  <Button onClick={stopScanner} variant="outline" size="sm">
+                    <CameraOff className="h-4 w-4 mr-2" />
+                    Stop Scanner
+                  </Button>
+                </div>
               </div>
               {/* Scanner container - only rendered when scanning */}
               <div className="w-full">
