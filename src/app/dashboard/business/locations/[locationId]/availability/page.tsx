@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Pencil, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Layers, DollarSign } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Layers, DollarSign, Calendar } from "lucide-react";
 import { useWeeklyAvailabilities } from "@/hooks/availability/useWeeklyAvailabilities";
 import { useCreateWeeklyAvailability } from "@/hooks/availability/useCreateWeeklyAvailability";
 import { useDeleteAvailability } from "@/hooks/availability/useDeleteAvailability";
@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { WeeklyAvailabilityResponse } from "@/api/availability";
 import { Badge } from "@/components/ui/badge";
+import { BookingsCalendar } from "./_components/BookingsCalendar";
 
 // Internal data structure for weekly availability slots
 interface WeeklyAvailabilitySlot {
@@ -98,8 +99,23 @@ export default function AvailabilityPage({
   const { locationId } = use(params);
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isBookingConfig = pathname.includes("/booking-config");
   const isAvailability = pathname.includes("/availability");
+  
+  // Tab state for Calendar/Availability
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<"availability" | "calendar">(
+    tabFromUrl === "calendar" ? "calendar" : tabFromUrl === "availability" ? "availability" : "availability"
+  );
+  
+  // Update tab when URL param changes
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "calendar" || tab === "availability") {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   // Fetch weekly availability from API
   const { data: apiAvailability, isLoading } = useWeeklyAvailabilities(locationId);
@@ -839,6 +855,40 @@ export default function AvailabilityPage({
     <div className="space-y-6 p-6">
       {/* Tab Navigation */}
       <div className="flex items-center gap-2 border-b">
+        <button
+          onClick={() => {
+            setActiveTab("calendar");
+            router.replace(`/dashboard/business/locations/${locationId}/availability?tab=calendar`);
+          }}
+          className={cn(
+            "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[1px]",
+            activeTab === "calendar"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Calendar
+          </div>
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab("availability");
+            router.replace(`/dashboard/business/locations/${locationId}/availability?tab=availability`);
+          }}
+          className={cn(
+            "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[1px]",
+            activeTab === "availability"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Availability
+          </div>
+        </button>
         <Link
           href={`/dashboard/business/locations/${locationId}/booking-config`}
           className={cn(
@@ -853,27 +903,16 @@ export default function AvailabilityPage({
             Booking Settings
           </div>
         </Link>
-        <Link
-          href={`/dashboard/business/locations/${locationId}/availability`}
-          className={cn(
-            "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[1px]",
-            isAvailability
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Availability
-          </div>
-        </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
-              <CardTitle>Manage Weekly Availability</CardTitle>
+      {activeTab === "calendar" ? (
+        <BookingsCalendar locationId={locationId} />
+      ) : (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <CardTitle>Manage Weekly Availability</CardTitle>
               <CardDescription>
                 Click or drag to select hours for each day. Confirm changes before they go live.
               </CardDescription>
@@ -1050,6 +1089,7 @@ export default function AvailabilityPage({
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

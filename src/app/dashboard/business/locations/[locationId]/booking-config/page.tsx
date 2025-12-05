@@ -170,17 +170,15 @@ export default function LocationBookingConfigPage({
       {/* Tab Navigation */}
       <div className="flex items-center gap-2 border-b">
         <Link
-          href={`/dashboard/business/locations/${locationId}/booking-config`}
+          href={`/dashboard/business/locations/${locationId}/availability?tab=calendar`}
           className={cn(
             "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[1px]",
-            isBookingConfig
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+            "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
           <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4" />
-            Booking Settings
+            <Calendar className="h-4 w-4" />
+            Calendar
           </div>
         </Link>
         <Link
@@ -195,6 +193,20 @@ export default function LocationBookingConfigPage({
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Availability
+          </div>
+        </Link>
+        <Link
+          href={`/dashboard/business/locations/${locationId}/booking-config`}
+          className={cn(
+            "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[1px]",
+            isBookingConfig
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            Booking Settings
           </div>
         </Link>
       </div>

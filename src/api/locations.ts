@@ -250,6 +250,34 @@ export const getLocationBookingById = async (
   return data.data;
 };
 
+export interface GetAllBookingsAtLocationParams {
+  locationId: string;
+  startDate: string; // ISO date-time string
+  endDate: string; // ISO date-time string
+  page?: number;
+  limit?: number;
+}
+
+export const getAllBookingsAtLocation = async ({
+  locationId,
+  startDate,
+  endDate,
+  page = 1,
+  limit = 100, // Use max limit to get all bookings for the week
+}: GetAllBookingsAtLocationParams): Promise<PaginatedData<LocationBooking>> => {
+  const params: any = {
+    startDate,
+    endDate,
+    page,
+    limit: Math.min(limit, 100), // Ensure limit doesn't exceed max
+  };
+
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<LocationBooking>>
+  >(`/v1/owner/location-bookings/all-bookings-at-location-paged/${locationId}`, { params });
+  return data.data;
+};
+
 export const processLocationBooking = async ({
   locationBookingId,
   payload,
