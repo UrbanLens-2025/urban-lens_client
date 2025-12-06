@@ -37,6 +37,18 @@ const DAYS_OF_WEEK = [
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i); // 0-23 (12 AM to 11 PM)
 
+const formatBookingObject = (bookingObject: string | null | undefined): string => {
+  if (!bookingObject) return "N/A";
+  
+  // Convert FOR_EVENT, FOR_OTHER, etc. to user-friendly format
+  const formatted = bookingObject
+    .split("_")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+  
+  return formatted;
+};
+
 export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
   const router = useRouter();
   
@@ -127,7 +139,7 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
             id: booking.id,
             start,
             end,
-            eventName: booking.referencedEventRequest?.eventName || booking.bookingObject || "Unknown Event",
+            eventName: booking.referencedEventRequest?.eventName || formatBookingObject(booking.bookingObject) || "Unknown Event",
             customerName,
             status: booking.status,
             amount: booking.amountToPay,

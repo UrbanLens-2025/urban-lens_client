@@ -26,10 +26,12 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useDebounce } from "use-debounce";
 import { useOwnerLocationBookings } from "@/hooks/locations/useOwnerLocationBookings";
+import { useConflictingBookings } from "@/hooks/locations/useConflictingBookings";
 import Link from "next/link";
 import { format } from "date-fns";
 
@@ -124,6 +126,110 @@ const calculateTotalHours = (dates: { startDateTime: string; endDateTime: string
   return Math.round(totalHours * 10) / 10; // Round to 1 decimal place
 };
 
+// Component for booking row with conflict detection
+function BookingRow({
+  booking,
+  index,
+  page,
+  meta,
+}: {
+  booking: any;
+  index: number;
+  page: number;
+  meta?: any;
+}) {
+  const { data: conflicts, isLoading: isLoadingConflicts } = useConflictingBookings(booking.id);
+  const conflictCount = useMemo(() => {
+    if (!conflicts) return 0;
+    // Filter out the booking itself from conflicts
+    return conflicts.filter((c: any) => c.id !== booking.id).length;
+  }, [conflicts, booking.id]);
+  
+  const hasConflicts = conflictCount > 0;
+
+  return (
+    <TableRow
+      className={`border-b transition-colors hover:bg-muted/30 ${
+        hasConflicts
+          ? "bg-orange-50/50 dark:bg-orange-950/10 border-l-4 border-l-orange-500 border-orange-200/50 dark:border-orange-800/50"
+          : "border-border/40"
+      }`}
+    >
+      <TableCell className="text-xs text-muted-foreground font-medium py-4 pl-6">
+        {((meta?.currentPage ?? page) - 1) * 10 + index + 1}
+      </TableCell>
+      <TableCell className="py-4">
+        <Link
+          href={`/dashboard/business/location-bookings/${booking.id}`}
+          className="group cursor-pointer hover:underline"
+        >
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium group-hover:text-primary transition-colors">
+              {booking.createdBy.firstName} {booking.createdBy.lastName}
+            </span>
+            <span className="text-xs text-muted-foreground truncate max-w-[180px]">
+              {booking.createdBy.email}
+            </span>
+          </div>
+        </Link>
+      </TableCell>
+      <TableCell className="py-4">
+        <span className="text-sm font-semibold leading-tight truncate">
+          {booking.location.name}
+        </span>
+      </TableCell>
+      <TableCell className="py-4">
+        {(() => {
+          const dateRange = formatBookingDateRange(booking.dates);
+          return (
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-muted-foreground">From:</span>
+                <span className="font-medium text-foreground">{dateRange.from}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-muted-foreground">To:</span>
+                <span className="font-medium text-foreground">{dateRange.to}</span>
+              </div>
+            </div>
+          );
+        })()}
+      </TableCell>
+      <TableCell className="py-4">
+        <div className="text-sm font-medium">
+          {calculateTotalHours(booking.dates)} hrs
+        </div>
+      </TableCell>
+      <TableCell className="py-4">
+        <div className="text-sm font-semibold text-emerald-600">
+          {formatCurrency(booking.amountToPay)}
+        </div>
+      </TableCell>
+      <TableCell className="py-4">
+        {isLoadingConflicts ? (
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        ) : hasConflicts ? (
+          <Badge
+            variant="outline"
+            className="bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-700"
+          >
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            {conflictCount} conflict{conflictCount > 1 ? "s" : ""}
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            No conflicts
+          </Badge>
+        )}
+      </TableCell>
+      <TableCell className="py-4">
+        {getStatusBadge(booking.status)}
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export default function LocationBookingsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -142,6 +248,9 @@ export default function LocationBookingsPage() {
   const bookings = bookingsData?.data || [];
   const meta = bookingsData?.meta;
 
+  // Fetch conflicts for all bookings - we'll calculate stats from individual queries
+  // Note: We can't use hooks in a loop, so each BookingRow will handle its own conflict detection
+  // For stats, we'll use a simpler approach - show approximate count
   const stats = {
     totalBookings: meta?.totalItems ?? 0,
     paymentReceived: bookings.filter(
@@ -153,13 +262,14 @@ export default function LocationBookingsPage() {
     totalRevenue: bookings
       .filter((b) => b.status?.toUpperCase() === "PAYMENT_RECEIVED")
       .reduce((sum, b) => sum + parseFloat(b.amountToPay || "0"), 0),
+    withConflicts: 0, // Will be calculated by individual row components
   };
 
   return (
     <div className="space-y-4">
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Bookings</CardTitle>
@@ -284,69 +394,19 @@ export default function LocationBookingsPage() {
                       <TableHead className="min-w-[180px] max-w-[250px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">Booking Date</TableHead>
                       <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[120px]">Total Hours Booked</TableHead>
                       <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[140px]">Amount to Pay</TableHead>
+                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[100px]">Conflicts</TableHead>
                       <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[130px]">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {bookings.map((booking, index) => (
-                      <TableRow
+                      <BookingRow
                         key={booking.id}
-                        className="border-b border-border/40 transition-colors hover:bg-muted/30"
-                      >
-                        <TableCell className="text-xs text-muted-foreground font-medium py-4 pl-6">
-                          {((meta?.currentPage ?? page) - 1) * 10 + index + 1}
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <Link
-                            href={`/dashboard/business/location-bookings/${booking.id}`}
-                            className="group cursor-pointer hover:underline"
-                          >
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-sm font-medium group-hover:text-primary transition-colors">
-                                {booking.createdBy.firstName} {booking.createdBy.lastName}
-                              </span>
-                              <span className="text-xs text-muted-foreground truncate max-w-[180px]">
-                                {booking.createdBy.email}
-                              </span>
-                            </div>
-                          </Link>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <span className="text-sm font-semibold leading-tight truncate">
-                            {booking.location.name}
-                          </span>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          {(() => {
-                            const dateRange = formatBookingDateRange(booking.dates);
-                            return (
-                              <div className="flex flex-col gap-0.5">
-                                <div className="flex items-center gap-1.5 text-xs">
-                                  <span className="text-muted-foreground">From:</span>
-                                  <span className="font-medium text-foreground">{dateRange.from}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 text-xs">
-                                  <span className="text-muted-foreground">To:</span>
-                                  <span className="font-medium text-foreground">{dateRange.to}</span>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="text-sm font-medium">
-                            {calculateTotalHours(booking.dates)} hrs
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="text-sm font-semibold text-emerald-600">
-                            {formatCurrency(booking.amountToPay)}
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          {getStatusBadge(booking.status)}
-                        </TableCell>
-                      </TableRow>
+                        booking={booking}
+                        index={index}
+                        page={page}
+                        meta={meta}
+                      />
                     ))}
                   </TableBody>
                 </Table>

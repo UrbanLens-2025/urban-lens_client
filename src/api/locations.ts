@@ -12,7 +12,6 @@ import type {
   LocationBookingConfig,
   LocationRequest,
   PaginatedData,
-  ProcessLocationBookingPayload,
   Tag,
   TagCategory,
   UpdateLocationBookingConfigPayload,
@@ -278,16 +277,30 @@ export const getAllBookingsAtLocation = async ({
   return data.data;
 };
 
-export const processLocationBooking = async ({
-  locationBookingId,
-  payload,
-}: {
-  locationBookingId: string;
-  payload: ProcessLocationBookingPayload;
-}): Promise<LocationBookingDetail> => {
+export const getConflictingBookings = async (
+  locationBookingId: string
+): Promise<LocationBooking[]> => {
+  const { data } = await axiosInstance.get<ApiResponse<LocationBooking[]>>(
+    `/v1/owner/location-bookings/conflicting-bookings/${locationBookingId}`
+  );
+  return data.data;
+};
+
+export const approveLocationBooking = async (
+  locationBookingId: string
+): Promise<LocationBookingDetail> => {
   const { data } = await axiosInstance.post<ApiResponse<LocationBookingDetail>>(
-    `/v1/owner/location-bookings/process/${locationBookingId}`,
-    payload
+    `/v1/owner/location-bookings/approve/${locationBookingId}`
+  );
+  return data.data;
+};
+
+export const rejectLocationBookings = async (
+  locationBookingIds: string[]
+): Promise<void> => {
+  const { data } = await axiosInstance.post<ApiResponse<void>>(
+    `/v1/owner/location-bookings/reject`,
+    { locationBookingIds }
   );
   return data.data;
 };
