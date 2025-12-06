@@ -45,6 +45,8 @@ import {
 import Link from "next/link";
 import { format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 
 function InfoRow({
   label,
@@ -395,16 +397,44 @@ export default function LocationBookingDetailPage({
     setProcessDialogOpen(true);
   };
 
+  // UUID validation helper
+  const isValidUUID = (id: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(id);
+  };
+
   const handleProcessConfirm = () => {
     if (!pendingStatus || !booking) return;
 
     const bookingId = booking.id;
-    if (!bookingId) return;
+    if (!bookingId || typeof bookingId !== 'string' || !isValidUUID(bookingId)) {
+      console.error('Invalid booking ID:', bookingId);
+      return;
+    }
 
     if (pendingStatus === "APPROVED") {
       // If approving with conflicts and user wants to reject conflicting bookings
       if (rejectConflictingBookings && conflictingBookings.length > 0) {
-        const conflictingIds = conflictingBookings.map(c => c.booking.id).filter((id): id is string => !!id);
+        const conflictingIds = conflictingBookings
+          .map(c => c.booking?.id)
+          .filter((id): id is string => 
+            !!id && 
+            typeof id === 'string' && 
+            isValidUUID(id)
+          );
+        
+        if (conflictingIds.length === 0) {
+          // No valid conflicting IDs, just approve
+          approveBooking.mutate(bookingId, {
+            onSuccess: () => {
+              setProcessDialogOpen(false);
+              setPendingStatus(null);
+              setRejectConflictingBookings(false);
+            },
+          });
+          return;
+        }
+
         // First reject conflicting bookings, then approve the current one
         rejectBookings.mutate(conflictingIds, {
           onSuccess: () => {
@@ -549,29 +579,56 @@ export default function LocationBookingDetailPage({
                 />
               )}
 
-              {/* Booking Dates */}
+              {/* Booking Dates Calendar */}
               <div className="mt-6">
                 <p className="text-sm font-semibold text-muted-foreground mb-3">
                   Booking Time Slots
                 </p>
-                <div className="space-y-2">
-                  {booking.dates.map((dateSlot, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 p-3 border rounded-lg"
-                    >
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex-1">
-                        <div className="font-medium">
-                          {formatDateTime(dateSlot.startDateTime)} -{" "}
-                          {format(new Date(dateSlot.endDateTime), "HH:mm")}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {format(new Date(dateSlot.startDateTime), "EEEE, MMMM dd, yyyy")}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Calendar View */}
+                  <div className="border rounded-lg p-4 bg-muted/30">
+                    <CalendarComponent
+                      mode="multiple"
+                      selected={booking.dates.map(dateSlot => {
+                        const date = new Date(dateSlot.startDateTime);
+                        date.setHours(0, 0, 0, 0);
+                        return date;
+                      })}
+                      className="rounded-md border-0"
+                      modifiers={{
+                        booked: booking.dates.map(dateSlot => {
+                          const date = new Date(dateSlot.startDateTime);
+                          date.setHours(0, 0, 0, 0);
+                          return date;
+                        }),
+                      }}
+                      modifiersClassNames={{
+                        booked: "bg-primary text-primary-foreground font-semibold",
+                      }}
+                    />
+                  </div>
+                  {/* Time Slots List */}
+                  <div className="space-y-2">
+                    {booking.dates.map((dateSlot, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 border rounded-lg bg-background"
+                      >
+                        <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm">
+                            {format(new Date(dateSlot.startDateTime), "MMM dd, yyyy")}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(dateSlot.startDateTime), "HH:mm")} - {format(new Date(dateSlot.endDateTime), "HH:mm")}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {format(new Date(dateSlot.startDateTime), "EEEE")}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -615,7 +672,7 @@ export default function LocationBookingDetailPage({
                 />
                 <InfoRow
                   label="Special Requirements"
-                  value={booking.referencedEventRequest.specialRequirements}
+                  value={booking.referencedEventRequest.specialRequirements || "None"}
                 />
                 <InfoRow
                   label="Event Status"
@@ -624,6 +681,24 @@ export default function LocationBookingDetailPage({
                       {booking.referencedEventRequest.status}
                     </Badge>
                   }
+                />
+                <InfoRow
+                  label="Event Request ID"
+                  value={
+                    <span className="font-mono text-sm">
+                      {booking.referencedEventRequest.id.substring(0, 8)}...
+                    </span>
+                  }
+                />
+                <InfoRow
+                  label="Created At"
+                  value={formatDateTime(booking.referencedEventRequest.createdAt)}
+                  icon={Calendar}
+                />
+                <InfoRow
+                  label="Last Updated"
+                  value={formatDateTime(booking.referencedEventRequest.updatedAt)}
+                  icon={Calendar}
                 />
 
                 {/* Event Validation Documents */}
@@ -668,42 +743,39 @@ export default function LocationBookingDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <InfoRow label="Location Name" value={booking.location.name} />
-              <InfoRow
-                label="Description"
-                value={booking.location.description}
-              />
-              <InfoRow label="Address" value={booking.location.addressLine} />
               <InfoRow
                 label="Full Address"
                 value={`${booking.location.addressLine}, ${booking.location.addressLevel1}, ${booking.location.addressLevel2}`}
               />
               <InfoRow
-                label="Coordinates"
-                value={`${booking.location.latitude}, ${booking.location.longitude}`}
-              />
-              <InfoRow
-                label="Ownership Type"
-                value={booking.location.ownershipType}
-              />
-              <InfoRow
                 label="Radius"
                 value={`${booking.location.radiusMeters} meters`}
               />
-              <InfoRow
-                label="Visible on Map"
-                value={
-                  <Badge
-                    variant={booking.location.isVisibleOnMap ? "default" : "outline"}
-                  >
-                    {booking.location.isVisibleOnMap ? "Yes" : "No"}
-                  </Badge>
-                }
-              />
+
+              {/* Location Map */}
+              <div className="mt-4">
+                <p className="text-sm font-semibold text-muted-foreground mb-3">
+                  Location on Map
+                </p>
+                <div className="h-64 w-full rounded-lg overflow-hidden border">
+                  <GoogleMapsPicker
+                    position={{
+                      lat: parseFloat(booking.location.latitude),
+                      lng: parseFloat(booking.location.longitude),
+                    }}
+                    onPositionChange={() => {}}
+                    radiusMeters={booking.location.radiusMeters}
+                    center={{
+                      lat: parseFloat(booking.location.latitude),
+                      lng: parseFloat(booking.location.longitude),
+                    }}
+                  />
+                </div>
+              </div>
 
               {/* Location Images */}
               {booking.location.imageUrl && booking.location.imageUrl.length > 0 && (
-                <div className="mt-6">
+                <div className="mt-4">
                   <p className="text-sm font-semibold text-muted-foreground mb-3">
                     Location Images
                   </p>
@@ -939,7 +1011,7 @@ export default function LocationBookingDetailPage({
                 </>
               )}
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
+            <div className="text-muted-foreground text-sm space-y-3">
               {conflictingBookings.length === 0 && (
                 <p>
                   Are you sure you want to{" "}
@@ -960,9 +1032,9 @@ export default function LocationBookingDetailPage({
                       ⚠️ Time Slot Conflict Detected
                     </AlertTitle>
                     <AlertDescription className="text-orange-800 dark:text-orange-300 mt-2">
-                      <p className="font-semibold">
+                      <span className="font-semibold">
                         This booking overlaps with {conflictingBookings.length} other active booking{conflictingBookings.length > 1 ? "s" : ""} at the same time slot{conflictingBookings.length > 1 ? "s" : ""}.
-                      </p>
+                      </span>
                     </AlertDescription>
                   </Alert>
 
@@ -1051,7 +1123,7 @@ export default function LocationBookingDetailPage({
                   </div>
                 </div>
               )}
-            </AlertDialogDescription>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={approveBooking.isPending || rejectBookings.isPending}>

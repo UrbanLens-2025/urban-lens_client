@@ -9,11 +9,6 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from "luci
 import { format, addDays, addWeeks, startOfDay, startOfWeek, isToday } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -401,79 +396,26 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
                           >
                             {hasBooking && primaryBooking ? (
                               bookings.length > 1 ? (
-                                // Multiple bookings - use Popover with Tooltip
+                                // Multiple bookings - use Popover
                                 <Popover open={isPopoverOpen} onOpenChange={(open) => setOpenPopover(open ? cellKey : null)}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <PopoverTrigger asChild>
-                                        <div
-                                          className={cn(
-                                            "w-full h-full rounded-md border-2 transition-all flex items-center justify-center text-[10px] font-semibold relative cursor-pointer shadow-sm",
-                                            statusColors?.bg,
-                                            statusColors?.border,
-                                            statusColors?.hover,
-                                            "text-white",
-                                            "hover:shadow-md hover:scale-[1.02]",
-                                            isPopoverOpen && "ring-2 ring-offset-2 ring-primary"
-                                          )}
-                                        >
-                                          <div className="flex flex-col items-center gap-0.5">
-                                            <span className="text-[8px] font-bold leading-none">{bookings.length}</span>
-                                            <span className="text-[6px] leading-none opacity-80">bookings</span>
-                                          </div>
-                                        </div>
-                                      </PopoverTrigger>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="max-w-sm p-3 bg-popover border shadow-lg">
-                                      <div className="space-y-2">
-                                        <div className="font-bold text-base border-b pb-2">
-                                          {bookings.length} Bookings at this time
-                                        </div>
-                                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                                          {bookings.slice(0, 3).map((booking, idx) => {
-                                            const bookingStatusColors = getStatusColor(booking.status);
-                                            return (
-                                              <div key={booking.id} className="pb-2 border-b last:border-b-0 last:pb-0">
-                                                <div className="font-semibold text-sm mb-1">
-                                                  {booking.eventName}
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                                  <div>
-                                                    <span className="text-muted-foreground">Time:</span>
-                                                    <div className="font-medium">
-                                                      {format(booking.start, "HH:mm")} - {format(booking.end, "HH:mm")}
-                                                    </div>
-                                                  </div>
-                                                  <div>
-                                                    <span className="text-muted-foreground">Customer:</span>
-                                                    <div className="font-medium truncate">{booking.customerName}</div>
-                                                  </div>
-                                                  <div>
-                                                    <span className="text-muted-foreground">Amount:</span>
-                                                    <div className="font-medium">{formatCurrency(booking.amount)}</div>
-                                                  </div>
-                                                  <div>
-                                                    <span className="text-muted-foreground">Status:</span>
-                                                    <Badge variant="outline" className={cn("text-[10px] px-1 py-0 mt-0.5", bookingStatusColors.text)}>
-                                                      {booking.status.replace(/_/g, " ")}
-                                                    </Badge>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
-                                          {bookings.length > 3 && (
-                                            <div className="text-xs text-muted-foreground pt-1">
-                                              +{bookings.length - 3} more booking{bookings.length - 3 > 1 ? "s" : ""}
-                                            </div>
-                                          )}
-                                        </div>
-                                        <div className="pt-2 border-t text-xs text-muted-foreground italic">
-                                          Click to view all bookings
-                                        </div>
+                                  <PopoverTrigger asChild>
+                                    <div
+                                      className={cn(
+                                        "w-full h-full rounded-md border-2 transition-all flex items-center justify-center text-[10px] font-semibold relative cursor-pointer shadow-sm",
+                                        statusColors?.bg,
+                                        statusColors?.border,
+                                        statusColors?.hover,
+                                        "text-white",
+                                        "hover:shadow-md hover:scale-[1.02]",
+                                        isPopoverOpen && "ring-2 ring-offset-2 ring-primary"
+                                      )}
+                                    >
+                                      <div className="flex flex-col items-center gap-0.5">
+                                        <span className="text-[8px] font-bold leading-none">{bookings.length}</span>
+                                        <span className="text-[6px] leading-none opacity-80">bookings</span>
                                       </div>
-                                    </TooltipContent>
-                                  </Tooltip>
+                                    </div>
+                                  </PopoverTrigger>
                                   <PopoverContent 
                                     side="top" 
                                     className="w-80 p-0"
@@ -529,9 +471,6 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
                                                 >
                                                   {booking.status.replace(/_/g, " ")}
                                                 </Badge>
-                                                {idx === 0 && (
-                                                  <span className="text-[9px] text-primary font-medium">Primary</span>
-                                                )}
                                               </div>
                                             </div>
                                           </div>
@@ -546,62 +485,20 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
                                   </PopoverContent>
                                 </Popover>
                               ) : (
-                                // Single booking - use Tooltip
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div
-                                      onClick={() => handleBookingClick(primaryBooking.id)}
-                                      className={cn(
-                                        "w-full h-full rounded-md border-2 transition-all flex items-center justify-center text-[10px] font-semibold relative cursor-pointer shadow-sm",
-                                        statusColors?.bg,
-                                        statusColors?.border,
-                                        statusColors?.hover,
-                                        "text-white",
-                                        "hover:shadow-md hover:scale-[1.02]"
-                                      )}
-                                    >
-                                      <span className="opacity-90">●</span>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" className="max-w-sm p-3 bg-popover border shadow-lg">
-                                    <div className="space-y-2">
-                                      <div className="font-bold text-base border-b pb-2">
-                                        {primaryBooking.eventName}
-                                      </div>
-                                      <div className="grid grid-cols-2 gap-2 text-xs">
-                                        <div>
-                                          <span className="text-muted-foreground">Date:</span>
-                                          <div className="font-medium">{format(primaryBooking.start, "MMM dd, yyyy")}</div>
-                                        </div>
-                                        <div>
-                                          <span className="text-muted-foreground">Time:</span>
-                                          <div className="font-medium">
-                                            {format(primaryBooking.start, "HH:mm")} - {format(primaryBooking.end, "HH:mm")}
-                                          </div>
-                                        </div>
-                                        <div>
-                                          <span className="text-muted-foreground">Customer:</span>
-                                          <div className="font-medium">{primaryBooking.customerName}</div>
-                                        </div>
-                                        <div>
-                                          <span className="text-muted-foreground">Amount:</span>
-                                          <div className="font-medium">{formatCurrency(primaryBooking.amount)}</div>
-                                        </div>
-                                      </div>
-                                      <div className="pt-2 border-t">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-muted-foreground text-xs">Status:</span>
-                                          <Badge variant="outline" className={cn("text-xs", statusColors?.text)}>
-                                            {primaryBooking.status.replace(/_/g, " ")}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                      <div className="pt-1 text-xs text-muted-foreground italic">
-                                        Click to view full details
-                                      </div>
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
+                                // Single booking
+                                <div
+                                  onClick={() => handleBookingClick(primaryBooking.id)}
+                                  className={cn(
+                                    "w-full h-full rounded-md border-2 transition-all flex items-center justify-center text-[10px] font-semibold relative cursor-pointer shadow-sm",
+                                    statusColors?.bg,
+                                    statusColors?.border,
+                                    statusColors?.hover,
+                                    "text-white",
+                                    "hover:shadow-md hover:scale-[1.02]"
+                                  )}
+                                >
+                                  <span className="opacity-90">●</span>
+                                </div>
                               )
                             ) : (
                               <div

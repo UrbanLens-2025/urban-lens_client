@@ -300,7 +300,7 @@ export const rejectLocationBookings = async (
 ): Promise<void> => {
   const { data } = await axiosInstance.post<ApiResponse<void>>(
     `/v1/owner/location-bookings/reject`,
-    { locationBookingIds }
+    { bookingIds: locationBookingIds }
   );
   return data.data;
 };
