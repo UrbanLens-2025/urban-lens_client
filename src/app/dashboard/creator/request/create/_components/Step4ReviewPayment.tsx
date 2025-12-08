@@ -49,6 +49,40 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
+function LocationReviewSection({ locationId }: { locationId: string }) {
+  const { data: locationsData } = useBookableLocations({ page: 1, limit: 100 });
+  const location = locationsData?.data?.find((loc) => loc.id === locationId);
+
+  if (!location) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading location details...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start gap-3">
+        <div className="p-2 rounded-lg bg-primary/10 text-primary">
+          <Building2 className="h-4 w-4" />
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-base">{location.name}</p>
+          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+            <MapPin className="h-3 w-3" />
+            {location.addressLine}, {location.addressLevel1}
+          </p>
+          {location.description && (
+            <p className="text-sm text-muted-foreground mt-2">{location.description}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Step4ReviewPayment({
   form,
   onSubmit,

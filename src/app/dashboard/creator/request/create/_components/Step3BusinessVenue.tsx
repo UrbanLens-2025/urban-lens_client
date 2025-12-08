@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map } from "lucide-react";
 import {
   Select,
@@ -32,6 +33,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     form.watch("locationId")
   );
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showMapView, setShowMapView] = useState(false);
   const { data: bookableLocationsData, isLoading: isLoadingLocations } = useBookableLocations({ 
     page: 1, 
     limit: 50, 
@@ -201,18 +203,30 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
             </Alert>
           )}
           
-          {/* Future: Map View (commented out for now) */}
-          {/* {showMapView && (
-            <Card className="h-[400px] w-full mt-4">
+          {/* Map View */}
+          {showMapView && locations.length > 0 && (
+            <Card className="h-[500px] w-full mt-4">
               <CardContent className="p-0 h-full">
                 <VenueMapSelector
-                  locations={locations}
+                  locations={locations.map((loc) => ({
+                    id: loc.id,
+                    name: loc.name,
+                    description: loc.description,
+                    latitude: Number(loc.latitude) || 0,
+                    longitude: Number(loc.longitude) || 0,
+                    addressLine: loc.addressLine,
+                    addressLevel1: loc.addressLevel1,
+                    addressLevel2: loc.addressLevel2,
+                    imageUrl: loc.imageUrl || [],
+                    bookingConfig: loc.bookingConfig,
+                    business: loc.business,
+                  }))}
                   onLocationSelect={setSelectedLocationId}
                   selectedLocationId={selectedLocationId}
                 />
               </CardContent>
             </Card>
-          )} */}
+          )}
         </div>
 
         {form.formState.errors.locationId && (
