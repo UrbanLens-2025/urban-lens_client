@@ -44,7 +44,7 @@ export function EventWelcomeModal({ eventId, eventName }: EventWelcomeModalProps
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -59,81 +59,48 @@ export function EventWelcomeModal({ eventId, eventName }: EventWelcomeModalProps
           </div>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          <div className="bg-muted/50 rounded-lg p-4 border space-y-3">
+        <div className="space-y-4 py-2">
+          <div className="bg-muted/50 rounded-lg p-3 border">
             <p className="text-sm text-foreground leading-relaxed">
-              Your event is live in Draft using the details you just entered in the creation
-              form—name, description, attendee count, tags, and any supporting documents.
-            </p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Finish setting things up by adding visuals, refining the info, uploading any missing
-              compliance documents, and configuring tickets before you publish.
+              Your event is saved as Draft. Add visuals, configure tickets, and complete setup before publishing.
             </p>
           </div>
 
           <div>
-            <h4 className="font-semibold text-sm mb-3 text-muted-foreground uppercase tracking-wide">
-              Recommended Next Steps
+            <h4 className="font-semibold text-xs mb-2 text-muted-foreground uppercase tracking-wide">
+              Quick Actions
             </h4>
-            <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleNavigate(`/dashboard/creator/event-form/edit/${eventId}`)}
-                className="w-full flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-left group"
+                className="flex items-center gap-2 p-2 rounded-lg border hover:bg-muted/50 transition-colors text-left group"
               >
-                <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/20 transition-colors">
-                  <Edit className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">Review Event Details</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Customize your event information, description, and settings
-                  </p>
-                </div>
+                <Edit className="h-4 w-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                <span className="text-xs font-medium">Edit Event</span>
               </button>
 
               <button
                 onClick={() => handleNavigate(`/dashboard/creator/ticket-form/create/${eventId}`)}
-                className="w-full flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-left group"
+                className="flex items-center gap-2 p-2 rounded-lg border hover:bg-muted/50 transition-colors text-left group"
               >
-                <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-green-500/20 transition-colors">
-                  <Ticket className="h-5 w-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">Create Ticket Types</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Set up pricing, availability, and ticket options for your attendees
-                  </p>
-                </div>
+                <Ticket className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                <span className="text-xs font-medium">Create Tickets</span>
               </button>
 
               <button
                 onClick={() => handleNavigate(`/dashboard/creator/events/${eventId}/tickets`)}
-                className="w-full flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-left group"
+                className="flex items-center gap-2 p-2 rounded-lg border hover:bg-muted/50 transition-colors text-left group"
               >
-                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
-                  <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">Manage Tickets</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    View and manage all your ticket types in one place
-                  </p>
-                </div>
+                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <span className="text-xs font-medium">Manage Tickets</span>
               </button>
 
               <button
                 onClick={() => handleNavigate(`/dashboard/creator/events/${eventId}/settings`)}
-                className="w-full flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-left group"
+                className="flex items-center gap-2 p-2 rounded-lg border hover:bg-muted/50 transition-colors text-left group"
               >
-                <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-500/20 transition-colors">
-                  <Settings className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">Configure Settings</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Adjust visibility, announcements, and advanced options
-                  </p>
-                </div>
+                <Settings className="h-4 w-4 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                <span className="text-xs font-medium">Settings</span>
               </button>
             </div>
           </div>
