@@ -27,5 +27,12 @@ export function useOnboardingCheck() {
       }
       return;
     }
+
+    if (user.hasOnboarded && user.businessProfile?.status === "REJECTED") {
+      if (pathname !== "/onboarding/rejected") {
+        router.replace("/onboarding/rejected");
+      }
+      return;
+    }
   }, [user, isLoading, router, pathname]);
 }

@@ -29,7 +29,7 @@ export default function RedirectPage() {
       }
 
       if (user.businessProfile?.status === "REJECTED") {
-        router.replace("/login");
+        router.replace("/onboarding/rejected");
         return;
       }
 

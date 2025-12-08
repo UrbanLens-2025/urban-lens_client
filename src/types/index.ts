@@ -105,6 +105,9 @@ export interface BusinessProfile {
   category: BusinessCategory;
   email: string;
   phone: string;
+  adminNotes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export enum AcceptedBusinessLicenseTypes {
