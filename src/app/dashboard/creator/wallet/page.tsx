@@ -251,6 +251,63 @@ export default function CreatorWalletPage() {
     }).format(amount);
   };
 
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const mapStatus = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      "COMPLETED": "completed",
+      "PENDING": "pending",
+      "FAILED": "failed",
+      "CANCELLED": "cancelled",
+      "READY_FOR_PAYMENT": "ready",
+    };
+    return statusMap[status.toUpperCase()] || status.toLowerCase();
+  };
+
+  const getBankName = (bankCode: string): string => {
+    const bankMap: Record<string, string> = {
+      "VNP": "Vietnam Payment",
+      "VNB": "Vietcombank",
+      "TCB": "Techcombank",
+      "BID": "BIDV",
+      "ACB": "ACB",
+      "VCB": "Vietcombank",
+      "CTG": "Vietinbank",
+      "NCB": "NCB Bank",
+      "VNPAY": "VNPay",
+    };
+    return bankMap[bankCode.toUpperCase()] || bankCode || "Unknown Bank";
+  };
+
+  // External mapping
+  const mapExternalTransaction = (transaction: WalletExternalTransaction) => {
+    const isDeposit = transaction.direction.toUpperCase() === "DEPOSIT";
+    const bankCode = transaction.providerResponse?.vnp_BankCode || transaction.provider || "N/A";
+    const bankName = getBankName(bankCode);
+    const bankTranNo = transaction.providerResponse?.vnp_BankTranNo;
+    const accountNumber = bankTranNo ? `****${String(bankTranNo).slice(-4)}` : "N/A";
+    return {
+      id: transaction.id,
+      type: isDeposit ? "deposit" : "withdrawal",
+      amount: parseFloat(transaction.amount),
+      description: isDeposit ? "Bank transfer deposit" : "Withdrawal to bank account",
+      bankName,
+      accountNumber,
+      status: mapStatus(transaction.status),
+      date: transaction.createdAt,
+      reference: transaction.providerTransactionId || transaction.id,
+      transactionFee: 0,
+    };
+  };
+
   // Calculate statistics with mock data for earnings
   const stats = useMemo(() => {
     const now = new Date();
@@ -424,38 +481,6 @@ export default function CreatorWalletPage() {
     });
   }, [externalTransactions, externalSearch, externalTypeFilter, externalStatusFilter]);
 
-  // External mapping
-  const mapExternalTransaction = (transaction: WalletExternalTransaction) => {
-    const isDeposit = transaction.direction.toUpperCase() === "DEPOSIT";
-    const bankCode = transaction.providerResponse?.vnp_BankCode || transaction.provider || "N/A";
-    const bankName = getBankName(bankCode);
-    const bankTranNo = transaction.providerResponse?.vnp_BankTranNo;
-    const accountNumber = bankTranNo ? `****${String(bankTranNo).slice(-4)}` : "N/A";
-    return {
-      id: transaction.id,
-      type: isDeposit ? "deposit" : "withdrawal",
-      amount: parseFloat(transaction.amount),
-      description: isDeposit ? "Bank transfer deposit" : "Withdrawal to bank account",
-      bankName,
-      accountNumber,
-      status: mapStatus(transaction.status),
-      date: transaction.createdAt,
-      reference: transaction.providerTransactionId || transaction.id,
-      transactionFee: 0,
-    };
-  };
-
-  const mapStatus = (status: string): string => {
-    const statusMap: Record<string, string> = {
-      "COMPLETED": "completed",
-      "PENDING": "pending",
-      "FAILED": "failed",
-      "CANCELLED": "cancelled",
-      "READY_FOR_PAYMENT": "ready",
-    };
-    return statusMap[status.toUpperCase()] || status.toLowerCase();
-  };
-
   const handleCancelClick = (transactionId: string) => {
     setTransactionToCancel(transactionId);
     setCancelDialogOpen(true);
@@ -467,31 +492,6 @@ export default function CreatorWalletPage() {
       setCancelDialogOpen(false);
       setTransactionToCancel(null);
     }
-  };
-
-  const getBankName = (bankCode: string): string => {
-    const bankMap: Record<string, string> = {
-      "VNP": "Vietnam Payment",
-      "VNB": "Vietcombank",
-      "TCB": "Techcombank",
-      "BID": "BIDV",
-      "ACB": "ACB",
-      "VCB": "Vietcombank",
-      "CTG": "Vietinbank",
-      "NCB": "NCB Bank",
-      "VNPAY": "VNPay",
-    };
-    return bankMap[bankCode.toUpperCase()] || bankCode || "Unknown Bank";
-  };
-
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   if (isLoading) {
