@@ -614,28 +614,28 @@ export default function AdminDashboardPage() {
 
         <Card className='hover:shadow-md transition-shadow'>
           <CardContent className='p-6'>
-            <div className='flex items-center justify-between'>
-              <div className='flex-1'>
-                <p className='text-sm font-medium text-muted-foreground mb-1'>
-                  Today Revenue
-                </p>
-                <div className='flex items-baseline gap-2'>
-                  <p className='text-3xl font-bold'>
+            <div>
+              <p className='text-sm font-medium text-muted-foreground mb-2'>
+                Today Revenue
+              </p>
+              <div className='space-y-2'>
+                <div className='flex items-baseline gap-3 flex-wrap'>
+                  <p className='text-3xl font-bold leading-none'>
                     {isLoadingStats ? (
                       <Loader2 className='h-8 w-8 animate-spin' />
                     ) : (
                       formatCurrency(stats.todayRevenue)
                     )}
                   </p>
-                  {!isLoadingStats && (
-                    <div className='flex items-center gap-1'>
+                  {!isLoadingStats && stats.revenueChange !== 0 && (
+                    <div className='flex items-center gap-1.5 shrink-0'>
                       {stats.revenueChange >= 0 ? (
-                        <TrendingUp className='h-4 w-4 text-green-600' />
+                        <TrendingUp className='h-4 w-4 text-green-600 shrink-0' />
                       ) : (
-                        <TrendingDown className='h-4 w-4 text-red-600' />
+                        <TrendingDown className='h-4 w-4 text-red-600 shrink-0' />
                       )}
                       <span
-                        className={`text-sm font-medium ${
+                        className={`text-sm font-semibold ${
                           stats.revenueChange >= 0
                             ? 'text-green-600'
                             : 'text-red-600'
@@ -646,12 +646,9 @@ export default function AdminDashboardPage() {
                     </div>
                   )}
                 </div>
-                <p className='text-xs text-muted-foreground mt-2'>
-                  vs yesterday
+                <p className='text-xs text-muted-foreground'>
+                  {stats.revenueChange === 0 ? 'No change from yesterday' : 'vs yesterday'}
                 </p>
-              </div>
-              <div className='h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center'>
-                <DollarSign className='h-6 w-6 text-emerald-600 dark:text-emerald-400' />
               </div>
             </div>
           </CardContent>
