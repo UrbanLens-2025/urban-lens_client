@@ -44,6 +44,11 @@ import { LocationRequest, LocationStatus } from '@/types';
 import { useLocationAdminRequests } from '@/hooks/admin/useLocationAdminRequests';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatShortDate } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 type StatusFilter = 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -259,7 +264,6 @@ export default function LocationRequestsPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Submitted By</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Business</TableHead>
                     <TableHead>Submitted</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -283,11 +287,25 @@ export default function LocationRequestsPage() {
                           : 'N/A'}
                       </TableCell>
                       <TableCell>
-                        {req.createdBy?.businessProfile ? (
-                          <div className="flex items-center gap-2">
-                            <IconBuildingStore className="h-4 w-4 text-muted-foreground" />
-                            <span>Business</span>
-                          </div>
+                        {req.type === 'BUSINESS_OWNED' ? (
+                          req.createdBy?.businessProfile?.name ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-2 cursor-default">
+                                  <IconBuildingStore className="h-4 w-4 text-muted-foreground" />
+                                  <span>Business</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{req.createdBy.businessProfile.name}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <IconBuildingStore className="h-4 w-4 text-muted-foreground" />
+                              <span>Business</span>
+                            </div>
+                          )
                         ) : (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <IconWorld className="h-4 w-4" />
@@ -295,15 +313,12 @@ export default function LocationRequestsPage() {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {req.createdBy?.businessProfile?.name || 'N/A'}
-                      </TableCell>
                       <TableCell>{formatShortDate(req.createdAt)}</TableCell>
                     </TableRow>
                   ))}
                   {requests.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24">
+                      <TableCell colSpan={5} className="text-center h-24">
                         No {statusFilter.toLowerCase()} requests found matching your criteria.
                       </TableCell>
                     </TableRow>
