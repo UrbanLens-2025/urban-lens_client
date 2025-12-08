@@ -4,9 +4,11 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocationByIdForAdmin } from '@/hooks/admin/useLocationByIdForAdmin';
 import {
+  ArrowLeft,
   Calendar,
   CalendarDays,
   ImageIcon,
+  Layers,
   Loader2,
   MapPin,
   Building,
@@ -66,7 +68,6 @@ export default function AdminLocationDetailsPage({
 }) {
   const { locationId } = use(params);
   const router = useRouter();
-  const pathname = usePathname();
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState('');
   const [currentImageAlt, setCurrentImageAlt] = useState('');
