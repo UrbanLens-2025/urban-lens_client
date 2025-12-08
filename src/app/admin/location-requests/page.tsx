@@ -100,7 +100,7 @@ export default function LocationRequestsPage() {
     return 'REJECTED';
   };
 
-  // Data fetching
+  // Data fetching for current view
   const { data, isLoading, error } = useLocationAdminRequests(
     page,
     itemsPerPage,
@@ -109,24 +109,53 @@ export default function LocationRequestsPage() {
     'createdAt:DESC'
   );
 
+  // Fetch statistics for all statuses (without pagination, just to get counts)
+  const { data: pendingData } = useLocationAdminRequests(
+    1,
+    1, // Only need the meta.totalItems
+    undefined,
+    'AWAITING_ADMIN_REVIEW',
+    'createdAt:DESC'
+  );
+
+  const { data: approvedData } = useLocationAdminRequests(
+    1,
+    1, // Only need the meta.totalItems
+    undefined,
+    'APPROVED',
+    'createdAt:DESC'
+  );
+
+  const { data: rejectedData } = useLocationAdminRequests(
+    1,
+    1, // Only need the meta.totalItems
+    undefined,
+    'REJECTED',
+    'createdAt:DESC'
+  );
+
   const requests = data?.data || [];
   const meta = data?.meta;
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['locationRequests'] });
+    queryClient.invalidateQueries({ queryKey: ['locationAdminRequest'] });
   };
 
-  // Calculate statistics
+  // Calculate real statistics from API data
   const stats = useMemo(() => {
-    // TODO: Implement real statistics from API
-    // Currently using mock data as the list API only returns paginated results
+    const pending = pendingData?.meta?.totalItems || 0;
+    const approved = approvedData?.meta?.totalItems || 0;
+    const rejected = rejectedData?.meta?.totalItems || 0;
+    const total = pending + approved + rejected;
+
     return {
-      total: meta?.totalItems || 0,
-      pending: 5,
-      approved: 1456,
-      rejected: 12,
+      total,
+      pending,
+      approved,
+      rejected,
     };
-  }, [meta]);
+  }, [pendingData?.meta?.totalItems, approvedData?.meta?.totalItems, rejectedData?.meta?.totalItems]);
 
   if (error) {
     return (
