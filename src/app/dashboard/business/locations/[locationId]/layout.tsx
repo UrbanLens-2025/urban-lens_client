@@ -26,6 +26,7 @@ import {
   X,
   Users,
   Ruler,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -185,6 +186,7 @@ function LocationDetailLayoutContent({
     else if (pathname.includes("/missions")) setActiveTab("missions");
     else if (pathname.includes("/availability") || pathname.includes("/booking-config")) setActiveTab("booking");
     else if (pathname.includes("/announcements")) setActiveTab("announcements");
+    else if (pathname.includes("/posts")) setActiveTab("posts");
     else if (pathname.includes("/edit")) setActiveTab("edit");
     else setActiveTab("overview");
   }, [pathname]);
@@ -434,6 +436,20 @@ function LocationDetailLayoutContent({
               >
                 <Megaphone className="h-4 w-4" />
                 Announcements
+              </Button>
+            </Link>
+            <Link href={`/dashboard/business/locations/${locationId}/posts`}>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "gap-2 rounded-b-none border-b-2 transition-colors",
+                  isActiveTab(`/dashboard/business/locations/${locationId}/posts`)
+                    ? "border-primary bg-muted"
+                    : "border-transparent hover:border-muted-foreground/50"
+                )}
+              >
+                <MessageSquare className="h-4 w-4" />
+                Posts & Reviews
               </Button>
             </Link>
             <Link href={`/dashboard/business/locations/${locationId}/edit`}>
