@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -34,14 +35,33 @@ import {
   Settings,
   Filter,
   Loader2,
+  Users,
+  MapPin,
+  Calendar,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  BarChart3,
+  PieChart,
+  RefreshCw,
 } from 'lucide-react';
 import {
   Line,
   LineChart,
+  BarChart,
+  Bar,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
   CartesianGrid,
   XAxis,
+  YAxis,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
+  Legend,
 } from 'recharts';
 import {
   StatsCard,
@@ -58,7 +78,8 @@ import { useAllLocations } from '@/hooks/admin/useAllLocations';
 import { useAllEvents } from '@/hooks/admin/useAllEvents';
 import { useReports } from '@/hooks/admin/useReports';
 import { useAdminExternalTransactions } from '@/hooks/admin/useAdminExternalTransactions';
-import { IconCurrencyDollar, IconCalendar, IconMapPin, IconUser, IconClock } from '@tabler/icons-react';
+import { format, subDays, subMonths, isSameMonth, isSameDay } from 'date-fns';
+import Link from 'next/link';
 
 const userGrowthConfig: ChartConfig = {
   users: {
@@ -67,22 +88,46 @@ const userGrowthConfig: ChartConfig = {
   },
 };
 
+const revenueConfig: ChartConfig = {
+  revenue: {
+    label: 'Revenue',
+    color: 'hsl(var(--chart-1))',
+  },
+  deposits: {
+    label: 'Deposits',
+    color: 'hsl(var(--chart-2))',
+  },
+};
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
 function QuickActionCard({
   title,
   description,
   icon: Icon,
   action,
   variant = 'default',
-}: any) {
+  onClick,
+}: {
+  title: string;
+  description: string;
+  icon: any;
+  action: string;
+  variant?: 'default' | 'danger';
+  onClick?: () => void;
+}) {
   return (
-    <Card className='hover:shadow-md transition-shadow cursor-pointer'>
+    <Card
+      className='hover:shadow-md transition-shadow cursor-pointer group'
+      onClick={onClick}
+    >
       <CardContent className='p-4'>
         <div className='flex items-center space-x-3'>
           <div
-            className={`p-2 rounded-lg ${
+            className={`p-2 rounded-lg transition-colors ${
               variant === 'danger'
-                ? 'bg-red-100 text-red-600'
-                : 'bg-blue-100 text-blue-600'
+                ? 'bg-red-100 text-red-600 group-hover:bg-red-200 dark:bg-red-950 dark:text-red-400'
+                : 'bg-blue-100 text-blue-600 group-hover:bg-blue-200 dark:bg-blue-950 dark:text-blue-400'
             }`}
           >
             <Icon className='h-4 w-4' />
@@ -94,6 +139,7 @@ function QuickActionCard({
           <Button
             size='sm'
             variant={variant === 'danger' ? 'destructive' : 'default'}
+            className='shrink-0'
           >
             {action}
           </Button>
@@ -104,6 +150,8 @@ function QuickActionCard({
 }
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
+
   const { data: accountsData, isLoading: isLoadingAccounts } = useAllAccounts({
     page: 1,
     limit: 200,
@@ -154,7 +202,17 @@ export default function AdminDashboardPage() {
     isLoadingReports ||
     isLoadingExternalTx;
 
-  const dashboardStats = useMemo(() => {
+  // Format currency helper
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  // Calculate enhanced statistics with trends
+  const stats = useMemo(() => {
     const totalUsers = accountsData?.data.meta.totalItems ?? 0;
     const totalLocations = locationsData?.meta.totalItems ?? 0;
     const totalEvents = eventsData?.meta.totalItems ?? 0;
@@ -162,59 +220,83 @@ export default function AdminDashboardPage() {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const yesterday = subDays(today, 1);
+    const lastWeek = subDays(today, 7);
+    const lastMonth = subMonths(today, 1);
 
+    // Calculate today's revenue
     const todayRevenueRaw =
       externalTransactionsData?.data
         .filter(
           (tx) =>
             tx.status === 'COMPLETED' &&
             tx.direction === 'DEPOSIT' &&
-            new Date(tx.createdAt) >= today
+            isSameDay(new Date(tx.createdAt), today)
         )
         .reduce((sum, tx) => sum + parseFloat(tx.amount || '0'), 0) ?? 0;
 
-    const todayRevenueLabel =
-      todayRevenueRaw > 0 ? `₫${todayRevenueRaw.toLocaleString()}` : '₫0';
+    // Calculate yesterday's revenue for comparison
+    const yesterdayRevenueRaw =
+      externalTransactionsData?.data
+        .filter(
+          (tx) =>
+            tx.status === 'COMPLETED' &&
+            tx.direction === 'DEPOSIT' &&
+            isSameDay(new Date(tx.createdAt), yesterday)
+        )
+        .reduce((sum, tx) => sum + parseFloat(tx.amount || '0'), 0) ?? 0;
 
-    return [
-      {
-        title: 'Total Users',
-        value: totalUsers.toLocaleString(),
-        change: 'All user accounts in the system',
-        icon: IconUser,
-        color: 'blue' as const,
-      },
-      {
-        title: 'Active Locations',
-        value: totalLocations.toLocaleString(),
-        change: 'Locations managed in the platform',
-        icon: IconMapPin,
-        color: 'green' as const,
-      },
-      {
-        title: 'Upcoming Events',
-        value: totalEvents.toLocaleString(),
-        change: 'Events visible to admins',
-        icon: IconCalendar,
-        color: 'purple' as const,
-      },
-      {
-        title: 'Today Revenue',
-        value: todayRevenueLabel,
-        change: 'Completed deposits today (approx.)',
-        icon: IconCurrencyDollar,
-        color: 'green' as const,
-      },
-      {
-        title: 'Pending Content',
-        value: pendingContent.toLocaleString(),
-        change: 'Reports waiting for review',
-        icon: IconClock,
-        color: 'orange' as const,
-      },
-    ];
-  }, [accountsData, locationsData, eventsData, pendingReportsData, externalTransactionsData]);
+    const revenueChange =
+      yesterdayRevenueRaw > 0
+        ? ((todayRevenueRaw - yesterdayRevenueRaw) / yesterdayRevenueRaw) * 100
+        : todayRevenueRaw > 0
+        ? 100
+        : 0;
 
+    // Calculate user growth (last 7 days vs previous 7 days)
+    const accounts = (accountsData?.data.data ?? []) as any[];
+    const last7Days = accounts.filter((acc) => {
+      const createdAt = new Date(acc.createdAt);
+      return createdAt >= lastWeek && createdAt < today;
+    }).length;
+
+    const previous7Days = accounts.filter((acc) => {
+      const createdAt = new Date(acc.createdAt);
+      const previousWeekStart = subDays(lastWeek, 7);
+      return createdAt >= previousWeekStart && createdAt < lastWeek;
+    }).length;
+
+    const usersChange =
+      previous7Days > 0
+        ? ((last7Days - previous7Days) / previous7Days) * 100
+        : last7Days > 0
+        ? 100
+        : 0;
+
+    // Mock data for locations and events growth (can be replaced with real API later)
+    const locationsChange = 8.5; // Mock: +8.5% growth
+    const eventsChange = -2.3; // Mock: -2.3% decrease
+
+    return {
+      totalUsers,
+      totalLocations,
+      totalEvents,
+      todayRevenue: todayRevenueRaw,
+      revenueChange,
+      usersChange,
+      locationsChange,
+      eventsChange,
+      pendingContent,
+    };
+  }, [
+    accountsData,
+    locationsData,
+    eventsData,
+    pendingReportsData,
+    externalTransactionsData,
+  ]);
+
+  // User growth data for chart
   const userGrowthData = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -253,6 +335,37 @@ export default function AdminDashboardPage() {
     return result;
   }, [accountsData]);
 
+  // Revenue trend data (mock data for now)
+  const revenueTrendData = useMemo(() => {
+    const today = new Date();
+    const result = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const date = subDays(today, i);
+      const label = date.toLocaleDateString('en-US', { weekday: 'short' });
+      // Mock revenue data - can be replaced with real API
+      const baseRevenue = 2000000;
+      const randomFactor = Math.random() * 500000 - 250000;
+      result.push({
+        period: label,
+        revenue: baseRevenue + randomFactor,
+        deposits: baseRevenue * 0.7 + randomFactor * 0.7,
+      });
+    }
+
+    return result;
+  }, []);
+
+  // Content type distribution (mock data)
+  const contentDistributionData = useMemo(() => {
+    return [
+      { name: 'Posts', value: 45, color: COLORS[0] },
+      { name: 'Events', value: 30, color: COLORS[1] },
+      { name: 'Locations', value: 25, color: COLORS[2] },
+    ];
+  }, []);
+
+  // Content stats
   const contentStats = useMemo(() => {
     const reports = recentReportsData?.data ?? [];
     const now = new Date();
@@ -289,97 +402,563 @@ export default function AdminDashboardPage() {
     };
   }, [recentReportsData, pendingReportsData]);
 
-  return (
-    <div className='space-y-8 pb-8 overflow-x-hidden'>
-      <DashboardHeader
-        title="Admin Dashboard"
-        description="Manage users, content, and system operations"
-      />
+  // Mock recent activity data
+  const recentActivity = useMemo(() => {
+    return [
+      {
+        id: '1',
+        type: 'user_created',
+        message: 'New user account created',
+        user: 'John Doe',
+        timestamp: new Date(Date.now() - 5 * 60 * 1000),
+        icon: Users,
+        color: 'text-blue-600',
+      },
+      {
+        id: '2',
+        type: 'location_approved',
+        message: 'Location approved',
+        location: 'Coffee Shop Downtown',
+        timestamp: new Date(Date.now() - 15 * 60 * 1000),
+        icon: CheckCircle2,
+        color: 'text-green-600',
+      },
+      {
+        id: '3',
+        type: 'report_resolved',
+        message: 'Report resolved',
+        report: 'Inappropriate content',
+        timestamp: new Date(Date.now() - 30 * 60 * 1000),
+        icon: Shield,
+        color: 'text-purple-600',
+      },
+      {
+        id: '4',
+        type: 'event_published',
+        message: 'Event published',
+        event: 'Summer Music Festival',
+        timestamp: new Date(Date.now() - 45 * 60 * 1000),
+        icon: Calendar,
+        color: 'text-orange-600',
+      },
+      {
+        id: '5',
+        type: 'transaction_completed',
+        message: 'Transaction completed',
+        amount: '₫500,000',
+        timestamp: new Date(Date.now() - 60 * 60 * 1000),
+        icon: DollarSign,
+        color: 'text-green-600',
+      },
+    ];
+  }, []);
 
-      {/* Stats Grid */}
-      <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'>
-        {dashboardStats.map((stat) => (
-          <StatsCard
-            key={stat.title}
-            title={stat.title}
-            value={stat.value}
-            change={stat.change}
-            icon={stat.icon}
-            color={stat.color}
-            isLoading={isLoadingStats}
-            variant="minimal"
-          />
-        ))}
+  return (
+    <div className='space-y-8 pb-8'>
+      {/* Enhanced Header */}
+      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+        <div>
+          <h1 className='text-3xl font-bold tracking-tight'>Admin Dashboard</h1>
+          <p className='text-muted-foreground mt-1'>
+            Overview of platform activity and system management
+          </p>
+        </div>
+        <div className='flex items-center gap-2'>
+          <Button variant='outline' onClick={() => window.location.reload()}>
+            <RefreshCw className='h-4 w-4 mr-2' />
+            Refresh
+          </Button>
+          <Button onClick={() => router.push('/admin/reports')}>
+            <Flag className='h-4 w-4 mr-2' />
+            View Reports
+          </Button>
+        </div>
       </div>
 
+      {/* Enhanced Stats Grid */}
+      <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-5'>
+        <Card className='hover:shadow-md transition-shadow'>
+          <CardContent className='p-6'>
+            <div className='flex items-center justify-between'>
+              <div className='flex-1'>
+                <p className='text-sm font-medium text-muted-foreground mb-1'>
+                  Total Users
+                </p>
+                <div className='flex items-baseline gap-2'>
+                  <p className='text-3xl font-bold'>
+                    {isLoadingStats ? (
+                      <Loader2 className='h-8 w-8 animate-spin' />
+                    ) : (
+                      stats.totalUsers.toLocaleString()
+                    )}
+                  </p>
+                  {!isLoadingStats && (
+                    <div className='flex items-center gap-1'>
+                      {stats.usersChange >= 0 ? (
+                        <TrendingUp className='h-4 w-4 text-green-600' />
+                      ) : (
+                        <TrendingDown className='h-4 w-4 text-red-600' />
+                      )}
+                      <span
+                        className={`text-sm font-medium ${
+                          stats.usersChange >= 0
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                        }`}
+                      >
+                        {Math.abs(stats.usersChange).toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className='text-xs text-muted-foreground mt-2'>
+                  {stats.usersChange >= 0 ? 'vs last week' : 'vs last week'}
+                </p>
+              </div>
+              <div className='h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center'>
+                <Users className='h-6 w-6 text-blue-600 dark:text-blue-400' />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className='hover:shadow-md transition-shadow'>
+          <CardContent className='p-6'>
+            <div className='flex items-center justify-between'>
+              <div className='flex-1'>
+                <p className='text-sm font-medium text-muted-foreground mb-1'>
+                  Active Locations
+                </p>
+                <div className='flex items-baseline gap-2'>
+                  <p className='text-3xl font-bold'>
+                    {isLoadingStats ? (
+                      <Loader2 className='h-8 w-8 animate-spin' />
+                    ) : (
+                      stats.totalLocations.toLocaleString()
+                    )}
+                  </p>
+                  {!isLoadingStats && (
+                    <div className='flex items-center gap-1'>
+                      {stats.locationsChange >= 0 ? (
+                        <TrendingUp className='h-4 w-4 text-green-600' />
+                      ) : (
+                        <TrendingDown className='h-4 w-4 text-red-600' />
+                      )}
+                      <span
+                        className={`text-sm font-medium ${
+                          stats.locationsChange >= 0
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                        }`}
+                      >
+                        {Math.abs(stats.locationsChange).toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className='text-xs text-muted-foreground mt-2'>
+                  Locations on platform
+                </p>
+              </div>
+              <div className='h-12 w-12 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center'>
+                <MapPin className='h-6 w-6 text-green-600 dark:text-green-400' />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className='hover:shadow-md transition-shadow'>
+          <CardContent className='p-6'>
+            <div className='flex items-center justify-between'>
+              <div className='flex-1'>
+                <p className='text-sm font-medium text-muted-foreground mb-1'>
+                  Upcoming Events
+                </p>
+                <div className='flex items-baseline gap-2'>
+                  <p className='text-3xl font-bold'>
+                    {isLoadingStats ? (
+                      <Loader2 className='h-8 w-8 animate-spin' />
+                    ) : (
+                      stats.totalEvents.toLocaleString()
+                    )}
+                  </p>
+                  {!isLoadingStats && (
+                    <div className='flex items-center gap-1'>
+                      {stats.eventsChange >= 0 ? (
+                        <TrendingUp className='h-4 w-4 text-green-600' />
+                      ) : (
+                        <TrendingDown className='h-4 w-4 text-red-600' />
+                      )}
+                      <span
+                        className={`text-sm font-medium ${
+                          stats.eventsChange >= 0
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                        }`}
+                      >
+                        {Math.abs(stats.eventsChange).toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className='text-xs text-muted-foreground mt-2'>
+                  Events scheduled
+                </p>
+              </div>
+              <div className='h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-950 flex items-center justify-center'>
+                <Calendar className='h-6 w-6 text-purple-600 dark:text-purple-400' />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className='hover:shadow-md transition-shadow'>
+          <CardContent className='p-6'>
+            <div className='flex items-center justify-between'>
+              <div className='flex-1'>
+                <p className='text-sm font-medium text-muted-foreground mb-1'>
+                  Today Revenue
+                </p>
+                <div className='flex items-baseline gap-2'>
+                  <p className='text-3xl font-bold'>
+                    {isLoadingStats ? (
+                      <Loader2 className='h-8 w-8 animate-spin' />
+                    ) : (
+                      formatCurrency(stats.todayRevenue)
+                    )}
+                  </p>
+                  {!isLoadingStats && (
+                    <div className='flex items-center gap-1'>
+                      {stats.revenueChange >= 0 ? (
+                        <TrendingUp className='h-4 w-4 text-green-600' />
+                      ) : (
+                        <TrendingDown className='h-4 w-4 text-red-600' />
+                      )}
+                      <span
+                        className={`text-sm font-medium ${
+                          stats.revenueChange >= 0
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                        }`}
+                      >
+                        {Math.abs(stats.revenueChange).toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className='text-xs text-muted-foreground mt-2'>
+                  vs yesterday
+                </p>
+              </div>
+              <div className='h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center'>
+                <DollarSign className='h-6 w-6 text-emerald-600 dark:text-emerald-400' />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className='hover:shadow-md transition-shadow border-orange-200 dark:border-orange-800'>
+          <CardContent className='p-6'>
+            <div className='flex items-center justify-between'>
+              <div className='flex-1'>
+                <p className='text-sm font-medium text-muted-foreground mb-1'>
+                  Pending Reviews
+                </p>
+                <div className='flex items-baseline gap-2'>
+                  <p className='text-3xl font-bold'>
+                    {isLoadingStats ? (
+                      <Loader2 className='h-8 w-8 animate-spin' />
+                    ) : (
+                      stats.pendingContent.toLocaleString()
+                    )}
+                  </p>
+                </div>
+                <p className='text-xs text-muted-foreground mt-2'>
+                  Requires attention
+                </p>
+              </div>
+              <div className='h-12 w-12 rounded-full bg-orange-100 dark:bg-orange-950 flex items-center justify-center'>
+                <Clock className='h-6 w-6 text-orange-600 dark:text-orange-400' />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+        <Link href='/admin/business'>
+          <Card className='hover:shadow-md transition-shadow cursor-pointer group h-full'>
+            <CardContent className='p-4'>
+              <div className='flex items-center gap-3'>
+                <div className='h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors'>
+                  <Building2 className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+                </div>
+                <div className='flex-1'>
+                  <p className='font-semibold text-sm'>Business Accounts</p>
+                  <p className='text-xs text-muted-foreground'>
+                    Manage business profiles
+                  </p>
+                </div>
+                <ArrowRight className='h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors' />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href='/admin/location-requests'>
+          <Card className='hover:shadow-md transition-shadow cursor-pointer group h-full'>
+            <CardContent className='p-4'>
+              <div className='flex items-center gap-3'>
+                <div className='h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition-colors'>
+                  <MapPin className='h-5 w-5 text-green-600 dark:text-green-400' />
+                </div>
+                <div className='flex-1'>
+                  <p className='font-semibold text-sm'>Location Requests</p>
+                  <p className='text-xs text-muted-foreground'>
+                    Review pending requests
+                  </p>
+                </div>
+                <ArrowRight className='h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors' />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href='/admin/reports'>
+          <Card className='hover:shadow-md transition-shadow cursor-pointer group h-full'>
+            <CardContent className='p-4'>
+              <div className='flex items-center gap-3'>
+                <div className='h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center group-hover:bg-red-500/20 transition-colors'>
+                  <Flag className='h-5 w-5 text-red-600 dark:text-red-400' />
+                </div>
+                <div className='flex-1'>
+                  <p className='font-semibold text-sm'>Content Reports</p>
+                  <p className='text-xs text-muted-foreground'>
+                    {stats.pendingContent} pending reviews
+                  </p>
+                </div>
+                <ArrowRight className='h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors' />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href='/admin/wallet'>
+          <Card className='hover:shadow-md transition-shadow cursor-pointer group h-full'>
+            <CardContent className='p-4'>
+              <div className='flex items-center gap-3'>
+                <div className='h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors'>
+                  <CreditCard className='h-5 w-5 text-purple-600 dark:text-purple-400' />
+                </div>
+                <div className='flex-1'>
+                  <p className='font-semibold text-sm'>Financial Overview</p>
+                  <p className='text-xs text-muted-foreground'>
+                    View transactions
+                  </p>
+                </div>
+                <ArrowRight className='h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors' />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
+      {/* Charts Section */}
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+        {/* User Growth Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className='flex items-center gap-2'>
+              <BarChart3 className='h-5 w-5' />
+              User Growth (Last 7 Days)
+            </CardTitle>
+            <CardDescription>
+              New user registrations over the past week
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {userGrowthData.length > 0 ? (
+              <ChartContainer config={userGrowthConfig} className='h-[300px]'>
+                <ResponsiveContainer width='100%' height='100%'>
+                  <LineChart data={userGrowthData}>
+                    <CartesianGrid
+                      strokeDasharray='3 3'
+                      vertical={false}
+                      className='stroke-muted'
+                    />
+                    <XAxis
+                      dataKey='period'
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <RechartsTooltip
+                      cursor={{ strokeDasharray: '4 4' }}
+                      content={<ChartTooltipContent />}
+                    />
+                    <Line
+                      type='monotone'
+                      dataKey='users'
+                      stroke='var(--color-users)'
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className='h-[300px] flex items-center justify-center text-muted-foreground'>
+                <div className='text-center'>
+                  <Users className='h-12 w-12 mx-auto mb-2 opacity-50' />
+                  <p>No user growth data available</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Revenue Trend Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className='flex items-center gap-2'>
+              <DollarSign className='h-5 w-5' />
+              Revenue Trend (Last 7 Days)
+            </CardTitle>
+            <CardDescription>
+              Daily revenue and deposits overview
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {revenueTrendData.length > 0 ? (
+              <ChartContainer config={revenueConfig} className='h-[300px]'>
+                <ResponsiveContainer width='100%' height='100%'>
+                  <BarChart data={revenueTrendData}>
+                    <CartesianGrid
+                      strokeDasharray='3 3'
+                      vertical={false}
+                      className='stroke-muted'
+                    />
+                    <XAxis
+                      dataKey='period'
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) =>
+                        `₫${(value / 1000000).toFixed(1)}M`
+                      }
+                    />
+                    <RechartsTooltip
+                      cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                      content={<ChartTooltipContent />}
+                      formatter={(value: number) => formatCurrency(value)}
+                    />
+                    <Legend />
+                    <Bar
+                      dataKey='revenue'
+                      fill='var(--color-revenue)'
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey='deposits'
+                      fill='var(--color-deposits)'
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className='h-[300px] flex items-center justify-center text-muted-foreground'>
+                <div className='text-center'>
+                  <DollarSign className='h-12 w-12 mx-auto mb-2 opacity-50' />
+                  <p>No revenue data available</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Tabs */}
       <Tabs defaultValue='users' className='space-y-6'>
         <TabsList className='grid w-full grid-cols-4'>
           <TabsTrigger value='users'>Users</TabsTrigger>
           <TabsTrigger value='content'>Content</TabsTrigger>
-          {/* <TabsTrigger value='locations'>Địa điểm</TabsTrigger> */}
-          {/* <TabsTrigger value='financial'>Financial</TabsTrigger> */}
           <TabsTrigger value='vouchers'>Vouchers</TabsTrigger>
           <TabsTrigger value='system'>System</TabsTrigger>
         </TabsList>
 
-        {/* 1️⃣ User Management */}
+        {/* Users Tab */}
         <TabsContent value='users' className='space-y-6'>
           <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-            {/* Biểu đồ tăng trưởng người dùng */}
+            {/* User Growth Chart */}
             <Card className='lg:col-span-2'>
               <CardHeader>
                 <div className='flex justify-between items-center'>
-                  <CardTitle>Tăng trưởng người dùng</CardTitle>
+                  <CardTitle>User Growth</CardTitle>
                   <div className='flex space-x-2'>
                     <Button variant='outline' size='sm'>
-                      Tuần
+                      Week
                     </Button>
                     <Button variant='outline' size='sm'>
-                      Tháng
+                      Month
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className='h-64 bg-muted/20 rounded-lg p-2'>
-                  <ChartContainer config={userGrowthConfig} className="h-full w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={userGrowthData}>
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          vertical={false}
-                          className="stroke-muted"
-                        />
-                        <XAxis
-                          dataKey="period"
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tick={{ fontSize: 11 }}
-                        />
-                        <RechartsTooltip
-                          cursor={{
-                            stroke: 'hsl(var(--muted-foreground))',
-                            strokeDasharray: '4 4',
-                          }}
-                          content={<ChartTooltipContent />}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="users"
-                          stroke="var(--color-users)"
-                          strokeWidth={2}
-                          dot={{ r: 3 }}
-                          activeDot={{ r: 5 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </div>
+                <ChartContainer config={userGrowthConfig} className='h-64'>
+                  <ResponsiveContainer width='100%' height='100%'>
+                    <LineChart data={userGrowthData}>
+                      <CartesianGrid
+                        strokeDasharray='3 3'
+                        vertical={false}
+                        className='stroke-muted'
+                      />
+                      <XAxis
+                        dataKey='period'
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        tick={{ fontSize: 11 }}
+                      />
+                      <RechartsTooltip
+                        cursor={{
+                          stroke: 'hsl(var(--muted-foreground))',
+                          strokeDasharray: '4 4',
+                        }}
+                        content={<ChartTooltipContent />}
+                      />
+                      <Line
+                        type='monotone'
+                        dataKey='users'
+                        stroke='var(--color-users)'
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
 
-            {/* Top 10 người dùng nổi bật */}
+            {/* Top Users */}
             <Card>
               <CardHeader>
                 <CardTitle className='flex items-center'>
@@ -390,26 +969,26 @@ export default function AdminDashboardPage() {
               <CardContent className='space-y-3'>
                 {[
                   {
-                    name: 'Nguyễn Văn A',
+                    name: 'John Doe',
                     points: '2,847',
                     badge: 'Gold Explorer',
                   },
                   {
-                    name: 'Trần Thị B',
+                    name: 'Jane Smith',
                     points: '2,156',
                     badge: 'Silver Reviewer',
                   },
                   {
-                    name: 'Lê Minh C',
+                    name: 'Mike Johnson',
                     points: '1,923',
                     badge: 'Bronze Creator',
                   },
-                  { name: 'Phạm Thị D', points: '1,678', badge: 'Active User' },
-                  { name: 'Hoàng Văn E', points: '1,445', badge: 'Explorer' },
+                  { name: 'Sarah Williams', points: '1,678', badge: 'Active User' },
+                  { name: 'David Brown', points: '1,445', badge: 'Explorer' },
                 ].map((user, i) => (
                   <div
                     key={i}
-                    className='flex items-center justify-between p-2 rounded-lg bg-muted/20'
+                    className='flex items-center justify-between p-2 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors'
                   >
                     <div className='flex items-center space-x-2'>
                       <span className='font-bold text-sm w-6'>#{i + 1}</span>
@@ -428,46 +1007,46 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-            {/* Người dùng bị cảnh báo/khóa */}
+            {/* Restricted Users */}
             <Card>
               <CardHeader>
                 <CardTitle className='flex items-center'>
                   <Shield className='h-4 w-4 mr-2 text-red-500' />
-                  Người dùng bị hạn chế
+                  Restricted Users
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Tên</TableHead>
-                      <TableHead>Trạng thái</TableHead>
-                      <TableHead>Lý do</TableHead>
-                      <TableHead>Hành động</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                      <TableCell>Nguyễn X</TableCell>
+                      <TableCell>John X</TableCell>
                       <TableCell>
-                        <StatusBadge status="REJECTED" />
+                        <StatusBadge status='REJECTED' />
                       </TableCell>
                       <TableCell>Spam reviews</TableCell>
                       <TableCell>
                         <Button size='sm' variant='outline'>
-                          Xem
+                          View
                         </Button>
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell>Trần Y</TableCell>
+                      <TableCell>Jane Y</TableCell>
                       <TableCell>
-                        <StatusBadge status="PENDING" />
+                        <StatusBadge status='PENDING' />
                       </TableCell>
-                      <TableCell>Nội dung không phù hợp</TableCell>
+                      <TableCell>Inappropriate content</TableCell>
                       <TableCell>
                         <Button size='sm' variant='outline'>
-                          Xem
+                          View
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -476,84 +1055,124 @@ export default function AdminDashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Tác vụ nhanh */}
+            {/* Quick Actions */}
             <Card>
               <CardHeader>
-                <CardTitle>Tác vụ nhanh</CardTitle>
+                <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className='space-y-3'>
                 <QuickActionCard
-                  title='Tìm kiếm người dùng'
-                  description='Tìm và xem hồ sơ chi tiết'
+                  title='Search Users'
+                  description='Find and view user profiles'
                   icon={Search}
-                  action='Tìm kiếm'
+                  action='Search'
+                  onClick={() => router.push('/admin/accounts')}
                 />
                 <QuickActionCard
-                  title='Khóa tài khoản'
-                  description='Tạm khóa người dùng vi phạm'
+                  title='Ban Account'
+                  description='Temporarily restrict violating users'
                   icon={UserX}
-                  action='Khóa'
+                  action='Ban'
                   variant='danger'
                 />
                 <QuickActionCard
-                  title='Xem nhật ký'
-                  description='Theo dõi hoạt động người dùng'
+                  title='View Activity Log'
+                  description='Track user activities'
                   icon={Activity}
-                  action='Xem'
+                  action='View'
                 />
                 <QuickActionCard
-                  title='Gỡ khóa'
-                  description='Khôi phục tài khoản'
+                  title='Unban Account'
+                  description='Restore user account'
                   icon={UserCheck}
-                  action='Gỡ khóa'
+                  action='Unban'
                 />
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        {/* 2️⃣ Content Moderation */}
+        {/* Content Tab */}
         <TabsContent value='content' className='space-y-6'>
           <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
             <StatsCard
-              title='Bài viết mới (24h)'
+              title='Posts (24h)'
               value={contentStats.postsLast24h}
-              change='Bài viết bị báo cáo trong 24h qua'
+              change='Posts reported in last 24h'
               icon={FileText}
               color='blue'
             />
             <StatsCard
-              title='Review mới (24h)'
+              title='Reviews (24h)'
               value={contentStats.locationsLast24h}
-              change='Địa điểm bị báo cáo trong 24h qua'
+              change='Locations reported in last 24h'
               icon={Star}
               color='green'
             />
             <StatsCard
-              title='Video mới (24h)'
+              title='Events (24h)'
               value={contentStats.eventsLast24h}
-              change='Sự kiện bị báo cáo trong 24h qua'
+              change='Events reported in last 24h'
               icon={Eye}
               color='purple'
             />
             <StatsCard
-              title='Nội dung chờ duyệt'
+              title='Pending Reviews'
               value={contentStats.pendingContent}
-              change='Báo cáo chờ xử lý'
+              change='Reports awaiting review'
               icon={Clock}
               color='orange'
             />
           </div>
 
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-            {/* Nội dung chờ duyệt */}
+            {/* Content Distribution */}
+            <Card>
+              <CardHeader>
+                <CardTitle className='flex items-center gap-2'>
+                  <PieChart className='h-5 w-5' />
+                  Content Distribution
+                </CardTitle>
+                <CardDescription>
+                  Breakdown of content types on platform
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className='h-[300px]'>
+                  <ResponsiveContainer width='100%' height='100%'>
+                    <RechartsPieChart>
+                      <Pie
+                        data={contentDistributionData}
+                        cx='50%'
+                        cy='50%'
+                        labelLine={false}
+                        label={({ name, percent }) =>
+                          `${name}: ${(percent * 100).toFixed(0)}%`
+                        }
+                        outerRadius={100}
+                        fill='#8884d8'
+                        dataKey='value'
+                      >
+                        {contentDistributionData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip />
+                      <Legend />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pending Content */}
             <Card>
               <CardHeader>
                 <CardTitle className='flex items-center justify-between'>
-                  <span>Nội dung chờ duyệt</span>
+                  <span>Pending Content</span>
                   <Button size='sm' variant='outline'>
                     <Filter className='h-4 w-4 mr-2' />
-                    Lọc
+                    Filter
                   </Button>
                 </CardTitle>
               </CardHeader>
@@ -562,41 +1181,56 @@ export default function AdminDashboardPage() {
                   <div className='flex items-center justify-center py-10'>
                     <Loader2 className='h-5 w-5 animate-spin text-muted-foreground' />
                   </div>
-                ) : !pendingReportsData || pendingReportsData.data.length === 0 ? (
-                  <p className='text-sm text-muted-foreground'>
-                    Hiện không có nội dung nào đang chờ duyệt.
-                  </p>
+                ) : !pendingReportsData ||
+                  pendingReportsData.data.length === 0 ? (
+                  <div className='text-center py-10'>
+                    <CheckCircle2 className='h-12 w-12 mx-auto text-green-500 mb-2 opacity-50' />
+                    <p className='text-sm text-muted-foreground'>
+                      No pending content reviews at this time.
+                    </p>
+                  </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Loại</TableHead>
-                        <TableHead>Tiêu đề</TableHead>
-                        <TableHead>Người tạo</TableHead>
-                        <TableHead>Hành động</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Reporter</TableHead>
+                        <TableHead>Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {pendingReportsData.data.slice(0, 5).map((report: any) => {
                         const typeLabel =
                           report.targetType === 'post'
-                            ? 'Bài viết'
+                            ? 'Post'
                             : report.targetType === 'event'
-                            ? 'Sự kiện'
-                            : 'Địa điểm';
+                            ? 'Event'
+                            : 'Location';
                         const reporterName =
-                          report.createdBy?.firstName || report.createdBy?.lastName
-                            ? `${report.createdBy?.firstName ?? ''} ${report.createdBy?.lastName ?? ''}`.trim()
+                          report.createdBy?.firstName ||
+                          report.createdBy?.lastName
+                            ? `${report.createdBy?.firstName ?? ''} ${
+                                report.createdBy?.lastName ?? ''
+                              }`.trim()
                             : report.createdBy?.email;
 
                         return (
                           <TableRow key={report.id}>
                             <TableCell>
-                              <Badge variant={report.targetType === 'event' ? 'secondary' : 'default'}>
+                              <Badge
+                                variant={
+                                  report.targetType === 'event'
+                                    ? 'secondary'
+                                    : 'default'
+                                }
+                              >
                                 {typeLabel}
                               </Badge>
                             </TableCell>
-                            <TableCell>{report.title}</TableCell>
+                            <TableCell className='font-medium'>
+                              {report.title}
+                            </TableCell>
                             <TableCell>{reporterName}</TableCell>
                             <TableCell>
                               <div className='flex space-x-1'>
@@ -616,113 +1250,127 @@ export default function AdminDashboardPage() {
                 )}
               </CardContent>
             </Card>
-
-            {/* Báo cáo từ người dùng */}
-            <Card>
-              <CardHeader>
-                <CardTitle className='flex items-center'>
-                  <Flag className='h-4 w-4 mr-2 text-red-500' />
-                  Báo cáo từ người dùng
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoadingRecentReports ? (
-                  <div className='flex items-center justify-center py-10'>
-                    <Loader2 className='h-5 w-5 animate-spin text-muted-foreground' />
-                  </div>
-                ) : !recentReportsData || recentReportsData.data.length === 0 ? (
-                  <p className='text-sm text-muted-foreground'>
-                    Chưa có báo cáo nào từ người dùng.
-                  </p>
-                ) : (
-                  <div className='space-y-4'>
-                    {recentReportsData.data.slice(0, 6).map((report: any) => {
-                      const typeLabel =
-                        report.targetType === 'post'
-                          ? 'Bài viết'
-                          : report.targetType === 'event'
-                          ? 'Sự kiện'
-                          : 'Địa điểm';
-
-                      const reporterName =
-                        report.createdBy?.firstName || report.createdBy?.lastName
-                          ? `${report.createdBy?.firstName ?? ''} ${report.createdBy?.lastName ?? ''}`.trim()
-                          : report.createdBy?.email;
-
-                      const statusVariant =
-                        report.status === 'PENDING'
-                          ? 'secondary'
-                          : report.status === 'IN_PROGRESS'
-                          ? 'default'
-                          : 'outline';
-
-                      const statusLabel =
-                        report.status === 'PENDING'
-                          ? 'Chờ xử lý'
-                          : report.status === 'IN_PROGRESS'
-                          ? 'Đang xem xét'
-                          : 'Đã xử lý';
-
-                      return (
-                        <div key={report.id} className='p-3 border rounded-lg'>
-                          <div className='flex justify-between items-start mb-2'>
-                            <div>
-                              <Badge variant='outline'>{typeLabel}</Badge>
-                              <p className='text-sm font-medium mt-1'>
-                                {report.title || report.reportedReasonEntity?.displayName}
-                              </p>
-                              <p className='text-xs text-muted-foreground'>
-                                Báo cáo bởi: {reporterName}
-                              </p>
-                            </div>
-                            <Badge variant={statusVariant}>{statusLabel}</Badge>
-                          </div>
-                          <div className='flex space-x-2'>
-                            <Button size='sm' variant='outline'>
-                              Xem chi tiết
-                            </Button>
-                            {report.status === 'PENDING' || report.status === 'IN_PROGRESS' ? (
-                              <Button size='sm'>Xử lý</Button>
-                            ) : null}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
+
+          {/* User Reports */}
+          <Card>
+            <CardHeader>
+              <CardTitle className='flex items-center'>
+                <Flag className='h-4 w-4 mr-2 text-red-500' />
+                Recent User Reports
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingRecentReports ? (
+                <div className='flex items-center justify-center py-10'>
+                  <Loader2 className='h-5 w-5 animate-spin text-muted-foreground' />
+                </div>
+              ) : !recentReportsData ||
+                recentReportsData.data.length === 0 ? (
+                <div className='text-center py-10'>
+                  <Flag className='h-12 w-12 mx-auto text-muted-foreground mb-2 opacity-50' />
+                  <p className='text-sm text-muted-foreground'>
+                    No user reports at this time.
+                  </p>
+                </div>
+              ) : (
+                <div className='space-y-4'>
+                  {recentReportsData.data.slice(0, 6).map((report: any) => {
+                    const typeLabel =
+                      report.targetType === 'post'
+                        ? 'Post'
+                        : report.targetType === 'event'
+                        ? 'Event'
+                        : 'Location';
+
+                    const reporterName =
+                      report.createdBy?.firstName ||
+                      report.createdBy?.lastName
+                        ? `${report.createdBy?.firstName ?? ''} ${
+                            report.createdBy?.lastName ?? ''
+                          }`.trim()
+                        : report.createdBy?.email;
+
+                    const statusVariant =
+                      report.status === 'PENDING'
+                        ? 'secondary'
+                        : report.status === 'IN_PROGRESS'
+                        ? 'default'
+                        : 'outline';
+
+                    const statusLabel =
+                      report.status === 'PENDING'
+                        ? 'Pending'
+                        : report.status === 'IN_PROGRESS'
+                        ? 'In Progress'
+                        : 'Resolved';
+
+                    return (
+                      <div
+                        key={report.id}
+                        className='p-3 border rounded-lg hover:bg-muted/50 transition-colors'
+                      >
+                        <div className='flex justify-between items-start mb-2'>
+                          <div>
+                            <Badge variant='outline' className='mb-2'>
+                              {typeLabel}
+                            </Badge>
+                            <p className='text-sm font-medium'>
+                              {report.title ||
+                                report.reportedReasonEntity?.displayName}
+                            </p>
+                            <p className='text-xs text-muted-foreground'>
+                              Reported by: {reporterName}
+                            </p>
+                          </div>
+                          <Badge variant={statusVariant}>{statusLabel}</Badge>
+                        </div>
+                        <div className='flex space-x-2'>
+                          <Button size='sm' variant='outline'>
+                            View Details
+                          </Button>
+                          {(report.status === 'PENDING' ||
+                            report.status === 'IN_PROGRESS') && (
+                            <Button size='sm'>Resolve</Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* 5️⃣ Voucher & Gamification */}
+        {/* Vouchers Tab */}
         <TabsContent value='vouchers' className='space-y-6'>
           <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
             <StatsCard
-              title='Voucher hoạt động'
+              title='Active Vouchers'
               value='156'
-              change='12 mới tuần này'
+              change='12 new this week'
               icon={Gift}
               color='green'
             />
             <StatsCard
-              title='Voucher hết hạn'
+              title='Expired Vouchers'
               value='23'
-              change='5 hết hạn hôm nay'
+              change='5 expired today'
               icon={Clock}
               color='red'
             />
             <StatsCard
-              title='Voucher sắp hết hạn'
+              title='Expiring Soon'
               value='8'
-              change='Trong 7 ngày tới'
+              change='Within 7 days'
               icon={AlertTriangle}
               color='orange'
             />
             <StatsCard
-              title='Điểm thưởng phân phối'
+              title='Points Distributed'
               value='45.2K'
-              change='+2.1K hôm nay'
+              change='+2.1K today'
               icon={Award}
               color='purple'
             />
@@ -746,13 +1394,13 @@ export default function AdminDashboardPage() {
                   </TabsList>
                   <TabsContent value='users' className='space-y-2 mt-4'>
                     {[
-                      { name: 'Nguyễn A', score: '2,847', badge: '🥇' },
-                      { name: 'Trần B', score: '2,156', badge: '🥈' },
-                      { name: 'Lê C', score: '1,923', badge: '🥉' },
+                      { name: 'John A', score: '2,847', badge: '🥇' },
+                      { name: 'Jane B', score: '2,156', badge: '🥈' },
+                      { name: 'Mike C', score: '1,923', badge: '🥉' },
                     ].map((user, i) => (
                       <div
                         key={i}
-                        className='flex items-center justify-between p-2 rounded-lg bg-muted/20'
+                        className='flex items-center justify-between p-2 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors'
                       >
                         <div className='flex items-center space-x-2'>
                           <span className='text-lg'>{user.badge}</span>
@@ -764,41 +1412,37 @@ export default function AdminDashboardPage() {
                   </TabsContent>
                   <TabsContent value='reviewers' className='space-y-2 mt-4'>
                     {[
-                      { name: 'Phạm D', reviews: '234', badge: '🥇' },
-                      { name: 'Hoàng E', reviews: '189', badge: '🥈' },
-                      { name: 'Vũ F', reviews: '156', badge: '🥉' },
+                      { name: 'Sarah D', reviews: '234', badge: '🥇' },
+                      { name: 'Tom E', reviews: '189', badge: '🥈' },
+                      { name: 'Lisa F', reviews: '156', badge: '🥉' },
                     ].map((user, i) => (
                       <div
                         key={i}
-                        className='flex items-center justify-between p-2 rounded-lg bg-muted/20'
+                        className='flex items-center justify-between p-2 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors'
                       >
                         <div className='flex items-center space-x-2'>
                           <span className='text-lg'>{user.badge}</span>
                           <span className='font-medium'>{user.name}</span>
                         </div>
-                        <span className='font-bold'>
-                          {user.reviews} reviews
-                        </span>
+                        <span className='font-bold'>{user.reviews} reviews</span>
                       </div>
                     ))}
                   </TabsContent>
                   <TabsContent value='checkins' className='space-y-2 mt-4'>
                     {[
-                      { name: 'Đỗ G', checkins: '89', badge: '🥇' },
-                      { name: 'Bùi H', checkins: '76', badge: '🥈' },
-                      { name: 'Mai I', checkins: '65', badge: '🥉' },
+                      { name: 'Alex G', checkins: '89', badge: '🥇' },
+                      { name: 'Emma H', checkins: '76', badge: '🥈' },
+                      { name: 'Ryan I', checkins: '65', badge: '🥉' },
                     ].map((user, i) => (
                       <div
                         key={i}
-                        className='flex items-center justify-between p-2 rounded-lg bg-muted/20'
+                        className='flex items-center justify-between p-2 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors'
                       >
                         <div className='flex items-center space-x-2'>
                           <span className='text-lg'>{user.badge}</span>
                           <span className='font-medium'>{user.name}</span>
                         </div>
-                        <span className='font-bold'>
-                          {user.checkins} check-ins
-                        </span>
+                        <span className='font-bold'>{user.checkins} check-ins</span>
                       </div>
                     ))}
                   </TabsContent>
@@ -806,32 +1450,52 @@ export default function AdminDashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Top địa điểm voucher */}
+            {/* Top Locations */}
             <Card>
               <CardHeader>
-                <CardTitle>Top địa điểm có nhiều voucher được đổi</CardTitle>
+                <CardTitle>Top Locations by Voucher Redemptions</CardTitle>
               </CardHeader>
               <CardContent className='space-y-3'>
                 {[
-                  { name: 'Highlands Coffee', vouchers: 89, revenue: '₫450K' },
-                  { name: 'The Coffee House', vouchers: 76, revenue: '₫380K' },
-                  { name: 'Starbucks', vouchers: 65, revenue: '₫325K' },
-                  { name: 'Phúc Long Coffee', vouchers: 54, revenue: '₫270K' },
-                  { name: 'Cộng Cà Phê', vouchers: 43, revenue: '₫215K' },
+                  {
+                    name: 'Highlands Coffee',
+                    vouchers: 89,
+                    revenue: '₫450K',
+                  },
+                  {
+                    name: 'The Coffee House',
+                    vouchers: 76,
+                    revenue: '₫380K',
+                  },
+                  {
+                    name: 'Starbucks',
+                    vouchers: 65,
+                    revenue: '₫325K',
+                  },
+                  {
+                    name: 'Phúc Long Coffee',
+                    vouchers: 54,
+                    revenue: '₫270K',
+                  },
+                  {
+                    name: 'Cộng Cà Phê',
+                    vouchers: 43,
+                    revenue: '₫215K',
+                  },
                 ].map((location, i) => (
                   <div
                     key={i}
-                    className='flex items-center justify-between p-3 border rounded-lg'
+                    className='flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors'
                   >
                     <div>
                       <p className='font-medium text-sm'>{location.name}</p>
                       <p className='text-xs text-muted-foreground'>
-                        {location.vouchers} voucher đã đổi
+                        {location.vouchers} vouchers redeemed
                       </p>
                     </div>
                     <div className='text-right'>
                       <p className='font-bold text-sm'>{location.revenue}</p>
-                      <p className='text-xs text-muted-foreground'>Doanh thu</p>
+                      <p className='text-xs text-muted-foreground'>Revenue</p>
                     </div>
                   </div>
                 ))}
@@ -839,111 +1503,112 @@ export default function AdminDashboardPage() {
             </Card>
           </div>
 
-          {/* Cấu hình nhanh */}
+          {/* Quick Configuration */}
           <Card>
             <CardHeader>
               <CardTitle className='flex items-center'>
                 <Settings className='h-4 w-4 mr-2' />
-                Cấu hình nhanh
+                Quick Configuration
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                 <QuickActionCard
-                  title='Điều chỉnh quy tắc tính điểm'
-                  description='Cập nhật hệ thống tính điểm'
+                  title='Adjust Points Rules'
+                  description='Update point calculation system'
                   icon={Settings}
-                  action='Cấu hình'
+                  action='Configure'
                 />
                 <QuickActionCard
-                  title='Tạo huy hiệu mới'
-                  description='Thêm huy hiệu cho người dùng'
+                  title='Create New Badge'
+                  description='Add badges for users'
                   icon={Award}
-                  action='Tạo mới'
+                  action='Create'
                 />
                 <QuickActionCard
-                  title='Quản lý voucher'
-                  description='Tạo và quản lý voucher'
+                  title='Manage Vouchers'
+                  description='Create and manage vouchers'
                   icon={Gift}
-                  action='Quản lý'
+                  action='Manage'
                 />
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* 6️⃣ System Notifications & Logs */}
+        {/* System Tab */}
         <TabsContent value='system' className='space-y-6'>
           <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
             <StatsCard
-              title='Cảnh báo hệ thống'
+              title='System Alerts'
               value='3'
-              change='2 cần xử lý ngay'
+              change='2 require immediate attention'
               icon={AlertTriangle}
               color='red'
             />
             <StatsCard
-              title='Lỗi thanh toán'
+              title='Payment Errors'
               value='1'
-              change='Trong 24h qua'
+              change='In last 24h'
               icon={CreditCard}
               color='orange'
             />
             <StatsCard
-              title='Upload lỗi'
+              title='Upload Failures'
               value='5'
-              change='Video upload thất bại'
+              change='Video upload failed'
               icon={Eye}
               color='orange'
             />
             <StatsCard
-              title='API thất bại'
+              title='API Failures'
               value='12'
-              change='Trong 1h qua'
+              change='In last hour'
               icon={Activity}
               color='red'
             />
           </div>
 
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-            {/* Cảnh báo hệ thống */}
+            {/* System Alerts */}
             <Card>
               <CardHeader>
                 <CardTitle className='flex items-center'>
                   <Bell className='h-4 w-4 mr-2 text-red-500' />
-                  Cảnh báo hệ thống
+                  System Alerts
                 </CardTitle>
               </CardHeader>
               <CardContent className='space-y-3'>
                 {[
                   {
-                    type: 'Thanh toán',
-                    message: 'Lỗi xử lý thanh toán cho giao dịch #12345',
+                    type: 'Payment',
+                    message:
+                      'Payment processing error for transaction #12345',
                     severity: 'high',
-                    time: '5 phút trước',
+                    time: '5 minutes ago',
                   },
                   {
                     type: 'AI Content',
                     message:
-                      'AI phát hiện nội dung nhạy cảm trong bài viết #789',
+                      'AI detected sensitive content in post #789',
                     severity: 'medium',
-                    time: '15 phút trước',
+                    time: '15 minutes ago',
                   },
                   {
                     type: 'Upload',
-                    message: 'Video upload thất bại - dung lượng quá lớn',
+                    message: 'Video upload failed - file too large',
                     severity: 'low',
-                    time: '1 giờ trước',
+                    time: '1 hour ago',
                   },
                 ].map((alert, i) => (
                   <div
                     key={i}
                     className={`p-3 border rounded-lg ${
                       alert.severity === 'high'
-                        ? 'border-red-200 bg-red-50'
+                        ? 'border-red-200 bg-red-50 dark:bg-red-950/20'
                         : alert.severity === 'medium'
-                        ? 'border-orange-200 bg-orange-50'
-                        : 'border-gray-200 bg-gray-50'
+                        ? 'border-orange-200 bg-orange-50 dark:bg-orange-950/20'
+                        : 'border-gray-200 bg-gray-50 dark:bg-gray-950/20'
                     }`}
                   >
                     <div className='flex justify-between items-start mb-2'>
@@ -962,12 +1627,12 @@ export default function AdminDashboardPage() {
                         {alert.time}
                       </span>
                     </div>
-                    <p className='text-sm'>{alert.message}</p>
-                    <div className='flex space-x-2 mt-2'>
+                    <p className='text-sm mb-2'>{alert.message}</p>
+                    <div className='flex space-x-2'>
                       <Button size='sm' variant='outline'>
-                        Xem chi tiết
+                        View Details
                       </Button>
-                      <Button size='sm'>Xử lý</Button>
+                      <Button size='sm'>Resolve</Button>
                     </div>
                   </div>
                 ))}
@@ -987,29 +1652,35 @@ export default function AdminDashboardPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Admin</TableHead>
-                      <TableHead>Hành động</TableHead>
-                      <TableHead>Thời gian</TableHead>
+                      <TableHead>Action</TableHead>
+                      <TableHead>Time</TableHead>
                       <TableHead>IP</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                      <TableCell>admin1</TableCell>
-                      <TableCell>Duyệt địa điểm #123</TableCell>
+                      <TableCell className='font-medium'>admin1</TableCell>
+                      <TableCell>Approved location #123</TableCell>
                       <TableCell>10:30</TableCell>
-                      <TableCell>192.168.1.1</TableCell>
+                      <TableCell className='text-muted-foreground'>
+                        192.168.1.1
+                      </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell>admin2</TableCell>
-                      <TableCell>Khóa user #456</TableCell>
+                      <TableCell className='font-medium'>admin2</TableCell>
+                      <TableCell>Banned user #456</TableCell>
                       <TableCell>09:15</TableCell>
-                      <TableCell>192.168.1.2</TableCell>
+                      <TableCell className='text-muted-foreground'>
+                        192.168.1.2
+                      </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell>admin1</TableCell>
-                      <TableCell>Duyệt rút tiền ₫200K</TableCell>
+                      <TableCell className='font-medium'>admin1</TableCell>
+                      <TableCell>Approved withdrawal ₫200K</TableCell>
                       <TableCell>08:45</TableCell>
-                      <TableCell>192.168.1.1</TableCell>
+                      <TableCell className='text-muted-foreground'>
+                        192.168.1.1
+                      </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -1018,243 +1689,43 @@ export default function AdminDashboardPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
-  );
-}
 
-{
-  /* 3️⃣ Location & Event Management */
-}
-{
-  /* <TabsContent value='locations' className='space-y-6'>
-          <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
-            <StatsCard
-              title='Địa điểm được duyệt'
-              value='1,456'
-              change='+12 địa điểm mới'
-              icon={MapPin}
-              color='green'
-            />
-            <StatsCard
-              title='Địa điểm chờ duyệt'
-              value='23'
-              change='5 mới hôm nay'
-              icon={Clock}
-              color='orange'
-            />
-            <StatsCard
-              title='Check-in/ngày'
-              value='2,847'
-              change='+18% so với tuần trước'
-              icon={Users}
-              color='blue'
-            />
-            <StatsCard
-              title='Sự kiện sắp tới'
-              value='89'
-              change='15 trong tuần này'
-              icon={Calendar}
-              color='purple'
-            />
-          </div>
-
-          <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-            <Card className='lg:col-span-2'>
-              <CardHeader>
-                <CardTitle className='flex items-center'>
-                  <Map className='h-4 w-4 mr-2' />
-                  Heatmap sự kiện nổi bật
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='h-64 flex items-center justify-center bg-muted/20 rounded-lg'>
-                  <div className='text-center'>
-                    <Map className='h-12 w-12 mx-auto text-muted-foreground mb-2' />
-                    <p className='text-sm text-muted-foreground'>
-                      Bản đồ nhiệt sự kiện
-                    </p>
-                    <p className='text-xs text-muted-foreground'>
-                      Khu vực trung tâm có hoạt động cao nhất
-                    </p>
-                  </div>
+      {/* Recent Activity Feed */}
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <Activity className='h-5 w-5' />
+            Recent Activity
+          </CardTitle>
+          <CardDescription>
+            Latest platform activities and updates
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className='space-y-4'>
+            {recentActivity.map((activity) => (
+              <div
+                key={activity.id}
+                className='flex items-start gap-4 p-3 border rounded-lg hover:bg-muted/50 transition-colors'
+              >
+                <div
+                  className={`h-10 w-10 rounded-full flex items-center justify-center ${activity.color.replace('text-', 'bg-').replace('-600', '-100')} dark:${activity.color.replace('text-', 'bg-').replace('-600', '-950')}`}
+                >
+                  <activity.icon
+                    className={`h-5 w-5 ${activity.color}`}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Thống kê sự kiện</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                <div>
-                  <div className='flex justify-between text-sm mb-1'>
-                    <span>Sự kiện sắp diễn ra</span>
-                    <span>89</span>
-                  </div>
-                  <Progress value={75} className='h-2' />
-                </div>
-                <div>
-                  <div className='flex justify-between text-sm mb-1'>
-                    <span>Sự kiện đã kết thúc</span>
-                    <span>234</span>
-                  </div>
-                  <Progress value={60} className='h-2' />
-                </div>
-                <div>
-                  <div className='flex justify-between text-sm mb-1'>
-                    <span>Tỷ lệ vé bán ra</span>
-                    <span>68%</span>
-                  </div>
-                  <Progress value={68} className='h-2' />
-                </div>
-                <div className='pt-2 border-t'>
-                  <p className='text-sm font-medium'>Top sự kiện bán chạy:</p>
-                  <div className='space-y-1 mt-2'>
-                    <p className='text-xs'>• Festival Âm nhạc (95% sold)</p>
-                    <p className='text-xs'>• Triển lãm Nghệ thuật (87% sold)</p>
-                    <p className='text-xs'>• Workshop Photography (82% sold)</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent> */
-}
-
-{
-  /* 4️⃣ Financial Dashboard */
-}
-{
-  /* <TabsContent value='financial' className='space-y-6'>
-          <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
-            <StatsCard
-              title='Giao dịch hôm nay'
-              value='₫2.4M'
-              change='+15.3% so với hôm qua'
-              icon={CreditCard}
-              color='green'
-            />
-            <StatsCard
-              title='Tổng rút tiền'
-              value='₫890K'
-              change='12 yêu cầu'
-              icon={Download}
-              color='blue'
-            />
-            <StatsCard
-              title='Tổng nạp tiền'
-              value='₫1.8M'
-              change='+8.7% so với hôm qua'
-              icon={Wallet}
-              color='purple'
-            />
-            <StatsCard
-              title='Chờ duyệt rút tiền'
-              value='8'
-              change='₫450K tổng cộng'
-              icon={Clock}
-              color='orange'
-            />
-          </div>
-
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-            <Card>
-              <CardHeader>
-                <CardTitle className='flex items-center'>
-                  <TrendingUp className='h-4 w-4 mr-2' />
-                  Biểu đồ dòng tiền
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='h-64 flex items-center justify-center bg-muted/20 rounded-lg'>
-                  <div className='text-center'>
-                    <TrendingUp className='h-12 w-12 mx-auto text-muted-foreground mb-2' />
-                    <p className='text-sm text-muted-foreground'>
-                      Biểu đồ dòng tiền theo ngày
-                    </p>
-                    <p className='text-xs text-muted-foreground'>
-                      Xu hướng tăng trưởng ổn định
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Yêu cầu rút tiền chờ duyệt</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Người dùng</TableHead>
-                      <TableHead>Số tiền</TableHead>
-                      <TableHead>Ngày yêu cầu</TableHead>
-                      <TableHead>Hành động</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>Nguyễn A</TableCell>
-                      <TableCell>₫150K</TableCell>
-                      <TableCell>04/11/2024</TableCell>
-                      <TableCell>
-                        <div className='flex space-x-1'>
-                          <Button size='sm' variant='outline'>
-                            <CheckCircle className='h-3 w-3' />
-                          </Button>
-                          <Button size='sm' variant='outline'>
-                            <XCircle className='h-3 w-3' />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Trần B</TableCell>
-                      <TableCell>₫200K</TableCell>
-                      <TableCell>03/11/2024</TableCell>
-                      <TableCell>
-                        <div className='flex space-x-1'>
-                          <Button size='sm' variant='outline'>
-                            <CheckCircle className='h-3 w-3' />
-                          </Button>
-                          <Button size='sm' variant='outline'>
-                            <XCircle className='h-3 w-3' />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Trạng thái ví hệ thống</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                <div className='p-4 border rounded-lg'>
-                  <h4 className='font-medium mb-2'>Ví hệ thống</h4>
-                  <p className='text-2xl font-bold text-green-600'>₫12.5M</p>
-                  <p className='text-xs text-muted-foreground'>
-                    Số dư khả dụng
+                <div className='flex-1 min-w-0'>
+                  <p className='text-sm font-medium'>{activity.message}</p>
+                  <p className='text-xs text-muted-foreground mt-1'>
+                    {format(activity.timestamp, 'MMM dd, yyyy HH:mm')}
                   </p>
                 </div>
-                <div className='p-4 border rounded-lg'>
-                  <h4 className='font-medium mb-2'>Event Creator</h4>
-                  <p className='text-2xl font-bold text-blue-600'>₫3.2M</p>
-                  <p className='text-xs text-muted-foreground'>Tổng số dư</p>
-                </div>
-                <div className='p-4 border rounded-lg'>
-                  <h4 className='font-medium mb-2'>Business Owner</h4>
-                  <p className='text-2xl font-bold text-purple-600'>₫8.7M</p>
-                  <p className='text-xs text-muted-foreground'>Tổng số dư</p>
-                </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent> */
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
