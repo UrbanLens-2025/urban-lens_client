@@ -22,12 +22,12 @@ export default function OnboardingPage() {
       return;
     }
 
-    if (!user || user.hasOnboarded || user.role === "USER") {
+    if (!user || user.hasOnboarded || user.role === "USER" || user.role === "ADMIN") {
       router.replace("/");
     }
   }, [user, isLoading, router]);
 
-  if (isLoading || !user || user.hasOnboarded || user.role === "USER") {
+  if (isLoading || !user || user.hasOnboarded || user.role === "USER" || user.role === "ADMIN") {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="animate-spin" />

@@ -27,14 +27,18 @@ export function useLogin() {
 
         const userRole = user.role;
 
-        if (!user.hasOnboarded) {
-          router.push("/onboarding");
-          router.refresh();
-          return;
-        }
-
-        // Handle business owner status-based routing
-        if (userRole === "BUSINESS_OWNER") {
+        // Handle role-based routing
+        if (userRole === "ADMIN") {
+          router.push("/admin");
+        } else if (userRole === "BUSINESS_OWNER") {
+          // Business owners need onboarding check
+          if (!user.hasOnboarded) {
+            router.push("/onboarding");
+            router.refresh();
+            return;
+          }
+          
+          // Handle business owner status-based routing
           if (user.businessProfile?.status === "PENDING") {
             router.push("/onboarding/pending");
           } else if (user.businessProfile?.status === "REJECTED") {
@@ -44,9 +48,13 @@ export function useLogin() {
           } else {
             router.push("/dashboard/business");
           }
-        } else if (userRole === "ADMIN") {
-          router.push("/admin");
         } else if (userRole === "EVENT_CREATOR") {
+          // Event creators need onboarding check
+          if (!user.hasOnboarded) {
+            router.push("/onboarding");
+            router.refresh();
+            return;
+          }
           router.push("/dashboard/creator");
         } else {
           router.push("/");

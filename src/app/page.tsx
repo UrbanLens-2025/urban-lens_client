@@ -17,6 +17,12 @@ export default function RedirectPage() {
       return;
     }
 
+    // Handle role-based routing
+    if (user.role === "ADMIN") {
+      router.replace("/admin");
+      return;
+    }
+
     if (user.role === "BUSINESS_OWNER") {
       if (!user.hasOnboarded) {
         router.replace("/onboarding");
@@ -37,14 +43,18 @@ export default function RedirectPage() {
         router.replace("/dashboard/business");
         return;
       }
+      
+      router.replace("/dashboard/business");
+      return;
     }
 
-    if (user.role === "ADMIN") {
-      router.replace("/admin");
-    } else if (user.role === "BUSINESS_OWNER") {
-      router.replace("/dashboard/business");
-    } else if (user.role === "EVENT_CREATOR") {
+    if (user.role === "EVENT_CREATOR") {
+      if (!user.hasOnboarded) {
+        router.replace("/onboarding");
+        return;
+      }
       router.replace("/dashboard/creator");
+      return;
     }
   }, [user, isLoading, router]);
 
