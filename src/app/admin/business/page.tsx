@@ -13,14 +13,6 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -30,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { IconSearch, IconFilter, IconBriefcase, IconClock, IconCheck, IconX, IconRefresh } from '@tabler/icons-react';
+import { IconSearch, IconFilter, IconBriefcase, IconClock, IconCheck, IconX, IconRefresh, IconMail, IconPhone, IconWorld, IconMapPin, IconFileText, IconCalendar, IconUser } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { BusinessProfile, BusinessStatus } from '@/types';
@@ -98,9 +90,11 @@ export default function AdminBusinessPage() {
 
   const { mutate: processAccount, isPending } = useProcessBusinessAccount();
 
+  const [selectedBusiness, setSelectedBusiness] = useState<BusinessProfile | null>(null);
   const [approvingBusiness, setApprovingBusiness] = useState<BusinessProfile | null>(null);
   const [rejectingBusiness, setRejectingBusiness] = useState<BusinessProfile | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
+  const [expandedDescription, setExpandedDescription] = useState(false);
 
   const handleConfirmApprove = () => {
     if (!approvingBusiness) return;
@@ -149,16 +143,6 @@ export default function AdminBusinessPage() {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
-
-  const getStatusBadge = (status: BusinessStatus) => {
-    const map: Record<BusinessStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' }> = {
-      PENDING: { label: 'Pending', variant: 'secondary' },
-      APPROVED: { label: 'Approved', variant: 'default' },
-      REJECTED: { label: 'Rejected', variant: 'destructive' },
-    } as const;
-    const s = map[status];
-    return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
   // Calculate statistics
@@ -231,42 +215,14 @@ export default function AdminBusinessPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>All Registrations ({meta?.totalItems || 0})</span>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search businesses..."
-                  className="pl-8 w-[250px]"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </div>
-              <Select
-                value={statusTab}
-                onValueChange={(value) => {
-                  setStatusTab(value as BusinessStatus);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <div className="flex items-center gap-2">
-                    <IconFilter className="h-4 w-4" />
-                    <SelectValue placeholder="Filter by Status" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="APPROVED">Approved</SelectItem>
-                  <SelectItem value="REJECTED">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-280px)]">
+        {/* Left Column - Business List */}
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col border rounded-lg bg-card overflow-hidden">
+          {/* Search and Filters */}
+          <div className="p-4 border-b space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">All Registrations</h2>
               <Button variant="outline" size="icon" onClick={refresh} disabled={isFetching}>
                 {isFetching ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -275,89 +231,370 @@ export default function AdminBusinessPage() {
                 )}
               </Button>
             </div>
-          </CardTitle>
-          <CardDescription className="hidden">
-            Manage business registrations and approvals.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="relative">
+              <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search businesses..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+            <Select
+              value={statusTab}
+              onValueChange={(value) => {
+                setStatusTab(value as BusinessStatus);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger>
+                <div className="flex items-center gap-2">
+                  <IconFilter className="h-4 w-4" />
+                  <SelectValue placeholder="Filter by Status" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="APPROVED">Approved</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="text-sm text-muted-foreground">
+              {meta?.totalItems || 0} results
+            </div>
+          </div>
+
+          {/* Business List */}
+          <div className="flex-1 overflow-y-auto">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : businesses.length === 0 ? (
+              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                <div className="text-center">
+                  <IconBriefcase className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No businesses found</p>
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {businesses.map((biz: BusinessProfile, index: number) => (
+                  <div
+                    key={biz.accountId}
+                    onClick={() => {
+                      setSelectedBusiness(biz);
+                      setExpandedDescription(false);
+                    }}
+                    className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
+                      selectedBusiness?.accountId === biz.accountId ? 'bg-muted border-l-4 border-l-primary' : ''
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-base line-clamp-1">{biz.name}</h3>
+                      <Badge variant="secondary" className="ml-2 shrink-0">
+                        {biz.category}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-1">{biz.email}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-xs text-muted-foreground">
+                        {formatDateTime((biz as any).createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {meta && meta.totalPages > 1 && (
+            <div className="p-4 border-t flex items-center justify-between">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(page - 1)}
+                disabled={page <= 1}
+              >
+                Previous
+              </Button>
+              <div className="text-sm text-muted-foreground">
+                Page {page} of {meta.totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(page + 1)}
+                disabled={page >= meta.totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column - Details Panel */}
+        <div className="lg:col-span-7 xl:col-span-8 border rounded-lg bg-card overflow-hidden">
+          {selectedBusiness ? (
+            <div className="h-full overflow-y-auto">
+              <div className="p-6">
+                {/* Header with Name and Actions */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-start gap-4">
+                      {selectedBusiness.avatar && (
+                        <img 
+                          src={selectedBusiness.avatar} 
+                          alt={selectedBusiness.name}
+                          className="w-16 h-16 rounded-lg object-cover border"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <h1 className="text-2xl font-bold mb-2">{selectedBusiness.name}</h1>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="secondary">{selectedBusiness.category}</Badge>
+                          <Badge variant={
+                            (selectedBusiness as any).status === 'APPROVED' ? 'default' :
+                            (selectedBusiness as any).status === 'REJECTED' ? 'destructive' :
+                            'secondary'
+                          }>
+                            {(selectedBusiness as any).status || statusTab}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Description - Truncated */}
+                    {selectedBusiness.description && (
+                      <div className="mt-4">
+                        <p className={`text-sm text-muted-foreground ${!expandedDescription ? 'line-clamp-2' : ''}`}>
+                          {selectedBusiness.description}
+                        </p>
+                        {selectedBusiness.description.length > 150 && (
+                          <button
+                            onClick={() => setExpandedDescription(!expandedDescription)}
+                            className="text-sm text-blue-600 hover:underline mt-1"
+                          >
+                            {expandedDescription ? 'Show less' : 'Read more'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {statusTab === 'PENDING' && (
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setApprovingBusiness(selectedBusiness)}
+                        className="border-green-600 text-green-700 hover:bg-green-50 hover:text-green-800"
+                      >
+                        <IconCheck className="h-4 w-4 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setRejectingBusiness(selectedBusiness)}
+                        className="border-red-600 text-red-700 hover:bg-red-50 hover:text-red-800"
+                      >
+                        <IconX className="h-4 w-4 mr-1" />
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Two Column Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                  {/* Contact Information Card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <IconUser className="h-4 w-4" />
+                        Contact Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-start gap-2">
+                        <IconMail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Email</p>
+                          <p className="text-sm break-all">{selectedBusiness.email}</p>
+                        </div>
+                      </div>
+                      {selectedBusiness.phone && (
+                        <div className="flex items-start gap-2">
+                          <IconPhone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Phone</p>
+                            <p className="text-sm">{selectedBusiness.phone}</p>
+                          </div>
+                        </div>
+                      )}
+                      {selectedBusiness.website && (
+                        <div className="flex items-start gap-2">
+                          <IconWorld className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Website</p>
+                            <a 
+                              href={selectedBusiness.website} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:underline break-all"
+                            >
+                              {selectedBusiness.website}
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Location Information Card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <IconMapPin className="h-4 w-4" />
+                        Location
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Address</p>
+                        <p className="text-sm">{selectedBusiness.addressLine}</p>
+                      </div>
+                      {selectedBusiness.addressLevel2 && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">District/City</p>
+                          <p className="text-sm">{selectedBusiness.addressLevel2}</p>
+                        </div>
+                      )}
+                      {selectedBusiness.addressLevel1 && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Province/State</p>
+                          <p className="text-sm">{selectedBusiness.addressLevel1}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Submission Details Card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <IconCalendar className="h-4 w-4" />
+                        Submission Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Account ID</p>
+                        <p className="text-xs font-mono break-all bg-muted px-2 py-1 rounded">{selectedBusiness.accountId}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Submitted</p>
+                        <p className="text-sm">
+                          {formatDateTime((selectedBusiness as any).createdAt)}
+                        </p>
+                      </div>
+                      {(selectedBusiness as any).updatedAt && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Last Updated</p>
+                          <p className="text-sm">
+                            {formatDateTime((selectedBusiness as any).updatedAt)}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Admin Notes Card */}
+                  {selectedBusiness.adminNotes && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <IconFileText className="h-4 w-4" />
+                          Admin Notes
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm whitespace-pre-wrap">{selectedBusiness.adminNotes}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Business Licenses - Full Width */}
+                {(selectedBusiness as any).licenses && (selectedBusiness as any).licenses.length > 0 && (
+                  <Card className="mt-4">
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <IconFileText className="h-4 w-4" />
+                        Business Licenses
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {(selectedBusiness as any).licenses.map((license: any, index: number) => (
+                          <div key={index} className="border rounded-lg p-4 bg-muted/20">
+                            <Badge variant="outline" className="mb-3">
+                              {license.licenseType?.replace(/_/g, ' ') || 'License'}
+                            </Badge>
+                            {license.documentImageUrls && license.documentImageUrls.length > 0 && (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-3">
+                                {license.documentImageUrls.map((url: string, imgIndex: number) => (
+                                  <a
+                                    key={imgIndex}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors"
+                                  >
+                                    <img
+                                      src={url}
+                                      alt={`License document ${imgIndex + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Action Link */}
+                <div className="mt-6 pt-4 border-t">
+                  <Link
+                    href={`/admin/business/${selectedBusiness.accountId}`}
+                    className="text-sm text-blue-600 hover:underline inline-flex items-center gap-1"
+                  >
+                    View full account details
+                    <span>→</span>
+                  </Link>
+                </div>
+              </div>
             </div>
           ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">#</TableHead>
-                    <TableHead>Business Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Submitted</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {businesses.map((biz: BusinessProfile, index: number) => (
-                    <TableRow key={biz.accountId}>
-                      <TableCell className="font-medium text-muted-foreground">
-                        {(page - 1) * itemsPerPage + index + 1}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <Link
-                          href={`/admin/business/${biz.accountId}`}
-                          className="hover:underline text-blue-600 hover:text-blue-800"
-                        >
-                          {biz.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{biz.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{biz.category}</Badge>
-                      </TableCell>
-                      <TableCell>{formatDateTime((biz as any).createdAt)}</TableCell>
-                      <TableCell>{getStatusBadge((biz as any).status || statusTab)}</TableCell>
-                    </TableRow>
-                  ))}
-                  {businesses.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24">
-                        No businesses found matching your criteria.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-
-              {/* Pagination */}
-              {meta && meta.totalPages > 1 && (
-                <div className="flex items-center justify-end space-x-2 py-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(page - 1)}
-                    disabled={page <= 1}
-                  >
-                    Previous
-                  </Button>
-                  <div className="text-sm text-muted-foreground">
-                    Page {page} of {meta.totalPages}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(page + 1)}
-                    disabled={page >= meta.totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
-            </>
+            <div className="h-full flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <IconBriefcase className="h-16 w-16 mx-auto mb-4 opacity-20" />
+                <p className="text-lg font-medium">Select a business</p>
+                <p className="text-sm mt-1">Choose a business from the list to view details</p>
+              </div>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <AlertDialog
         open={!!approvingBusiness}
