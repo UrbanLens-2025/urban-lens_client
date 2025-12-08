@@ -346,24 +346,6 @@ function LocationDetailLayoutContent({
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-4">
-              <div className="flex flex-col sm:flex-row gap-2 flex-1">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveTab("edit");
-                    router.push(`/dashboard/business/locations/${locationId}/edit`);
-                  }}
-                  className="w-full sm:w-auto gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  Edit Location
-                </Button>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -439,6 +421,20 @@ function LocationDetailLayoutContent({
               >
                 <Megaphone className="h-4 w-4" />
                 Announcements
+              </Button>
+            </Link>
+            <Link href={`/dashboard/business/locations/${locationId}/edit`}>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "gap-2 rounded-b-none border-b-2 transition-colors",
+                  isEditLocationRoute
+                    ? "border-primary bg-muted"
+                    : "border-transparent hover:border-muted-foreground/50"
+                )}
+              >
+                <FilePenLine className="h-4 w-4" />
+                Edit Location
               </Button>
             </Link>
             

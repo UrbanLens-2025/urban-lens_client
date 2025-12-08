@@ -190,14 +190,7 @@ export default function EditLocationPage({
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-3xl font-bold">Edit Location: {location.name}</h1>
-      </div>
-
+    <div className="space-y-6">
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle>Update Location Details</CardTitle>

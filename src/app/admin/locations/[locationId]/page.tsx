@@ -4,13 +4,9 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocationByIdForAdmin } from '@/hooks/admin/useLocationByIdForAdmin';
 import {
-  ArrowLeft,
   Calendar,
   CalendarDays,
-  Eye,
-  EyeOff,
   ImageIcon,
-  Layers,
   Loader2,
   MapPin,
   Building,
@@ -25,6 +21,8 @@ import {
   Users,
   Ruler,
   AlertCircle,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GoogleMapsPicker } from '@/components/shared/GoogleMapsPicker';
@@ -68,6 +66,7 @@ export default function AdminLocationDetailsPage({
 }) {
   const { locationId } = use(params);
   const router = useRouter();
+  const pathname = usePathname();
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState('');
   const [currentImageAlt, setCurrentImageAlt] = useState('');
@@ -138,39 +137,7 @@ export default function AdminLocationDetailsPage({
   const checkIns = parseInt(location.totalCheckIns || '0', 10);
 
   return (
-    <div className='space-y-6 pb-6'>
-      {/* Enhanced Header */}
-      <div className='flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4'>
-        <div className='flex items-start gap-4 flex-1'>
-          <Button variant='outline' size='icon' onClick={() => router.back()}>
-            <ArrowLeft className='h-4 w-4' />
-          </Button>
-          <div className='flex-1 min-w-0'>
-            <h1 className='text-3xl font-bold mb-2 break-words'>{location.name}</h1>
-            <div className='flex flex-wrap items-center gap-3 mt-2'>
-              <Badge variant='outline' className='text-sm px-3 py-1'>
-                {location.ownershipType === 'OWNED_BY_BUSINESS' ? (
-                  <><Building className='h-3 w-3 mr-1' /> Business Owned</>
-                ) : location.ownershipType === 'PUBLIC_PLACE' ? (
-                  <><Globe className='h-3 w-3 mr-1' /> Public Place</>
-                ) : (
-                  'User Owned'
-                )}
-              </Badge>
-              <Badge 
-                variant={location.isVisibleOnMap ? 'default' : 'secondary'}
-                className='text-sm px-3 py-1'
-              >
-                {location.isVisibleOnMap ? (
-                  <><Eye className='h-3 w-3 mr-1' /> Visible on Map</>
-                ) : (
-                  <><EyeOff className='h-3 w-3 mr-1' /> Hidden</>
-                )}
-              </Badge>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className='space-y-6'>
 
       {/* Quick Stats Summary */}
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
