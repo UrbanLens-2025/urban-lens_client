@@ -11,24 +11,43 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Building2, Users, Calendar, Eye, Loader2 } from "lucide-react";
+import { 
+  PlusCircle, 
+  Building2, 
+  Users, 
+  Calendar, 
+  DollarSign, 
+  Loader2,
+  TrendingUp,
+  TrendingDown,
+  ArrowRight,
+  MapPin,
+  CheckCircle2,
+  Clock,
+  Activity,
+  Wallet,
+  Eye,
+} from "lucide-react";
 import Link from "next/link";
 import { useMyLocations } from "@/hooks/locations/useMyLocations";
 import { useOwnerLocationBookings } from "@/hooks/locations/useOwnerLocationBookings";
-import { format } from "date-fns";
+import { format, subDays, subMonths, startOfMonth, endOfMonth, isSameMonth } from "date-fns";
 import {
   DashboardSection,
   StatusBadge,
 } from "@/components/dashboard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Bar,
   BarChart,
   CartesianGrid,
   XAxis,
+  YAxis,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
+  Line,
+  LineChart,
 } from "recharts";
 import {
   ChartContainer,
@@ -39,16 +58,16 @@ import {
 export default function BusinessDashboardPage() {
   const router = useRouter();
   
-  // Fetch locations
+  // Fetch locations - increase limit to get all for accurate stats
   const { data: locationsData, isLoading: isLoadingLocations } = useMyLocations(1, "", {
-    limit: 10,
+    limit: 100, // Increased to get all locations for accurate statistics
     sortBy: "createdAt:DESC",
   });
 
-  // Fetch bookings for statistics
+  // Fetch bookings for statistics - increase limit for better accuracy
   const { data: bookingsData, isLoading: isLoadingBookings } = useOwnerLocationBookings({
     page: 1,
-    limit: 100,
+    limit: 500, // Increased to get more bookings for accurate revenue/trend calculations
     sortBy: "createdAt:DESC",
   });
 
@@ -57,6 +76,15 @@ export default function BusinessDashboardPage() {
   const bookings = bookingsData?.data || [];
   const bookingsMeta = bookingsData?.meta;
 
+  // Format currency helper
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
   // Calculate statistics from real data
   const stats = useMemo(() => {
     const totalLocations = locationsMeta?.totalItems || 0;
@@ -64,28 +92,99 @@ export default function BusinessDashboardPage() {
     const totalBookings = bookingsMeta?.totalItems || 0;
     
     const approvedLocations = locations.filter((loc) => {
-      // Locations don't have a status field directly, but we can check if they're visible
       return loc.isVisibleOnMap;
     }).length;
+    
+    // If we have pagination info and fetched all locations, use accurate count
+    // Otherwise, estimate based on fetched data
+    // Handle edge cases to prevent NaN
+    let visibleLocationsCount: number;
+    if (locations.length === 0 || totalLocations === 0) {
+      visibleLocationsCount = 0;
+    } else if (locationsMeta && locationsMeta.totalItems <= locations.length) {
+      // We've fetched all locations, use exact count
+      visibleLocationsCount = approvedLocations;
+    } else {
+      // Estimate based on ratio
+      const ratio = approvedLocations / locations.length;
+      visibleLocationsCount = Math.round(ratio * totalLocations);
+    }
+    
+    // Ensure we never return NaN
+    visibleLocationsCount = isNaN(visibleLocationsCount) ? 0 : visibleLocationsCount;
 
+    const now = new Date();
+    const thirtyDaysAgo = subDays(now, 30);
+    const previousThirtyDaysAgo = subDays(now, 60);
+    
     const recentBookings = bookings.filter((booking) => {
       const bookingDate = new Date(booking.createdAt);
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       return bookingDate >= thirtyDaysAgo;
     }).length;
+
+    const previousPeriodBookings = bookings.filter((booking) => {
+      const bookingDate = new Date(booking.createdAt);
+      return bookingDate >= previousThirtyDaysAgo && bookingDate < thirtyDaysAgo;
+    }).length;
+
+    const bookingsChange = previousPeriodBookings > 0 
+      ? ((recentBookings - previousPeriodBookings) / previousPeriodBookings) * 100 
+      : recentBookings > 0 ? 100 : 0;
+
+    const thisMonthBookings = bookings.filter((booking) => {
+      const bookingDate = new Date(booking.createdAt);
+      return isSameMonth(bookingDate, now);
+    });
+
+    const lastMonthBookings = bookings.filter((booking) => {
+      const bookingDate = new Date(booking.createdAt);
+      return isSameMonth(bookingDate, subMonths(now, 1));
+    });
 
     const totalRevenue = bookings
       .filter((b) => b.status?.toUpperCase() === "PAYMENT_RECEIVED")
       .reduce((sum, b) => sum + parseFloat(b.amountToPay || "0"), 0);
 
+    const thisMonthRevenue = thisMonthBookings
+      .filter((b) => b.status?.toUpperCase() === "PAYMENT_RECEIVED")
+      .reduce((sum, b) => sum + parseFloat(b.amountToPay || "0"), 0);
+
+    const lastMonthRevenue = lastMonthBookings
+      .filter((b) => b.status?.toUpperCase() === "PAYMENT_RECEIVED")
+      .reduce((sum, b) => sum + parseFloat(b.amountToPay || "0"), 0);
+
+    const revenueChange = lastMonthRevenue > 0 
+      ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+      : thisMonthRevenue > 0 ? 100 : 0;
+
+    const pendingBookings = bookings.filter(
+      (b) => b.status?.toUpperCase() === "AWAITING_BUSINESS_PROCESSING"
+    ).length;
+
+    const activeBookings = bookings.filter((booking) => {
+      if (booking.status?.toUpperCase() === "CANCELLED") return false;
+      const hasFutureDate = booking.dates?.some((dateSlot: any) => {
+        const endDate = new Date(dateSlot.endDateTime);
+        return endDate >= now;
+      });
+      return hasFutureDate;
+    }).length;
+
     return {
       totalLocations,
       totalCheckIns,
       totalBookings,
-      approvedLocations,
+      approvedLocations: visibleLocationsCount,
       recentBookings,
+      bookingsChange,
       totalRevenue,
+      thisMonthRevenue,
+      revenueChange,
+      pendingBookings,
+      activeBookings,
+      // Add warning flags if data might be incomplete
+      hasMoreBookings: bookingsMeta && bookingsMeta.totalItems > bookings.length,
+      hasMoreLocations: locationsMeta && locationsMeta.totalItems > locations.length,
     };
   }, [locations, locationsMeta, bookings, bookingsMeta]);
 
@@ -115,122 +214,374 @@ export default function BusinessDashboardPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Title Section */}
-      <div className="flex items-start justify-between">
+    <div className="space-y-6 p-6">
+      {/* Welcome Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Business Dashboard</h1>
           <p className="text-muted-foreground mt-2">
-            Manage your locations, bookings, and revenue
+            Overview of your locations, bookings, and revenue
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/business/locations/create')}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Location
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => router.push('/dashboard/business/location-bookings')}
+          >
+            <Calendar className="mr-2 h-4 w-4" />
+            View Bookings
+          </Button>
+          <Button onClick={() => router.push('/dashboard/business/locations/create')}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Location
+          </Button>
+        </div>
       </div>
 
-      {/* Quick Statistics */}
+      {/* Enhanced Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Locations</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalLocations}</div>
-            <p className="text-xs text-muted-foreground">{stats.approvedLocations} approved</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Check-ins</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCheckIns.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">All locations</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalBookings.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">{stats.recentBookings} in last 30 days</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.totalRevenue > 0 ? `₫${(stats.totalRevenue / 1000).toFixed(0)}K` : "₫0"}
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Locations
+            </CardTitle>
+            <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <Building2 className="h-4 w-4 text-blue-600" />
             </div>
-            <p className="text-xs text-muted-foreground">From completed bookings</p>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-600">{stats.totalLocations}</div>
+            <div className="flex items-center gap-2 mt-2">
+              <p className="text-xs text-muted-foreground">
+                {stats.approvedLocations} visible on map
+              </p>
+              {stats.approvedLocations < stats.totalLocations && (
+                <Badge variant="outline" className="text-xs">
+                  {stats.totalLocations - stats.approvedLocations} hidden
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Check-ins
+            </CardTitle>
+            <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <Users className="h-4 w-4 text-emerald-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-emerald-600">
+              {stats.totalCheckIns.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Across all locations
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Bookings
+            </CardTitle>
+            <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+              <Calendar className="h-4 w-4 text-purple-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-purple-600">
+              {stats.totalBookings.toLocaleString()}
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <p className="text-xs text-muted-foreground">
+                {stats.recentBookings} in last 30 days
+              </p>
+              {stats.bookingsChange !== 0 && (
+                <div className={`flex items-center gap-1 text-xs ${
+                  stats.bookingsChange > 0 ? "text-emerald-600" : "text-red-600"
+                }`}>
+                  {stats.bookingsChange > 0 ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3" />
+                  )}
+                  {Math.abs(stats.bookingsChange).toFixed(1)}%
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Revenue
+            </CardTitle>
+            <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-amber-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-amber-600">
+              {formatCurrency(stats.totalRevenue)}
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <p className="text-xs text-muted-foreground">
+                {formatCurrency(stats.thisMonthRevenue)} this month
+              </p>
+              {stats.revenueChange !== 0 && (
+                <div className={`flex items-center gap-1 text-xs ${
+                  stats.revenueChange > 0 ? "text-emerald-600" : "text-red-600"
+                }`}>
+                  {stats.revenueChange > 0 ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3" />
+                  )}
+                  {Math.abs(stats.revenueChange).toFixed(1)}%
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Overview Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Check-ins by top locations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-72">
-            {isLoadingLocations ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      {/* Quick Actions & Insights */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => router.push('/dashboard/business/location-bookings')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Pending Bookings</p>
+                <p className="text-2xl font-bold mt-1">{stats.pendingBookings}</p>
               </div>
-            ) : topLocationsForChart.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Check-ins data will appear here once you have locations.
-              </p>
-            ) : (
-              <ChartContainer config={locationChartConfig} className="h-full w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topLocationsForChart}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      className="stroke-muted"
-                    />
-                    <XAxis
-                      dataKey="name"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={10}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <RechartsTooltip
-                      cursor={{
-                        fill: "hsl(var(--muted))",
-                        opacity: 0.4,
-                      }}
-                      content={<ChartTooltipContent />}
-                    />
-                    <Bar
-                      dataKey="checkIns"
-                      fill="var(--color-checkIns)"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-orange-600" />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+              Requires your action
+              <ArrowRight className="h-3 w-3" />
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => router.push('/dashboard/business/location-bookings')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Active Bookings</p>
+                <p className="text-2xl font-bold mt-1">{stats.activeBookings}</p>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+              Upcoming events
+              <ArrowRight className="h-3 w-3" />
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => router.push('/dashboard/business/locations')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Visible Locations</p>
+                <p className="text-2xl font-bold mt-1">{stats.approvedLocations}</p>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <MapPin className="h-5 w-5 text-blue-600" />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+              On the map
+              <ArrowRight className="h-3 w-3" />
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => router.push('/dashboard/business/wallet')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">This Month Revenue</p>
+                <p className="text-2xl font-bold mt-1">{formatCurrency(stats.thisMonthRevenue)}</p>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-emerald-600" />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+              View wallet
+              <ArrowRight className="h-3 w-3" />
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" />
+                  Top Locations by Check-ins
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Most popular locations this month
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/dashboard/business/locations')}
+              >
+                View All
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              {isLoadingLocations ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : topLocationsForChart.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <Building2 className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm text-muted-foreground font-medium">
+                    No check-ins data yet
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Check-ins will appear here once customers visit your locations
+                  </p>
+                </div>
+              ) : (
+                <ChartContainer config={locationChartConfig} className="h-full w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topLocationsForChart}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        className="stroke-muted"
+                      />
+                      <XAxis
+                        dataKey="name"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={10}
+                        tick={{ fontSize: 11 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 11 }}
+                      />
+                      <RechartsTooltip
+                        cursor={{
+                          fill: "hsl(var(--muted))",
+                          opacity: 0.4,
+                        }}
+                        content={<ChartTooltipContent />}
+                      />
+                      <Bar
+                        dataKey="checkIns"
+                        fill="var(--color-checkIns)"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Revenue Overview
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Monthly revenue from bookings
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+                  <p className="text-xs text-muted-foreground mb-1">This Month</p>
+                  <p className="text-2xl font-bold text-emerald-600">
+                    {formatCurrency(stats.thisMonthRevenue)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Total</p>
+                  <p className="text-2xl font-bold text-amber-600">
+                    {formatCurrency(stats.totalRevenue)}
+                  </p>
+                </div>
+              </div>
+              {stats.revenueChange !== 0 && (
+                <div className={`flex items-center gap-2 p-3 rounded-lg ${
+                  stats.revenueChange > 0 
+                    ? "bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800" 
+                    : "bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800"
+                }`}>
+                  {stats.revenueChange > 0 ? (
+                    <TrendingUp className="h-4 w-4 text-emerald-600" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-red-600" />
+                  )}
+                  <div>
+                    <p className={`text-sm font-medium ${
+                      stats.revenueChange > 0 ? "text-emerald-600" : "text-red-600"
+                    }`}>
+                      {stats.revenueChange > 0 ? "+" : ""}{stats.revenueChange.toFixed(1)}% from last month
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Revenue {stats.revenueChange > 0 ? "increased" : "decreased"}
+                    </p>
+                  </div>
+                </div>
+              )}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => router.push('/dashboard/business/wallet')}
+              >
+                <Wallet className="mr-2 h-4 w-4" />
+                View Wallet Details
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -258,44 +609,63 @@ export default function BusinessDashboardPage() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="font-semibold">Name</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Check-ins</TableHead>
-                  <TableHead className="font-semibold">Address</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentLocations.map((location) => (
-                  <TableRow
-                    key={location.id}
-                    className="hover:bg-muted/50 cursor-pointer"
-                    onClick={() => router.push(`/dashboard/business/locations/${location.id}`)}
-                  >
-                    <TableCell className="font-medium">{location.name}</TableCell>
-                    <TableCell>
-                      {location.isVisibleOnMap ? (
-                        <StatusBadge status="ACTIVE" />
-                      ) : (
-                        <Badge variant="secondary" className="font-medium">
-                          HIDDEN
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {parseInt(location.totalCheckIns || "0").toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {location.addressLine
-                        ? `${location.addressLine}, ${location.addressLevel2}`
-                        : "N/A"}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-b">
+                    <TableHead className="font-semibold">Name</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold">Check-ins</TableHead>
+                    <TableHead className="font-semibold">Address</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {recentLocations.map((location) => (
+                    <TableRow
+                      key={location.id}
+                      className="hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => router.push(`/dashboard/business/locations/${location.id}`)}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          {location.name}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {location.isVisibleOnMap ? (
+                          <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Visible
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="font-medium">
+                            <Eye className="h-3 w-3 mr-1" />
+                            Hidden
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-1">
+                          <Users className="h-3 w-3 text-muted-foreground" />
+                          {parseInt(location.totalCheckIns || "0").toLocaleString()}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1 max-w-[200px]">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span className="truncate">
+                            {location.addressLine
+                              ? `${location.addressLine}, ${location.addressLevel2}`
+                              : "N/A"}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </DashboardSection>
 
@@ -319,29 +689,54 @@ export default function BusinessDashboardPage() {
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="space-y-4">
-              {recentBookingsList.map((booking) => (
-                <Link
-                  key={booking.id}
-                  href={`/dashboard/business/location-bookings/${booking.id}`}
-                  className="block"
-                >
-                  <div className="flex flex-col p-4 border-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors shadow-sm cursor-pointer">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="font-semibold text-sm">
-                        {booking.location?.name || "Location"}
-                      </p>
-                      <StatusBadge status={booking.status || ""} />
+            <div className="space-y-3">
+              {recentBookingsList.map((booking) => {
+                const bookingDate = booking.dates?.[0]?.startDateTime 
+                  ? new Date(booking.dates[0].startDateTime)
+                  : new Date(booking.createdAt);
+                const isUpcoming = bookingDate >= new Date();
+                
+                return (
+                  <Link
+                    key={booking.id}
+                    href={`/dashboard/business/location-bookings/${booking.id}`}
+                    className="block"
+                  >
+                    <div className="flex flex-col p-4 border-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all shadow-sm cursor-pointer hover:shadow-md">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">
+                            {booking.location?.name || "Location"}
+                          </p>
+                          {booking.referencedEventRequest?.eventName && (
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                              {booking.referencedEventRequest.eventName}
+                            </p>
+                          )}
+                        </div>
+                        <StatusBadge status={booking.status || ""} />
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(bookingDate, "MMM dd, yyyy")}
+                        </span>
+                        {isUpcoming && (
+                          <Badge variant="outline" className="text-xs">
+                            Upcoming
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-emerald-600">
+                          {formatCurrency(parseFloat(booking.amountToPay || "0"))}
+                        </p>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {format(new Date(booking.createdAt), "MMM dd, yyyy")}
-                    </p>
-                    <p className="text-sm font-medium">
-                      ₫{parseFloat(booking.amountToPay || "0").toLocaleString()}
-                    </p>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </DashboardSection>
