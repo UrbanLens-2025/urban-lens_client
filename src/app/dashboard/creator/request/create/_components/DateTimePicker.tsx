@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { CalendarIcon, Clock } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -9,8 +9,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimePicker } from "@/components/ui/time-picker";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
@@ -79,6 +79,12 @@ export function DateTimePicker({
       const newDate = new Date(selectedDate);
       newDate.setHours(hours || 0, minutes || 0, 0, 0);
       onChange(newDate);
+    } else {
+      // If no date selected, create a date with today's date and the selected time
+      const today = new Date();
+      const [hours, minutes] = time.split(":").map(Number);
+      today.setHours(hours || 0, minutes || 0, 0, 0);
+      onChange(today);
     }
   };
 
@@ -139,17 +145,13 @@ export function DateTimePicker({
           </PopoverContent>
         </Popover>
 
-        <div className="relative">
-          <Input
-            type="time"
-            value={timeString}
-            onChange={(e) => handleTimeChange(e.target.value)}
-            className={cn("w-32 pr-10", error && "border-destructive")}
-          />
-          <Clock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-        </div>
+        <TimePicker
+          value={timeString}
+          onChange={handleTimeChange}
+          error={error}
+          className="w-32"
+        />
       </div>
-      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

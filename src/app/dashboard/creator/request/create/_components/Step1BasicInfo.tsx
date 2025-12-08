@@ -9,11 +9,11 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Info, 
-  Calendar, 
   Users, 
   FileText, 
   Globe,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Tag
 } from "lucide-react";
 import { CreateEventRequestForm } from "../page";
 import { DateTimePicker } from "./DateTimePicker";
@@ -48,7 +48,7 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
             <FormItem>
               <div className="flex items-center gap-2">
                 <FormLabel className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4 text-primary" />
+                  <Tag className="h-4 w-4 text-primary" />
                   Event Name *
                 </FormLabel>
                 <Tooltip>

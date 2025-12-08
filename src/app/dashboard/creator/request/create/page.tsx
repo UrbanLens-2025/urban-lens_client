@@ -11,10 +11,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, FileText } from "lucide-react";
+import { AlertCircle, FileText, ArrowLeft, ArrowRight } from "lucide-react";
 import { StepIndicator } from "./_components/StepIndicator";
 import { Step1BasicInfo } from "./_components/Step1BasicInfo";
 import { Step2TagsSelection } from "./_components/Step2TagsSelection";
+import { Step3LocationSelection } from "./_components/Step3LocationSelection";
 import { Step3Documents } from "./_components/Step3Documents";
 import { Step4ReviewPayment } from "./_components/Step4ReviewPayment";
 import { CreateEventRequestPayload } from "@/types";
@@ -126,7 +127,7 @@ const formSchema = z
     }
     
     // Validate end date is after start date (only if both are provided)
-    if (hasStartDate && hasEndDate) {
+    if (hasStartDate && hasEndDate && data.startDate && data.endDate) {
       if (data.endDate <= data.startDate) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -209,10 +210,13 @@ export default function CreateEventRequestPage() {
         fieldsToValidate = ["tagIds"];
         break;
       case 3:
-        // Documents step - no validation for now
+        // Location step - optional, always valid
         return true;
       case 4:
-        // Validate entire form
+        // Documents step - optional, always valid
+        return true;
+      case 5:
+        // Validate entire form (location is optional but recommended)
         const isValid = await form.trigger();
         if (!isValid) {
           const errors = form.formState.errors;
@@ -282,13 +286,11 @@ export default function CreateEventRequestPage() {
       case 2:
         return !errors.tagIds && values.tagIds && values.tagIds.length > 0;
       case 3:
-        // Documents step - Next button disabled if no valid documents (each document must have at least one image)
-        const documents = eventValidationDocuments || [];
-        if (documents.length === 0) {
-          return false;
-        }
-        // Check that each document has at least one image
-        return documents.every((doc) => doc.documentImageUrls && doc.documentImageUrls.length > 0);
+        // Location step - optional, always valid to proceed
+        return true;
+      case 4:
+        // Documents step - optional, always valid to proceed
+        return true;
       default:
         return true;
     }
@@ -296,7 +298,7 @@ export default function CreateEventRequestPage() {
 
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
-    if (isValid && currentStep < 4) {
+    if (isValid && currentStep < 5) {
       setShowValidationErrors(false);
       setCurrentStep(currentStep + 1);
       // Scroll to top of page when moving to next step
@@ -304,12 +306,6 @@ export default function CreateEventRequestPage() {
     } else if (!isValid) {
       setShowValidationErrors(true);
     }
-  };
-
-  const handleSkipStep3 = () => {
-    setShowValidationErrors(false);
-    setCurrentStep(4);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handlePrevious = () => {
@@ -322,7 +318,7 @@ export default function CreateEventRequestPage() {
   };
 
   const handleSubmit = async () => {
-    const isValid = await validateStep(4);
+    const isValid = await validateStep(5);
     if (!isValid) {
       return;
     }
@@ -330,7 +326,7 @@ export default function CreateEventRequestPage() {
     const values = form.getValues();
 
     // Build payload according to new API structure
-    const payload = {
+    const payload: any = {
       displayName: values.eventName,
       description: values.eventDescription,
       expectedNumberOfParticipants: values.expectedNumberOfParticipants,
@@ -343,6 +339,19 @@ export default function CreateEventRequestPage() {
       avatarUrl: values.avatarUrl,
     };
 
+    // Include location data if provided (optional fields)
+    if (values.locationId) {
+      payload.locationId = values.locationId;
+    }
+
+    // Include date ranges if provided (for location booking)
+    if (values.dateRanges && values.dateRanges.length > 0) {
+      payload.dateRanges = values.dateRanges.map((range) => ({
+        startDateTime: range.startDateTime.toISOString(),
+        endDateTime: range.endDateTime.toISOString(),
+      }));
+    }
+
     createEvent.mutate(payload);
   };
 
@@ -353,8 +362,10 @@ export default function CreateEventRequestPage() {
       case 2:
         return <Step2TagsSelection form={form} />;
       case 3:
-        return <Step3Documents form={form} />;
+        return <Step3LocationSelection form={form} />;
       case 4:
+        return <Step3Documents form={form} />;
+      case 5:
         return (
           <Step4ReviewPayment
             form={form}
@@ -383,6 +394,11 @@ export default function CreateEventRequestPage() {
         break;
       case 2:
         fieldsToCheck = ["tagIds"];
+        break;
+      case 3:
+      case 4:
+        // Location and Documents are optional
+        fieldsToCheck = [];
         break;
     }
 
@@ -415,7 +431,7 @@ export default function CreateEventRequestPage() {
 
       <StepIndicator currentStep={currentStep} />
 
-      {showValidationErrors && currentStep !== 4 && (
+      {showValidationErrors && currentStep !== 5 && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Validation Error</AlertTitle>
@@ -433,27 +449,35 @@ export default function CreateEventRequestPage() {
       </Form>
 
       {/* Navigation Buttons */}
-      {currentStep !== 4 && (
-        <div className="flex justify-between">
+      {currentStep !== 5 && (
+        <div className="flex flex-col sm:flex-row justify-between gap-4 pb-6">
           <Button
             variant="outline"
             onClick={handlePrevious}
-            disabled={currentStep === 1}
+            disabled={currentStep === 1 || createEvent.isPending}
+            className="w-full sm:w-auto"
           >
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Previous
           </Button>
-          <div className="flex gap-2">
-            {currentStep === 3 && (
+          <div className="flex gap-2 w-full sm:w-auto">
+            {(currentStep === 3 || currentStep === 4) && (
               <Button
                 variant="ghost"
-                onClick={handleSkipStep3}
+                onClick={handleNext}
                 disabled={createEvent.isPending}
+                className="w-full sm:w-auto"
               >
-                Skip this step
+                Skip {currentStep === 3 ? "Location" : "Documents"}
               </Button>
             )}
-            <Button onClick={handleNext} disabled={!isCurrentStepValid()}>
-              Next
+            <Button
+              onClick={handleNext}
+              disabled={!isCurrentStepValid() || createEvent.isPending}
+              className="w-full sm:w-auto"
+            >
+              Continue
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>

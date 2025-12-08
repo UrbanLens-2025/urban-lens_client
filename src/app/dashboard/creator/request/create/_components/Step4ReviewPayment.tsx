@@ -19,11 +19,17 @@ import {
   Image as ImageIcon,
   FileCheck,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Building2,
+  AlertCircle,
+  MapPin
 } from "lucide-react";
 import { CreateEventRequestForm } from "../page";
 import Link from "next/link";
 import Image from "next/image";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useBookableLocations } from "@/hooks/events/useBookableLocations";
+import { cn } from "@/lib/utils";
 
 interface Step4ReviewPaymentProps {
   form: UseFormReturn<CreateEventRequestForm>;
@@ -224,6 +230,89 @@ export function Step4ReviewPayment({
         </CardContent>
       </Card>
 
+      {/* Location & Booking */}
+      <Card className={cn(
+        formValues.locationId && formValues.dateRanges && formValues.dateRanges.length > 0
+          ? "border-green-500/50 bg-green-50/30 dark:bg-green-950/20"
+          : "border-amber-500/50 bg-amber-50/30 dark:bg-amber-950/20"
+      )}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              Location & Booking
+              {formValues.locationId && formValues.dateRanges && formValues.dateRanges.length > 0 ? (
+                <Badge variant="default" className="ml-2 bg-green-600">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Complete
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="ml-2">
+                  Optional
+                </Badge>
+              )}
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleEditStep(3)}
+              className="text-xs"
+            >
+              <Edit className="h-3 w-3 mr-1" />
+              {formValues.locationId ? "Edit" : "Add"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {formValues.locationId ? (
+            <>
+              <LocationReviewSection locationId={formValues.locationId} />
+              {formValues.dateRanges && formValues.dateRanges.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    Booked Time Slots ({formValues.dateRanges.length})
+                  </p>
+                  <div className="space-y-2">
+                    {formValues.dateRanges.map((range, index) => (
+                      <div
+                        key={index}
+                        className="p-3 border rounded-lg bg-background"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">
+                              {format(range.startDateTime, "PPP 'at' h:mm a")}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              to {format(range.endDateTime, "PPP 'at' h:mm a")}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <Alert variant="default" className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-sm text-amber-900 dark:text-amber-200">
+                    Location selected but no time slots booked yet. You can add time slots when editing your event.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </>
+          ) : (
+            <Alert variant="default" className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-sm text-amber-900 dark:text-amber-200">
+                <strong>No location selected.</strong> Your event will be created without a specific venue. You can add a location later when editing your event.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Documents */}
       {formValues.eventValidationDocuments && formValues.eventValidationDocuments.length > 0 && (
         <Card>
@@ -236,7 +325,7 @@ export function Step4ReviewPayment({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleEditStep(3)}
+                onClick={() => handleEditStep(4)}
                 className="text-xs"
               >
                 <Edit className="h-3 w-3 mr-1" />
