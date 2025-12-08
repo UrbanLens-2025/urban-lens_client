@@ -26,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatDocumentType } from "@/lib/utils";
 import { DisplayTags } from "@/components/shared/DisplayTags";
 import { ImageViewer } from "@/components/shared/ImageViewer";
 
@@ -386,7 +386,7 @@ export default function LocationRequestDetailsPage({
                       className="border-b pb-4 last:border-b-0"
                     >
                       <p className="font-semibold mb-3 text-sm">
-                        {doc.documentType}
+                        {formatDocumentType(doc.documentType)}
                       </p>
                       <div className="flex flex-wrap gap-4">
                         {doc.documentImageUrls.map((url, imgIndex) => (

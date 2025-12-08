@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { formatDocumentType } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
@@ -713,13 +714,15 @@ export default function LocationBookingDetailPage({
                         {booking.referencedEventRequest.eventValidationDocuments.map(
                           (doc, docIndex) => (
                             <div key={docIndex} className="space-y-2">
-                              <Badge variant="outline">{doc.documentType}</Badge>
+                              <Badge variant="outline">
+                                {formatDocumentType(doc.documentType)}
+                              </Badge>
                               <div className="grid grid-cols-2 gap-2">
                                 {doc.documentImageUrls.map((url, imgIndex) => (
                                   <img
                                     key={imgIndex}
                                     src={url}
-                                    alt={`${doc.documentType} ${imgIndex + 1}`}
+                                    alt={`${formatDocumentType(doc.documentType)} ${imgIndex + 1}`}
                                     onClick={() => handleImageClick(url)}
                                     className="w-full h-32 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity"
                                   />

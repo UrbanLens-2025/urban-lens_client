@@ -26,6 +26,10 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  Clock,
+  ExternalLink,
+  Download,
+  Copy,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { GoogleMapsPicker } from '@/components/shared/GoogleMapsPicker';
@@ -44,7 +48,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { DisplayTags } from '@/components/shared/DisplayTags';
-import { formatShortDate } from '@/lib/utils';
+import { formatShortDate, formatDocumentType } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 
 function InfoRow({
@@ -156,8 +160,22 @@ export default function AdminLocationRequestDetailsPage({
 
   if (isError || !request) {
     return (
-      <div className='text-center py-20 text-red-500'>
-        Error loading request details.
+      <div className='container mx-auto py-12'>
+        <Card className='border-destructive'>
+          <CardContent className='pt-6'>
+            <div className='flex flex-col items-center justify-center py-12 text-center'>
+              <AlertCircle className='h-12 w-12 text-destructive mb-4' />
+              <h2 className='text-xl font-semibold mb-2'>Error Loading Request</h2>
+              <p className='text-muted-foreground mb-4'>
+                Unable to load location request details. Please try again.
+              </p>
+              <Button onClick={() => router.back()} variant='outline'>
+                <ArrowLeft className='h-4 w-4 mr-2' />
+                Go Back
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -184,25 +202,145 @@ export default function AdminLocationRequestDetailsPage({
       : 'destructive';
 
   const isPending = request.status === 'AWAITING_ADMIN_REVIEW';
+  
+  // Calculate stats
+  const imageCount = request.locationImageUrls?.length || 0;
+  const documentCount = request.locationValidationDocuments?.reduce(
+    (acc, doc) => acc + doc.documentImageUrls.length,
+    0
+  ) || 0;
+  const totalAttachments = imageCount + documentCount;
+
+  // Copy coordinates to clipboard
+  const copyCoordinates = () => {
+    const coords = `${request.latitude}, ${request.longitude}`;
+    navigator.clipboard.writeText(coords);
+    toast.success('Coordinates copied to clipboard');
+  };
+
+  // Open in Google Maps
+  const openInGoogleMaps = () => {
+    const url = `https://www.google.com/maps?q=${request.latitude},${request.longitude}`;
+    window.open(url, '_blank');
+  };
 
   return (
-    <div className='space-y-6'>
-      {/* Header */}
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-4'>
+    <div className='space-y-6 pb-6'>
+      {/* Enhanced Header with Quick Actions */}
+      <div className='flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4'>
+        <div className='flex items-start gap-4 flex-1'>
           <Button variant='outline' size='icon' onClick={() => router.back()}>
             <ArrowLeft className='h-4 w-4' />
           </Button>
-          <div>
-            <h1 className='text-3xl font-bold'>{request.name}</h1>
-            <div className='flex items-center gap-2 mt-1'>
-              <Badge variant={statusVariant as any}>{statusBadge}</Badge>
-              <span className='text-sm text-muted-foreground'>
-                Submitted {formatShortDate(request.createdAt)}
-              </span>
+          <div className='flex-1 min-w-0'>
+            <div className='flex items-start justify-between gap-4'>
+              <div className='flex-1 min-w-0'>
+                <h1 className='text-3xl font-bold mb-2 break-words'>{request.name}</h1>
+                <div className='flex flex-wrap items-center gap-3 mt-2'>
+                  <Badge 
+                    variant={statusVariant as any}
+                    className='text-sm px-3 py-1'
+                  >
+                    {statusBadge}
+                  </Badge>
+                  <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                    <Calendar className='h-4 w-4' />
+                    <span>Submitted {formatShortDate(request.createdAt)}</span>
+                  </div>
+                  {request.processedBy && (
+                    <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                      <User className='h-4 w-4' />
+                      <span>
+                        Processed by {request.processedBy.firstName} {request.processedBy.lastName}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
+        
+        {/* Quick Action Buttons */}
+        {isPending && (
+          <div className='flex flex-col sm:flex-row gap-2 lg:flex-shrink-0'>
+            <Button
+              variant='destructive'
+              onClick={() => setShowRejectDialog(true)}
+              disabled={isProcessing}
+              className='sm:min-w-[140px]'
+            >
+              <XCircle className='h-4 w-4 mr-2' />
+              Reject
+            </Button>
+            <Button
+              onClick={() => setShowApproveDialog(true)}
+              disabled={isProcessing}
+              className='bg-green-600 hover:bg-green-700 sm:min-w-[140px]'
+            >
+              <CheckCircle2 className='h-4 w-4 mr-2' />
+              Approve
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Quick Stats Summary */}
+      <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+        <Card>
+          <CardContent className='pt-6'>
+            <div className='flex items-center gap-3'>
+              <div className='p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30'>
+                <MapPin className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+              </div>
+              <div>
+                <p className='text-xs text-muted-foreground'>Type</p>
+                <p className='text-sm font-semibold'>
+                  {request.type === 'BUSINESS_OWNED' ? 'Business' : 'Public'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className='pt-6'>
+            <div className='flex items-center gap-3'>
+              <div className='p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30'>
+                <ImageIcon className='h-5 w-5 text-purple-600 dark:text-purple-400' />
+              </div>
+              <div>
+                <p className='text-xs text-muted-foreground'>Images</p>
+                <p className='text-sm font-semibold'>{imageCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className='pt-6'>
+            <div className='flex items-center gap-3'>
+              <div className='p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30'>
+                <FileText className='h-5 w-5 text-orange-600 dark:text-orange-400' />
+              </div>
+              <div>
+                <p className='text-xs text-muted-foreground'>Documents</p>
+                <p className='text-sm font-semibold'>{documentCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className='pt-6'>
+            <div className='flex items-center gap-3'>
+              <div className='p-2 rounded-lg bg-green-100 dark:bg-green-900/30'>
+                <TagIcon className='h-5 w-5 text-green-600 dark:text-green-400' />
+              </div>
+              <div>
+                <p className='text-xs text-muted-foreground'>Tags</p>
+                <p className='text-sm font-semibold'>{tags.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Review Instructions Banner */}
@@ -215,11 +353,24 @@ export default function AdminLocationRequestDetailsPage({
                 <h3 className='font-semibold text-blue-900 dark:text-blue-100 mb-1'>
                   Review Required
                 </h3>
-                <p className='text-sm text-blue-800 dark:text-blue-200'>
+                <p className='text-sm text-blue-800 dark:text-blue-200 mb-3'>
                   Please review all sections below carefully before making a decision. 
-                  Verify the location details, images, documents, and submitter information. 
-                  Action buttons are available at the bottom of the page.
+                  Verify the location details, images, documents, and submitter information.
                 </p>
+                <div className='flex flex-wrap gap-2 mt-3'>
+                  <Badge variant='outline' className='text-xs'>
+                    <ImageIcon className='h-3 w-3 mr-1' />
+                    {imageCount} Image{imageCount !== 1 ? 's' : ''}
+                  </Badge>
+                  <Badge variant='outline' className='text-xs'>
+                    <FileText className='h-3 w-3 mr-1' />
+                    {documentCount} Document{documentCount !== 1 ? 's' : ''}
+                  </Badge>
+                  <Badge variant='outline' className='text-xs'>
+                    <TagIcon className='h-3 w-3 mr-1' />
+                    {tags.length} Tag{tags.length !== 1 ? 's' : ''}
+                  </Badge>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -227,7 +378,7 @@ export default function AdminLocationRequestDetailsPage({
       )}
 
       {/* Main Content - Top to Bottom Flow */}
-      <div className='space-y-6 max-w-4xl'>
+      <div className='space-y-6'>
         {/* Request Overview */}
         <Card>
           <CardHeader>
@@ -302,7 +453,29 @@ export default function AdminLocationRequestDetailsPage({
             </div>
             <Separator />
             <div className='pt-2'>
-              <p className='text-xs font-medium text-muted-foreground mb-2'>Map Location</p>
+              <div className='flex items-center justify-between mb-2'>
+                <p className='text-xs font-medium text-muted-foreground'>Map Location</p>
+                <div className='flex gap-2'>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={copyCoordinates}
+                    className='h-7 text-xs'
+                  >
+                    <Copy className='h-3 w-3 mr-1' />
+                    Copy Coords
+                  </Button>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={openInGoogleMaps}
+                    className='h-7 text-xs'
+                  >
+                    <ExternalLink className='h-3 w-3 mr-1' />
+                    Open Maps
+                  </Button>
+                </div>
+              </div>
               <div className='h-64 rounded-lg overflow-hidden border'>
                 <GoogleMapsPicker
                   position={position}
@@ -326,18 +499,24 @@ export default function AdminLocationRequestDetailsPage({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
+              <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
                 {request.locationImageUrls.map((url, index) => (
                   <div
                     key={index}
-                    className='relative aspect-video rounded-lg overflow-hidden border cursor-pointer group'
+                    className='relative aspect-video rounded-lg overflow-hidden border cursor-pointer group hover:border-primary transition-all'
                     onClick={() => handleImageClick(url, `Location Image ${index + 1}`)}
                   >
                     <img
                       src={url || '/placeholder.svg'}
                       alt={`Location ${index + 1}`}
-                      className='w-full h-full object-cover group-hover:opacity-90 transition-opacity'
+                      className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-200'
                     />
+                    <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center'>
+                      <ImageIcon className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity' />
+                    </div>
+                    <div className='absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity'>
+                      #{index + 1}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -364,22 +543,28 @@ export default function AdminLocationRequestDetailsPage({
                     {docIndex > 0 && <Separator />}
                     <div>
                       <p className='font-semibold text-sm mb-3'>
-                        {doc.documentType}
+                        {formatDocumentType(doc.documentType)}
                       </p>
-                      <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
+                      <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
                         {doc.documentImageUrls.map((url, imgIndex) => (
                           <div
                             key={imgIndex}
-                            className='relative aspect-[4/3] rounded-lg overflow-hidden border cursor-pointer group'
+                            className='relative aspect-[4/3] rounded-lg overflow-hidden border cursor-pointer group hover:border-primary transition-all'
                             onClick={() =>
-                              handleImageClick(url, `${doc.documentType} - Document ${imgIndex + 1}`)
+                              handleImageClick(url, `${formatDocumentType(doc.documentType)} - Document ${imgIndex + 1}`)
                             }
                           >
                             <img
                               src={url || '/placeholder.svg'}
                               alt={`Document ${imgIndex + 1}`}
-                              className='w-full h-full object-cover group-hover:opacity-90 transition-opacity'
+                              className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-200'
                             />
+                            <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center'>
+                              <FileText className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity' />
+                            </div>
+                            <div className='absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity'>
+                              #{imgIndex + 1}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -474,10 +659,13 @@ export default function AdminLocationRequestDetailsPage({
                           <Separator />
                           <div className='pt-2'>
                             <Link
-                              href={`/admin/accounts/${request.createdBy.businessProfile.accountId}`}
-                              className='text-sm text-primary hover:underline'
+                              href={`/admin/business/${request.createdBy.businessProfile.accountId}`}
                             >
-                              View Business Account →
+                              <Button variant='outline' size='sm' className='w-full sm:w-auto'>
+                                <Building className='h-4 w-4 mr-2' />
+                                View Business Account
+                                <ExternalLink className='h-3 w-3 ml-2' />
+                              </Button>
                             </Link>
                           </div>
                         </>
@@ -505,9 +693,9 @@ export default function AdminLocationRequestDetailsPage({
           </Card>
         )}
 
-        {/* Action Buttons - Sticky at Bottom */}
+        {/* Action Buttons - Sticky at Bottom (for mobile) */}
         {isPending && (
-          <Card className='sticky bottom-6 border-2 border-primary/20 bg-background shadow-lg z-10'>
+          <Card className='sticky bottom-6 border-2 border-primary/20 bg-background shadow-lg z-10 lg:hidden'>
             <CardContent className='pt-6'>
               <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-3'>
                 <Button
@@ -515,6 +703,7 @@ export default function AdminLocationRequestDetailsPage({
                   onClick={() => setShowRejectDialog(true)}
                   disabled={isProcessing}
                   className='flex-1'
+                  size='lg'
                 >
                   <XCircle className='h-4 w-4 mr-2' />
                   Reject Request
@@ -523,6 +712,7 @@ export default function AdminLocationRequestDetailsPage({
                   onClick={() => setShowApproveDialog(true)}
                   disabled={isProcessing}
                   className='flex-1 bg-green-600 hover:bg-green-700'
+                  size='lg'
                 >
                   <CheckCircle2 className='h-4 w-4 mr-2' />
                   Approve Request

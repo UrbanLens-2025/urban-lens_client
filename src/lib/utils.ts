@@ -30,3 +30,30 @@ export function formatShortDate(dateString: string) {
     day: 'numeric',
   });
 }
+
+// Document type labels mapping
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  LOCATION_REGISTRATION_CERTIFICATE: 'Location Registration Certificate',
+  BUSINESS_LICENSE: 'Business License',
+  TAX_REGISTRATION: 'Tax Registration',
+  EVENT_PERMIT: 'Event Permit',
+  OTHER: 'Other Document',
+};
+
+/**
+ * Formats a document type string for display.
+ * Converts enum-style strings (e.g., "LOCATION_REGISTRATION_CERTIFICATE")
+ * to readable format (e.g., "Location Registration Certificate").
+ */
+export function formatDocumentType(type: string): string {
+  // Check if we have a predefined label
+  if (DOCUMENT_TYPE_LABELS[type]) {
+    return DOCUMENT_TYPE_LABELS[type];
+  }
+  
+  // Fallback: format the string by splitting on underscores and capitalizing
+  return type
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
