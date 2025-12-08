@@ -588,37 +588,39 @@ export default function AdminLocationRequestDetailsPage({
               </CardDescription>
             </CardHeader>
             <CardContent className='space-y-4'>
-              <InfoRow
-                label='Full Name'
-                value={`${request.createdBy.firstName} ${request.createdBy.lastName}`}
-                icon={User}
-              />
-              <Separator />
-              <InfoRow
-                label='Email'
-                value={
-                  <a
-                    href={`mailto:${request.createdBy.email}`}
-                    className='text-primary hover:underline'
-                  >
-                    {request.createdBy.email}
-                  </a>
-                }
-                icon={Mail}
-              />
-              <Separator />
-              <InfoRow
-                label='Phone Number'
-                value={
-                  <a
-                    href={`tel:${request.createdBy.phoneNumber}`}
-                    className='text-primary hover:underline'
-                  >
-                    {request.createdBy.phoneNumber}
-                  </a>
-                }
-                icon={Phone}
-              />
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <InfoRow
+                  label='Full Name'
+                  value={`${request.createdBy.firstName} ${request.createdBy.lastName}`}
+                  icon={User}
+                />
+                <InfoRow
+                  label='Email'
+                  value={
+                    <a
+                      href={`mailto:${request.createdBy.email}`}
+                      className='text-primary hover:underline'
+                    >
+                      {request.createdBy.email}
+                    </a>
+                  }
+                  icon={Mail}
+                />
+              </div>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <InfoRow
+                  label='Phone Number'
+                  value={
+                    <a
+                      href={`tel:${request.createdBy.phoneNumber}`}
+                      className='text-primary hover:underline'
+                    >
+                      {request.createdBy.phoneNumber}
+                    </a>
+                  }
+                  icon={Phone}
+                />
+              </div>
               {request.createdBy.businessProfile && (
                 <>
                   <Separator />
@@ -627,12 +629,11 @@ export default function AdminLocationRequestDetailsPage({
                       <Building className='h-4 w-4 text-muted-foreground' />
                       <p className='text-sm font-semibold'>Business Profile</p>
                     </div>
-                    <div className='ml-6 space-y-3'>
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                       <InfoRow
                         label='Business Name'
                         value={request.createdBy.businessProfile.name}
                       />
-                      <Separator />
                       <InfoRow
                         label='Business Email'
                         value={
@@ -645,7 +646,8 @@ export default function AdminLocationRequestDetailsPage({
                         }
                         icon={Mail}
                       />
-                      <Separator />
+                    </div>
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
                       <InfoRow
                         label='Category'
                         value={
@@ -655,20 +657,17 @@ export default function AdminLocationRequestDetailsPage({
                         }
                       />
                       {request.createdBy.businessProfile.accountId && (
-                        <>
-                          <Separator />
-                          <div className='pt-2'>
-                            <Link
-                              href={`/admin/business/${request.createdBy.businessProfile.accountId}`}
-                            >
-                              <Button variant='outline' size='sm' className='w-full sm:w-auto'>
-                                <Building className='h-4 w-4 mr-2' />
-                                View Business Account
-                                <ExternalLink className='h-3 w-3 ml-2' />
-                              </Button>
-                            </Link>
-                          </div>
-                        </>
+                        <div className='pt-2'>
+                          <Link
+                            href={`/admin/business/${request.createdBy.businessProfile.accountId}`}
+                          >
+                            <Button variant='outline' size='sm' className='w-full sm:w-auto'>
+                              <Building className='h-4 w-4 mr-2' />
+                              View Business Account
+                              <ExternalLink className='h-3 w-3 ml-2' />
+                            </Button>
+                          </Link>
+                        </div>
                       )}
                     </div>
                   </div>
