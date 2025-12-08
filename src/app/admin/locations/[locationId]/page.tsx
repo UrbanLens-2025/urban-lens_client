@@ -18,6 +18,13 @@ import {
   Phone,
   Globe,
   Tag,
+  Copy,
+  ExternalLink,
+  FileText,
+  CheckCircle2,
+  Users,
+  Ruler,
+  AlertCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GoogleMapsPicker } from '@/components/shared/GoogleMapsPicker';
@@ -27,9 +34,9 @@ import { DisplayTags } from '@/components/shared/DisplayTags';
 import Link from 'next/link';
 import type React from 'react';
 import { ImageViewer } from '@/components/shared/ImageViewer';
-import { formatDate } from '@/lib/utils';
-import { locationStats } from '@/constants/admin/location-stats';
-import { StatsCard } from '@/components/dashboard';
+import { formatDate, formatShortDate } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 
 function InfoRow({
   label,
@@ -87,8 +94,22 @@ export default function AdminLocationDetailsPage({
 
   if (isError || !location) {
     return (
-      <div className='text-center py-20 text-red-500'>
-        Error loading location details.
+      <div className='container mx-auto py-12'>
+        <Card className='border-destructive'>
+          <CardContent className='pt-6'>
+            <div className='flex flex-col items-center justify-center py-12 text-center'>
+              <AlertCircle className='h-12 w-12 text-destructive mb-4' />
+              <h2 className='text-xl font-semibold mb-2'>Error Loading Location</h2>
+              <p className='text-muted-foreground mb-4'>
+                Unable to load location details. Please try again.
+              </p>
+              <Button onClick={() => router.back()} variant='outline'>
+                <ArrowLeft className='h-4 w-4 mr-2' />
+                Go Back
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -98,39 +119,113 @@ export default function AdminLocationDetailsPage({
     lng: Number(location.longitude),
   };
 
+  // Copy coordinates to clipboard
+  const copyCoordinates = () => {
+    const coords = `${location.latitude}, ${location.longitude}`;
+    navigator.clipboard.writeText(coords);
+    toast.success('Coordinates copied to clipboard');
+  };
+
+  // Open in Google Maps
+  const openInGoogleMaps = () => {
+    const url = `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
+    window.open(url, '_blank');
+  };
+
+  // Calculate real statistics
+  const imageCount = location.imageUrl?.length || 0;
+  const tagCount = location.tags?.length || 0;
+  const checkIns = parseInt(location.totalCheckIns || '0', 10);
+
   return (
-    <div className='space-y-8'>
-      {/* Back Button and Location Name */}
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-4'>
+    <div className='space-y-6 pb-6'>
+      {/* Enhanced Header */}
+      <div className='flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4'>
+        <div className='flex items-start gap-4 flex-1'>
           <Button variant='outline' size='icon' onClick={() => router.back()}>
             <ArrowLeft className='h-4 w-4' />
           </Button>
-          <div>
-            <h1 className='text-3xl font-bold'>{location.name}</h1>
-            <p className='text-sm text-muted-foreground mt-1'>
-              {location.ownershipType === 'OWNED_BY_BUSINESS'
-                ? 'Business Owned'
-                : location.ownershipType === 'PUBLIC_PLACE'
-                ? 'Public Place'
-                : 'User Owned'}
-            </p>
+          <div className='flex-1 min-w-0'>
+            <h1 className='text-3xl font-bold mb-2 break-words'>{location.name}</h1>
+            <div className='flex flex-wrap items-center gap-3 mt-2'>
+              <Badge variant='outline' className='text-sm px-3 py-1'>
+                {location.ownershipType === 'OWNED_BY_BUSINESS' ? (
+                  <><Building className='h-3 w-3 mr-1' /> Business Owned</>
+                ) : location.ownershipType === 'PUBLIC_PLACE' ? (
+                  <><Globe className='h-3 w-3 mr-1' /> Public Place</>
+                ) : (
+                  'User Owned'
+                )}
+              </Badge>
+              <Badge 
+                variant={location.isVisibleOnMap ? 'default' : 'secondary'}
+                className='text-sm px-3 py-1'
+              >
+                {location.isVisibleOnMap ? (
+                  <><Eye className='h-3 w-3 mr-1' /> Visible on Map</>
+                ) : (
+                  <><EyeOff className='h-3 w-3 mr-1' /> Hidden</>
+                )}
+              </Badge>
+            </div>
           </div>
         </div>
       </div>
-      {/* Statistics Cards */}
-      <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
-        {locationStats.map((stat: any) => (
-          <StatsCard
-            key={stat.title}
-            title={stat.title}
-            value={stat.value}
-            change={stat.change}
-            icon={stat.icon}
-            color={stat.color}
-            variant="minimal"
-          />
-        ))}
+
+      {/* Quick Stats Summary */}
+      <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+        <Card>
+          <CardContent className='pt-6'>
+            <div className='flex items-center gap-3'>
+              <div className='p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30'>
+                <Users className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+              </div>
+              <div>
+                <p className='text-xs text-muted-foreground'>Check-ins</p>
+                <p className='text-sm font-semibold'>{checkIns.toLocaleString()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className='pt-6'>
+            <div className='flex items-center gap-3'>
+              <div className='p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30'>
+                <ImageIcon className='h-5 w-5 text-purple-600 dark:text-purple-400' />
+              </div>
+              <div>
+                <p className='text-xs text-muted-foreground'>Images</p>
+                <p className='text-sm font-semibold'>{imageCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className='pt-6'>
+            <div className='flex items-center gap-3'>
+              <div className='p-2 rounded-lg bg-green-100 dark:bg-green-900/30'>
+                <Tag className='h-5 w-5 text-green-600 dark:text-green-400' />
+              </div>
+              <div>
+                <p className='text-xs text-muted-foreground'>Tags</p>
+                <p className='text-sm font-semibold'>{tagCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className='pt-6'>
+            <div className='flex items-center gap-3'>
+              <div className='p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30'>
+                <Ruler className='h-5 w-5 text-orange-600 dark:text-orange-400' />
+              </div>
+              <div>
+                <p className='text-xs text-muted-foreground'>Radius</p>
+                <p className='text-sm font-semibold'>{location.radiusMeters}m</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       {/* Content */}
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
@@ -147,28 +242,33 @@ export default function AdminLocationDetailsPage({
             <CardContent className='space-y-4'>
               <InfoRow
                 label='Description'
-                value={location.description || 'No description'}
+                value={location.description || 'No description provided'}
+                icon={FileText}
               />
-              <InfoRow
-                label='Total Check-ins'
-                value={location.totalCheckIns || '0'}
-              />
-              <InfoRow
-                label='Visibility'
-                value={
-                  location.isVisibleOnMap ? (
-                    <div className='flex items-center gap-2'>
-                      <span className='text-sm'>Visible on map</span>
-                      <Eye className='h-4 w-4 text-green-600' />
-                    </div>
-                  ) : (
-                    <div className='flex items-center gap-2'>
-                      <span className='text-sm'>Hidden from map</span>
-                      <EyeOff className='h-4 w-4 text-gray-400' />
-                    </div>
-                  )
-                }
-              />
+              <Separator />
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <InfoRow
+                  label='Total Check-ins'
+                  value={checkIns.toLocaleString()}
+                  icon={Users}
+                />
+                <InfoRow
+                  label='Visibility'
+                  value={
+                    location.isVisibleOnMap ? (
+                      <Badge variant='default' className='w-fit'>
+                        <Eye className='h-3 w-3 mr-1' />
+                        Visible on map
+                      </Badge>
+                    ) : (
+                      <Badge variant='secondary' className='w-fit'>
+                        <EyeOff className='h-3 w-3 mr-1' />
+                        Hidden from map
+                      </Badge>
+                    )
+                  }
+                />
+              </div>
             </CardContent>
           </Card>
           {/* Address */}
@@ -180,21 +280,60 @@ export default function AdminLocationDetailsPage({
               </CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
-              <InfoRow label='Address' value={location.addressLine} />
-              <InfoRow
-                label='District/Ward'
-                value={location.addressLevel1 || 'N/A'}
-              />
-              <InfoRow
-                label='Province/City'
-                value={location.addressLevel2 || 'N/A'}
-              />
-              <InfoRow label='Latitude' value={location.latitude} />
-              <InfoRow label='Longitude' value={location.longitude} />
+              <InfoRow label='Street Address' value={location.addressLine} />
+              <Separator />
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <InfoRow
+                  label='District/Ward'
+                  value={location.addressLevel1 || 'N/A'}
+                />
+                <InfoRow
+                  label='Province/City'
+                  value={location.addressLevel2 || 'N/A'}
+                />
+              </div>
+              <Separator />
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <InfoRow label='Latitude' value={location.latitude.toString()} />
+                <InfoRow label='Longitude' value={location.longitude.toString()} />
+              </div>
+              <Separator />
               <InfoRow
                 label='Service Radius'
                 value={`${location.radiusMeters} meters`}
               />
+              <Separator />
+              <div className='pt-2'>
+                <div className='flex items-center justify-between mb-2'>
+                  <p className='text-xs font-medium text-muted-foreground'>Map Location</p>
+                  <div className='flex gap-2'>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={copyCoordinates}
+                      className='h-7 text-xs'
+                    >
+                      <Copy className='h-3 w-3 mr-1' />
+                      Copy Coords
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={openInGoogleMaps}
+                      className='h-7 text-xs'
+                    >
+                      <ExternalLink className='h-3 w-3 mr-1' />
+                      Open Maps
+                    </Button>
+                  </div>
+                </div>
+                <div className='h-64 rounded-lg overflow-hidden border'>
+                  <GoogleMapsPicker
+                    position={position}
+                    onPositionChange={() => {}}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
           {/* Tags */}
@@ -211,21 +350,6 @@ export default function AdminLocationDetailsPage({
               </CardContent>
             </Card>
           )}
-          {/* Map */}
-          <Card className='sticky top-6'>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <MapPin className='h-5 w-5' />
-                Location Map
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='h-96 rounded-lg overflow-hidden'>
-              <GoogleMapsPicker
-                position={position}
-                onPositionChange={() => {}}
-              />
-            </CardContent>
-          </Card>
         </div>
 
         {/* RIGHT COLUMN */}
@@ -258,104 +382,120 @@ export default function AdminLocationDetailsPage({
                   </div>
                 </div>
 
-                <div className='space-y-3 pt-4 border-t'>
+                <Separator />
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4 pt-2'>
                   <InfoRow
                     label='Email'
-                    value={location.business.email}
+                    value={
+                      <a
+                        href={`mailto:${location.business.email}`}
+                        className='text-primary hover:underline'
+                      >
+                        {location.business.email}
+                      </a>
+                    }
                     icon={Mail}
                   />
                   <InfoRow
                     label='Phone'
-                    value={location.business.phone}
+                    value={
+                      <a
+                        href={`tel:${location.business.phone}`}
+                        className='text-primary hover:underline'
+                      >
+                        {location.business.phone}
+                      </a>
+                    }
                     icon={Phone}
                   />
-                  <InfoRow
-                    label='Website'
-                    value={
-                      location.business.website && (
+                </div>
+                {location.business.website && (
+                  <>
+                    <Separator />
+                    <InfoRow
+                      label='Website'
+                      value={
                         <a
                           href={location.business.website}
                           target='_blank'
                           rel='noopener noreferrer'
-                          className='text-blue-600 hover:underline'
+                          className='text-primary hover:underline flex items-center gap-1'
                         >
                           {location.business.website}
+                          <ExternalLink className='h-3 w-3' />
                         </a>
-                      )
-                    }
-                    icon={Globe}
-                  />
-                </div>
-
-                {location.business.licenseNumber && (
-                  <div className='space-y-3 pt-4 border-t'>
-                    <InfoRow
-                      label='License Type'
-                      value={location.business.licenseType}
+                      }
+                      icon={Globe}
                     />
-                    <InfoRow
-                      label='License Number'
-                      value={location.business.licenseNumber}
-                    />
-                    <InfoRow
-                      label='License Expiration'
-                      value={formatDate(
-                        location.business.licenseExpirationDate
-                      )}
-                    />
-                  </div>
+                  </>
                 )}
 
-                <div className='pt-4 border-t'>
+                {location.business.licenseNumber && (
+                  <>
+                    <Separator />
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4 pt-2'>
+                      <InfoRow
+                        label='License Type'
+                        value={location.business.licenseType}
+                        icon={FileText}
+                      />
+                      <InfoRow
+                        label='License Number'
+                        value={location.business.licenseNumber}
+                        icon={FileText}
+                      />
+                    </div>
+                    {location.business.licenseExpirationDate && (
+                      <>
+                        <Separator />
+                        <InfoRow
+                          label='License Expiration'
+                          value={formatDate(location.business.licenseExpirationDate)}
+                          icon={Calendar}
+                        />
+                      </>
+                    )}
+                  </>
+                )}
+
+                <Separator />
+                <div className='pt-2'>
                   <InfoRow
-                    label='Status'
+                    label='Business Status'
                     value={
                       <Badge
                         variant={
                           location.business.status === 'APPROVED'
                             ? 'default'
+                            : location.business.status === 'REJECTED'
+                            ? 'destructive'
                             : 'secondary'
                         }
+                        className='w-fit'
                       >
+                        {location.business.status === 'APPROVED' && (
+                          <CheckCircle2 className='h-3 w-3 mr-1' />
+                        )}
                         {location.business.status}
                       </Badge>
                     }
                   />
+                  {location.business.accountId && (
+                    <>
+                      <Separator className='my-4' />
+                      <Link href={`/admin/business/${location.business.accountId}`}>
+                        <Button variant='outline' size='sm' className='w-full sm:w-auto'>
+                          <Building className='h-4 w-4 mr-2' />
+                          View Business Account
+                          <ExternalLink className='h-3 w-3 ml-2' />
+                        </Button>
+                      </Link>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
           )}
-          {/* Quick Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <Layers className='h-5 w-5' />
-                Quick Stats
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-3'>
-              <div className='flex justify-between items-center'>
-                <span className='text-sm text-muted-foreground'>Check-ins</span>
-                <span className='font-semibold'>
-                  {location.totalCheckIns || '0'}
-                </span>
-              </div>
-              <div className='flex justify-between items-center'>
-                <span className='text-sm text-muted-foreground'>
-                  Service Radius
-                </span>
-                <span className='font-semibold'>{location.radiusMeters}m</span>
-              </div>
-              <div className='flex justify-between items-center'>
-                <span className='text-sm text-muted-foreground'>Ownership</span>
-                <Badge variant='outline' className='text-xs'>
-                  {location.ownershipType === 'OWNED_BY_BUSINESS'
-                    ? 'Business'
-                    : 'Public'}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
           {/* Metadata */}
           <Card>
             <CardHeader>
@@ -365,11 +505,18 @@ export default function AdminLocationDetailsPage({
               </CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
-              <InfoRow label='Created' value={formatDate(location.createdAt)} />
-              <InfoRow
-                label='Last Updated'
-                value={formatDate(location.updatedAt)}
-              />
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <InfoRow 
+                  label='Created' 
+                  value={formatShortDate(location.createdAt)}
+                  icon={Calendar}
+                />
+                <InfoRow
+                  label='Last Updated'
+                  value={formatShortDate(location.updatedAt)}
+                  icon={CalendarDays}
+                />
+              </div>
             </CardContent>
           </Card>
           {/* Images */}
@@ -382,20 +529,24 @@ export default function AdminLocationDetailsPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className='grid grid-cols-3 gap-4'>
+                <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
                   {location.imageUrl.map((url, index) => (
-                    <div key={index} className='flex flex-col gap-2'>
+                    <div
+                      key={index}
+                      className='relative aspect-video rounded-lg overflow-hidden border cursor-pointer group hover:border-primary transition-all'
+                      onClick={() => handleImageClick(url, `Location Image ${index + 1}`)}
+                    >
                       <img
                         src={url || '/placeholder.svg'}
                         alt={`Location image ${index + 1}`}
-                        onClick={() =>
-                          handleImageClick(url, `Location ${index + 1}`)
-                        }
-                        className='w-full h-36 object-cover rounded-md border cursor-pointer'
+                        className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-200'
                       />
-                      <p className='text-xs text-muted-foreground text-center'>
-                        Image {index + 1}
-                      </p>
+                      <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center'>
+                        <ImageIcon className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity' />
+                      </div>
+                      <div className='absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity'>
+                        #{index + 1}
+                      </div>
                     </div>
                   ))}
                 </div>
