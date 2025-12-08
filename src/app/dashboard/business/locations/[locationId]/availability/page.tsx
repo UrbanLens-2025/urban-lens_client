@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Pencil, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Layers, DollarSign, Calendar } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Layers, DollarSign, Calendar, Save, Settings, Info, HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { useWeeklyAvailabilities } from "@/hooks/availability/useWeeklyAvailabilities";
 import { useCreateWeeklyAvailability } from "@/hooks/availability/useCreateWeeklyAvailability";
 import { useDeleteAvailability } from "@/hooks/availability/useDeleteAvailability";
@@ -31,6 +31,24 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { WeeklyAvailabilityResponse } from "@/api/availability";
 import { Badge } from "@/components/ui/badge";
 import { BookingsCalendar } from "./_components/BookingsCalendar";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useOwnerLocationBookingConfig } from "@/hooks/locations/useOwnerLocationBookingConfig";
+import { useCreateLocationBookingConfig, useUpdateLocationBookingConfig } from "@/hooks/locations/useCreateLocationBookingConfig";
+import type { UpdateLocationBookingConfigPayload } from "@/types";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Internal data structure for weekly availability slots
 interface WeeklyAvailabilitySlot {
@@ -91,6 +109,39 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i); // 0-23 (12 AM to 11 PM)
 
 type CellStatus = "available" | "saved";
 
+// Booking Config Schema
+const bookingConfigSchema = z
+  .object({
+    allowBooking: z.boolean(),
+    baseBookingPrice: z
+      .number()
+      .positive("Base booking price must be greater than 0")
+      .min(0.01, "Base booking price must be at least 0.01"),
+    currency: z.string().min(1, "Currency is required"),
+    minBookingDurationMinutes: z
+      .number()
+      .int("Must be a whole number")
+      .positive("Must be greater than 0")
+      .min(1, "Minimum duration must be at least 1 minute"),
+    maxBookingDurationMinutes: z
+      .number()
+      .int("Must be a whole number")
+      .positive("Must be greater than 0"),
+    minGapBetweenBookingsMinutes: z
+      .number()
+      .int("Must be a whole number")
+      .min(0, "Minimum gap cannot be negative"),
+  })
+  .refine(
+    (data) => data.maxBookingDurationMinutes >= data.minBookingDurationMinutes,
+    {
+      message: "Maximum duration must be greater than or equal to minimum duration",
+      path: ["maxBookingDurationMinutes"],
+    }
+  );
+
+type BookingConfigForm = z.infer<typeof bookingConfigSchema>;
+
 export default function AvailabilityPage({
   params,
 }: {
@@ -103,19 +154,105 @@ export default function AvailabilityPage({
   const isBookingConfig = pathname.includes("/booking-config");
   const isAvailability = pathname.includes("/availability");
   
-  // Tab state for Calendar/Availability
+  // Tab state for Calendar/Settings (merged Availability + Booking Settings)
   const tabFromUrl = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState<"availability" | "calendar">(
-    tabFromUrl === "calendar" ? "calendar" : tabFromUrl === "availability" ? "availability" : "availability"
+  const [activeTab, setActiveTab] = useState<"settings" | "calendar">(
+    tabFromUrl === "calendar" ? "calendar" : "settings"
   );
+  
+  // Section state for Settings tab (Availability or Booking Settings)
+  const [activeSection, setActiveSection] = useState<"availability" | "booking">("availability");
+  const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(true);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
   
   // Update tab when URL param changes
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab === "calendar" || tab === "availability") {
-      setActiveTab(tab);
+    if (tab === "calendar") {
+      setActiveTab("calendar");
+    } else {
+      setActiveTab("settings");
     }
   }, [searchParams]);
+  
+  // Redirect from booking-config to settings tab
+  useEffect(() => {
+    if (isBookingConfig) {
+      router.replace(`/dashboard/business/locations/${locationId}/availability?tab=settings`);
+    }
+  }, [isBookingConfig, locationId, router]);
+  
+  // Booking Config Form
+  const { data: existingConfig, isLoading: isLoadingConfig, error: configError } =
+    useOwnerLocationBookingConfig(locationId);
+  const createConfig = useCreateLocationBookingConfig();
+  const updateConfig = useUpdateLocationBookingConfig();
+  
+  const bookingForm = useForm<BookingConfigForm>({
+    resolver: zodResolver(bookingConfigSchema),
+    defaultValues: {
+      allowBooking: true,
+      baseBookingPrice: 0,
+      currency: "VND",
+      minBookingDurationMinutes: 30,
+      maxBookingDurationMinutes: 240,
+      minGapBetweenBookingsMinutes: 15,
+    },
+  });
+  
+  // Load existing config when available
+  useEffect(() => {
+    if (existingConfig && !configError) {
+      bookingForm.reset({
+        allowBooking: existingConfig.allowBooking,
+        baseBookingPrice: parseFloat(existingConfig.baseBookingPrice),
+        currency: existingConfig.currency,
+        minBookingDurationMinutes: existingConfig.minBookingDurationMinutes,
+        maxBookingDurationMinutes: existingConfig.maxBookingDurationMinutes,
+        minGapBetweenBookingsMinutes: existingConfig.minGapBetweenBookingsMinutes,
+      });
+    }
+  }, [existingConfig, configError, bookingForm]);
+  
+  const hasConfig = existingConfig && !configError;
+  const isSubmittingBooking = createConfig.isPending || updateConfig.isPending;
+  
+  const formatCurrency = (amount: number, currency: string) => {
+    if (currency === "VND") {
+      return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+        minimumFractionDigits: 0,
+      }).format(amount);
+    }
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency,
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
+  
+  const onBookingSubmit = (data: BookingConfigForm) => {
+    if (hasConfig) {
+      const updatePayload: UpdateLocationBookingConfigPayload = {
+        allowBooking: data.allowBooking,
+        baseBookingPrice: data.baseBookingPrice,
+        currency: data.currency,
+        minBookingDurationMinutes: data.minBookingDurationMinutes,
+        maxBookingDurationMinutes: data.maxBookingDurationMinutes,
+        minGapBetweenBookingsMinutes: data.minGapBetweenBookingsMinutes,
+      };
+      updateConfig.mutate({
+        locationId,
+        payload: updatePayload,
+      });
+    } else {
+      createConfig.mutate({
+        locationId,
+        ...data,
+      });
+    }
+  };
 
   // Fetch weekly availability from API
   const { data: apiAvailability, isLoading } = useWeeklyAvailabilities(locationId);
@@ -874,52 +1011,75 @@ export default function AvailabilityPage({
         </button>
         <button
           onClick={() => {
-            setActiveTab("availability");
-            router.replace(`/dashboard/business/locations/${locationId}/availability?tab=availability`);
+            setActiveTab("settings");
+            router.replace(`/dashboard/business/locations/${locationId}/availability?tab=settings`);
           }}
           className={cn(
             "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[1px]",
-            activeTab === "availability"
+            activeTab === "settings"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Availability
+            <Settings className="h-4 w-4" />
+            Settings
           </div>
         </button>
-        <Link
-          href={`/dashboard/business/locations/${locationId}/booking-config`}
-          className={cn(
-            "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[1px]",
-            isBookingConfig
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4" />
-            Booking Settings
-          </div>
-        </Link>
       </div>
 
       {activeTab === "calendar" ? (
         <BookingsCalendar locationId={locationId} />
-      ) : (
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex-1">
-                <CardTitle>Manage Weekly Availability</CardTitle>
-              <CardDescription>
-                Click or drag to select hours for each day. Confirm changes before they go live.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      ) : activeTab === "settings" ? (
+        <div className="space-y-6">
+          {/* Helpful Info Banner */}
+          <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <AlertDescription className="text-blue-800 dark:text-blue-200">
+              <strong>Quick Guide:</strong> Configure your location's availability schedule and booking settings. 
+              Set your weekly hours in the Availability section, then configure pricing and duration rules in Booking Settings.
+            </AlertDescription>
+          </Alert>
+
+          {/* Availability Section */}
+          <Collapsible open={isAvailabilityOpen} onOpenChange={setIsAvailabilityOpen}>
+            <CollapsibleTrigger asChild>
+              <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Clock className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          Weekly Availability
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Set the hours your location is available each day of the week. Customers can only book during these times.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </CardTitle>
+                        <CardDescription>
+                          Click or drag to select hours for each day. Confirm changes before they go live.
+                        </CardDescription>
+                      </div>
+                    </div>
+                    {isAvailabilityOpen ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                </CardHeader>
+              </Card>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <Card>
+                <CardContent className="pt-6 space-y-6">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
               <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
@@ -1087,9 +1247,379 @@ export default function AvailabilityPage({
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-      )}
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Booking Settings Section */}
+          {isLoadingConfig ? (
+            <Card>
+              <CardContent className="py-20">
+                <div className="flex items-center justify-center">
+                  <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Collapsible open={isBookingOpen} onOpenChange={setIsBookingOpen}>
+              <CollapsibleTrigger asChild>
+                <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-emerald-500/10">
+                          <DollarSign className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            Booking Settings
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Configure pricing, duration limits, and booking rules. These settings determine how customers can book your location.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </CardTitle>
+                          <CardDescription>
+                            Configure how customers can book your location
+                          </CardDescription>
+                        </div>
+                      </div>
+                      {isBookingOpen ? (
+                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                  </CardHeader>
+                </Card>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <Card>
+                  <CardContent className="pt-6">
+                    <Form {...bookingForm}>
+                      <form onSubmit={bookingForm.handleSubmit(onBookingSubmit)} className="space-y-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                          <div className="lg:col-span-2 space-y-6">
+                            {/* Allow Booking Toggle */}
+                            <FormField
+                              control={bookingForm.control}
+                              name="allowBooking"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                  <div className="space-y-0.5 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <FormLabel className="text-base">Allow Booking</FormLabel>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Enable or disable booking for this location. When disabled, customers cannot make new bookings.</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </div>
+                                    <FormDescription>
+                                      Enable or disable booking for this location
+                                    </FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+
+                            {/* Pricing */}
+                            <div className="space-y-4">
+                              <h3 className="text-lg font-semibold flex items-center gap-2">
+                                Pricing
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Set the base price for the minimum booking duration. Longer bookings will be calculated proportionally.</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </h3>
+                              
+                              <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                  control={bookingForm.control}
+                                  name="baseBookingPrice"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Base Booking Price</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          min="0.01"
+                                          placeholder="0.00"
+                                          {...field}
+                                          onChange={(e) =>
+                                            field.onChange(parseFloat(e.target.value) || 0)
+                                          }
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        Base price for minimum booking duration
+                                      </FormDescription>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={bookingForm.control}
+                                  name="currency"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Currency</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          placeholder="VND"
+                                          maxLength={3}
+                                          {...field}
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        Currency code (e.g., VND, USD)
+                                      </FormDescription>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Duration Settings */}
+                            <div className="space-y-4">
+                              <h3 className="text-lg font-semibold flex items-center gap-2">
+                                <Clock className="h-5 w-5" />
+                                Duration Settings
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Set the minimum and maximum booking duration. The gap between bookings prevents back-to-back reservations.</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </h3>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                  control={bookingForm.control}
+                                  name="minBookingDurationMinutes"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Minimum Duration (minutes)</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          placeholder="30"
+                                          {...field}
+                                          onChange={(e) =>
+                                            field.onChange(parseInt(e.target.value) || 0)
+                                          }
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        Minimum booking duration in minutes
+                                      </FormDescription>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={bookingForm.control}
+                                  name="maxBookingDurationMinutes"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Maximum Duration (minutes)</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          placeholder="240"
+                                          {...field}
+                                          onChange={(e) =>
+                                            field.onChange(parseInt(e.target.value) || 0)
+                                          }
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        Maximum booking duration in minutes
+                                      </FormDescription>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+
+                              <FormField
+                                control={bookingForm.control}
+                                name="minGapBetweenBookingsMinutes"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Minimum Gap Between Bookings (minutes)</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        placeholder="15"
+                                        {...field}
+                                        onChange={(e) =>
+                                          field.onChange(parseInt(e.target.value) || 0)
+                                        }
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Minimum time required between consecutive bookings
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+
+                            {/* Submit Button */}
+                            <div className="flex justify-end gap-2 pt-4">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => router.back()}
+                                disabled={isSubmittingBooking}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="submit"
+                                disabled={isSubmittingBooking}
+                              >
+                                {isSubmittingBooking ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Saving...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    {hasConfig ? "Update Configuration" : "Create Configuration"}
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Preview Card */}
+                          <div className="lg:col-span-1">
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                  <Calendar className="h-5 w-5" />
+                                  Preview
+                                </CardTitle>
+                                <CardDescription>
+                                  How your booking configuration will appear
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="space-y-4">
+                                <div className="space-y-3">
+                                  <div>
+                                    <Label className="text-xs text-muted-foreground">Status</Label>
+                                    <p className="font-semibold">
+                                      {bookingForm.watch("allowBooking") ? (
+                                        <span className="text-green-600">Booking Enabled</span>
+                                      ) : (
+                                        <span className="text-gray-500">Booking Disabled</span>
+                                      )}
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <Label className="text-xs text-muted-foreground">
+                                      Base Price
+                                    </Label>
+                                    <p className="text-2xl font-bold">
+                                      {formatCurrency(bookingForm.watch("baseBookingPrice"), bookingForm.watch("currency"))}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      per {bookingForm.watch("minBookingDurationMinutes")} minutes
+                                    </p>
+                                  </div>
+
+                                  <div className="border-t pt-3 space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-muted-foreground">Min Duration</span>
+                                      <span className="font-medium">{bookingForm.watch("minBookingDurationMinutes")} min</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-muted-foreground">Max Duration</span>
+                                      <span className="font-medium">{bookingForm.watch("maxBookingDurationMinutes")} min</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-muted-foreground">Gap Required</span>
+                                      <span className="font-medium">
+                                        {bookingForm.watch("minGapBetweenBookingsMinutes")} min
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Example Calculation */}
+                                  {bookingForm.watch("baseBookingPrice") > 0 && bookingForm.watch("minBookingDurationMinutes") > 0 && (
+                                    <div className="border-t pt-3 space-y-2">
+                                      <Label className="text-xs text-muted-foreground">
+                                        Example Calculations
+                                      </Label>
+                                      <div className="space-y-1 text-xs">
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">
+                                            {bookingForm.watch("minBookingDurationMinutes")} min booking:
+                                          </span>
+                                          <span className="font-medium">
+                                            {formatCurrency(bookingForm.watch("baseBookingPrice"), bookingForm.watch("currency"))}
+                                          </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">
+                                            {bookingForm.watch("maxBookingDurationMinutes")} min booking:
+                                          </span>
+                                          <span className="font-medium">
+                                            {formatCurrency(
+                                              bookingForm.watch("baseBookingPrice") *
+                                                (bookingForm.watch("maxBookingDurationMinutes") / bookingForm.watch("minBookingDurationMinutes")),
+                                              bookingForm.watch("currency")
+                                            )}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        </div>
+                      </form>
+                    </Form>
+                  </CardContent>
+                </Card>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+        </div>
+      ) : null}
 
       {/* Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

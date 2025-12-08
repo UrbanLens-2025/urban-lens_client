@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -76,6 +76,11 @@ export default function LocationBookingConfigPage({
   const pathname = usePathname();
   const isBookingConfig = pathname.includes("/booking-config");
   const isAvailability = pathname.includes("/availability");
+  
+  // Redirect to merged settings tab
+  useEffect(() => {
+    router.replace(`/dashboard/business/locations/${locationId}/availability?tab=settings`);
+  }, [locationId, router]);
   const { data: locationsData } = useMyLocations(1, "");
   const location = locationsData?.data?.find((loc) => loc.id === locationId);
   const { data: existingConfig, isLoading: isLoadingConfig, error: configError } =

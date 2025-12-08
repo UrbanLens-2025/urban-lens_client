@@ -304,19 +304,6 @@ function LocationDetailLayoutContent({
               <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="text-3xl md:text-4xl font-bold">{location.name}</h1>
-                  <Badge variant={location.isVisibleOnMap ? "default" : "secondary"} className="text-sm">
-                    {location.isVisibleOnMap ? (
-                      <span className="flex items-center gap-1.5">
-                        <Eye className="h-3 w-3" />
-                        Visible
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1.5">
-                        <EyeOff className="h-3 w-3" />
-                        Hidden
-                      </span>
-                    )}
-                  </Badge>
                 </div>
                 
                 {truncatedDescription && (
@@ -326,21 +313,47 @@ function LocationDetailLayoutContent({
                 )}
 
                 {/* Address Information */}
-                <div className="flex flex-wrap items-center gap-3 pt-2">
-                  {/* Address */}
-                  <div className="flex items-center gap-2 text-sm bg-muted/50 px-3 py-1.5 rounded-lg">
-                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="font-medium whitespace-nowrap">
-                      {location.addressLine}
-                    </span>
-                    {location.addressLevel1 && location.addressLevel2 && (
-                      <>
-                        <span className="text-muted-foreground mx-1.5">•</span>
-                        <span className="text-muted-foreground text-xs">
-                          {location.addressLevel1}, {location.addressLevel2}
+                <div className="space-y-2 pt-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Address */}
+                    <div className="flex items-center gap-2 text-sm bg-muted/50 px-3 py-1.5 rounded-lg">
+                      <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="font-medium whitespace-nowrap">
+                        {location.addressLine}
+                      </span>
+                      {location.addressLevel1 && location.addressLevel2 && (
+                        <>
+                          <span className="text-muted-foreground mx-1.5">•</span>
+                          <span className="text-muted-foreground text-xs">
+                            {location.addressLevel1}, {location.addressLevel2}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Visibility Badge */}
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant={location.isVisibleOnMap ? "default" : "secondary"} 
+                      className={`text-sm px-3 py-1.5 font-semibold ${
+                        location.isVisibleOnMap 
+                          ? "bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-600" 
+                          : "bg-muted text-muted-foreground border-muted-foreground/20"
+                      }`}
+                    >
+                      {location.isVisibleOnMap ? (
+                        <span className="flex items-center gap-1.5">
+                          <Eye className="h-3.5 w-3.5" />
+                          Visible
                         </span>
-                      </>
-                    )}
+                      ) : (
+                        <span className="flex items-center gap-1.5">
+                          <EyeOff className="h-3.5 w-3.5" />
+                          Hidden
+                        </span>
+                      )}
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -394,7 +407,7 @@ function LocationDetailLayoutContent({
                 Missions
               </Button>
             </Link>
-            <Link href={`/dashboard/business/locations/${locationId}/booking-config`}>
+            <Link href={`/dashboard/business/locations/${locationId}/availability?tab=calendar`}>
               <Button
                 variant="ghost"
                 className={cn(
