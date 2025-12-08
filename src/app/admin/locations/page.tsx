@@ -82,17 +82,31 @@ export default function LocationDashboardPage() {
     queryClient.invalidateQueries({ queryKey: ['allLocations'] });
   };
 
-  // Calculate statistics
+  // Calculate statistics from actual locations data
   const stats = useMemo(() => {
-    // TODO: Implement real statistics from API
-    // Currently using mock data as the list API only returns paginated results
+    const totalLocations = meta?.totalItems || 0;
+    const businessLocations = locations.filter((loc: Location) => loc.business).length;
+    const publicLocations = locations.filter((loc: Location) => !loc.business).length;
+    const visibleOnMap = locations.filter((loc: Location) => loc.isVisibleOnMap).length;
+
+    // If we have paginated data, estimate totals based on current page
+    const businessLocationsEstimate = totalLocations > 0 && locations.length > 0
+      ? Math.round((businessLocations / locations.length) * totalLocations)
+      : businessLocations;
+    const publicLocationsEstimate = totalLocations > 0 && locations.length > 0
+      ? Math.round((publicLocations / locations.length) * totalLocations)
+      : publicLocations;
+    const visibleOnMapEstimate = totalLocations > 0 && locations.length > 0
+      ? Math.round((visibleOnMap / locations.length) * totalLocations)
+      : visibleOnMap;
+
     return {
-      totalLocations: meta?.totalItems || 0,
-      businessLocations: 18, // Mock data - TODO: Get from API
-      publicLocations: 10, // Mock data - TODO: Get from API
-      visibleOnMap: 25, // Mock data - TODO: Get from API
+      totalLocations,
+      businessLocations: businessLocationsEstimate,
+      publicLocations: publicLocationsEstimate,
+      visibleOnMap: visibleOnMapEstimate,
     };
-  }, [meta]);
+  }, [locations, meta]);
 
   if (error) {
     return (
@@ -110,53 +124,61 @@ export default function LocationDashboardPage() {
     <div className="space-y-6">
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Locations</CardTitle>
-            <IconMapPin className="h-4 w-4 text-muted-foreground" />
+            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
+              <IconMapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalLocations}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold">{stats.totalLocations}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Approved locations
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-orange-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Business Locations</CardTitle>
-            <IconBuildingStore className="h-4 w-4 text-muted-foreground" />
+            <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-950 flex items-center justify-center">
+              <IconBuildingStore className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.businessLocations}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{stats.businessLocations}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Owned by businesses
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-purple-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Public Locations</CardTitle>
-            <IconWorld className="h-4 w-4 text-muted-foreground" />
+            <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-950 flex items-center justify-center">
+              <IconWorld className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.publicLocations}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{stats.publicLocations}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Publicly accessible
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Visible on Map</CardTitle>
-            <IconEye className="h-4 w-4 text-muted-foreground" />
+            <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
+              <IconEye className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.visibleOnMap}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.visibleOnMap}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Shown on map
             </p>
           </CardContent>

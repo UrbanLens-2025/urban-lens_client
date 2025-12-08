@@ -110,29 +110,38 @@ export default function AdminEventsPage() {
 
   // Calculate statistics from all events (not just current page)
   const stats = useMemo(() => {
+    const total = eventsMeta?.totalItems || 0;
     const published = events.filter((e) => e.status?.toUpperCase() === 'PUBLISHED').length;
     const draft = events.filter((e) => e.status?.toUpperCase() === 'DRAFT').length;
     const cancelled = events.filter((e) => e.status?.toUpperCase() === 'CANCELLED').length;
     const uniqueCreators = new Set(events.map((e) => e.createdBy?.id).filter(Boolean)).size;
 
+    // Estimate totals based on current page if we have paginated data
+    const publishedEstimate = total > 0 && events.length > 0
+      ? Math.round((published / events.length) * total)
+      : published;
+    const draftEstimate = total > 0 && events.length > 0
+      ? Math.round((draft / events.length) * total)
+      : draft;
+
     return [
       {
         title: 'Total Events',
-        value: eventsMeta?.totalItems?.toString() || '0',
+        value: total.toString(),
         change: `${events.length} on this page`,
         icon: IconCalendar,
         color: 'blue' as const,
       },
       {
         title: 'Published',
-        value: published.toString(),
+        value: publishedEstimate.toString(),
         change: 'Active events',
         icon: IconTrendingUp,
         color: 'green' as const,
       },
       {
         title: 'Draft',
-        value: draft.toString(),
+        value: draftEstimate.toString(),
         change: 'Unpublished events',
         icon: IconCalendar,
         color: 'orange' as const,

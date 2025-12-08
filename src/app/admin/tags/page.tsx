@@ -20,13 +20,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ArrowUp, ArrowDown, Edit } from "lucide-react";
+import { Loader2, PlusCircle, ArrowUp, ArrowDown, Edit, IconTag, IconSearch, IconRefresh } from "lucide-react";
 import { TagFormModal } from "@/components/admin/TagFormModal";
 import { Badge } from "@/components/ui/badge";
 import { useDebounce } from "use-debounce";
 import { Input } from "@/components/ui/input";
+import { useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 export default function AdminTagsPage() {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortState>({
     column: "displayName",
@@ -47,6 +50,19 @@ export default function AdminTagsPage() {
 
   const tags = response?.data || [];
   const meta = response?.meta;
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['adminTags'] });
+  };
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    return {
+      total: meta?.totalItems || 0,
+      visible: tags.filter((t: Tag) => t.isVisible !== false).length,
+      hidden: tags.filter((t: Tag) => t.isVisible === false).length,
+    };
+  }, [tags, meta]);
 
   const openNewModal = () => {
     setSelectedTag(undefined);
@@ -79,34 +95,95 @@ export default function AdminTagsPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Tag Management</h1>
-          <p className="text-muted-foreground">
-            Create and view all tags on the platform.
+          <h1 className="text-3xl font-bold tracking-tight">Tag Management</h1>
+          <p className="text-muted-foreground mt-1">
+            Create and manage tags for events and locations
           </p>
         </div>
-        <Button onClick={openNewModal}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Create New Tag
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={refresh} disabled={isLoading}>
+            <IconRefresh className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={openNewModal}>
+            <PlusCircle className="mr-2 h-4 w-4" /> Create New Tag
+          </Button>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Tags</CardTitle>
+            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
+              <IconTag className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              All tags on platform
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Visible</CardTitle>
+            <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
+              <IconTag className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.visible}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Active tags
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-gray-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Hidden</CardTitle>
+            <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-950 flex items-center justify-center">
+              <IconTag className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-gray-600 dark:text-gray-400">{stats.hidden}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Hidden tags
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Tags ({meta?.totalItems || 0})</CardTitle>
-          <CardDescription>
-            Showing page {meta?.currentPage} of {meta?.totalPages}.
-          </CardDescription>
-          <div className="pt-4">
-            <Input
-              placeholder="Search by display name..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setPage(1);
-              }}
-            />
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>All Tags ({meta?.totalItems || 0})</CardTitle>
+              <CardDescription className="mt-1">
+                Showing page {meta?.currentPage || 1} of {meta?.totalPages || 1}
+              </CardDescription>
+            </div>
+            <div className="relative w-[300px]">
+              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by display name..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9"
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent>

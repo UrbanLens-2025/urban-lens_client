@@ -84,23 +84,46 @@ export default function AccountsPage() {
     const accounts = data?.data?.data || [];
     const meta = data?.data?.meta;
 
-    // Calculate statistics
+    // Calculate statistics from actual accounts data
     const stats = useMemo(() => {
-        // TODO: Implement real statistics from API
-        // Currently using mock data as the list API only returns paginated results
-        return {
-            total: meta?.totalItems || 0,
-            active: 120,
-            locked: 5,
-            onboarded: 98,
-            byRole: {
-                'ADMIN': 2,
-                'BUSINESS_OWNER': 45,
-                'EVENT_CREATOR': 30,
-                'USER': 48
-            }
+        const total = meta?.totalItems || 0;
+        const active = accounts.filter((acc: any) => !acc.isLocked).length;
+        const locked = accounts.filter((acc: any) => acc.isLocked).length;
+        const onboarded = accounts.filter((acc: any) => acc.hasOnboarded).length;
+
+        // Count by role from current page
+        const byRoleCounts: Record<string, number> = {
+            'ADMIN': 0,
+            'BUSINESS_OWNER': 0,
+            'EVENT_CREATOR': 0,
+            'USER': 0
         };
-    }, [meta]);
+
+        accounts.forEach((acc: any) => {
+            if (byRoleCounts[acc.role] !== undefined) {
+                byRoleCounts[acc.role]++;
+            }
+        });
+
+        // Estimate totals based on current page if we have paginated data
+        const activeEstimate = total > 0 && accounts.length > 0
+            ? Math.round((active / accounts.length) * total)
+            : active;
+        const lockedEstimate = total > 0 && accounts.length > 0
+            ? Math.round((locked / accounts.length) * total)
+            : locked;
+        const onboardedEstimate = total > 0 && accounts.length > 0
+            ? Math.round((onboarded / accounts.length) * total)
+            : onboarded;
+
+        return {
+            total,
+            active: activeEstimate,
+            locked: lockedEstimate,
+            onboarded: onboardedEstimate,
+            byRole: byRoleCounts
+        };
+    }, [accounts, meta]);
 
     const getRoleBadgeColor = (role: string) => {
         switch (role) {
@@ -163,56 +186,64 @@ export default function AccountsPage() {
         <div className="space-y-6">
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
+                <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
-                        <IconUsers className="h-4 w-4 text-muted-foreground" />
+                        <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
+                            <IconUsers className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.total}</div>
-                        <p className="text-xs text-muted-foreground">
+                        <div className="text-3xl font-bold">{stats.total}</div>
+                        <p className="text-xs text-muted-foreground mt-1">
                             {stats.onboarded} onboarded
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active</CardTitle>
-                        <IconUserCheck className="h-4 w-4 text-green-600" />
+                        <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
+                            <IconUserCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-                        <p className="text-xs text-muted-foreground">
+                        <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.active}</div>
+                        <p className="text-xs text-muted-foreground mt-1">
                             Not locked accounts
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:shadow-md transition-shadow border-l-4 border-l-red-500">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Locked</CardTitle>
-                        <IconUserX className="h-4 w-4 text-red-600" />
+                        <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center">
+                            <IconUserX className="h-5 w-5 text-red-600 dark:text-red-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-red-600">{stats.locked}</div>
-                        <p className="text-xs text-muted-foreground">
+                        <div className="text-3xl font-bold text-red-600 dark:text-red-400">{stats.locked}</div>
+                        <p className="text-xs text-muted-foreground mt-1">
                             Restricted accounts
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:shadow-md transition-shadow border-l-4 border-l-purple-500">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">By Role</CardTitle>
-                        <IconShieldCheck className="h-4 w-4 text-muted-foreground" />
+                        <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-950 flex items-center justify-center">
+                            <IconShieldCheck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                             {Object.entries(stats.byRole).map(([role, count]: [string, any]) => (
-                                <div key={role} className="flex justify-between text-xs">
-                                    <span className="text-muted-foreground">{role.replace('_', ' ')}</span>
-                                    <span className="font-medium">{count}</span>
+                                <div key={role} className="flex justify-between items-center">
+                                    <span className="text-xs text-muted-foreground">{role.replace('_', ' ')}</span>
+                                    <span className="text-sm font-semibold">{count}</span>
                                 </div>
                             ))}
                         </div>

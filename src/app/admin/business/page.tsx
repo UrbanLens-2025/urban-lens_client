@@ -145,70 +145,103 @@ export default function AdminBusinessPage() {
     });
   };
 
-  // Calculate statistics
+  // Fetch statistics for all statuses
+  const { data: pendingResponse } = useBusinessAccounts({
+    page: 1,
+    limit: 1,
+    status: 'PENDING',
+    sortBy: 'createdAt:DESC',
+  });
+
+  const { data: approvedResponse } = useBusinessAccounts({
+    page: 1,
+    limit: 1,
+    status: 'APPROVED',
+    sortBy: 'createdAt:DESC',
+  });
+
+  const { data: rejectedResponse } = useBusinessAccounts({
+    page: 1,
+    limit: 1,
+    status: 'REJECTED',
+    sortBy: 'createdAt:DESC',
+  });
+
+  // Calculate statistics from API data
   const stats = useMemo(() => {
-    // TODO: Implement real statistics from API
-    // Currently using mock data as the list API only returns paginated results
+    const pending = pendingResponse?.meta?.totalItems || 0;
+    const approved = approvedResponse?.meta?.totalItems || 0;
+    const rejected = rejectedResponse?.meta?.totalItems || 0;
+    const total = pending + approved + rejected;
+
     return {
-      total: meta?.totalItems || 0,
-      pending: 15,
-      approved: 120,
-      rejected: 8,
+      total,
+      pending,
+      approved,
+      rejected,
     };
-  }, [meta]);
+  }, [pendingResponse?.meta?.totalItems, approvedResponse?.meta?.totalItems, rejectedResponse?.meta?.totalItems]);
 
   return (
     <div className="space-y-6">
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500 cursor-pointer" onClick={() => { setStatusTab('PENDING'); setPage(1); }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Businesses</CardTitle>
-            <IconBriefcase className="h-4 w-4 text-muted-foreground" />
+            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
+              <IconBriefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               All business accounts
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-yellow-500 cursor-pointer" onClick={() => { setStatusTab('PENDING'); setPage(1); }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <IconClock className="h-4 w-4 text-yellow-600" />
+            <div className="h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-950 flex items-center justify-center">
+              <IconClock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Awaiting review
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-green-500 cursor-pointer" onClick={() => { setStatusTab('APPROVED'); setPage(1); }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Approved</CardTitle>
-            <IconCheck className="h-4 w-4 text-green-600" />
+            <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
+              <IconCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.approved}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Active businesses
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-red-500 cursor-pointer" onClick={() => { setStatusTab('REJECTED'); setPage(1); }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Rejected</CardTitle>
-            <IconX className="h-4 w-4 text-red-600" />
+            <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center">
+              <IconX className="h-5 w-5 text-red-600 dark:text-red-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">{stats.rejected}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Rejected accounts
             </p>
           </CardContent>
