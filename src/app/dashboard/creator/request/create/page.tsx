@@ -197,9 +197,7 @@ export default function CreateEventRequestPage() {
 
     switch (step) {
       case 1:
-        // Location step - optional, always valid
-        return true;
-      case 2:
+        // Basic Info step
         fieldsToValidate = [
           "eventName",
           "eventDescription",
@@ -209,6 +207,9 @@ export default function CreateEventRequestPage() {
           "tagIds",
         ];
         break;
+      case 2:
+        // Location step - optional, always valid
+        return true;
       case 3:
         // Documents step - optional, always valid
         return true;
@@ -269,9 +270,6 @@ export default function CreateEventRequestPage() {
     
     switch (currentStep) {
       case 1:
-        // Location step - optional, always valid to proceed
-        return true;
-      case 2:
         // Check required fields
         const basicFieldsValid = !errors.eventName && !errors.eventDescription && !errors.expectedNumberOfParticipants &&
                                  values.eventName && values.eventDescription && values.expectedNumberOfParticipants;
@@ -286,6 +284,9 @@ export default function CreateEventRequestPage() {
         const tagsValid = !errors.tagIds && values.tagIds && values.tagIds.length > 0;
         
         return basicFieldsValid && datesValid && tagsValid;
+      case 2:
+        // Location step - optional, always valid to proceed
+        return true;
       case 3:
         // Documents step - optional, always valid to proceed
         return true;
@@ -356,9 +357,9 @@ export default function CreateEventRequestPage() {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        return <Step1LocationSelection form={form} />;
-      case 2:
         return <Step2BasicInfo form={form} />;
+      case 2:
+        return <Step1LocationSelection form={form} />;
       case 3:
         return <Step3Documents form={form} />;
       case 4:
@@ -382,16 +383,16 @@ export default function CreateEventRequestPage() {
 
     switch (step) {
       case 1:
-        // Location is optional
-        fieldsToCheck = [];
-        break;
-      case 2:
         fieldsToCheck = [
           "eventName",
           "eventDescription",
           "expectedNumberOfParticipants",
           "tagIds",
         ];
+        break;
+      case 2:
+        // Location is optional
+        fieldsToCheck = [];
         break;
       case 3:
         // Documents are optional
@@ -491,7 +492,7 @@ export default function CreateEventRequestPage() {
               </Button>
               
               <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                {(currentStep === 1 || currentStep === 3) && (
+                {(currentStep === 2 || currentStep === 3) && (
                   <Button
                     variant="ghost"
                     onClick={handleNext}
@@ -499,7 +500,7 @@ export default function CreateEventRequestPage() {
                     className="text-muted-foreground hover:text-foreground"
                     size="lg"
                   >
-                    Skip {currentStep === 1 ? "Location" : "Documents"}
+                    Skip {currentStep === 2 ? "Location" : "Documents"}
                   </Button>
                 )}
                 <Button

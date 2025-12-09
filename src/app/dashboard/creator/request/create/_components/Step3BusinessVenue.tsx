@@ -37,10 +37,21 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [showMapView, setShowMapView] = useState(true); // Show map by default
   const [isInitializingCalendar, setIsInitializingCalendar] = useState(false);
+  
+  // Get event dates from form
+  const startDate = form.watch("startDate");
+  const endDate = form.watch("endDate");
+  
+  // Convert dates to ISO strings for API
+  const startTime = startDate ? startDate.toISOString() : undefined;
+  const endTime = endDate ? endDate.toISOString() : undefined;
+  
   const { data: bookableLocationsData, isLoading: isLoadingLocations } = useBookableLocations({ 
     page: 1, 
     limit: 50, 
-    sortBy: 'name:ASC' 
+    sortBy: 'name:ASC',
+    startTime,
+    endTime,
   });
 
   const locations = bookableLocationsData?.data || [];
@@ -51,7 +62,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   // Fetch detailed location data for analytics (check-ins, reviews, etc.)
   const { data: bookableLocationDetails } = useBookableLocationById(selectedLocationId);
   // Also fetch regular location data which may have analytics
-  const { data: regularLocationDetails } = useLocationById(selectedLocationId);
+  const { data: regularLocationDetails } = useLocationById(selectedLocationId || null);
   
   // Combine data from both sources
   const locationDetails = bookableLocationDetails || regularLocationDetails;
@@ -75,6 +86,72 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     }
   }, [selectedLocationId, form]);
 
+  // Generate initial slots from event dates if they exist
+  const getInitialSlotsFromEventDates = useMemo(() => {
+    if (!startDate || !endDate) return [];
+    
+    // Create slots from startDate to endDate
+    // If it's a single day, create one slot for that day
+    // If it spans multiple days, create slots for each day
+    const slots: Array<{ startDateTime: Date; endDateTime: Date }> = [];
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // If same day, create one slot
+    if (start.toDateString() === end.toDateString()) {
+      slots.push({
+        startDateTime: start,
+        endDateTime: end,
+      });
+    } else {
+      // Multiple days - create slots for each day
+      let currentDate = new Date(start);
+      currentDate.setHours(0, 0, 0, 0);
+      
+      while (currentDate <= end) {
+        const dayStart = new Date(currentDate);
+        const dayEnd = new Date(currentDate);
+        
+        // First day: use actual start time
+        if (currentDate.toDateString() === start.toDateString()) {
+          dayStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+          dayEnd.setHours(23, 59, 59, 999);
+        }
+        // Last day: use actual end time
+        else if (currentDate.toDateString() === end.toDateString()) {
+          dayStart.setHours(0, 0, 0, 0);
+          dayEnd.setHours(end.getHours(), end.getMinutes(), 0, 0);
+        }
+        // Middle days: full day
+        else {
+          dayStart.setHours(0, 0, 0, 0);
+          dayEnd.setHours(23, 59, 59, 999);
+        }
+        
+        slots.push({
+          startDateTime: dayStart,
+          endDateTime: dayEnd,
+        });
+        
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+    }
+    
+    return slots;
+  }, [startDate, endDate]);
+
+  // Automatically set time slots from event dates when they're available and no slots exist
+  useEffect(() => {
+    if (startDate && endDate && (!dateRanges || dateRanges.length === 0) && selectedLocationId) {
+      const initialSlots = getInitialSlotsFromEventDates;
+      if (initialSlots.length > 0) {
+        form.setValue("dateRanges" as any, initialSlots, { shouldValidate: false });
+      }
+    }
+  }, [startDate, endDate, selectedLocationId, getInitialSlotsFromEventDates, form, dateRanges]);
+
   const handleSlotsChange = (slots: Array<{ startDateTime: Date; endDateTime: Date }>) => {
     form.setValue("dateRanges" as any, slots, { shouldValidate: true });
     // Don't close dialog automatically - let user edit freely
@@ -88,6 +165,15 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     if (!selectedLocationId) {
       return;
     }
+    
+    // If we have event dates and no existing slots, initialize with event dates
+    if (startDate && endDate && (!dateRanges || dateRanges.length === 0)) {
+      const initialSlots = getInitialSlotsFromEventDates;
+      if (initialSlots.length > 0) {
+        form.setValue("dateRanges" as any, initialSlots, { shouldValidate: true });
+      }
+    }
+    
     setIsInitializingCalendar(true);
     setShowCalendar(true);
     // Reset initialization flag after a short delay to allow calendar to initialize
@@ -155,12 +241,21 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       </div>
 
       {/* Info Alert */}
-      <Alert className="bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-2 border-blue-200 dark:border-blue-800 shadow-sm">
-        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-        <AlertDescription className="text-sm text-blue-900 dark:text-blue-200 ml-2">
-          <strong className="font-semibold">Tip:</strong> Booking a location now helps ensure venue availability. You can always add or change the location when editing your event.
-        </AlertDescription>
-      </Alert>
+      {!startDate || !endDate ? (
+        <Alert className="bg-gradient-to-r from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20 border-2 border-amber-200 dark:border-amber-800 shadow-sm">
+          <Info className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          <AlertDescription className="text-sm text-amber-900 dark:text-amber-200 ml-2">
+            <strong className="font-semibold">Note:</strong> Please set your event dates in the previous step to see venues available during your event time.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Alert className="bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-2 border-blue-200 dark:border-blue-800 shadow-sm">
+          <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <AlertDescription className="text-sm text-blue-900 dark:text-blue-200 ml-2">
+            <strong className="font-semibold">Tip:</strong> Only venues available during your event time ({startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}) are shown. You can always add or change the location when editing your event.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Location Selection */}
       <div className="space-y-4">
@@ -211,21 +306,21 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                       addressLevel2: loc.addressLevel2,
                       imageUrl: loc.imageUrl || [],
                       bookingConfig: loc.bookingConfig,
-                      business: loc.business,
+                      businessId: loc.businessId,
                       // Add analytics if available from detailed data
                       ...(detailedData && {
-                        totalCheckIns: detailedData.totalCheckIns,
+                        totalCheckIns: (detailedData as any).totalCheckIns,
                         analytics: {
-                          totalCheckIns: detailedData.totalCheckIns 
-                            ? (typeof detailedData.totalCheckIns === 'string' 
-                                ? parseInt(detailedData.totalCheckIns) 
-                                : detailedData.totalCheckIns)
+                          totalCheckIns: (detailedData as any).totalCheckIns 
+                            ? (typeof (detailedData as any).totalCheckIns === 'string' 
+                                ? parseInt((detailedData as any).totalCheckIns) 
+                                : (detailedData as any).totalCheckIns)
                             : 0,
-                          totalReviews: detailedData.totalReviews || 0,
-                          averageRating: detailedData.averageRating 
-                            ? (typeof detailedData.averageRating === 'string' 
-                                ? parseFloat(detailedData.averageRating) 
-                                : detailedData.averageRating)
+                          totalReviews: (detailedData as any).totalReviews || 0,
+                          averageRating: (detailedData as any).averageRating 
+                            ? (typeof (detailedData as any).averageRating === 'string' 
+                                ? parseFloat((detailedData as any).averageRating) 
+                                : (detailedData as any).averageRating)
                             : 0,
                         },
                       }),
@@ -360,14 +455,14 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
             
             {/* Analytics */}
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              {locationDetails?.averageRating !== undefined ? (
-                locationDetails.averageRating > 0 ? (
+              {(locationDetails as any)?.averageRating !== undefined ? (
+                (locationDetails as any).averageRating > 0 ? (
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                     <span className="font-medium text-foreground">
-                      {typeof locationDetails.averageRating === 'string' 
-                        ? parseFloat(locationDetails.averageRating).toFixed(1)
-                        : locationDetails.averageRating.toFixed(1)}
+                      {typeof (locationDetails as any).averageRating === 'string' 
+                        ? parseFloat((locationDetails as any).averageRating).toFixed(1)
+                        : (locationDetails as any).averageRating.toFixed(1)}
                     </span>
                   </div>
                 ) : (
@@ -377,14 +472,14 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 <span>No rating yet</span>
               )}
               <span>
-                {locationDetails?.totalCheckIns 
-                  ? (typeof locationDetails.totalCheckIns === 'string' 
-                      ? parseInt(locationDetails.totalCheckIns) 
-                      : locationDetails.totalCheckIns)
+                {(locationDetails as any)?.totalCheckIns 
+                  ? (typeof (locationDetails as any).totalCheckIns === 'string' 
+                      ? parseInt((locationDetails as any).totalCheckIns) 
+                      : (locationDetails as any).totalCheckIns)
                   : 0} check-ins
               </span>
               <span>
-                {locationDetails?.totalReviews || 0} reviews
+                {(locationDetails as any)?.totalReviews || 0} reviews
               </span>
             </div>
             
@@ -512,7 +607,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               <AvailabilityCalendar
                 locationId={selectedLocationId}
                 onSlotsChange={handleSlotsChange}
-                initialSlots={dateRanges || []}
+                initialSlots={dateRanges && dateRanges.length > 0 ? dateRanges : getInitialSlotsFromEventDates}
+                initialWeekStart={startDate}
               />
             )}
           </div>

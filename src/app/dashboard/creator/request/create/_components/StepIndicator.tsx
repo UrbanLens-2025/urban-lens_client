@@ -8,8 +8,8 @@ interface StepIndicatorProps {
 }
 
 const steps = [
-  { number: 1, label: "Location", icon: Building2, description: "Choose venue" },
-  { number: 2, label: "Basic Info", icon: FileText, description: "Event details" },
+  { number: 1, label: "Basic Info", icon: FileText, description: "Event details" },
+  { number: 2, label: "Location", icon: Building2, description: "Choose venue" },
   { number: 3, label: "Documents", icon: FileCheck, description: "Upload files" },
   { number: 4, label: "Review", icon: CheckCircle2, description: "Submit" },
 ];
