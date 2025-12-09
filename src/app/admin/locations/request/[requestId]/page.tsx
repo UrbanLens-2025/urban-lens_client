@@ -26,9 +26,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Clock,
   ExternalLink,
-  Download,
   Copy,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -50,6 +48,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { DisplayTags } from '@/components/shared/DisplayTags';
 import { formatShortDate, formatDocumentType } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { PageContainer } from '@/components/shared/PageContainer';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { StatCard } from '@/components/shared/StatCard';
 
 function InfoRow({
   label,
@@ -64,11 +65,11 @@ function InfoRow({
   return (
     <div className='flex gap-3 py-2'>
       {Icon && (
-        <Icon className='h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5' />
+        <Icon className='h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5' />
       )}
       <div className='flex-1 min-w-0'>
-        <p className='text-xs font-medium text-muted-foreground mb-0.5'>{label}</p>
-        <div className='text-sm text-foreground break-words'>{value}</div>
+        <p className='text-sm font-semibold text-muted-foreground mb-1'>{label}</p>
+        <div className='text-base text-foreground break-words'>{value}</div>
       </div>
     </div>
   );
@@ -113,7 +114,7 @@ export default function AdminLocationRequestDetailsPage({
       { id: request.id, payload: { status: 'APPROVED' } },
       {
         onSuccess: () => {
-          toast.success('Request approved!');
+          toast.success('Request approved successfully!');
           queryClient.invalidateQueries({
             queryKey: ['locationRequests'],
           });
@@ -152,15 +153,20 @@ export default function AdminLocationRequestDetailsPage({
 
   if (isLoading) {
     return (
-      <div className='flex h-screen items-center justify-center'>
-        <Loader2 className='animate-spin' />
-      </div>
+      <PageContainer>
+        <div className='flex h-[60vh] items-center justify-center'>
+          <div className='flex flex-col items-center gap-4'>
+            <Loader2 className='h-8 w-8 animate-spin text-primary' />
+            <p className='text-sm text-muted-foreground'>Loading request details...</p>
+          </div>
+        </div>
+      </PageContainer>
     );
   }
 
   if (isError || !request) {
     return (
-      <div className='container mx-auto py-12'>
+      <PageContainer>
         <Card className='border-destructive'>
           <CardContent className='pt-6'>
             <div className='flex flex-col items-center justify-center py-12 text-center'>
@@ -176,7 +182,7 @@ export default function AdminLocationRequestDetailsPage({
             </div>
           </CardContent>
         </Card>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -187,7 +193,7 @@ export default function AdminLocationRequestDetailsPage({
 
   const statusBadge =
     request.status === 'AWAITING_ADMIN_REVIEW'
-      ? 'Pending'
+      ? 'Pending Review'
       : request.status === 'APPROVED'
       ? 'Approved'
       : request.status === 'REJECTED'
@@ -209,7 +215,6 @@ export default function AdminLocationRequestDetailsPage({
     (acc, doc) => acc + doc.documentImageUrls.length,
     0
   ) || 0;
-  const totalAttachments = imageCount + documentCount;
 
   // Copy coordinates to clipboard
   const copyCoordinates = () => {
@@ -224,123 +229,96 @@ export default function AdminLocationRequestDetailsPage({
     window.open(url, '_blank');
   };
 
-  return (
-    <div className='space-y-6 pb-6'>
-      {/* Enhanced Header with Quick Actions */}
-      <div className='flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4'>
-        <div className='flex items-start gap-4 flex-1'>
-          <Button variant='outline' size='icon' onClick={() => router.back()}>
-            <ArrowLeft className='h-4 w-4' />
+  // Action buttons for header
+  const headerActions = (
+    <div className='flex items-center gap-2'>
+      <Button variant='outline' size='icon' onClick={() => router.back()}>
+        <ArrowLeft className='h-4 w-4' />
+      </Button>
+      {isPending && (
+        <>
+          <Button
+            variant='destructive'
+            onClick={() => setShowRejectDialog(true)}
+            disabled={isProcessing}
+          >
+            <XCircle className='h-4 w-4 mr-2' />
+            Reject
           </Button>
-          <div className='flex-1 min-w-0'>
-            <div className='flex items-start justify-between gap-4'>
-              <div className='flex-1 min-w-0'>
-                <h1 className='text-3xl font-bold mb-2 break-words'>{request.name}</h1>
-                <div className='flex flex-wrap items-center gap-3 mt-2'>
-                  <Badge 
-                    variant={statusVariant as any}
-                    className='text-sm px-3 py-1'
-                  >
-                    {statusBadge}
-                  </Badge>
-                  <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-                    <Calendar className='h-4 w-4' />
-                    <span>Submitted {formatShortDate(request.createdAt)}</span>
-                  </div>
-                  {request.processedBy && (
-                    <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-                      <User className='h-4 w-4' />
-                      <span>
-                        Processed by {request.processedBy.firstName} {request.processedBy.lastName}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+          <Button
+            onClick={() => setShowApproveDialog(true)}
+            disabled={isProcessing}
+            className='bg-green-600 hover:bg-green-700'
+          >
+            <CheckCircle2 className='h-4 w-4 mr-2' />
+            Approve
+          </Button>
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <PageContainer maxWidth="xl">
+      {/* Page Header */}
+      <PageHeader
+        title={request.name}
+        description={
+          <div className='flex flex-wrap items-center gap-3 mt-2'>
+            <Badge 
+              variant={statusVariant as any}
+              className='text-sm px-3 py-1'
+            >
+              {statusBadge}
+            </Badge>
+            <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+              <Calendar className='h-4 w-4' />
+              <span>Submitted {formatShortDate(request.createdAt)}</span>
             </div>
+            {request.processedBy && (
+              <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                <User className='h-4 w-4' />
+                <span>
+                  Processed by {request.processedBy.firstName} {request.processedBy.lastName}
+                </span>
+              </div>
+            )}
           </div>
-        </div>
-        
-        {/* Quick Action Buttons */}
-        {isPending && (
-          <div className='flex flex-col sm:flex-row gap-2 lg:flex-shrink-0'>
-            <Button
-              variant='destructive'
-              onClick={() => setShowRejectDialog(true)}
-              disabled={isProcessing}
-              className='sm:min-w-[140px]'
-            >
-              <XCircle className='h-4 w-4 mr-2' />
-              Reject
-            </Button>
-            <Button
-              onClick={() => setShowApproveDialog(true)}
-              disabled={isProcessing}
-              className='bg-green-600 hover:bg-green-700 sm:min-w-[140px]'
-            >
-              <CheckCircle2 className='h-4 w-4 mr-2' />
-              Approve
-            </Button>
-          </div>
-        )}
-      </div>
+        }
+        icon={MapPin}
+        actions={headerActions}
+      />
 
       {/* Quick Stats Summary */}
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='flex items-center gap-3'>
-              <div className='p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30'>
-                <MapPin className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-              </div>
-              <div>
-                <p className='text-xs text-muted-foreground'>Type</p>
-                <p className='text-sm font-semibold'>
-                  {request.type === 'BUSINESS_OWNED' ? 'Business' : 'Public'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='flex items-center gap-3'>
-              <div className='p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30'>
-                <ImageIcon className='h-5 w-5 text-purple-600 dark:text-purple-400' />
-              </div>
-              <div>
-                <p className='text-xs text-muted-foreground'>Images</p>
-                <p className='text-sm font-semibold'>{imageCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='flex items-center gap-3'>
-              <div className='p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30'>
-                <FileText className='h-5 w-5 text-orange-600 dark:text-orange-400' />
-              </div>
-              <div>
-                <p className='text-xs text-muted-foreground'>Documents</p>
-                <p className='text-sm font-semibold'>{documentCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='flex items-center gap-3'>
-              <div className='p-2 rounded-lg bg-green-100 dark:bg-green-900/30'>
-                <TagIcon className='h-5 w-5 text-green-600 dark:text-green-400' />
-              </div>
-              <div>
-                <p className='text-xs text-muted-foreground'>Tags</p>
-                <p className='text-sm font-semibold'>{tags.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Location Type"
+          value={request.type === 'BUSINESS_OWNED' ? 'Business' : 'Public'}
+          icon={request.type === 'BUSINESS_OWNED' ? Building : Globe}
+          iconColor="text-blue-600 dark:text-blue-400"
+          iconBg="bg-blue-100 dark:bg-blue-900/30"
+        />
+        <StatCard
+          title="Images"
+          value={imageCount}
+          icon={ImageIcon}
+          iconColor="text-purple-600 dark:text-purple-400"
+          iconBg="bg-purple-100 dark:bg-purple-900/30"
+        />
+        <StatCard
+          title="Documents"
+          value={documentCount}
+          icon={FileText}
+          iconColor="text-orange-600 dark:text-orange-400"
+          iconBg="bg-orange-100 dark:bg-orange-900/30"
+        />
+        <StatCard
+          title="Tags"
+          value={tags.length}
+          icon={TagIcon}
+          iconColor="text-green-600 dark:text-green-400"
+          iconBg="bg-green-100 dark:bg-green-900/30"
+        />
       </div>
 
       {/* Review Instructions Banner */}
@@ -377,7 +355,7 @@ export default function AdminLocationRequestDetailsPage({
         </Card>
       )}
 
-      {/* Main Content - Top to Bottom Flow */}
+      {/* Main Content */}
       <div className='space-y-6'>
         {/* Request Overview */}
         <Card>
@@ -394,7 +372,7 @@ export default function AdminLocationRequestDetailsPage({
               icon={FileText}
             />
             <Separator />
-            <div className='grid grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <InfoRow
                 label='Request Type'
                 value={
@@ -417,9 +395,9 @@ export default function AdminLocationRequestDetailsPage({
               <>
                 <Separator />
                 <div className='flex gap-3 py-2'>
-                  <TagIcon className='h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5' />
+                  <TagIcon className='h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5' />
                   <div className='flex-1'>
-                    <p className='text-xs font-medium text-muted-foreground mb-2'>Tags</p>
+                    <p className='text-sm font-semibold text-muted-foreground mb-2'>Tags</p>
                     <DisplayTags tags={tags} maxCount={10} />
                   </div>
                 </div>
@@ -442,25 +420,25 @@ export default function AdminLocationRequestDetailsPage({
           <CardContent className='space-y-4'>
             <InfoRow label='Street Address' value={request.addressLine} />
             <Separator />
-            <div className='grid grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <InfoRow label='District' value={request.addressLevel1} />
               <InfoRow label='City/Province' value={request.addressLevel2} />
             </div>
             <Separator />
-            <div className='grid grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <InfoRow label='Latitude' value={request.latitude.toString()} />
               <InfoRow label='Longitude' value={request.longitude.toString()} />
             </div>
             <Separator />
             <div className='pt-2'>
               <div className='flex items-center justify-between mb-2'>
-                <p className='text-xs font-medium text-muted-foreground'>Map Location</p>
+                <p className='text-sm font-semibold text-muted-foreground'>Map Location</p>
                 <div className='flex gap-2'>
                   <Button
                     variant='ghost'
                     size='sm'
                     onClick={copyCoordinates}
-                    className='h-7 text-xs'
+                    className='h-8 text-xs'
                   >
                     <Copy className='h-3 w-3 mr-1' />
                     Copy Coords
@@ -469,7 +447,7 @@ export default function AdminLocationRequestDetailsPage({
                     variant='ghost'
                     size='sm'
                     onClick={openInGoogleMaps}
-                    className='h-7 text-xs'
+                    className='h-8 text-xs'
                   >
                     <ExternalLink className='h-3 w-3 mr-1' />
                     Open Maps
@@ -793,6 +771,6 @@ export default function AdminLocationRequestDetailsPage({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   );
 }
