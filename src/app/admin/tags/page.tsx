@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ArrowUp, ArrowDown, Edit, IconTag, IconSearch, IconRefresh } from "lucide-react";
+import { Loader2, PlusCircle, ArrowUp, ArrowDown, Edit, Tag as TagIcon, Search, RefreshCw } from "lucide-react";
 import { TagFormModal } from "@/components/admin/TagFormModal";
 import { Badge } from "@/components/ui/badge";
 import { useDebounce } from "use-debounce";
@@ -106,7 +106,7 @@ export default function AdminTagsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={refresh} disabled={isLoading}>
-            <IconRefresh className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button onClick={openNewModal}>
@@ -121,7 +121,7 @@ export default function AdminTagsPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tags</CardTitle>
             <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-              <IconTag className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <TagIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
           </CardHeader>
           <CardContent>
@@ -173,7 +173,7 @@ export default function AdminTagsPage() {
               </CardDescription>
             </div>
             <div className="relative w-[300px]">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by display name..."
                 value={searchTerm}

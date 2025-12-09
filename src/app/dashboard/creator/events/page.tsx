@@ -457,6 +457,6 @@ export default function CreatorEventsPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

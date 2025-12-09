@@ -515,7 +515,7 @@ export default function LocationBookingsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   );
 }
 
