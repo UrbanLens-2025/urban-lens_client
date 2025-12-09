@@ -111,6 +111,9 @@ import {
   Zap,
   Ruler,
   Star,
+  RotateCcw,
+  Info,
+  Settings,
 } from "lucide-react";
 import type { LocationVoucher, LocationMission, SortState, Announcement } from "@/types";
 import { useForm } from "react-hook-form";
@@ -1513,7 +1516,7 @@ const bookingConfigSchema = z
       .number()
       .positive("Base booking price must be greater than 0")
       .min(0.01, "Base booking price must be at least 0.01"),
-    currency: z.literal("VND").default("VND"),
+    currency: z.literal("VND"),
     minBookingDurationMinutes: z
       .number()
       .int("Must be a whole number")
@@ -1527,6 +1530,27 @@ const bookingConfigSchema = z
       .number()
       .int("Must be a whole number")
       .min(0, "Minimum gap cannot be negative"),
+    maxCapacity: z
+      .number()
+      .int("Must be a whole number")
+      .positive("Must be greater than 0")
+      .optional(),
+    refundEnabled: z.boolean().optional(),
+    refundCutoffHours: z
+      .number()
+      .int("Must be a whole number")
+      .min(0, "Cannot be negative")
+      .optional(),
+    refundPercentageAfterCutoff: z
+      .number()
+      .min(0, "Cannot be negative")
+      .max(1, "Cannot exceed 1 (100%)")
+      .optional(),
+    refundPercentageBeforeCutoff: z
+      .number()
+      .min(0, "Cannot be negative")
+      .max(1, "Cannot exceed 1 (100%)")
+      .optional(),
   })
   .refine(
     (data) => data.maxBookingDurationMinutes >= data.minBookingDurationMinutes,
@@ -1641,6 +1665,11 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
       minBookingDurationMinutes: 30,
       maxBookingDurationMinutes: 240,
       minGapBetweenBookingsMinutes: 15,
+      maxCapacity: undefined,
+      refundEnabled: false,
+      refundCutoffHours: 24,
+      refundPercentageAfterCutoff: 0.8,
+      refundPercentageBeforeCutoff: 1,
     },
   });
 
@@ -1664,12 +1693,17 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
         minBookingDurationMinutes: existingConfig.minBookingDurationMinutes,
         maxBookingDurationMinutes: existingConfig.maxBookingDurationMinutes,
         minGapBetweenBookingsMinutes: existingConfig.minGapBetweenBookingsMinutes,
+        maxCapacity: existingConfig.maxCapacity,
+        refundEnabled: existingConfig.refundEnabled ?? false,
+        refundCutoffHours: existingConfig.refundCutoffHours ?? 24,
+        refundPercentageAfterCutoff: existingConfig.refundPercentageAfterCutoff ?? 0.8,
+        refundPercentageBeforeCutoff: existingConfig.refundPercentageBeforeCutoff ?? 1,
       }, { keepDefaultValues: false });
     }
   }, [configKey, configError, form]); // Only reset when config key changes
 
   const onSubmit = useCallback((data: BookingConfigForm) => {
-    if (hasConfig) {
+    if (hasConfig && existingConfig) {
       const updatePayload: UpdateLocationBookingConfigPayload = {
         allowBooking: data.allowBooking,
         baseBookingPrice: data.baseBookingPrice,
@@ -1677,6 +1711,11 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
         minBookingDurationMinutes: data.minBookingDurationMinutes,
         maxBookingDurationMinutes: data.maxBookingDurationMinutes,
         minGapBetweenBookingsMinutes: data.minGapBetweenBookingsMinutes,
+        maxCapacity: data.maxCapacity,
+        refundEnabled: data.refundEnabled,
+        refundCutoffHours: data.refundCutoffHours,
+        refundPercentageAfterCutoff: data.refundPercentageAfterCutoff,
+        refundPercentageBeforeCutoff: data.refundPercentageBeforeCutoff,
       };
       updateConfig.mutate({
         configId: existingConfig.id || locationId, // Use config ID if available, fallback to locationId
@@ -1867,6 +1906,175 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
                         </FormItem>
                       )}
                     />
+                  </div>
+
+                  <div className="space-y-3 pt-3 border-t">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Capacity
+                    </h3>
+                    <FormField
+                      control={form.control}
+                      name="maxCapacity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Maximum Capacity</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              placeholder="100"
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? parseInt(e.target.value)
+                                    : undefined
+                                )
+                              }
+                              className="h-8"
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            Maximum number of participants allowed (optional)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-3 pt-3 border-t">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <RotateCcw className="h-4 w-4" />
+                      Refund Settings
+                    </h3>
+                    <FormField
+                      control={form.control}
+                      name="refundEnabled"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-sm">Enable Refunds</FormLabel>
+                            <FormDescription className="text-xs">
+                              Allow customers to receive refunds for cancellations
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="space-y-3 pt-3 border-t">
+                      <Alert className="bg-primary/5 border-primary/20">
+                        <Info className="h-4 w-4 text-primary" />
+                        <AlertDescription className="text-xs">
+                          Configure refund percentages based on cancellation timing
+                        </AlertDescription>
+                      </Alert>
+
+                      <FormField
+                        control={form.control}
+                        name="refundCutoffHours"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Refund Cutoff (hours)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder="24"
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) =>
+                                  field.onChange(
+                                    e.target.value
+                                      ? parseInt(e.target.value)
+                                      : undefined
+                                  )
+                                }
+                                className="h-8"
+                              />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              Hours before booking start time for refund cutoff
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name="refundPercentageBeforeCutoff"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Refund % Before Cutoff</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  max="1"
+                                  placeholder="1.0"
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      e.target.value
+                                        ? parseFloat(e.target.value)
+                                        : undefined
+                                    )
+                                  }
+                                  className="h-8"
+                                />
+                              </FormControl>
+                              <FormDescription className="text-xs">
+                                Refund percentage (0-1) before cutoff time
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="refundPercentageAfterCutoff"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Refund % After Cutoff</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  max="1"
+                                  placeholder="0.8"
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      e.target.value
+                                        ? parseFloat(e.target.value)
+                                        : undefined
+                                    )
+                                  }
+                                  className="h-8"
+                                />
+                              </FormControl>
+                              <FormDescription className="text-xs">
+                                Refund percentage (0-1) after cutoff time
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="flex justify-end gap-2 pt-3 border-t">
@@ -2605,11 +2813,15 @@ function BookingAndAvailabilityTab({ locationId }: { locationId: string }) {
       </div>
 
       <Tabs value={subTab} onValueChange={setSubTab} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-md grid-cols-3">
           <TabsTrigger value="current">Current Booking</TabsTrigger>
           <TabsTrigger value="history">
             <List className="h-4 w-4 mr-2" />
             Booking History
+          </TabsTrigger>
+          <TabsTrigger value="settings">
+            <Settings className="h-4 w-4 mr-2" />
+            Settings
           </TabsTrigger>
         </TabsList>
         
@@ -2618,6 +2830,9 @@ function BookingAndAvailabilityTab({ locationId }: { locationId: string }) {
           </TabsContent>
         <TabsContent value="history" className="mt-6">
           <BookingHistoryTab locationId={locationId} />
+          </TabsContent>
+        <TabsContent value="settings" className="mt-6">
+          <BookingConfigTab locationId={locationId} />
           </TabsContent>
       </Tabs>
     </div>

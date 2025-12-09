@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Pencil, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Layers, DollarSign, Calendar, Save, Settings, Info, HelpCircle, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Layers, DollarSign, Calendar, Save, Settings, Info, HelpCircle, ChevronDown, ChevronUp, Copy, Check, RotateCcw } from "lucide-react";
 import { useWeeklyAvailabilities } from "@/hooks/availability/useWeeklyAvailabilities";
 import { useCreateWeeklyAvailability } from "@/hooks/availability/useCreateWeeklyAvailability";
 import { useDeleteAvailability } from "@/hooks/availability/useDeleteAvailability";
@@ -131,6 +131,27 @@ const bookingConfigSchema = z
       .number()
       .int("Must be a whole number")
       .min(0, "Minimum gap cannot be negative"),
+    maxCapacity: z
+      .number()
+      .int("Must be a whole number")
+      .positive("Must be greater than 0")
+      .optional(),
+    refundEnabled: z.boolean().optional(),
+    refundCutoffHours: z
+      .number()
+      .int("Must be a whole number")
+      .min(0, "Cannot be negative")
+      .optional(),
+    refundPercentageAfterCutoff: z
+      .number()
+      .min(0, "Cannot be negative")
+      .max(1, "Cannot exceed 1 (100%)")
+      .optional(),
+    refundPercentageBeforeCutoff: z
+      .number()
+      .min(0, "Cannot be negative")
+      .max(1, "Cannot exceed 1 (100%)")
+      .optional(),
   })
   .refine(
     (data) => data.maxBookingDurationMinutes >= data.minBookingDurationMinutes,
@@ -197,6 +218,11 @@ export default function AvailabilityPage({
       minBookingDurationMinutes: 30,
       maxBookingDurationMinutes: 240,
       minGapBetweenBookingsMinutes: 15,
+      maxCapacity: undefined,
+      refundEnabled: false,
+      refundCutoffHours: 24,
+      refundPercentageAfterCutoff: 0.8,
+      refundPercentageBeforeCutoff: 1,
     },
   });
   
@@ -210,6 +236,11 @@ export default function AvailabilityPage({
         minBookingDurationMinutes: existingConfig.minBookingDurationMinutes,
         maxBookingDurationMinutes: existingConfig.maxBookingDurationMinutes,
         minGapBetweenBookingsMinutes: existingConfig.minGapBetweenBookingsMinutes,
+        maxCapacity: existingConfig.maxCapacity,
+        refundEnabled: existingConfig.refundEnabled ?? false,
+        refundCutoffHours: existingConfig.refundCutoffHours ?? 24,
+        refundPercentageAfterCutoff: existingConfig.refundPercentageAfterCutoff ?? 0.8,
+        refundPercentageBeforeCutoff: existingConfig.refundPercentageBeforeCutoff ?? 1,
       });
     }
   }, [existingConfig, configError, bookingForm]);
@@ -241,6 +272,11 @@ export default function AvailabilityPage({
         minBookingDurationMinutes: data.minBookingDurationMinutes,
         maxBookingDurationMinutes: data.maxBookingDurationMinutes,
         minGapBetweenBookingsMinutes: data.minGapBetweenBookingsMinutes,
+        maxCapacity: data.maxCapacity,
+        refundEnabled: data.refundEnabled,
+        refundCutoffHours: data.refundCutoffHours,
+        refundPercentageAfterCutoff: data.refundPercentageAfterCutoff,
+        refundPercentageBeforeCutoff: data.refundPercentageBeforeCutoff,
       };
       updateConfig.mutate({
         configId: existingConfig.id || locationId, // Use config ID if available, fallback to locationId
@@ -1436,8 +1472,7 @@ export default function AvailabilityPage({
                   <CardContent className="pt-6">
                     <Form {...bookingForm}>
                       <form onSubmit={bookingForm.handleSubmit(onBookingSubmit)} className="space-y-6">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                          <div className="lg:col-span-2 space-y-6">
+                        <div className="space-y-6">
                             {/* Allow Booking Toggle */}
                             <FormField
                               control={bookingForm.control}
@@ -1628,6 +1663,118 @@ export default function AvailabilityPage({
                               />
                             </div>
 
+                            {/* Refund Settings */}
+                            <div className="space-y-4">
+                              <h3 className="text-lg font-semibold flex items-center gap-2">
+                                <RotateCcw className="h-5 w-5" />
+                                Refund Settings
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Configure refund policies for cancellations based on timing</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </h3>
+
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <FormField
+                                  control={bookingForm.control}
+                                  name="refundCutoffHours"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Refund Cutoff (hours)</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          placeholder="24"
+                                          {...field}
+                                          value={field.value ?? ""}
+                                          onChange={(e) =>
+                                            field.onChange(
+                                              e.target.value
+                                                ? parseInt(e.target.value)
+                                                : undefined
+                                            )
+                                          }
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        Hours before booking start time for refund cutoff
+                                      </FormDescription>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={bookingForm.control}
+                                  name="refundPercentageBeforeCutoff"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Refund % Before Cutoff</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          max="1"
+                                          placeholder="1.0"
+                                          {...field}
+                                          value={field.value ?? ""}
+                                          onChange={(e) =>
+                                            field.onChange(
+                                              e.target.value
+                                                ? parseFloat(e.target.value)
+                                                : undefined
+                                            )
+                                          }
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        Refund percentage (0-1) before cutoff time
+                                      </FormDescription>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={bookingForm.control}
+                                  name="refundPercentageAfterCutoff"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Refund % After Cutoff</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          max="1"
+                                          placeholder="0.8"
+                                          {...field}
+                                          value={field.value ?? ""}
+                                          onChange={(e) =>
+                                            field.onChange(
+                                              e.target.value
+                                                ? parseFloat(e.target.value)
+                                                : undefined
+                                            )
+                                          }
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        Refund percentage (0-1) after cutoff time
+                                      </FormDescription>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                            </div>
+
                             {/* Submit Button */}
                             <div className="flex justify-end gap-2 pt-4">
                               <Button
@@ -1655,96 +1802,6 @@ export default function AvailabilityPage({
                                 )}
                               </Button>
                             </div>
-                          </div>
-
-                          {/* Preview Card */}
-                          <div className="lg:col-span-1">
-                            <Card>
-                              <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                  <Calendar className="h-5 w-5" />
-                                  Preview
-                                </CardTitle>
-                                <CardDescription>
-                                  How your booking configuration will appear
-                                </CardDescription>
-                              </CardHeader>
-                              <CardContent className="space-y-4">
-                                <div className="space-y-3">
-                                  <div>
-                                    <Label className="text-xs text-muted-foreground">Status</Label>
-                                    <p className="font-semibold">
-                                      {bookingForm.watch("allowBooking") ? (
-                                        <span className="text-green-600">Booking Enabled</span>
-                                      ) : (
-                                        <span className="text-gray-500">Booking Disabled</span>
-                                      )}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <Label className="text-xs text-muted-foreground">
-                                      Base Price
-                                    </Label>
-                                    <p className="text-2xl font-bold">
-                                      {formatCurrency(bookingForm.watch("baseBookingPrice"), bookingForm.watch("currency"))}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      per {bookingForm.watch("minBookingDurationMinutes")} minutes
-                                    </p>
-                                  </div>
-
-                                  <div className="border-t pt-3 space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                      <span className="text-muted-foreground">Min Duration</span>
-                                      <span className="font-medium">{bookingForm.watch("minBookingDurationMinutes")} min</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                      <span className="text-muted-foreground">Max Duration</span>
-                                      <span className="font-medium">{bookingForm.watch("maxBookingDurationMinutes")} min</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                      <span className="text-muted-foreground">Gap Required</span>
-                                      <span className="font-medium">
-                                        {bookingForm.watch("minGapBetweenBookingsMinutes")} min
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  {/* Example Calculation */}
-                                  {bookingForm.watch("baseBookingPrice") > 0 && bookingForm.watch("minBookingDurationMinutes") > 0 && (
-                                    <div className="border-t pt-3 space-y-2">
-                                      <Label className="text-xs text-muted-foreground">
-                                        Example Calculations
-                                      </Label>
-                                      <div className="space-y-1 text-xs">
-                                        <div className="flex justify-between">
-                                          <span className="text-muted-foreground">
-                                            {bookingForm.watch("minBookingDurationMinutes")} min booking:
-                                          </span>
-                                          <span className="font-medium">
-                                            {formatCurrency(bookingForm.watch("baseBookingPrice"), bookingForm.watch("currency"))}
-                                          </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-muted-foreground">
-                                            {bookingForm.watch("maxBookingDurationMinutes")} min booking:
-                                          </span>
-                                          <span className="font-medium">
-                                            {formatCurrency(
-                                              bookingForm.watch("baseBookingPrice") *
-                                                (bookingForm.watch("maxBookingDurationMinutes") / bookingForm.watch("minBookingDurationMinutes")),
-                                              bookingForm.watch("currency")
-                                            )}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </div>
                         </div>
                       </form>
                     </Form>

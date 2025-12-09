@@ -2,7 +2,7 @@
 
 import { use, useState, useMemo, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, Loader2, MapPin as MapPinIcon, ArrowLeft, Mail, Phone, Star, ChevronLeft, ChevronRight, Calendar, Search, ChevronDown, DollarSign, Clock, ChevronUp } from "lucide-react";
+import { Building2, Loader2, MapPin as MapPinIcon, ArrowLeft, Mail, Phone, Star, ChevronLeft, ChevronRight, Calendar, Search, ChevronDown, DollarSign, Clock, ChevronUp, RotateCcw } from "lucide-react";
 import { useBookableLocations } from "@/hooks/events/useBookableLocations";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
 import { useEventById } from "@/hooks/events/useEventById";
@@ -411,12 +411,50 @@ function LocationDetailsOverlay({
             {/* Price */}
             {displayLocation.bookingConfig?.baseBookingPrice && (
               <div className={`flex items-start gap-3 p-3 bg-muted/50 border border-border/50 ${
-                !businessEmail && !businessPhone ? 'rounded-b-xl rounded-t-xs' : 'rounded-xs'
+                !displayLocation.bookingConfig?.refundEnabled && !businessEmail && !businessPhone ? 'rounded-b-xl rounded-t-xs' : 'rounded-xs'
               }`}>
                 <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-foreground">
                   {parseFloat(displayLocation.bookingConfig.baseBookingPrice).toLocaleString("vi-VN")} {displayLocation.bookingConfig.currency || "VND"} / hour
                 </p>
+              </div>
+            )}
+
+            {/* Refund Policy */}
+            {displayLocation.bookingConfig && (
+              <div className={`flex items-start gap-3 p-3 bg-muted/50 border border-border/50 ${
+                !businessEmail && !businessPhone ? 'rounded-b-xl rounded-t-xs' : 'rounded-xs'
+              }`}>
+                <RotateCcw className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium text-foreground">Refund Policy</p>
+                  {displayLocation.bookingConfig.refundEnabled ? (
+                    <div className="space-y-0.5 text-xs text-muted-foreground">
+                      {displayLocation.bookingConfig.refundCutoffHours !== undefined && (
+                        <div className="flex justify-between">
+                          <span>Before {displayLocation.bookingConfig.refundCutoffHours}h:</span>
+                          <span className="font-medium text-foreground">
+                            {displayLocation.bookingConfig.refundPercentageBeforeCutoff !== undefined
+                              ? `${(displayLocation.bookingConfig.refundPercentageBeforeCutoff * 100).toFixed(0)}%`
+                              : "100%"}
+                          </span>
+                        </div>
+                      )}
+                      {displayLocation.bookingConfig.refundCutoffHours !== undefined && (
+                        <div className="flex justify-between">
+                          <span>After {displayLocation.bookingConfig.refundCutoffHours}h:</span>
+                          <span className="font-medium text-foreground">
+                            {displayLocation.bookingConfig.refundPercentageAfterCutoff !== undefined
+                              ? `${(displayLocation.bookingConfig.refundPercentageAfterCutoff * 100).toFixed(0)}%`
+                              : "0%"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Refunds are not available</p>
+                  )}
+                </div>
               </div>
             )}
 

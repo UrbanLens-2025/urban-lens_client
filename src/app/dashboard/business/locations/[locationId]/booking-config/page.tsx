@@ -597,7 +597,7 @@ export default function LocationBookingConfigPage({
                     Configure refund policies for cancellations
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="pt-6 space-y-6">
+                <CardContent className="pt-6 space-y-4">
                   <FormField
                     control={form.control}
                     name="refundEnabled"
@@ -625,131 +625,119 @@ export default function LocationBookingConfigPage({
                     )}
                   />
 
-                  {refundEnabled && (
-                    <div className="space-y-4 pt-4 border-t border-border">
-                      <Alert className="bg-primary/5 border-primary/20">
-                        <Info className="h-4 w-4 text-primary" />
-                        <AlertDescription>
-                          Configure refund percentages based on cancellation
-                          timing
-                        </AlertDescription>
-                      </Alert>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                    <FormField
+                      control={form.control}
+                      name="refundCutoffHours"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <div className="p-1 rounded bg-primary/10">
+                              <Clock className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            Refund Cutoff (hours)
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="24"
+                              className="h-12 border-2 border-primary/20 focus:ring-2 focus:ring-primary/20"
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? parseInt(e.target.value)
+                                    : undefined
+                                )
+                              }
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Hours before booking start time for refund cutoff
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                      <FormField
-                        control={form.control}
-                        name="refundCutoffHours"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <div className="p-1 rounded bg-primary/10">
-                                <Clock className="h-3.5 w-3.5 text-primary" />
-                              </div>
-                              Refund Cutoff (hours)
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min="0"
-                                placeholder="24"
-                                className="h-12 border-2 border-primary/20 focus:ring-2 focus:ring-primary/20"
-                                {...field}
-                                value={field.value ?? ""}
-                                onChange={(e) =>
-                                  field.onChange(
-                                    e.target.value
-                                      ? parseInt(e.target.value)
-                                      : undefined
-                                  )
-                                }
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Hours before booking start time for refund cutoff
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    <FormField
+                      control={form.control}
+                      name="refundPercentageBeforeCutoff"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <div className="p-1 rounded bg-primary/10">
+                              <RotateCcw className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            Refund % Before Cutoff
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="1"
+                              placeholder="1.0"
+                              className="h-12 border-2 border-primary/20 focus:ring-2 focus:ring-primary/20"
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? parseFloat(e.target.value)
+                                    : undefined
+                                )
+                              }
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Refund percentage (0-1) before cutoff time
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="refundPercentageBeforeCutoff"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="flex items-center gap-2">
-                                <div className="p-1 rounded bg-primary/10">
-                                  <RotateCcw className="h-3.5 w-3.5 text-primary" />
-                                </div>
-                                Refund % Before Cutoff
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  max="1"
-                                  placeholder="1.0"
-                                  className="h-12 border-2 border-primary/20 focus:ring-2 focus:ring-primary/20"
-                                  {...field}
-                                  value={field.value ?? ""}
-                                  onChange={(e) =>
-                                    field.onChange(
-                                      e.target.value
-                                        ? parseFloat(e.target.value)
-                                        : undefined
-                                    )
-                                  }
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Refund percentage (0-1) before cutoff time
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="refundPercentageAfterCutoff"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="flex items-center gap-2">
-                                <div className="p-1 rounded bg-primary/10">
-                                  <RotateCcw className="h-3.5 w-3.5 text-primary" />
-                                </div>
-                                Refund % After Cutoff
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  max="1"
-                                  placeholder="0.8"
-                                  className="h-12 border-2 border-primary/20 focus:ring-2 focus:ring-primary/20"
-                                  {...field}
-                                  value={field.value ?? ""}
-                                  onChange={(e) =>
-                                    field.onChange(
-                                      e.target.value
-                                        ? parseFloat(e.target.value)
-                                        : undefined
-                                    )
-                                  }
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Refund percentage (0-1) after cutoff time
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-                  )}
+                    <FormField
+                      control={form.control}
+                      name="refundPercentageAfterCutoff"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <div className="p-1 rounded bg-primary/10">
+                              <RotateCcw className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            Refund % After Cutoff
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="1"
+                              placeholder="0.8"
+                              className="h-12 border-2 border-primary/20 focus:ring-2 focus:ring-primary/20"
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? parseFloat(e.target.value)
+                                    : undefined
+                                )
+                              }
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Refund percentage (0-1) after cutoff time
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 

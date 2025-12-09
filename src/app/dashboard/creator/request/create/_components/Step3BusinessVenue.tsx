@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map, Star } from "lucide-react";
+import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map, Star, RotateCcw } from "lucide-react";
 import Image from "next/image";
 import {
   Select,
@@ -387,6 +387,48 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 {locationDetails?.totalReviews || 0} reviews
               </span>
             </div>
+            
+            {/* Refund Policy */}
+            {location.bookingConfig && (
+              <div className="border-t pt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-semibold">Refund Policy</h4>
+                </div>
+                {location.bookingConfig.refundEnabled ? (
+                  <div className="space-y-2 text-sm">
+                    {location.bookingConfig.refundCutoffHours !== undefined && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">
+                          Before {location.bookingConfig.refundCutoffHours}h:
+                        </span>
+                        <span className="font-medium">
+                          {location.bookingConfig.refundPercentageBeforeCutoff !== undefined
+                            ? `${(location.bookingConfig.refundPercentageBeforeCutoff * 100).toFixed(0)}%`
+                            : "100%"}
+                        </span>
+                      </div>
+                    )}
+                    {location.bookingConfig.refundCutoffHours !== undefined && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">
+                          After {location.bookingConfig.refundCutoffHours}h:
+                        </span>
+                        <span className="font-medium">
+                          {location.bookingConfig.refundPercentageAfterCutoff !== undefined
+                            ? `${(location.bookingConfig.refundPercentageAfterCutoff * 100).toFixed(0)}%`
+                            : "0%"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Refunds are not available for this venue
+                  </p>
+                )}
+              </div>
+            )}
             
             {/* Book Time Slots Button */}
             {!hasBookedSlots ? (
