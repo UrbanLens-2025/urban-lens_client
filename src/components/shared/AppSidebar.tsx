@@ -50,7 +50,6 @@ const adminNavGroups = [
     groupLabel: 'User Management',
     items: [
       { title: 'All Accounts', url: '/admin/accounts', icon: IconUsers },
-      { title: 'Creator Profiles', url: '/admin/creators', icon: IconStar },
     ]
   },
   {
