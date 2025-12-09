@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, AlertCircle, Store, Calendar, CheckCircle2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, AlertCircle, Store, Calendar, CheckCircle2, Info } from "lucide-react";
 
 const formSchema = z.object({
   firstName: z.string().min(1, { message: "First name is required." }),
@@ -216,29 +216,38 @@ export function SignupForm() {
                 name="firstName"
                 render={({ field, fieldState }) => (
                   <FormItem>
-                    <FormLabel>First Name</FormLabel>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                        <div className="p-1 rounded-md bg-primary/10">
+                          <User className="h-4 w-4 text-primary" />
+                        </div>
+                        First Name
+                      </FormLabel>
+                      {fieldState.error && (
+                        <Tooltip open={firstNameTooltipOpen} onOpenChange={setFirstNameTooltipOpen}>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-destructive cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800">
+                            <p className="text-xs font-medium">{fieldState.error.message}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                     <FormControl>
-                      <div className="relative">
-                        <User className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          placeholder="John" 
-                          className={`pl-9 ${fieldState.error ? 'pr-9 border-destructive focus-visible:border-destructive' : ''}`}
-                          {...field} 
-                        />
-                        {fieldState.error && (
-                          <Tooltip open={firstNameTooltipOpen} onOpenChange={setFirstNameTooltipOpen}>
-                            <TooltipTrigger asChild>
-                              <div className="absolute right-2.5 top-2.5 cursor-pointer">
-                                <AlertCircle className="h-4 w-4 text-destructive" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800 [&>svg]:!fill-red-100 dark:[&>svg]:!fill-red-950/50 [&>svg]:!bg-red-100 dark:[&>svg]:!bg-red-950/50">
-                              <p className="text-xs font-medium">{fieldState.error.message}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
+                      <Input 
+                        placeholder="John" 
+                        className={`h-12 border-2 transition-all text-base ${
+                          fieldState.error 
+                            ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+                            : 'border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                        }`}
+                        {...field} 
+                      />
                     </FormControl>
+                    {fieldState.error && (
+                      <p className="text-sm text-destructive mt-1">{fieldState.error.message}</p>
+                    )}
                   </FormItem>
                 )}
               />
@@ -247,29 +256,38 @@ export function SignupForm() {
                 name="lastName"
                 render={({ field, fieldState }) => (
                   <FormItem>
-                    <FormLabel>Last Name</FormLabel>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                        <div className="p-1 rounded-md bg-primary/10">
+                          <User className="h-4 w-4 text-primary" />
+                        </div>
+                        Last Name
+                      </FormLabel>
+                      {fieldState.error && (
+                        <Tooltip open={lastNameTooltipOpen} onOpenChange={setLastNameTooltipOpen}>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-destructive cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800">
+                            <p className="text-xs font-medium">{fieldState.error.message}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                     <FormControl>
-                      <div className="relative">
-                        <User className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          placeholder="Doe" 
-                          className={`pl-9 ${fieldState.error ? 'pr-9 border-destructive focus-visible:border-destructive' : ''}`}
-                          {...field} 
-                        />
-                        {fieldState.error && (
-                          <Tooltip open={lastNameTooltipOpen} onOpenChange={setLastNameTooltipOpen}>
-                            <TooltipTrigger asChild>
-                              <div className="absolute right-2.5 top-2.5 cursor-pointer">
-                                <AlertCircle className="h-4 w-4 text-destructive" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800 [&>svg]:!fill-red-100 dark:[&>svg]:!fill-red-950/50 [&>svg]:!bg-red-100 dark:[&>svg]:!bg-red-950/50">
-                              <p className="text-xs font-medium">{fieldState.error.message}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
+                      <Input 
+                        placeholder="Doe" 
+                        className={`h-12 border-2 transition-all text-base ${
+                          fieldState.error 
+                            ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+                            : 'border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                        }`}
+                        {...field} 
+                      />
                     </FormControl>
+                    {fieldState.error && (
+                      <p className="text-sm text-destructive mt-1">{fieldState.error.message}</p>
+                    )}
                   </FormItem>
                 )}
               />
@@ -285,49 +303,61 @@ export function SignupForm() {
 
                 return (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                        <div className="p-1 rounded-md bg-primary/10">
+                          <Mail className="h-4 w-4 text-primary" />
+                        </div>
+                        Email
+                      </FormLabel>
+                      {showError && (
+                        <Tooltip open={emailTooltipOpen} onOpenChange={setEmailTooltipOpen}>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-destructive cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800">
+                            <p className="text-xs font-medium">
+                              {fieldState.error?.message || "This email is already registered."}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                     <FormControl>
                       <div className="relative">
-                        <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input 
                           placeholder="m@example.com" 
-                          className={`pl-9 ${
+                          className={`h-12 border-2 transition-all text-base pr-12 ${
                             showError 
-                              ? 'pr-9 border-destructive focus-visible:border-destructive' 
+                              ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
                               : showSuccess
-                              ? 'pr-9 border-green-500 focus-visible:border-green-500'
-                              : showLoading
-                              ? 'pr-9'
-                              : ''
+                              ? 'border-green-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/20'
+                              : 'border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
                           }`}
                           {...field} 
                         />
                         {showLoading && (
-                          <div className="absolute right-2.5 top-2.5">
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
                             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                           </div>
                         )}
                         {showSuccess && !showLoading && (
-                          <div className="absolute right-2.5 top-2.5">
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
                             <CheckCircle2 className="h-4 w-4 text-green-600" />
                           </div>
                         )}
                         {showError && !showLoading && (
-                          <Tooltip open={emailTooltipOpen} onOpenChange={setEmailTooltipOpen}>
-                            <TooltipTrigger asChild>
-                              <div className="absolute right-2.5 top-2.5 cursor-pointer">
-                                <AlertCircle className="h-4 w-4 text-destructive" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800 [&>svg]:!fill-red-100 dark:[&>svg]:!fill-red-950/50 [&>svg]:!bg-red-100 dark:[&>svg]:!bg-red-950/50">
-                              <p className="text-xs font-medium">
-                                {fieldState.error?.message || "This email is already registered."}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <AlertCircle className="h-4 w-4 text-destructive" />
+                          </div>
                         )}
                       </div>
                     </FormControl>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">
+                        {fieldState.error?.message || "This email is already registered."}
+                      </p>
+                    )}
                   </FormItem>
                 );
               }}
@@ -338,11 +368,28 @@ export function SignupForm() {
               name="phoneNumber"
               render={({ field, fieldState }) => (
                 <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
+                  <div className="flex items-center gap-2 mb-2">
+                    <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                      <div className="p-1 rounded-md bg-primary/10">
+                        <Phone className="h-4 w-4 text-primary" />
+                      </div>
+                      Phone Number
+                    </FormLabel>
+                    {fieldState.error && (
+                      <Tooltip open={phoneNumberTooltipOpen} onOpenChange={setPhoneNumberTooltipOpen}>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-destructive cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800">
+                          <p className="text-xs font-medium">{fieldState.error.message}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                   <FormControl>
                     <div className="flex gap-2">
                       <Select value={countryCode} onValueChange={setCountryCode}>
-                        <SelectTrigger className="w-[110px] h-9">
+                        <SelectTrigger className="w-[110px] h-12 border-2 border-primary/20">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -355,10 +402,13 @@ export function SignupForm() {
                         </SelectContent>
                       </Select>
                       <div className="relative flex-1">
-                        <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input 
                           placeholder="912345678" 
-                          className={`pl-9 ${fieldState.error ? 'pr-9 border-destructive focus-visible:border-destructive' : ''}`}
+                          className={`h-12 border-2 transition-all text-base ${
+                            fieldState.error 
+                              ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+                              : 'border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                          }`}
                           {...field}
                           onChange={(e) => {
                             // Remove any non-digit characters and limit length
@@ -366,21 +416,12 @@ export function SignupForm() {
                             field.onChange(value);
                           }}
                         />
-                        {fieldState.error && (
-                          <Tooltip open={phoneNumberTooltipOpen} onOpenChange={setPhoneNumberTooltipOpen}>
-                            <TooltipTrigger asChild>
-                              <div className="absolute right-2.5 top-2.5 cursor-pointer">
-                                <AlertCircle className="h-4 w-4 text-destructive" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800 [&>svg]:!fill-red-100 dark:[&>svg]:!fill-red-950/50 [&>svg]:!bg-red-100 dark:[&>svg]:!bg-red-950/50">
-                              <p className="text-xs font-medium">{fieldState.error.message}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
                       </div>
                     </div>
                   </FormControl>
+                  {fieldState.error && (
+                    <p className="text-sm text-destructive mt-1">{fieldState.error.message}</p>
+                  )}
                 </FormItem>
               )}
             />
@@ -390,50 +431,68 @@ export function SignupForm() {
               name="password"
               render={({ field, fieldState }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <div className="flex items-center gap-2 mb-2">
+                    <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                      <div className="p-1 rounded-md bg-primary/10">
+                        <Lock className="h-4 w-4 text-primary" />
+                      </div>
+                      Password
+                    </FormLabel>
+                    {fieldState.error && (
+                      <Tooltip open={passwordTooltipOpen} onOpenChange={setPasswordTooltipOpen}>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-destructive cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800">
+                          <p className="text-xs font-medium">{fieldState.error.message}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                   <FormControl>
                     <div className="relative">
-                      <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         type={showPassword ? "text" : "password"}
                         placeholder="********"
-                        className={`pl-9 ${fieldState.error ? 'pr-16 border-destructive focus-visible:border-destructive' : 'pr-9'}`}
+                        className={`h-12 border-2 transition-all text-base pr-12 ${
+                          fieldState.error 
+                            ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+                            : 'border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                        }`}
                         {...field}
                       />
-                      {fieldState.error && (
-                        <Tooltip open={passwordTooltipOpen} onOpenChange={setPasswordTooltipOpen}>
-                          <TooltipTrigger asChild>
-                            <div className="absolute right-9 top-2.5 cursor-pointer">
-                              <AlertCircle className="h-4 w-4 text-destructive" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800 [&>svg]:!fill-red-100 dark:[&>svg]:!fill-red-950/50 [&>svg]:!bg-red-100 dark:[&>svg]:!bg-red-950/50">
-                            <p className="text-xs font-medium">{fieldState.error.message}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 hover:bg-transparent"
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
                         ) : (
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-4 w-4 text-muted-foreground" />
                         )}
                       </Button>
                     </div>
                   </FormControl>
+                  {fieldState.error && (
+                    <p className="text-sm text-destructive mt-1">{fieldState.error.message}</p>
+                  )}
                 </FormItem>
               )}
             />
 
-            <Button type="submit" className="w-full" disabled={isPending}>
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg transition-all" 
+              disabled={isPending}
+            >
               {isPending ? (
-                <Loader2 className="size-4 animate-spin" />
+                <>
+                  <Loader2 className="size-4 animate-spin mr-2" />
+                  Creating account...
+                </>
               ) : (
                 "Create account"
               )}

@@ -31,7 +31,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Loader2, Eye, EyeOff, Mail, Lock, LogIn, AlertCircle } from "lucide-react";
+import { Loader2, Eye, EyeOff, Mail, Lock, LogIn, AlertCircle, Info } from "lucide-react";
 
 const formSchema = z.object({
   email: z.email({ message: "Invalid email address." }),
@@ -113,29 +113,38 @@ export function LoginForm() {
                 name="email"
                 render={({ field, fieldState }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                        <div className="p-1 rounded-md bg-primary/10">
+                          <Mail className="h-4 w-4 text-primary" />
+                        </div>
+                        Email
+                      </FormLabel>
+                      {fieldState.error && (
+                        <Tooltip open={emailTooltipOpen} onOpenChange={setEmailTooltipOpen}>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-destructive cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800">
+                            <p className="text-xs font-medium">{fieldState.error.message}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                     <FormControl>
-                      <div className="relative">
-                        <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          placeholder="m@example.com" 
-                          className={`pl-9 ${fieldState.error ? 'pr-9 border-destructive focus-visible:border-destructive' : ''}`}
-                          {...field} 
-                        />
-                        {fieldState.error && (
-                          <Tooltip open={emailTooltipOpen} onOpenChange={setEmailTooltipOpen}>
-                            <TooltipTrigger asChild>
-                              <div className="absolute right-2.5 top-2.5 cursor-pointer">
-                                <AlertCircle className="h-4 w-4 text-destructive" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800 [&>svg]:!fill-red-100 dark:[&>svg]:!fill-red-950/50 [&>svg]:!bg-red-100 dark:[&>svg]:!bg-red-950/50">
-                              <p className="text-xs font-medium">{fieldState.error.message}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
+                      <Input 
+                        placeholder="m@example.com" 
+                        className={`h-12 border-2 transition-all text-base ${
+                          fieldState.error 
+                            ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+                            : 'border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                        }`}
+                        {...field} 
+                      />
                     </FormControl>
+                    {fieldState.error && (
+                      <p className="text-sm text-destructive mt-1">{fieldState.error.message}</p>
+                    )}
                   </FormItem>
                 )}
               />
@@ -145,50 +154,68 @@ export function LoginForm() {
                 name="password"
                 render={({ field, fieldState }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                        <div className="p-1 rounded-md bg-primary/10">
+                          <Lock className="h-4 w-4 text-primary" />
+                        </div>
+                        Password
+                      </FormLabel>
+                      {fieldState.error && (
+                        <Tooltip open={passwordTooltipOpen} onOpenChange={setPasswordTooltipOpen}>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-destructive cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800">
+                            <p className="text-xs font-medium">{fieldState.error.message}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                     <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                           type={showPassword ? "text" : "password"}
                           placeholder="********"
-                          className={`pl-9 ${fieldState.error ? 'pr-16 border-destructive focus-visible:border-destructive' : 'pr-9'}`}
+                          className={`h-12 border-2 transition-all text-base pr-12 ${
+                            fieldState.error 
+                              ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+                              : 'border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                          }`}
                           {...field}
                         />
-                        {fieldState.error && (
-                          <Tooltip open={passwordTooltipOpen} onOpenChange={setPasswordTooltipOpen}>
-                            <TooltipTrigger asChild>
-                              <div className="absolute right-9 top-2.5 cursor-pointer">
-                                <AlertCircle className="h-4 w-4 text-destructive" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="bg-red-100 dark:bg-red-950/50 text-gray-900 dark:text-gray-100 border-2 border-red-300 dark:border-red-800 [&>svg]:!fill-red-100 dark:[&>svg]:!fill-red-950/50 [&>svg]:!bg-red-100 dark:[&>svg]:!bg-red-950/50">
-                              <p className="text-xs font-medium">{fieldState.error.message}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? (
-                            <EyeOff className="h-4 w-4" />
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
                           ) : (
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-4 w-4 text-muted-foreground" />
                           )}
                         </Button>
                       </div>
                     </FormControl>
+                    {fieldState.error && (
+                      <p className="text-sm text-destructive mt-1">{fieldState.error.message}</p>
+                    )}
                   </FormItem>
                 )}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isPending}>
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg transition-all" 
+              disabled={isPending}
+            >
               {isPending ? (
-                <Loader2 className="size-4 animate-spin" />
+                <>
+                  <Loader2 className="size-4 animate-spin mr-2" />
+                  Logging in...
+                </>
               ) : (
                 "Login"
               )}
