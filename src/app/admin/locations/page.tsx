@@ -52,7 +52,7 @@ export default function LocationDashboardPage() {
     column: "createdAt",
     direction: "DESC",
   });
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>(searchParams.get('type') || "all");
   const itemsPerPage = 10;
 
   // Update URL when filters change
@@ -66,6 +66,12 @@ export default function LocationDashboardPage() {
       params.delete('search');
     }
 
+    if (typeFilter !== "all") {
+      params.set('type', typeFilter);
+    } else {
+      params.delete('type');
+    }
+
     if (page > 1) {
       params.set('page', page.toString());
     } else {
@@ -73,18 +79,26 @@ export default function LocationDashboardPage() {
     }
 
     router.replace(`${pathname}?${params.toString()}`);
-  }, [debouncedSearchTerm, page, pathname, router, searchParams]);
+  }, [debouncedSearchTerm, typeFilter, page, pathname, router, searchParams]);
 
   const sortBy = sort.direction 
     ? `${sort.column}:${sort.direction}` 
     : "createdAt:DESC";
+
+  // Convert typeFilter to isBusiness parameter for API
+  const isBusinessFilter = typeFilter === "all" 
+    ? undefined 
+    : typeFilter === "business" 
+      ? true 
+      : false; // public
 
   // Data fetching for locations
   const { data, isLoading, error } = useAllLocations(
     page,
     itemsPerPage,
     debouncedSearchTerm.trim() || undefined,
-    sortBy
+    sortBy,
+    isBusinessFilter
   );
 
   const locations = data?.data || [];
@@ -97,13 +111,6 @@ export default function LocationDashboardPage() {
     queryClient.invalidateQueries({ queryKey: ['allLocations'] });
     queryClient.invalidateQueries({ queryKey: ['locationStats'] });
   };
-
-  // Filter locations by type
-  const filteredLocations = useMemo(() => {
-    if (typeFilter === "all") return locations;
-    if (typeFilter === "business") return locations.filter((loc: Location) => loc.business);
-    return locations.filter((loc: Location) => !loc.business);
-  }, [locations, typeFilter]);
 
   if (error) {
     return (
@@ -279,7 +286,7 @@ export default function LocationDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredLocations.length === 0 ? (
+                    {locations.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-12">
                           <div className="flex flex-col items-center justify-center text-muted-foreground">
@@ -294,7 +301,7 @@ export default function LocationDashboardPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredLocations.map((loc: Location, index: number) => (
+                      locations.map((loc: Location, index: number) => (
                     <TableRow key={loc.id}>
                       <TableCell className="font-medium text-muted-foreground">
                         {(page - 1) * itemsPerPage + index + 1}

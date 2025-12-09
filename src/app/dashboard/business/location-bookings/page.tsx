@@ -35,6 +35,13 @@ import { useOwnerLocationBookings } from "@/hooks/locations/useOwnerLocationBook
 import { useConflictingBookings } from "@/hooks/locations/useConflictingBookings";
 import Link from "next/link";
 import { format } from "date-fns";
+import {
+  PageHeader,
+  PageContainer,
+  TableFilters,
+  SortableTableHeader,
+  type SortDirection,
+} from "@/components/shared";
 
 const getStatusBadge = (status: string) => {
   const statusUpper = status?.toUpperCase();
@@ -388,7 +395,7 @@ export default function LocationBookingsPage() {
                   { value: "SOFT_LOCKED", label: "Soft Locked" },
                   { value: "CANCELLED", label: "Cancelled" },
                 ],
-                onValueChange: (value) => {
+                onValueChange: (value: string) => {
                   setStatusFilter(value);
                   setPage(1);
                 },

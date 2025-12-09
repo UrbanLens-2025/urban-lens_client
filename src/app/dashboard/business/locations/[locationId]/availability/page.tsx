@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Pencil, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Layers, DollarSign, Calendar, Save, Settings, Info, HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Pencil, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Layers, DollarSign, Calendar, Save, Settings, Info, HelpCircle, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
 import { useWeeklyAvailabilities } from "@/hooks/availability/useWeeklyAvailabilities";
 import { useCreateWeeklyAvailability } from "@/hooks/availability/useCreateWeeklyAvailability";
 import { useDeleteAvailability } from "@/hooks/availability/useDeleteAvailability";
@@ -279,6 +279,11 @@ export default function AvailabilityPage({
   const [editedStartHour, setEditedStartHour] = useState<number>(0);
   const [editedEndHour, setEditedEndHour] = useState<number>(0);
   const [editErrors, setEditErrors] = useState<{ start?: string; end?: string; overlap?: string }>({});
+  
+  // Copy dialog state
+  const [showCopyDialog, setShowCopyDialog] = useState(false);
+  const [sourceDay, setSourceDay] = useState<number | null>(null);
+  const [targetDays, setTargetDays] = useState<Set<number>>(new Set());
 
   // Track hovered block for highlighting
   const [hoveredBlock, setHoveredBlock] = useState<WeeklyAvailabilitySlot | null>(null);
@@ -433,7 +438,8 @@ export default function AvailabilityPage({
       hasMovedRef.current = true;
       const roundedHour = roundHour(hour);
 
-      // Only allow resizing within the same day
+      // Allow resizing across days
+      // Note: Resizing still works within the same day for better UX
       if (resizeSlotRef.current.dayOfWeek !== day) {
         return;
       }
@@ -749,6 +755,70 @@ export default function AvailabilityPage({
     setSlotsToConfirm([]);
   };
 
+  // Handle copy slots to other days
+  const handleCopySlots = async () => {
+    if (sourceDay === null || targetDays.size === 0) return;
+
+    // Get all slots from the source day
+    const sourceSlots = displayAvailability.filter(slot => slot.dayOfWeek === sourceDay);
+    
+    if (sourceSlots.length === 0) return;
+
+    // Create slots for each target day
+    const slotsToCreate: WeeklyAvailabilitySlot[] = [];
+    
+    targetDays.forEach(targetDay => {
+      // Skip if target day is the same as source day
+      if (targetDay === sourceDay) return;
+      
+      sourceSlots.forEach(sourceSlot => {
+        // Check for overlaps in target day
+        const hasOverlap = displayAvailability.some(existingSlot => {
+          if (existingSlot.dayOfWeek !== targetDay) return false;
+          // Check if time ranges overlap
+          return !(sourceSlot.endHour <= existingSlot.startHour || sourceSlot.startHour >= existingSlot.endHour);
+        });
+        
+        if (!hasOverlap) {
+          slotsToCreate.push({
+            dayOfWeek: targetDay,
+            startHour: sourceSlot.startHour,
+            endHour: sourceSlot.endHour,
+          });
+        }
+      });
+    });
+
+    if (slotsToCreate.length === 0) {
+      return;
+    }
+
+    // Create all slots sequentially
+    try {
+      for (const slot of slotsToCreate) {
+        const apiPayload = {
+          locationId,
+          ...convertToApiFormat(slot),
+        };
+        
+        await new Promise<void>((resolve, reject) => {
+          createWeeklyAvailability(apiPayload, {
+            onSuccess: () => resolve(),
+            onError: (err) => reject(err),
+          });
+        });
+      }
+
+      // Reset state
+      setShowCopyDialog(false);
+      setSourceDay(null);
+      setTargetDays(new Set());
+    } catch (error) {
+      // Error handling is done by the mutation
+      console.error("Error copying slots:", error);
+    }
+  };
+
   // Validate edited times
   const validateEditedTimes = (startHour: number, endHour: number, dayOfWeek: number, slotId?: number): { start?: string; end?: string; overlap?: string } => {
     const errors: { start?: string; end?: string; overlap?: string } = {};
@@ -925,13 +995,18 @@ export default function AvailabilityPage({
     const isEdgeOfHovered = isEdgeOfHoveredBlock(day, hour);
 
     return cn(
-      "w-full h-full rounded border transition-all flex items-center justify-center text-[8px] font-medium relative",
+      "w-full h-full rounded border transition-all flex items-center justify-center relative",
       {
-        "bg-green-500 border-green-600 border-2 text-white cursor-pointer": status === "saved" && !isEdgeOfHovered,
-        "bg-green-600 border-green-700 border-2 text-white shadow-md cursor-pointer": status === "saved" && isHovered && !isEdgeOfHovered,
-        "bg-green-600 border-green-700 border-2 text-white shadow-md cursor-col-resize": status === "saved" && isEdgeOfHovered,
-        "bg-blue-400 border-blue-500 border-2 text-white": isSelected && status === "available",
-        "bg-white border-gray-300 border-2 text-gray-700 hover:opacity-80 cursor-grab": !isSelected && status === "available",
+        // Saved availability - green
+        "bg-green-500 dark:bg-green-600 border-green-600 dark:border-green-500 border text-white cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02]": status === "saved" && !isEdgeOfHovered && !isHovered,
+        "bg-green-600 dark:bg-green-500 border-green-700 dark:border-green-400 border text-white shadow-md cursor-pointer hover:shadow-lg hover:scale-[1.03]": status === "saved" && isHovered && !isEdgeOfHovered,
+        "bg-green-600 dark:bg-green-500 border-green-700 dark:border-green-400 border text-white shadow-md cursor-col-resize hover:shadow-lg": status === "saved" && isEdgeOfHovered,
+        
+        // Selected cells - blue
+        "bg-blue-500 dark:bg-blue-600 border-blue-600 dark:border-blue-500 border text-white shadow-sm hover:shadow-md hover:scale-[1.02]": isSelected && status === "available",
+        
+        // Available/Empty cells
+        "bg-background border-border/50 border hover:border-border hover:bg-muted/30 cursor-grab": !isSelected && status === "available",
       }
     );
   };
@@ -1078,81 +1153,129 @@ export default function AvailabilityPage({
               </Card>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <Card>
-                <CardContent className="pt-6 space-y-6">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
-              <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
-                <span>Total weekly hours</span>
-                <Clock className="h-4 w-4 text-primary" />
+              <Card className="border-2 border-primary/10 shadow-xl">
+                <CardContent className="pt-4 space-y-4">
+          {/* Statistics Cards */}
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border-2 border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Total Weekly Hours</span>
+                <div className="p-1 rounded-md bg-primary/10">
+                  <Clock className="h-3 w-3 text-primary" />
+                </div>
               </div>
-              <p className="mt-2 text-2xl font-semibold">
+              <p className="text-xl font-bold text-foreground">
                 {weeklyStats.totalHours}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">hrs</span>
+                <span className="ml-1 text-xs font-normal text-muted-foreground">hrs</span>
               </p>
             </div>
-            <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
-              <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
-                <span>Active days</span>
-                <CalendarDays className="h-4 w-4 text-primary" />
+            <div className="rounded-lg border-2 border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Active Days</span>
+                <div className="p-1 rounded-md bg-primary/10">
+                  <CalendarDays className="h-3 w-3 text-primary" />
+                </div>
               </div>
-              <p className="mt-2 text-2xl font-semibold">
+              <p className="text-xl font-bold text-foreground">
                 {weeklyStats.activeDays}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">days</span>
+                <span className="ml-1 text-xs font-normal text-muted-foreground">days</span>
               </p>
             </div>
-            <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
-              <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
-                <span>Availability blocks</span>
-                <Layers className="h-4 w-4 text-primary" />
+            <div className="rounded-lg border-2 border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Availability Blocks</span>
+                <div className="p-1 rounded-md bg-primary/10">
+                  <Layers className="h-3 w-3 text-primary" />
+                </div>
               </div>
-              <div className="mt-2 flex items-baseline gap-3">
-                <p className="text-2xl font-semibold">{weeklyStats.slotCount}</p>
-                <span className="text-xs text-muted-foreground">
-                  longest block {weeklyStats.longestBlock || 0} hr{weeklyStats.longestBlock === 1 ? "" : "s"}
+              <div className="flex items-baseline gap-2">
+                <p className="text-xl font-bold text-foreground">{weeklyStats.slotCount}</p>
+                <span className="text-[10px] text-muted-foreground">
+                  longest {weeklyStats.longestBlock || 0}hr{weeklyStats.longestBlock === 1 ? "" : "s"}
                 </span>
               </div>
             </div>
           </div>
 
+          {/* Legend and Actions */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-4 rounded-lg border border-dashed border-border/60 bg-muted/20 px-4 py-3 text-xs font-medium text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-3 w-3 rounded bg-green-500 ring-1 ring-green-600" />
-                Saved availability
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border-2 border-primary/10 bg-gradient-to-r from-muted/50 to-muted/30 px-3 py-2">
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
+                <Info className="h-3 w-3" />
+                <span>Legend:</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-3 w-3 rounded bg-blue-400 ring-1 ring-blue-500" />
-                Currently selected
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block h-3 w-3 rounded bg-green-500 border border-green-600 shadow-sm" />
+                <span className="text-[10px] font-medium text-foreground">Saved</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-3 w-3 rounded bg-background ring-1 ring-border" />
-                Empty slot
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block h-3 w-3 rounded bg-blue-400 border border-blue-500 shadow-sm" />
+                <span className="text-[10px] font-medium text-foreground">Selected</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block h-3 w-3 rounded bg-background border border-border shadow-sm" />
+                <span className="text-[10px] font-medium text-muted-foreground">Empty</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {hasSelection && (
-                <Badge variant="secondary" className="bg-primary/10 text-primary">
-                  {selectedCells.size} cell{selectedCells.size === 1 ? "" : "s"} selected
+                <Badge variant="secondary" className="bg-primary/10 text-primary border border-primary/20 text-xs font-semibold px-2 py-1">
+                  {selectedCells.size} selected
                 </Badge>
               )}
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => {
+                  // Find the day with the most slots to use as default source
+                  const slotsByDay = new Map<number, WeeklyAvailabilitySlot[]>();
+                  displayAvailability.forEach(slot => {
+                    if (!slotsByDay.has(slot.dayOfWeek)) {
+                      slotsByDay.set(slot.dayOfWeek, []);
+                    }
+                    slotsByDay.get(slot.dayOfWeek)!.push(slot);
+                  });
+                  
+                  // Find day with most slots as default
+                  let maxSlots = 0;
+                  let dayWithMostSlots = 0;
+                  slotsByDay.forEach((slots, day) => {
+                    if (slots.length > maxSlots) {
+                      maxSlots = slots.length;
+                      dayWithMostSlots = day;
+                    }
+                  });
+                  
+                  if (maxSlots > 0) {
+                    setSourceDay(dayWithMostSlots);
+                    setTargetDays(new Set());
+                    setShowCopyDialog(true);
+                  }
+                }}
+                disabled={displayAvailability.length === 0}
+                className="h-8 text-xs border-2 border-primary/20 hover:bg-primary/10"
+              >
+                <Copy className="h-3 w-3 mr-1.5" />
+                Copy to Days
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={clearSelection}
                 disabled={!hasSelection}
+                className="h-8 text-xs border-2 border-primary/20 hover:bg-primary/10"
               >
-                Clear selection
+                Clear
               </Button>
             </div>
           </div>
 
           {/* Weekly Grid */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg border-2 border-primary/10 bg-background shadow-md">
             <div className="inline-block min-w-full">
               <div
                 className={cn(
-                  "rounded-xl border border-border/60 bg-muted/10 p-3 shadow-sm",
+                  "rounded-lg border border-primary/10 bg-muted/5 p-2",
                   isDragging && "cursor-grabbing select-none",
                   isResizing && "cursor-col-resize select-none"
                 )}
@@ -1161,28 +1284,32 @@ export default function AvailabilityPage({
                 }}
               >
                 {/* Header Row - Days of Week */}
-                <div className="mb-2 grid grid-cols-[95px_repeat(7,1fr)] gap-1 border-b border-border/60 pb-2">
-                  <div className="border-r border-border/60" />
+                <div className="mb-2 grid grid-cols-[80px_repeat(7,1fr)] gap-1 border-b-2 border-primary/20 pb-2">
+                  <div className="flex items-center justify-center">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Time</span>
+                  </div>
                   {DAYS_OF_WEEK.map((day, index) => (
                     <div
                       key={index}
-                      className="py-2 text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground"
+                      className="py-1.5 text-center text-[10px] font-bold uppercase tracking-wide text-muted-foreground"
                     >
                       {day.slice(0, 3)}
                     </div>
                   ))}
                 </div>
 
-                {/* Time Slot Rows */}
-                <div className="space-y-0.5">
-                  {HOURS.map((hour) => {
+                {/* Time Slot Rows - Show only business hours (6 AM - 10 PM) for shorter calendar */}
+                <div className="space-y-0.5 max-h-[480px] overflow-y-auto">
+                  {HOURS.filter(hour => hour >= 6 && hour < 22).map((hour) => {
                     const isNightTime = hour >= 21 || hour <= 5;
+                    const isBusinessHours = hour >= 9 && hour <= 17;
                     return (
                       <div
                         key={hour}
                         className={cn(
-                          "grid grid-cols-[95px_repeat(7,1fr)] gap-1 rounded-md px-0.5 py-0.5",
-                          isNightTime && "bg-muted/40"
+                          "grid grid-cols-[80px_repeat(7,1fr)] gap-1 rounded px-0.5 py-0.5 transition-colors",
+                          isNightTime && "bg-muted/20",
+                          isBusinessHours && !isNightTime && "bg-muted/5"
                         )}
                         onMouseUp={(e) => {
                           e.stopPropagation();
@@ -1190,8 +1317,13 @@ export default function AvailabilityPage({
                         }}
                       >
                         {/* Time Label */}
-                        <div className="flex items-center justify-center pr-2 text-xs font-medium text-muted-foreground">
-                          {formatHourRange(hour)}
+                        <div className="flex items-center justify-center pr-1">
+                          <span className={cn(
+                            "text-[10px] font-semibold",
+                            isBusinessHours ? "text-foreground" : "text-muted-foreground"
+                          )}>
+                            {formatHourRange(hour)}
+                          </span>
                         </div>
 
                         {/* Day Cells */}
@@ -1213,7 +1345,7 @@ export default function AvailabilityPage({
                             <div
                               key={`${dayIndex}_${hour}`}
                               className={cn(
-                                "h-[20px] select-none",
+                                "h-[16px] select-none",
                                 !isResizeEdge && !isDragging && !isResizing && !availabilityCellsSet.has(key) && "cursor-grab",
                                 isDragging && "cursor-grabbing",
                                 isResizing && "cursor-col-resize"
@@ -1230,9 +1362,9 @@ export default function AvailabilityPage({
                                 {showResizeIcon && (
                                   <>
                                     {isStartEdge ? (
-                                      <ChevronLeft className="h-3 w-3 text-white drop-shadow-md" />
+                                      <ChevronLeft className="h-2 w-2 text-white drop-shadow-md" />
                                     ) : isEndEdge ? (
-                                      <ChevronRight className="h-3 w-3 text-white drop-shadow-md" />
+                                      <ChevronRight className="h-2 w-2 text-white drop-shadow-md" />
                                     ) : null}
                                   </>
                                 )}
@@ -1825,6 +1957,179 @@ export default function AvailabilityPage({
                 )}
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Copy to Days Dialog */}
+      <Dialog open={showCopyDialog} onOpenChange={setShowCopyDialog}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Copy className="h-5 w-5 text-primary" />
+              </div>
+              Copy Availability to Other Days
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              Select a source day and target days to copy availability slots.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Source Day Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <div className="p-1 rounded bg-primary/10">
+                  <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                </div>
+                Source Day (copy from):
+              </Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {DAYS_OF_WEEK.map((day, index) => {
+                  const hasSlots = displayAvailability.some(s => s.dayOfWeek === index);
+                  const isSelected = sourceDay === index;
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => {
+                        setSourceDay(index);
+                        setTargetDays(new Set());
+                      }}
+                      disabled={!hasSlots}
+                      className={cn(
+                        "p-3 rounded-lg border-2 transition-all text-sm font-semibold",
+                        isSelected
+                          ? "bg-primary/10 border-primary text-primary shadow-md"
+                          : hasSlots
+                          ? "bg-background border-border/50 hover:border-primary/50 hover:bg-primary/5"
+                          : "bg-muted/30 border-border/30 text-muted-foreground cursor-not-allowed opacity-50"
+                      )}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        {isSelected && <Check className="h-4 w-4" />}
+                        {day}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {sourceDay !== null && (
+              <>
+                {/* Source Day Info */}
+                <div className="rounded-lg border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-muted-foreground mb-1">Copying from:</div>
+                      <div className="text-lg font-bold text-foreground">{DAYS_OF_WEEK[sourceDay]}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-primary">
+                        {displayAvailability.filter(s => s.dayOfWeek === sourceDay).length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">slot(s)</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Target Days Selection */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold flex items-center gap-2">
+                    <div className="p-1 rounded bg-primary/10">
+                      <Calendar className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    Target Days (copy to):
+                  </Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {DAYS_OF_WEEK.map((day, index) => {
+                      if (index === sourceDay) return null; // Don't show source day
+                      const isSelected = targetDays.has(index);
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            const newTargetDays = new Set(targetDays);
+                            if (isSelected) {
+                              newTargetDays.delete(index);
+                            } else {
+                              newTargetDays.add(index);
+                            }
+                            setTargetDays(newTargetDays);
+                          }}
+                          className={cn(
+                            "p-3 rounded-lg border-2 transition-all text-sm font-semibold",
+                            isSelected
+                              ? "bg-primary/10 border-primary text-primary shadow-md"
+                              : "bg-background border-border/50 hover:border-primary/50 hover:bg-primary/5"
+                          )}
+                        >
+                          <div className="flex items-center justify-center gap-2">
+                            {isSelected && <Check className="h-4 w-4" />}
+                            {day}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Preview */}
+                {targetDays.size > 0 && (
+                  <div className="rounded-lg border-2 border-primary/20 bg-gradient-to-r from-muted/50 to-muted/30 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-sm font-semibold text-muted-foreground">
+                        Will create:
+                      </div>
+                      <div className="text-lg font-bold text-primary">
+                        {displayAvailability.filter(s => s.dayOfWeek === sourceDay).length * targetDays.size} slot(s)
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Array.from(targetDays).map(dayIndex => (
+                        <Badge key={dayIndex} variant="secondary" className="bg-primary/10 text-primary border border-primary/20 text-xs font-semibold">
+                          {DAYS_OF_WEEK[dayIndex]}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCopyDialog(false);
+                setSourceDay(null);
+                setTargetDays(new Set());
+              }}
+              disabled={isCreating}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCopySlots}
+              disabled={isCreating || targetDays.size === 0}
+              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Copying...
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy Slots
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

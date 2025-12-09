@@ -594,6 +594,11 @@ export interface LocationBookingConfig {
   minBookingDurationMinutes: number;
   maxBookingDurationMinutes: number;
   minGapBetweenBookingsMinutes: number;
+  maxCapacity?: number;
+  refundEnabled?: boolean;
+  refundCutoffHours?: number;
+  refundPercentageAfterCutoff?: number;
+  refundPercentageBeforeCutoff?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -606,6 +611,11 @@ export interface CreateLocationBookingConfigPayload {
   minBookingDurationMinutes: number;
   maxBookingDurationMinutes: number;
   minGapBetweenBookingsMinutes: number;
+  maxCapacity?: number;
+  refundEnabled?: boolean;
+  refundCutoffHours?: number;
+  refundPercentageAfterCutoff?: number;
+  refundPercentageBeforeCutoff?: number;
 }
 
 export interface UpdateLocationBookingConfigPayload {
@@ -615,6 +625,11 @@ export interface UpdateLocationBookingConfigPayload {
   minBookingDurationMinutes: number;
   maxBookingDurationMinutes: number;
   minGapBetweenBookingsMinutes: number;
+  maxCapacity?: number;
+  refundEnabled?: boolean;
+  refundCutoffHours?: number;
+  refundPercentageAfterCutoff?: number;
+  refundPercentageBeforeCutoff?: number;
 }
 
 export interface BookableLocation {
