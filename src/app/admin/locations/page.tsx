@@ -3,6 +3,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { SortableTableHeader, SortDirection } from '@/components/shared/SortableTableHeader';
+import { TableFilters } from '@/components/shared/TableFilters';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { PageContainer } from '@/components/shared/PageContainer';
 import {
   Card,
   CardContent,
@@ -23,17 +27,17 @@ import { Input } from '@/components/ui/input';
 import {
   IconSearch,
   IconRefresh,
-  IconMapPin,
   IconBuildingStore,
   IconWorld,
   IconEye,
 } from '@tabler/icons-react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MapPin } from 'lucide-react';
 import { Location } from '@/types';
 import { useAllLocations } from '@/hooks/admin/useAllLocations';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatShortDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import Image from 'next/image';
 
 export default function LocationDashboardPage() {
   const router = useRouter();
@@ -45,6 +49,11 @@ export default function LocationDashboardPage() {
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
+  const [sort, setSort] = useState<{ column: string; direction: SortDirection }>({
+    column: "createdAt",
+    direction: "DESC",
+  });
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const itemsPerPage = 10;
 
   // Update URL when filters change
@@ -67,12 +76,16 @@ export default function LocationDashboardPage() {
     router.replace(`${pathname}?${params.toString()}`);
   }, [debouncedSearchTerm, page, pathname, router, searchParams]);
 
+  const sortBy = sort.direction 
+    ? `${sort.column}:${sort.direction}` 
+    : "createdAt:DESC";
+
   // Data fetching for locations
   const { data, isLoading, error } = useAllLocations(
     page,
     itemsPerPage,
     debouncedSearchTerm.trim() || undefined,
-    'createdAt:DESC'
+    sortBy
   );
 
   const locations = data?.data || [];
@@ -120,15 +133,47 @@ export default function LocationDashboardPage() {
     );
   }
 
+  const handleSort = (column: string, direction: SortDirection) => {
+    setSort({ column, direction });
+    setPage(1);
+  };
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (typeFilter !== "all") count++;
+    if (debouncedSearchTerm) count++;
+    return count;
+  }, [typeFilter, debouncedSearchTerm]);
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setTypeFilter("all");
+    setSort({ column: "createdAt", direction: "DESC" });
+    setPage(1);
+  };
+
+  // Filter locations by type
+  const filteredLocations = useMemo(() => {
+    if (typeFilter === "all") return locations;
+    if (typeFilter === "business") return locations.filter((loc: Location) => loc.business);
+    return locations.filter((loc: Location) => !loc.business);
+  }, [locations, typeFilter]);
+
   return (
-    <div className="space-y-6">
+    <PageContainer>
+      <PageHeader
+        title="Location Management"
+        description="Manage and view all approved locations"
+        icon={MapPin}
+      />
+
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Locations</CardTitle>
             <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-              <IconMapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
           </CardHeader>
           <CardContent>
@@ -186,56 +231,111 @@ export default function LocationDashboardPage() {
       </div>
 
       {/* Main Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>All Locations ({meta?.totalItems || 0})</span>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search locations..."
-                  className="pl-8 w-[250px]"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
+      <Card className="overflow-hidden border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
+        <CardContent className="p-0">
+          <div className="flex flex-col h-full">
+            {/* Filters */}
+            <TableFilters
+              searchValue={searchTerm}
+              onSearchChange={(value) => {
+                setSearchTerm(value);
+                setPage(1);
+              }}
+              searchPlaceholder="Search locations..."
+              filters={[
+                {
+                  key: "type",
+                  label: "Type",
+                  value: typeFilter,
+                  options: [
+                    { value: "all", label: "All Types" },
+                    { value: "business", label: "Business" },
+                    { value: "public", label: "Public" },
+                  ],
+                  onValueChange: (value) => {
+                    setTypeFilter(value);
                     setPage(1);
-                  }}
-                />
-              </div>
-              <Button variant="outline" size="icon" onClick={refresh} disabled={isLoading}>
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <IconRefresh className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </CardTitle>
-          <CardDescription className="hidden">
-            Manage approved locations.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">#</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Address</TableHead>
-                    <TableHead>Visible</TableHead>
-                    <TableHead>Created</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {locations.map((loc: Location, index: number) => (
+                  },
+                },
+              ]}
+              activeFiltersCount={activeFiltersCount}
+              onClearFilters={handleClearFilters}
+              actions={
+                <Button variant="outline" size="sm" onClick={refresh} disabled={isLoading} className="h-11 border-2 border-primary/20">
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <IconRefresh className="h-4 w-4" />
+                  )}
+                </Button>
+              }
+            />
+
+            {/* Table */}
+            <div className="flex-1 overflow-auto">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-[50px] font-semibold">#</TableHead>
+                      <SortableTableHeader
+                        column="name"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Name
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="business"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Type
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="addressLine"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Address
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="isVisibleOnMap"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Visible
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="createdAt"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Created
+                      </SortableTableHeader>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLocations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-12">
+                          <div className="flex flex-col items-center justify-center text-muted-foreground">
+                            <MapPin className="h-12 w-12 mb-4 opacity-50" />
+                            <p className="font-medium">No locations found</p>
+                            <p className="text-sm mt-2">
+                              {debouncedSearchTerm || typeFilter !== "all"
+                                ? "Try adjusting your filters"
+                                : "No locations available"}
+                            </p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredLocations.map((loc: Location, index: number) => (
                     <TableRow key={loc.id}>
                       <TableCell className="font-medium text-muted-foreground">
                         {(page - 1) * itemsPerPage + index + 1}
@@ -243,9 +343,24 @@ export default function LocationDashboardPage() {
                       <TableCell className="font-medium max-w-[200px]">
                         <a
                           href={`/admin/locations/${loc.id}`}
-                          className="hover:underline text-blue-600 hover:text-blue-800 truncate block"
+                          className="hover:underline text-blue-600 hover:text-blue-800 flex items-center gap-3"
                         >
-                          {loc.name}
+                          {loc.imageUrl && loc.imageUrl.length > 0 ? (
+                            <div className="relative h-10 w-10 flex-shrink-0 rounded-md overflow-hidden border border-border">
+                              <Image
+                                src={loc.imageUrl[0]}
+                                alt={loc.name}
+                                fill
+                                className="object-cover"
+                                sizes="40px"
+                              />
+                            </div>
+                          ) : (
+                            <div className="h-10 w-10 flex-shrink-0 rounded-md bg-muted border border-border flex items-center justify-center">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                          <span className="truncate">{loc.name}</span>
                         </a>
                       </TableCell>
                       <TableCell>
@@ -296,45 +411,51 @@ export default function LocationDashboardPage() {
                       </TableCell>
                       <TableCell>{formatShortDate(loc.createdAt)}</TableCell>
                     </TableRow>
-                  ))}
-                  {locations.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24">
-                        No locations found matching your criteria.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-
-              {/* Pagination */}
-              {meta && meta.totalPages > 1 && (
-                <div className="flex items-center justify-end space-x-2 py-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(page - 1)}
-                    disabled={page <= 1}
-                  >
-                    Previous
-                  </Button>
-                  <div className="text-sm text-muted-foreground">
-                    Page {page} of {meta.totalPages}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(page + 1)}
-                    disabled={page >= meta.totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               )}
-            </>
-          )}
+            </div>
+
+            {/* Pagination */}
+            {meta && meta.totalPages > 1 && (
+              <div className="border-t border-primary/10 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {((page - 1) * itemsPerPage) + 1} to{" "}
+                    {Math.min(page * itemsPerPage, meta.totalItems)} of{" "}
+                    {meta.totalItems} locations
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page - 1)}
+                      disabled={page <= 1 || isLoading}
+                      className="h-10"
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-muted-foreground px-2">
+                      Page {page} of {meta.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page + 1)}
+                      disabled={page >= meta.totalPages || isLoading}
+                      className="h-10"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
-    </div>
-  );
-}
+      </PageContainer>
+    );
+  }

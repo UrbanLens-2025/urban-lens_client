@@ -42,6 +42,9 @@ import {
   ChartConfig,
 } from "@/components/ui/chart";
 import Link from "next/link";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { PageContainer } from "@/components/shared/PageContainer";
+import { StatCard } from "@/components/shared/StatCard";
 
 export default function CreatorDashboardPage() {
   const router = useRouter();
@@ -248,228 +251,145 @@ export default function CreatorDashboardPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Welcome Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Creator Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Overview of your events, attendees, and revenue
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => router.push('/dashboard/creator/events')}
-          >
-            <Eye className="mr-2 h-4 w-4" />
-            View Events
-          </Button>
-          <Button onClick={() => router.push('/dashboard/creator/request/create')}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create Event
-          </Button>
-        </div>
-      </div>
+    <PageContainer>
+      {/* Professional Header */}
+      <PageHeader
+        title="Creator Dashboard"
+        description="Overview of your events, attendees, and revenue"
+        icon={CalendarDays}
+        actions={
+          <>
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/dashboard/creator/events')}
+              className="h-11 border-2 border-primary/20 hover:border-primary/40"
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              View Events
+            </Button>
+            <Button 
+              onClick={() => router.push('/dashboard/creator/request/create')}
+              className="h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create Event
+            </Button>
+          </>
+        }
+      />
 
       {/* Enhanced Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Events
-            </CardTitle>
-            <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <CalendarDays className="h-4 w-4 text-blue-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{stats.totalEvents}</div>
-            <div className="flex items-center gap-2 mt-2">
-              <p className="text-xs text-muted-foreground">
-                {stats.activeEvents} active
-              </p>
-              {stats.eventsChange !== 0 && (
-                <div className={`flex items-center gap-1 text-xs ${
-                  stats.eventsChange > 0 ? "text-emerald-600" : "text-red-600"
-                }`}>
-                  {stats.eventsChange > 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  {Math.abs(stats.eventsChange).toFixed(1)}%
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Events"
+          value={stats.totalEvents}
+          icon={CalendarDays}
+          iconColor="text-blue-600"
+          iconBg="bg-blue-500/10"
+          description={`${stats.activeEvents} active`}
+          trend={
+            stats.eventsChange !== 0
+              ? {
+                  value: stats.eventsChange,
+                  isPositive: stats.eventsChange > 0,
+                }
+              : undefined
+          }
+          onClick={() => router.push('/dashboard/creator/events')}
+        />
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Attendees
-            </CardTitle>
-            <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <Users className="h-4 w-4 text-emerald-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-emerald-600">
-              {stats.totalAttendees.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Across all events
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Attendees"
+          value={stats.totalAttendees.toLocaleString()}
+          icon={Users}
+          iconColor="text-emerald-600"
+          iconBg="bg-emerald-500/10"
+          description="Across all events"
+          onClick={() => router.push('/dashboard/creator/events')}
+        />
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Active Events
-            </CardTitle>
-            <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-              <MapPin className="h-4 w-4 text-purple-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-600">
-              {stats.activeEvents}
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <p className="text-xs text-muted-foreground">
-                {stats.draftEvents} drafts
-              </p>
-              {stats.completedEvents > 0 && (
-                <Badge variant="outline" className="text-xs">
-                  {stats.completedEvents} completed
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Active Events"
+          value={stats.activeEvents}
+          icon={MapPin}
+          iconColor="text-purple-600"
+          iconBg="bg-purple-500/10"
+          description={`${stats.draftEvents} drafts`}
+          footer={
+            stats.completedEvents > 0 && (
+              <Badge variant="outline" className="text-xs">
+                {stats.completedEvents} completed
+              </Badge>
+            )
+          }
+          onClick={() => router.push('/dashboard/creator/events')}
+        />
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Revenue
-            </CardTitle>
-            <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
-              <DollarSign className="h-4 w-4 text-amber-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-amber-600">
-              {formatCurrency(stats.totalRevenue)}
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <p className="text-xs text-muted-foreground">
-                {formatCurrency(stats.thisMonthRevenue)} this month
-              </p>
-              {stats.revenueChange !== 0 && (
-                <div className={`flex items-center gap-1 text-xs ${
-                  stats.revenueChange > 0 ? "text-emerald-600" : "text-red-600"
-                }`}>
-                  {stats.revenueChange > 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  {Math.abs(stats.revenueChange).toFixed(1)}%
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Revenue"
+          value={formatCurrency(stats.totalRevenue)}
+          icon={DollarSign}
+          iconColor="text-amber-600"
+          iconBg="bg-amber-500/10"
+          description={`${formatCurrency(stats.thisMonthRevenue)} this month`}
+          trend={
+            stats.revenueChange !== 0
+              ? {
+                  value: stats.revenueChange,
+                  isPositive: stats.revenueChange > 0,
+                }
+              : undefined
+          }
+          onClick={() => router.push('/dashboard/creator/wallet')}
+        />
       </div>
 
       {/* Quick Actions & Insights */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Draft Events"
+          value={stats.draftEvents}
+          icon={Clock}
+          iconColor="text-yellow-600"
+          iconBg="bg-yellow-500/10"
+          description="Needs publishing"
           onClick={() => router.push('/dashboard/creator/events')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Draft Events</p>
-                <p className="text-2xl font-bold mt-1">{stats.draftEvents}</p>
-              </div>
-              <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              Needs publishing
-              <ArrowRight className="h-3 w-3" />
-            </p>
-          </CardContent>
-        </Card>
+        />
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        <StatCard
+          title="Completed Events"
+          value={stats.completedEvents}
+          icon={CheckCircle2}
+          iconColor="text-green-600"
+          iconBg="bg-green-500/10"
+          description="Past events"
           onClick={() => router.push('/dashboard/creator/events')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Completed Events</p>
-                <p className="text-2xl font-bold mt-1">{stats.completedEvents}</p>
-              </div>
-              <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              Past events
-              <ArrowRight className="h-3 w-3" />
-            </p>
-          </CardContent>
-        </Card>
+        />
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        <StatCard
+          title="This Month Revenue"
+          value={formatCurrency(stats.thisMonthRevenue)}
+          icon={Wallet}
+          iconColor="text-emerald-600"
+          iconBg="bg-emerald-500/10"
+          description="View wallet"
           onClick={() => router.push('/dashboard/creator/wallet')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">This Month Revenue</p>
-                <p className="text-2xl font-bold mt-1">{formatCurrency(stats.thisMonthRevenue)}</p>
-              </div>
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Wallet className="h-5 w-5 text-emerald-600" />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              View wallet
-              <ArrowRight className="h-3 w-3" />
-            </p>
-          </CardContent>
-        </Card>
+        />
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        <StatCard
+          title="Upcoming Events"
+          value={upcomingEvents.length}
+          icon={Ticket}
+          iconColor="text-blue-600"
+          iconBg="bg-blue-500/10"
+          description="Scheduled events"
           onClick={() => router.push('/dashboard/creator/events')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Upcoming Events</p>
-                <p className="text-2xl font-bold mt-1">{upcomingEvents.length}</p>
-              </div>
-              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Ticket className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              Scheduled events
-              <ArrowRight className="h-3 w-3" />
-            </p>
-          </CardContent>
-        </Card>
+        />
       </div>
 
       {/* Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-border/60 shadow-sm">
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -551,15 +471,17 @@ export default function CreatorDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm">
+        <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                  </div>
                   Event Trends
                 </CardTitle>
-                <CardDescription className="mt-1">
+                <CardDescription className="mt-1 text-sm">
                   Events and revenue over time
                 </CardDescription>
               </div>
@@ -641,7 +563,7 @@ export default function CreatorDashboardPage() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-border/60 shadow-sm">
+        <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
@@ -711,11 +633,13 @@ export default function CreatorDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm">
+        <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Ticket className="h-4 w-4 text-primary" />
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+                  <Ticket className="h-4 w-4 text-primary" />
+                </div>
                 Upcoming Events
               </CardTitle>
               <Button
@@ -803,6 +727,6 @@ export default function CreatorDashboardPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   );
 }

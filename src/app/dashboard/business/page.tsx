@@ -38,6 +38,9 @@ import {
 } from "@/components/dashboard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { PageContainer } from "@/components/shared/PageContainer";
+import { StatCard } from "@/components/shared/StatCard";
 import {
   Bar,
   BarChart,
@@ -214,228 +217,145 @@ export default function BusinessDashboardPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Welcome Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Business Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Overview of your locations, bookings, and revenue
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => router.push('/dashboard/business/location-bookings')}
-          >
-            <Calendar className="mr-2 h-4 w-4" />
-            View Bookings
-          </Button>
-          <Button onClick={() => router.push('/dashboard/business/locations/create')}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Location
-          </Button>
-        </div>
-      </div>
+    <PageContainer>
+      {/* Professional Header */}
+      <PageHeader
+        title="Business Dashboard"
+        description="Overview of your locations, bookings, and revenue"
+        icon={Building2}
+        actions={
+          <>
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/dashboard/business/location-bookings')}
+              className="h-11 border-2 border-primary/20 hover:border-primary/40"
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              View Bookings
+            </Button>
+            <Button 
+              onClick={() => router.push('/dashboard/business/locations/create')}
+              className="h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Location
+            </Button>
+          </>
+        }
+      />
 
       {/* Enhanced Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Locations
-            </CardTitle>
-            <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <Building2 className="h-4 w-4 text-blue-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{stats.totalLocations}</div>
-            <div className="flex items-center gap-2 mt-2">
-              <p className="text-xs text-muted-foreground">
-                {stats.approvedLocations} visible on map
-              </p>
-              {stats.approvedLocations < stats.totalLocations && (
-                <Badge variant="outline" className="text-xs">
-                  {stats.totalLocations - stats.approvedLocations} hidden
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Locations"
+          value={stats.totalLocations}
+          icon={Building2}
+          iconColor="text-blue-600"
+          iconBg="bg-blue-500/10"
+          description={`${stats.approvedLocations} visible on map`}
+          footer={
+            stats.approvedLocations < stats.totalLocations && (
+              <Badge variant="outline" className="text-xs">
+                {stats.totalLocations - stats.approvedLocations} hidden
+              </Badge>
+            )
+          }
+          onClick={() => router.push('/dashboard/business/locations')}
+        />
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Check-ins
-            </CardTitle>
-            <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <Users className="h-4 w-4 text-emerald-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-emerald-600">
-              {stats.totalCheckIns.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Across all locations
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Check-ins"
+          value={stats.totalCheckIns.toLocaleString()}
+          icon={Users}
+          iconColor="text-emerald-600"
+          iconBg="bg-emerald-500/10"
+          description="Across all locations"
+          onClick={() => router.push('/dashboard/business/locations')}
+        />
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Bookings
-            </CardTitle>
-            <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-              <Calendar className="h-4 w-4 text-purple-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-600">
-              {stats.totalBookings.toLocaleString()}
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <p className="text-xs text-muted-foreground">
-                {stats.recentBookings} in last 30 days
-              </p>
-              {stats.bookingsChange !== 0 && (
-                <div className={`flex items-center gap-1 text-xs ${
-                  stats.bookingsChange > 0 ? "text-emerald-600" : "text-red-600"
-                }`}>
-                  {stats.bookingsChange > 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  {Math.abs(stats.bookingsChange).toFixed(1)}%
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Bookings"
+          value={stats.totalBookings.toLocaleString()}
+          icon={Calendar}
+          iconColor="text-purple-600"
+          iconBg="bg-purple-500/10"
+          description={`${stats.recentBookings} in last 30 days`}
+          trend={
+            stats.bookingsChange !== 0
+              ? {
+                  value: stats.bookingsChange,
+                  isPositive: stats.bookingsChange > 0,
+                }
+              : undefined
+          }
+          onClick={() => router.push('/dashboard/business/location-bookings')}
+        />
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Revenue
-            </CardTitle>
-            <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
-              <DollarSign className="h-4 w-4 text-amber-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-amber-600">
-              {formatCurrency(stats.totalRevenue)}
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <p className="text-xs text-muted-foreground">
-                {formatCurrency(stats.thisMonthRevenue)} this month
-              </p>
-              {stats.revenueChange !== 0 && (
-                <div className={`flex items-center gap-1 text-xs ${
-                  stats.revenueChange > 0 ? "text-emerald-600" : "text-red-600"
-                }`}>
-                  {stats.revenueChange > 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  {Math.abs(stats.revenueChange).toFixed(1)}%
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Revenue"
+          value={formatCurrency(stats.totalRevenue)}
+          icon={DollarSign}
+          iconColor="text-amber-600"
+          iconBg="bg-amber-500/10"
+          description={`${formatCurrency(stats.thisMonthRevenue)} this month`}
+          trend={
+            stats.revenueChange !== 0
+              ? {
+                  value: stats.revenueChange,
+                  isPositive: stats.revenueChange > 0,
+                }
+              : undefined
+          }
+          onClick={() => router.push('/dashboard/business/wallet')}
+        />
       </div>
 
       {/* Quick Actions & Insights */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Pending Bookings"
+          value={stats.pendingBookings}
+          icon={Clock}
+          iconColor="text-orange-600"
+          iconBg="bg-orange-500/10"
+          description="Requires your action"
           onClick={() => router.push('/dashboard/business/location-bookings')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Pending Bookings</p>
-                <p className="text-2xl font-bold mt-1">{stats.pendingBookings}</p>
-              </div>
-              <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-orange-600" />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              Requires your action
-              <ArrowRight className="h-3 w-3" />
-            </p>
-          </CardContent>
-        </Card>
+        />
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        <StatCard
+          title="Active Bookings"
+          value={stats.activeBookings}
+          icon={CheckCircle2}
+          iconColor="text-green-600"
+          iconBg="bg-green-500/10"
+          description="Upcoming events"
           onClick={() => router.push('/dashboard/business/location-bookings')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Bookings</p>
-                <p className="text-2xl font-bold mt-1">{stats.activeBookings}</p>
-              </div>
-              <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              Upcoming events
-              <ArrowRight className="h-3 w-3" />
-            </p>
-          </CardContent>
-        </Card>
+        />
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        <StatCard
+          title="Visible Locations"
+          value={stats.approvedLocations}
+          icon={MapPin}
+          iconColor="text-blue-600"
+          iconBg="bg-blue-500/10"
+          description="On the map"
           onClick={() => router.push('/dashboard/business/locations')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Visible Locations</p>
-                <p className="text-2xl font-bold mt-1">{stats.approvedLocations}</p>
-              </div>
-              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <MapPin className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              On the map
-              <ArrowRight className="h-3 w-3" />
-            </p>
-          </CardContent>
-        </Card>
+        />
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        <StatCard
+          title="This Month Revenue"
+          value={formatCurrency(stats.thisMonthRevenue)}
+          icon={Wallet}
+          iconColor="text-emerald-600"
+          iconBg="bg-emerald-500/10"
+          description="View wallet"
           onClick={() => router.push('/dashboard/business/wallet')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">This Month Revenue</p>
-                <p className="text-2xl font-bold mt-1">{formatCurrency(stats.thisMonthRevenue)}</p>
-              </div>
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Wallet className="h-5 w-5 text-emerald-600" />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              View wallet
-              <ArrowRight className="h-3 w-3" />
-            </p>
-          </CardContent>
-        </Card>
+        />
       </div>
 
       {/* Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-border/60 shadow-sm">
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -517,15 +437,17 @@ export default function BusinessDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm">
+        <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                  </div>
                   Revenue Overview
                 </CardTitle>
-                <CardDescription className="mt-1">
+                <CardDescription className="mt-1 text-sm">
                   Monthly revenue from bookings
                 </CardDescription>
               </div>
@@ -741,6 +663,6 @@ export default function BusinessDashboardPage() {
           )}
         </DashboardSection>
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -27,6 +27,7 @@ import {
   CheckCircle,
   AlertCircle,
   AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useDebounce } from "use-debounce";
@@ -234,8 +235,15 @@ export default function LocationBookingsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [sortBy, setSortBy] = useState<string>("createdAt:DESC");
+  const [sort, setSort] = useState<{ column: string; direction: SortDirection }>({
+    column: "createdAt",
+    direction: "DESC",
+  });
   const [debouncedSearchTerm] = useDebounce(search, 300);
+
+  const sortBy = sort.direction 
+    ? `${sort.column}:${sort.direction}` 
+    : "createdAt:DESC";
 
   const { data: bookingsData, isLoading } = useOwnerLocationBookings({
     page,
@@ -265,8 +273,32 @@ export default function LocationBookingsPage() {
     withConflicts: 0, // Will be calculated by individual row components
   };
 
+  const handleSort = (column: string, direction: SortDirection) => {
+    setSort({ column, direction });
+    setPage(1);
+  };
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (statusFilter !== "ALL") count++;
+    if (debouncedSearchTerm) count++;
+    return count;
+  }, [statusFilter, debouncedSearchTerm]);
+
+  const handleClearFilters = () => {
+    setSearch("");
+    setStatusFilter("ALL");
+    setSort({ column: "createdAt", direction: "DESC" });
+    setPage(1);
+  };
+
   return (
-    <div className="space-y-4">
+    <PageContainer>
+      <PageHeader
+        title="Location Bookings"
+        description="Manage and track all bookings for your locations"
+        icon={CalendarDays}
+      />
 
       {/* Statistics Cards */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -334,42 +366,37 @@ export default function LocationBookingsPage() {
       </div>
 
       {/* Bookings Table */}
-      <Card>
+      <Card className="overflow-hidden border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
         <CardContent className="pb-0 px-0">
-          {/* Modern Search Bar */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-4 px-6">
-            <div className="relative flex-1">
-              <Input
-                placeholder="Search by event name, location, or creator..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
+          {/* Filters */}
+          <TableFilters
+            searchValue={search}
+            onSearchChange={(value) => {
+              setSearch(value);
+              setPage(1);
+            }}
+            searchPlaceholder="Search by event name, location, or creator..."
+            filters={[
+              {
+                key: "status",
+                label: "Status",
+                value: statusFilter,
+                options: [
+                  { value: "ALL", label: "All statuses" },
+                  { value: "AWAITING_BUSINESS_PROCESSING", label: "Awaiting Processing" },
+                  { value: "PAYMENT_RECEIVED", label: "Payment Received" },
+                  { value: "SOFT_LOCKED", label: "Soft Locked" },
+                  { value: "CANCELLED", label: "Cancelled" },
+                ],
+                onValueChange: (value) => {
+                  setStatusFilter(value);
                   setPage(1);
-                }}
-                className="h-10 pl-4 pr-4 rounded-lg border-border/60"
-              />
-            </div>
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => {
-                setStatusFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-10 sm:w-[200px] rounded-lg">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All statuses</SelectItem>
-                <SelectItem value="AWAITING_BUSINESS_PROCESSING">
-                  Awaiting Processing
-                </SelectItem>
-                <SelectItem value="PAYMENT_RECEIVED">Payment Received</SelectItem>
-                <SelectItem value="SOFT_LOCKED">Soft Locked</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+                },
+              },
+            ]}
+            activeFiltersCount={activeFiltersCount}
+            onClearFilters={handleClearFilters}
+          />
 
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -389,13 +416,55 @@ export default function LocationBookingsPage() {
                   <TableHeader className="bg-muted/50">
                     <TableRow className="border-b border-border/60 hover:bg-muted/50">
                       <TableHead className="w-12 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 pl-6">#</TableHead>
-                      <TableHead className="min-w-[180px] max-w-[220px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">Requested By</TableHead>
-                      <TableHead className="min-w-[200px] max-w-[280px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">Location Name</TableHead>
-                      <TableHead className="min-w-[180px] max-w-[250px] text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">Booking Date</TableHead>
-                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[120px]">Total Hours Booked</TableHead>
-                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[140px]">Amount to Pay</TableHead>
+                      <SortableTableHeader
+                        column="referencedEventRequest.eventName"
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className="min-w-[180px] max-w-[220px] text-left text-xs uppercase tracking-wide text-muted-foreground py-3"
+                      >
+                        Requested By
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="location.name"
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className="min-w-[200px] max-w-[280px] text-left text-xs uppercase tracking-wide text-muted-foreground py-3"
+                      >
+                        Location Name
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="createdAt"
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className="min-w-[180px] max-w-[250px] text-left text-xs uppercase tracking-wide text-muted-foreground py-3"
+                      >
+                        Booking Date
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="totalHours"
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className="text-left text-xs uppercase tracking-wide text-muted-foreground py-3 w-[120px]"
+                      >
+                        Total Hours Booked
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="amountToPay"
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className="text-left text-xs uppercase tracking-wide text-muted-foreground py-3 w-[140px]"
+                      >
+                        Amount to Pay
+                      </SortableTableHeader>
                       <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[100px]">Conflicts</TableHead>
-                      <TableHead className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 w-[130px]">Status</TableHead>
+                      <SortableTableHeader
+                        column="status"
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className="text-left text-xs uppercase tracking-wide text-muted-foreground py-3 w-[130px]"
+                      >
+                        Status
+                      </SortableTableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

@@ -28,6 +28,10 @@ import { useMyLocations } from "@/hooks/locations/useMyLocations";
 import Link from "next/link";
 import Image from "next/image";
 import type { Location } from "@/types";
+import { SortableTableHeader, SortDirection } from "@/components/shared/SortableTableHeader";
+import { TableFilters } from "@/components/shared/TableFilters";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 const getStatusLabel = (isVisible: boolean) => {
   return isVisible ? "Visible" : "Draft";
@@ -47,11 +51,19 @@ export default function MyLocationsPage() {
   const [search, setSearch] = useState("");
   const [visibilityFilter, setVisibilityFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<{ column: string; direction: SortDirection }>({
+    column: "createdAt",
+    direction: "DESC",
+  });
   const [debouncedSearchTerm] = useDebounce(search, 300);
+
+  const sortBy = sort.direction 
+    ? `${sort.column}:${sort.direction}` 
+    : undefined;
 
   const { data: locationsData, isLoading, refetch } = useMyLocations(page, debouncedSearchTerm, {
     limit: 10,
-    sortBy: "createdAt:DESC",
+    sortBy: sortBy || "createdAt:DESC",
     searchBy: ["name", "addressLine", "description"],
   });
 
@@ -95,23 +107,41 @@ export default function MyLocationsPage() {
     });
   };
 
+  const handleSort = (column: string, direction: SortDirection) => {
+    setSort({ column, direction });
+    setPage(1);
+  };
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (visibilityFilter !== "all") count++;
+    if (debouncedSearchTerm) count++;
+    return count;
+  }, [visibilityFilter, debouncedSearchTerm]);
+
+  const handleClearFilters = () => {
+    setSearch("");
+    setVisibilityFilter("all");
+    setSort({ column: "createdAt", direction: "DESC" });
+    setPage(1);
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Title Section */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Locations</h1>
-          <p className="text-muted-foreground mt-2">
-            View and manage your locations
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/dashboard/business/locations/create">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Location
-          </Link>
-        </Button>
-      </div>
+    <PageContainer>
+      {/* Professional Header */}
+      <PageHeader
+        title="My Locations"
+        description="View and manage your locations"
+        icon={MapPin}
+        actions={
+          <Button asChild className="h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg">
+            <Link href="/dashboard/business/locations/create">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Location
+            </Link>
+          </Button>
+        }
+      />
 
       {/* Quick Statistics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -161,60 +191,50 @@ export default function MyLocationsPage() {
       </div>
 
       {/* Locations Table */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
         <CardContent className="p-0">
           <div className="flex flex-col h-full">
             {/* Search and Filter Section */}
-            <div className="px-6 py-4 border-b">
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* Search Input */}
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by location name, address, or tags..."
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setPage(1);
-                    }}
-                    className="pl-9"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  {/* Visibility Filter */}
-                  <Select
-                    value={visibilityFilter}
-                    onValueChange={(value) => {
-                      setVisibilityFilter(value);
-                      setPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Filter by Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Visibility</SelectItem>
-                      <SelectItem value="visible">Visible</SelectItem>
-                      <SelectItem value="hidden">Hidden</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {/* Refresh Button */}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      refetch();
-                      setPage(1);
-                    }}
-                    disabled={isLoading}
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <TableFilters
+              searchValue={search}
+              onSearchChange={(value) => {
+                setSearch(value);
+                setPage(1);
+              }}
+              searchPlaceholder="Search by location name, address, or tags..."
+              filters={[
+                {
+                  key: "visibility",
+                  label: "Visibility",
+                  value: visibilityFilter,
+                  options: [
+                    { value: "all", label: "All Visibility" },
+                    { value: "visible", label: "Visible" },
+                    { value: "hidden", label: "Hidden" },
+                  ],
+                  onValueChange: (value) => {
+                    setVisibilityFilter(value);
+                    setPage(1);
+                  },
+                },
+              ]}
+              activeFiltersCount={activeFiltersCount}
+              onClearFilters={handleClearFilters}
+              actions={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    refetch();
+                    setPage(1);
+                  }}
+                  disabled={isLoading}
+                  className="h-11 border-2 border-primary/20"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              }
+            />
 
             {/* Table Section */}
             <div className="flex-1 overflow-auto">
@@ -227,11 +247,36 @@ export default function MyLocationsPage() {
               <TableHeader>
                 <TableRow className="bg-muted/50 border-b">
                   <TableHead className="w-12 font-semibold pl-6">#</TableHead>
-                  <TableHead className="font-semibold">Location Name</TableHead>
-                  <TableHead className="font-semibold">Address</TableHead>
+                  <SortableTableHeader
+                    column="name"
+                    currentSort={sort}
+                    onSort={handleSort}
+                  >
+                    Location Name
+                  </SortableTableHeader>
+                  <SortableTableHeader
+                    column="addressLine"
+                    currentSort={sort}
+                    onSort={handleSort}
+                  >
+                    Address
+                  </SortableTableHeader>
                   <TableHead className="font-semibold">Tags</TableHead>
-                  <TableHead className="font-semibold">Created</TableHead>
-                  <TableHead className="font-semibold pr-6">Status</TableHead>
+                  <SortableTableHeader
+                    column="createdAt"
+                    currentSort={sort}
+                    onSort={handleSort}
+                  >
+                    Created
+                  </SortableTableHeader>
+                  <SortableTableHeader
+                    column="isVisibleOnMap"
+                    currentSort={sort}
+                    onSort={handleSort}
+                    className="pr-6"
+                  >
+                    Status
+                  </SortableTableHeader>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -400,6 +445,6 @@ export default function MyLocationsPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   );
 }
