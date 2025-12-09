@@ -50,6 +50,11 @@ export interface CreateEventPayload {
   endDate?: string;
   coverUrl?: string;
   avatarUrl?: string;
+  locationId?: string;
+  dateRanges?: Array<{
+    startDateTime: string;
+    endDateTime: string;
+  }>;
 }
 
 export const createEvent = async (
