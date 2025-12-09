@@ -15,6 +15,8 @@ interface AvailabilityCalendarProps {
   initialSlots?: Array<{ startDateTime: Date; endDateTime: Date }>;
   locationId?: string;
   initialWeekStart?: Date;
+  eventStartDate?: Date;
+  eventEndDate?: Date;
 }
 
 type CellStatus = "available" | "selected" | "dragging" | "past" | "booked" | "unavailable";
@@ -34,6 +36,8 @@ export function AvailabilityCalendar({
   initialSlots = [],
   locationId,
   initialWeekStart,
+  eventStartDate,
+  eventEndDate,
 }: AvailabilityCalendarProps) {
   // Week navigation state
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
@@ -299,7 +303,7 @@ export function AvailabilityCalendar({
       };
     });
     
-    onSlotsChange(normalizedSlotsForParent);
+    onSlotsChange(filterSlotsByEventTime(normalizedSlotsForParent));
     
     setHasValidatedInitialSlots(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -323,6 +327,14 @@ export function AvailabilityCalendar({
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
   const [hasValidatedInitialSlots, setHasValidatedInitialSlots] = useState(false);
 
+  // Helper function to filter slots by event time range
+  const filterSlotsByEventTime = (slots: Array<{ startDateTime: Date; endDateTime: Date }>) => {
+    if (!eventStartDate || !eventEndDate) return slots;
+    return slots.filter((slot) => {
+      return slot.startDateTime >= eventStartDate! && slot.endDateTime <= eventEndDate!;
+    });
+  };
+
   // Drag state management
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ dateIndex: number; timeIndex: number } | null>(null);
@@ -343,6 +355,17 @@ export function AvailabilityCalendar({
     }
 
     const timeSlot = timeSlots[timeIndex];
+    const slotDateTime = new Date(dateStart);
+    slotDateTime.setHours(timeSlot.getHours(), timeSlot.getMinutes(), 0, 0);
+    const slotEndDateTime = addHours(slotDateTime, 1);
+    
+    // Check if slot is outside event time range
+    if (eventStartDate && eventEndDate) {
+      if (slotDateTime < eventStartDate || slotEndDateTime > eventEndDate) {
+        return "unavailable";
+      }
+    }
+
     const dateKey = format(dateStart, "yyyy-MM-dd");
     const timeKey = format(timeSlot, "HH:mm");
     const key = `${dateKey}_${timeKey}`;
@@ -392,6 +415,17 @@ export function AvailabilityCalendar({
 
     // Check if slot is available (within availability hours and not booked)
     const timeSlot = timeSlots[timeIndex];
+    const slotDateTime = new Date(dateStart);
+    slotDateTime.setHours(timeSlot.getHours(), timeSlot.getMinutes(), 0, 0);
+    const slotEndDateTime = addHours(slotDateTime, 1);
+    
+    // Check if slot is outside event time range
+    if (eventStartDate && eventEndDate) {
+      if (slotDateTime < eventStartDate || slotEndDateTime > eventEndDate) {
+        return; // Can't select slots outside event time
+      }
+    }
+
     const dateKey = format(dateStart, "yyyy-MM-dd");
     const timeKey = format(timeSlot, "HH:mm");
     const key = `${dateKey}_${timeKey}`;
@@ -426,6 +460,17 @@ export function AvailabilityCalendar({
 
       // Check if slot is available (within availability hours and not booked)
       const timeSlot = timeSlots[timeIndex];
+      const slotDateTime = new Date(dateStart);
+      slotDateTime.setHours(timeSlot.getHours(), timeSlot.getMinutes(), 0, 0);
+      const slotEndDateTime = addHours(slotDateTime, 1);
+      
+      // Check if slot is outside event time range
+      if (eventStartDate && eventEndDate) {
+        if (slotDateTime < eventStartDate || slotEndDateTime > eventEndDate) {
+          return; // Can't drag to slots outside event time
+        }
+      }
+
       const dateKey = format(dateStart, "yyyy-MM-dd");
       const timeKey = format(timeSlot, "HH:mm");
       const key = `${dateKey}_${timeKey}`;
@@ -458,7 +503,7 @@ export function AvailabilityCalendar({
       const minIndex = Math.min(dragStart.timeIndex, dragCurrent.timeIndex);
       const maxIndex = Math.max(dragStart.timeIndex, dragCurrent.timeIndex);
 
-      // Filter out past slots, booked slots, and unavailable slots
+      // Filter out past slots, booked slots, unavailable slots, and slots outside event time
       const validSlots: number[] = [];
       for (let i = minIndex; i <= maxIndex; i++) {
         const isDatePast = isBefore(dateStart, today);
@@ -469,6 +514,17 @@ export function AvailabilityCalendar({
 
         // Check if slot is available
         const timeSlot = timeSlots[i];
+        const slotDateTime = new Date(dateStart);
+        slotDateTime.setHours(timeSlot.getHours(), timeSlot.getMinutes(), 0, 0);
+        const slotEndDateTime = addHours(slotDateTime, 1);
+        
+        // Check if slot is outside event time range
+        if (eventStartDate && eventEndDate) {
+          if (slotDateTime < eventStartDate || slotEndDateTime > eventEndDate) {
+            continue; // Skip slots outside event time
+          }
+        }
+
         const dateKey = format(dateStart, "yyyy-MM-dd");
         const timeKey = format(timeSlot, "HH:mm");
         const key = `${dateKey}_${timeKey}`;
@@ -530,7 +586,7 @@ export function AvailabilityCalendar({
         };
       });
 
-      onSlotsChange(slots);
+      onSlotsChange(filterSlotsByEventTime(slots));
     }
 
     setIsDragging(false);
@@ -630,7 +686,7 @@ export function AvailabilityCalendar({
             };
           });
 
-          onSlotsChange(slots);
+          onSlotsChange(filterSlotsByEventTime(slots));
         }
 
         setIsDragging(false);
@@ -781,12 +837,23 @@ export function AvailabilityCalendar({
     const isDatePast = isBefore(dateStart, today);
     if (isDatePast) return;
     
-    // Get all available slots for this date (within availability hours and not booked)
+    // Get all available slots for this date (within availability hours, not booked, and within event time)
     const dateSlotKeys: string[] = [];
     timeSlots.forEach((timeSlot, timeIndex) => {
       // Don't include past time slots on today
       const isTimePast = isSameDay(dateStart, today) && timeIndex < new Date().getHours();
       if (isTimePast) return;
+
+      const slotDateTime = new Date(dateStart);
+      slotDateTime.setHours(timeSlot.getHours(), timeSlot.getMinutes(), 0, 0);
+      const slotEndDateTime = addHours(slotDateTime, 1);
+      
+      // Check if slot is outside event time range
+      if (eventStartDate && eventEndDate) {
+        if (slotDateTime < eventStartDate || slotEndDateTime > eventEndDate) {
+          return; // Skip slots outside event time
+        }
+      }
 
       const timeKey = format(timeSlot, "HH:mm");
       const key = `${dateKey}_${timeKey}`;
@@ -825,8 +892,8 @@ export function AvailabilityCalendar({
         endDateTime: endDate,
       };
     });
-    
-    onSlotsChange(slots);
+
+    onSlotsChange(filterSlotsByEventTime(slots));
   };
 
   // Check if current week is this week (today falls within the displayed week)

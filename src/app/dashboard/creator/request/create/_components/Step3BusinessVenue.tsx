@@ -609,6 +609,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 onSlotsChange={handleSlotsChange}
                 initialSlots={dateRanges && dateRanges.length > 0 ? dateRanges : getInitialSlotsFromEventDates}
                 initialWeekStart={startDate}
+                eventStartDate={startDate}
+                eventEndDate={endDate}
               />
             )}
           </div>
