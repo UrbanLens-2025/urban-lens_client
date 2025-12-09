@@ -32,6 +32,7 @@ import { IconSearch, IconFilter, IconUsers, IconUserCheck, IconUserX, IconShield
 import { Badge } from '@/components/ui/badge';
 import { useAllAccounts } from '@/hooks/admin/useAllAccounts';
 import { Loader2 } from 'lucide-react';
+import { SortableTableHeader, SortDirection } from '@/components/shared/SortableTableHeader';
 
 export default function AccountsPage() {
     const router = useRouter();
@@ -43,6 +44,10 @@ export default function AccountsPage() {
     const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
     const [roleFilter, setRoleFilter] = useState(searchParams.get('role') || 'ALL');
     const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
+    const [sort, setSort] = useState<{ column: string; direction: SortDirection }>({
+        column: 'createdAt',
+        direction: 'DESC',
+    });
     const itemsPerPage = 10;
 
     // Update URL when filters change
@@ -71,6 +76,10 @@ export default function AccountsPage() {
         router.push(`${pathname}?${params.toString()}`);
     }, [debouncedSearchTerm, roleFilter, page, pathname, router, searchParams]);
 
+    const sortBy = sort.direction 
+        ? [`${sort.column}:${sort.direction}`]
+        : ['createdAt:DESC'];
+
     // Fetch accounts from API
     const { data, isLoading, error } = useAllAccounts({
         page,
@@ -78,7 +87,7 @@ export default function AccountsPage() {
         search: debouncedSearchTerm.trim() || undefined,
         searchBy: debouncedSearchTerm.trim() ? ['email', 'firstName', 'lastName', 'phoneNumber'] : undefined,
         filterRole: roleFilter !== 'ALL' ? `$eq:${roleFilter}` : undefined,
-        sortBy: ['createdAt:DESC'],
+        sortBy: sortBy,
     });
 
     const accounts = data?.data?.data || [];
@@ -168,6 +177,11 @@ export default function AccountsPage() {
         return isLocked
             ? 'text-red-600 bg-red-100'
             : 'text-green-600 bg-green-100';
+    };
+
+    const handleSort = (column: string, direction: SortDirection) => {
+        setSort({ column, direction });
+        setPage(1);
     };
 
     if (error) {
@@ -304,13 +318,43 @@ export default function AccountsPage() {
                         <>
                             <Table>
                                 <TableHeader>
-                                    <TableRow>
+                                    <TableRow className="bg-muted/50">
                                         <TableHead className="w-[50px]">#</TableHead>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Role</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Onboarded</TableHead>
+                                        <SortableTableHeader
+                                            column="firstName"
+                                            currentSort={sort}
+                                            onSort={handleSort}
+                                        >
+                                            Name
+                                        </SortableTableHeader>
+                                        <SortableTableHeader
+                                            column="email"
+                                            currentSort={sort}
+                                            onSort={handleSort}
+                                        >
+                                            Email
+                                        </SortableTableHeader>
+                                        <SortableTableHeader
+                                            column="role"
+                                            currentSort={sort}
+                                            onSort={handleSort}
+                                        >
+                                            Role
+                                        </SortableTableHeader>
+                                        <SortableTableHeader
+                                            column="isLocked"
+                                            currentSort={sort}
+                                            onSort={handleSort}
+                                        >
+                                            Status
+                                        </SortableTableHeader>
+                                        <SortableTableHeader
+                                            column="hasOnboarded"
+                                            currentSort={sort}
+                                            onSort={handleSort}
+                                        >
+                                            Onboarded
+                                        </SortableTableHeader>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
