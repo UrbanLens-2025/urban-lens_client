@@ -7,11 +7,13 @@ import { usePathname, useParams, useSearchParams } from "next/navigation";
 import { ChevronRight, Wallet, MapPin, Calendar, FileText, Building2, CreditCard, Users, Settings, BarChart3, Gift, Target, Megaphone, ArrowLeftRight } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useLocationByIdForAdmin } from "@/hooks/admin/useLocationByIdForAdmin";
 
 interface BreadcrumbItem {
   label: string;
   href?: string;
   icon?: React.ComponentType<{ className?: string }>;
+  locationId?: string;
 }
 
 // Route segment to label mapping
@@ -184,10 +186,24 @@ function buildBreadcrumbs(
     // Handle special action pages
     if (segment === "edit" || segment === "create" || segment === "new") {
       const actionLabel = segment === "new" ? "Create" : segment.charAt(0).toUpperCase() + segment.slice(1);
-      const parentLabel = actualPrevSegment ? routeLabels[actualPrevSegment] || actualPrevSegment : "Item";
+      // Check if we're editing a location - the previous segment would be a locationId
+      let parentLabel = actualPrevSegment ? routeLabels[actualPrevSegment] || actualPrevSegment : "Item";
+      
+      // If editing a location, we'll handle the label in the component itself using the location data
+      if (segment === "edit" && isIdSegment(actualPrevSegment || "") && segments[index - 2] === "locations") {
+        // This will be handled in the component with location data
+        parentLabel = actualPrevSegment || "Location";
+      } else {
+        parentLabel = actualPrevSegment ? routeLabels[actualPrevSegment] || actualPrevSegment : "Item";
+      }
+      
       breadcrumbs.push({
         label: `${actionLabel} ${parentLabel}`,
         icon: FileText,
+        // Store the locationId if we're editing a location
+        ...(segment === "edit" && isIdSegment(actualPrevSegment || "") && segments[index - 2] === "locations" 
+          ? { locationId: actualPrevSegment } 
+          : {}),
       });
       return;
     }
@@ -224,6 +240,18 @@ export function SiteHeader() {
   const breadcrumbs = React.useMemo(() => {
     return buildBreadcrumbs(pathname, params as Record<string, string | string[]>, searchParams);
   }, [pathname, params, searchParams]);
+
+  // Check if we're on a location edit page and fetch location name
+  const locationId = React.useMemo(() => {
+    const segments = pathname.split("/").filter(Boolean);
+    const editIndex = segments.indexOf("edit");
+    if (editIndex > 0 && segments[editIndex - 1] && segments[editIndex - 2] === "locations") {
+      return segments[editIndex - 1];
+    }
+    return null;
+  }, [pathname]);
+
+  const { data: location } = useLocationByIdForAdmin(locationId);
 
   // Handle root dashboard pages - show "Overview" instead of just "Business" or "Creator"
   if (breadcrumbs.length === 1 && (pathname === "/dashboard/business" || pathname === "/dashboard/creator" || pathname === "/admin")) {
@@ -329,7 +357,10 @@ export function SiteHeader() {
                         <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
                       )}
                       <span className="text-base font-semibold text-foreground truncate">
-                        {item.label}
+                        {/* Show location name if editing a location */}
+                        {location && item.label.startsWith("Edit") && item.locationId
+                          ? `Edit ${location.name}`
+                          : item.label}
                       </span>
                     </div>
                   ) : (

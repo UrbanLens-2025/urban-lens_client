@@ -7,6 +7,7 @@ import { SortableTableHeader, SortDirection } from '@/components/shared/Sortable
 import { TableFilters } from '@/components/shared/TableFilters';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { PageContainer } from '@/components/shared/PageContainer';
+import { StatCard } from '@/components/shared/StatCard';
 import {
   Card,
   CardContent,
@@ -27,11 +28,8 @@ import { Input } from '@/components/ui/input';
 import {
   IconSearch,
   IconRefresh,
-  IconBuildingStore,
-  IconWorld,
-  IconEye,
 } from '@tabler/icons-react';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2, MapPin, Building2, Globe, Eye } from 'lucide-react';
 import { Location } from '@/types';
 import { useAllLocations } from '@/hooks/admin/useAllLocations';
 import { useQueryClient } from '@tanstack/react-query';
@@ -95,31 +93,34 @@ export default function LocationDashboardPage() {
     queryClient.invalidateQueries({ queryKey: ['allLocations'] });
   };
 
-  // Calculate statistics from actual locations data
+  // Filter locations by type
+  const filteredLocations = useMemo(() => {
+    if (typeFilter === "all") return locations;
+    if (typeFilter === "business") return locations.filter((loc: Location) => loc.business);
+    return locations.filter((loc: Location) => !loc.business);
+  }, [locations, typeFilter]);
+
+  // Calculate statistics - show accurate totals and current view stats
   const stats = useMemo(() => {
     const totalLocations = meta?.totalItems || 0;
-    const businessLocations = locations.filter((loc: Location) => loc.business).length;
-    const publicLocations = locations.filter((loc: Location) => !loc.business).length;
-    const visibleOnMap = locations.filter((loc: Location) => loc.isVisibleOnMap).length;
-
-    // If we have paginated data, estimate totals based on current page
-    const businessLocationsEstimate = totalLocations > 0 && locations.length > 0
-      ? Math.round((businessLocations / locations.length) * totalLocations)
-      : businessLocations;
-    const publicLocationsEstimate = totalLocations > 0 && locations.length > 0
-      ? Math.round((publicLocations / locations.length) * totalLocations)
-      : publicLocations;
-    const visibleOnMapEstimate = totalLocations > 0 && locations.length > 0
-      ? Math.round((visibleOnMap / locations.length) * totalLocations)
-      : visibleOnMap;
-
+    
+    // Current view stats (from filtered/paginated data)
+    const currentViewBusiness = filteredLocations.filter((loc: Location) => loc.business).length;
+    const currentViewPublic = filteredLocations.filter((loc: Location) => !loc.business).length;
+    const currentViewVisible = filteredLocations.filter((loc: Location) => loc.isVisibleOnMap).length;
+    
+    // Check if filters are active
+    const hasFilters = typeFilter !== "all" || !!debouncedSearchTerm;
+    
     return {
       totalLocations,
-      businessLocations: businessLocationsEstimate,
-      publicLocations: publicLocationsEstimate,
-      visibleOnMap: visibleOnMapEstimate,
+      currentViewBusiness,
+      currentViewPublic,
+      currentViewVisible,
+      hasFilters,
+      currentViewTotal: filteredLocations.length,
     };
-  }, [locations, meta]);
+  }, [filteredLocations, meta, typeFilter, debouncedSearchTerm]);
 
   if (error) {
     return (
@@ -152,13 +153,6 @@ export default function LocationDashboardPage() {
     setPage(1);
   };
 
-  // Filter locations by type
-  const filteredLocations = useMemo(() => {
-    if (typeFilter === "all") return locations;
-    if (typeFilter === "business") return locations.filter((loc: Location) => loc.business);
-    return locations.filter((loc: Location) => !loc.business);
-  }, [locations, typeFilter]);
-
   return (
     <PageContainer>
       <PageHeader
@@ -169,65 +163,47 @@ export default function LocationDashboardPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Locations</CardTitle>
-            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-              <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.totalLocations}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Approved locations
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Locations"
+          value={stats.totalLocations.toLocaleString()}
+          description={stats.hasFilters ? `Showing ${stats.currentViewTotal} in current view` : "All approved locations"}
+          icon={MapPin}
+          iconBg="bg-blue-100 dark:bg-blue-950"
+          iconColor="text-blue-600 dark:text-blue-400"
+        />
 
-        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-orange-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Business Locations</CardTitle>
-            <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-950 flex items-center justify-center">
-              <IconBuildingStore className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{stats.businessLocations}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Owned by businesses
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Business Locations"
+          value={stats.hasFilters ? stats.currentViewBusiness.toLocaleString() : "—"}
+          description={stats.hasFilters 
+            ? `In current view${stats.currentViewTotal > 0 ? ` (${Math.round((stats.currentViewBusiness / stats.currentViewTotal) * 100)}%)` : ''}`
+            : "Apply filters to see breakdown"}
+          icon={Building2}
+          iconBg="bg-orange-100 dark:bg-orange-950"
+          iconColor="text-orange-600 dark:text-orange-400"
+        />
 
-        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-purple-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Public Locations</CardTitle>
-            <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-950 flex items-center justify-center">
-              <IconWorld className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{stats.publicLocations}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Publicly accessible
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Public Locations"
+          value={stats.hasFilters ? stats.currentViewPublic.toLocaleString() : "—"}
+          description={stats.hasFilters
+            ? `In current view${stats.currentViewTotal > 0 ? ` (${Math.round((stats.currentViewPublic / stats.currentViewTotal) * 100)}%)` : ''}`
+            : "Apply filters to see breakdown"}
+          icon={Globe}
+          iconBg="bg-purple-100 dark:bg-purple-950"
+          iconColor="text-purple-600 dark:text-purple-400"
+        />
 
-        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Visible on Map</CardTitle>
-            <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
-              <IconEye className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.visibleOnMap}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Shown on map
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Visible on Map"
+          value={stats.hasFilters ? stats.currentViewVisible.toLocaleString() : "—"}
+          description={stats.hasFilters
+            ? `In current view${stats.currentViewTotal > 0 ? ` (${Math.round((stats.currentViewVisible / stats.currentViewTotal) * 100)}%)` : ''}`
+            : "Apply filters to see breakdown"}
+          icon={Eye}
+          iconBg="bg-green-100 dark:bg-green-950"
+          iconColor="text-green-600 dark:text-green-400"
+        />
       </div>
 
       {/* Main Card */}
@@ -369,7 +345,7 @@ export default function LocationDashboardPage() {
                             variant="outline" 
                             className="flex items-center w-fit bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200"
                           >
-                            <IconBuildingStore className="h-3 w-3 mr-1" />
+                            <Building2 className="h-3 w-3 mr-1" />
                             <a
                               href={`/admin/business/${loc.business.accountId}`}
                               className="hover:underline"
@@ -382,7 +358,7 @@ export default function LocationDashboardPage() {
                             variant="outline" 
                             className="flex items-center w-fit bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200"
                           >
-                            <IconWorld className="h-3 w-3 mr-1" />
+                            <Globe className="h-3 w-3 mr-1" />
                             <span>Public</span>
                           </Badge>
                         )}
@@ -397,7 +373,7 @@ export default function LocationDashboardPage() {
                             variant="outline" 
                             className="flex items-center w-fit bg-green-100 text-green-700 hover:bg-green-100 border-green-200"
                           >
-                            <IconEye className="h-3 w-3 mr-1" />
+                            <Eye className="h-3 w-3 mr-1" />
                             Visible
                           </Badge>
                         ) : (

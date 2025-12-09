@@ -37,6 +37,7 @@ import { ImageViewer } from '@/components/shared/ImageViewer';
 import { formatDate, formatShortDate } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 function InfoRow({
   label,
@@ -139,6 +140,12 @@ export default function AdminLocationDetailsPage({
 
   return (
     <div className='space-y-6'>
+      {/* Page Header */}
+      <PageHeader
+        title={location.name}
+        description={location.addressLine}
+        icon={MapPin}
+      />
 
       {/* Quick Stats Summary */}
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>

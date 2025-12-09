@@ -54,7 +54,9 @@ function AdminLocationDetailLayoutContent({
   }
 
   const isEditPage = pathname.includes("/edit");
-  const activeTab = isEditPage ? "edit" : "overview";
+  const isPublicLocation = !location.business;
+  // If location is business-owned and user is on edit page, default to overview
+  const activeTab = isEditPage && isPublicLocation ? "edit" : "overview";
 
   const handleTabChange = (value: string) => {
     if (value === "overview") {
@@ -107,19 +109,21 @@ function AdminLocationDetailLayoutContent({
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b rounded-none">
-          <TabsTrigger value="overview" className="gap-2 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-muted">
-            <Layers className="h-4 w-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="edit" className="gap-2 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-muted">
-            <Edit className="h-4 w-4" />
-            Edit Location
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Tabs Navigation - Only show if location is public (has Edit tab) */}
+      {isPublicLocation && (
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+          <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b rounded-none">
+            <TabsTrigger value="overview" className="gap-2 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-muted">
+              <Layers className="h-4 w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="edit" className="gap-2 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-muted">
+              <Edit className="h-4 w-4" />
+              Edit Location
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
 
       {/* Page Content */}
       <div className="mt-6">{children}</div>

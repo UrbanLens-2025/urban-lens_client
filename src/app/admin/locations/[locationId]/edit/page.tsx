@@ -18,7 +18,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, AlertCircle, MapPin, FileText, ImageIcon, Eye, Tag as TagIcon, Save } from "lucide-react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -189,91 +190,199 @@ export default function EditLocationPage({
     return <div>Location not found.</div>;
   }
 
+  // Prevent editing business-owned locations
+  if (location.business) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Card className="max-w-md border-destructive">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Editing Not Allowed
+            </CardTitle>
+            <CardDescription>
+              This location is owned by a business account and cannot be edited by administrators.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm font-medium mb-2">Business Owner:</p>
+              <p className="text-sm">{location.business.name}</p>
+              {location.business.accountId && (
+                <Link href={`/admin/business/${location.business.accountId}`}>
+                  <Button variant="outline" size="sm" className="mt-2">
+                    View Business Account
+                  </Button>
+                </Link>
+              )}
+            </div>
+            <Button onClick={() => router.back()} variant="outline" className="w-full">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Go Back
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle>Update Location Details</CardTitle>
-          <CardDescription>
-            Make changes to your active location.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="space-y-6 pb-16">
+      {/* Header Section */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary shadow-md">
+            <MapPin className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+              Update Location Details
+            </h1>
+            <p className="text-muted-foreground mt-1 text-base">
+              Make changes to your active location
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Form Section */}
+      <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
+        <CardContent className="p-6 lg:p-8">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                name="name"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              {/* Basic Information Section */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 pb-2 border-b border-primary/10">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <FileText className="h-4 w-4 text-primary" />
+                  </div>
+                  <h2 className="text-xl font-semibold">Basic Information</h2>
+                </div>
 
-              <FormField
-                name="description"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  name="name"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                        <MapPin className="h-4 w-4 text-primary" />
+                        Location Name
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} className="h-12 border-2 border-primary/20 focus:ring-2 focus:ring-primary/20" />
+                      </FormControl>
+                      <FormMessage className="text-sm" />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                name="imageUrl"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location Images</FormLabel>
-                    <FormControl>
-                      <FileUpload
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  name="description"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                        <FileText className="h-4 w-4 text-primary" />
+                        Description
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          className="min-h-[120px] border-2 border-primary/20 focus:ring-2 focus:ring-primary/20 resize-none" 
+                          placeholder="Describe the location, its features, and what makes it special..."
+                        />
+                      </FormControl>
+                      <FormMessage className="text-sm" />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-              <FormField
-                name="isVisibleOnMap"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel>Visible on Map</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Should this location be visible to the public on the
-                        map?
-                      </p>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              {/* Images Section */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 pb-2 border-b border-primary/10">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <ImageIcon className="h-4 w-4 text-primary" />
+                  </div>
+                  <h2 className="text-xl font-semibold">Location Images</h2>
+                </div>
 
-              <FormField
-                name="tagIds"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tags</FormLabel>
+                <FormField
+                  name="imageUrl"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                        <ImageIcon className="h-4 w-4 text-primary" />
+                        Upload Images
+                      </FormLabel>
+                      <FormControl>
+                        <div className="border-2 border-dashed border-primary/20 rounded-lg p-6 bg-muted/30 hover:border-primary/40 transition-colors">
+                          <FileUpload
+                            value={field.value}
+                            onChange={field.onChange}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-sm" />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Settings Section */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 pb-2 border-b border-primary/10">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Eye className="h-4 w-4 text-primary" />
+                  </div>
+                  <h2 className="text-xl font-semibold">Visibility Settings</h2>
+                </div>
+
+                <FormField
+                  name="isVisibleOnMap"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-xl border-2 border-primary/10 p-6 bg-gradient-to-r from-muted/50 to-transparent hover:border-primary/20 transition-all">
+                      <div className="space-y-1 flex-1">
+                        <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                          <Eye className="h-4 w-4 text-primary" />
+                          Visible on Map
+                        </FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Should this location be visible to the public on the map?
+                        </p>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Tags Section */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 pb-2 border-b border-primary/10">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <TagIcon className="h-4 w-4 text-primary" />
+                  </div>
+                  <h2 className="text-xl font-semibold">Location Tags</h2>
+                </div>
+
+                <FormField
+                  name="tagIds"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                        <TagIcon className="h-4 w-4 text-primary" />
+                        Select Location Type
+                      </FormLabel>
                     {isLoadingTags ? (
                       <div className="flex items-center justify-center py-6">
                         <Loader2Icon className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -281,7 +390,7 @@ export default function EditLocationPage({
                     ) : (
                       <div className="space-y-3">
                         {selectedTagIds.length > 0 && (
-                          <div className="flex flex-wrap gap-2 p-3 bg-muted/50 rounded-md">
+                          <div className="flex flex-wrap gap-2 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border-2 border-primary/10">
                             {selectedTagIds.map((id: number) => {
                               const tag = tagsFromDb.find((t: Tag) => t.id === id);
                               if (!tag) return null;
@@ -323,11 +432,11 @@ export default function EditLocationPage({
                               <div 
                                 key={groupName} 
                                 className={cn(
-                                  "border rounded-lg p-3 space-y-2 bg-muted/30",
-                                  hasError && "bg-destructive/5 border-destructive border-2 shadow-md"
+                                  "border-2 rounded-xl p-4 space-y-3 bg-gradient-to-br from-card to-muted/20 shadow-sm transition-all",
+                                  hasError && "bg-destructive/5 border-destructive border-2 shadow-md ring-2 ring-destructive/20"
                                 )}
                               >
-                                <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center justify-between gap-3">
                                   <button
                                     type="button"
                                     onClick={() =>
@@ -336,27 +445,32 @@ export default function EditLocationPage({
                                         [`group_${groupName}`]: !prev[`group_${groupName}`],
                                       }))
                                     }
-                                    className="flex items-center gap-2 flex-1 text-left hover:text-primary transition-colors"
+                                    className="flex items-center gap-2 flex-1 text-left hover:text-primary transition-colors group"
                                   >
-                                    {isGroupExpanded ? (
-                                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                                    ) : (
-                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                    )}
+                                    <div className={cn(
+                                      "p-1.5 rounded-md transition-colors",
+                                      isGroupExpanded ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground group-hover:bg-primary/5"
+                                    )}>
+                                      {isGroupExpanded ? (
+                                        <ChevronUp className="h-4 w-4" />
+                                      ) : (
+                                        <ChevronDown className="h-4 w-4" />
+                                      )}
+                                    </div>
                                     <h3 className="text-sm font-semibold">
                                       {getGroupLabel(groupName)}
                                       <span className="text-xs text-muted-foreground font-normal ml-2">({filtered.length})</span>
                                     </h3>
                                   </button>
                                   {isGroupExpanded && (
-                                    <div className="relative w-40">
-                                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                    <div className="relative w-48">
+                                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                       <Input
                                         type="text"
-                                        placeholder="Search..."
+                                        placeholder="Search tags..."
                                         value={searchTerms[groupName] || ""}
                                         onChange={(e) => setSearchTerms((prev) => ({ ...prev, [groupName]: e.target.value }))}
-                                        className="pl-7 h-8 text-xs"
+                                        className="pl-9 h-10 text-sm border-2 border-primary/20 focus:ring-2 focus:ring-primary/20"
                                         onClick={(e) => e.stopPropagation()}
                                       />
                                     </div>
@@ -365,7 +479,7 @@ export default function EditLocationPage({
 
                                 {isGroupExpanded && (
                                   <>
-                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                    <div className="flex flex-wrap gap-2 pt-2">
                                       {displayed.map((tag: Tag) => {
                                         const isSelected = selectedTagIds.includes(tag.id);
                                         return (
@@ -378,13 +492,13 @@ export default function EditLocationPage({
                                                 : { borderColor: tag.color, color: tag.color }
                                             }
                                             className={cn(
-                                              "cursor-pointer transition-all hover:shadow-sm px-2 py-0.5 text-xs",
-                                              isSelected && "ring-1 ring-offset-1 ring-primary",
-                                              !isSelected && "hover:bg-muted"
+                                              "cursor-pointer transition-all px-3 py-1.5 text-sm font-medium shadow-sm hover:shadow-md",
+                                              isSelected && "ring-2 ring-offset-2 ring-primary/30 scale-105",
+                                              !isSelected && "hover:bg-muted/50 hover:scale-105"
                                             )}
                                             onClick={() => toggleTag(tag.id, tag.groupName)}
                                           >
-                                            <span className="mr-1">{tag.icon}</span>
+                                            <span className="mr-1.5">{tag.icon}</span>
                                             {tag.displayName}
                                           </Badge>
                                         );
@@ -396,25 +510,27 @@ export default function EditLocationPage({
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => setExpandedGroups((prev) => ({ ...prev, [groupName]: !isExpandedList }))}
-                                        className="w-full h-7 text-xs"
+                                        className="w-full h-9 text-sm border border-primary/20 hover:bg-primary/5 hover:border-primary/40"
                                       >
                                         {isExpandedList ? (
                                           <>
-                                            <ChevronUp className="mr-1 h-3 w-3" />
+                                            <ChevronUp className="mr-2 h-4 w-4" />
                                             Show Less
                                           </>
                                         ) : (
                                           <>
-                                            <ChevronDown className="mr-1 h-3 w-3" />
+                                            <ChevronDown className="mr-2 h-4 w-4" />
                                             View More ({filtered.length - INITIAL_DISPLAY_COUNT} more)
                                           </>
                                         )}
                                       </Button>
                                     )}
                                     {filtered.length === 0 && searchTerms[groupName] && (
-                                      <p className="text-xs text-muted-foreground text-center py-2">
-                                        No tags found for "{searchTerms[groupName]}"
-                                      </p>
+                                      <div className="text-center py-6">
+                                        <p className="text-sm text-muted-foreground">
+                                          No tags found for "<span className="font-medium">{searchTerms[groupName]}</span>"
+                                        </p>
+                                      </div>
                                     )}
                                   </>
                                 )}
@@ -423,25 +539,40 @@ export default function EditLocationPage({
                           })}
                       </div>
                     )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage className="text-sm" />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-              <div className="flex justify-end gap-2">
+              {/* Form Actions */}
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-primary/10">
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   onClick={() => router.back()}
                   disabled={isUpdating}
+                  className="h-12 border-2 border-primary/20 hover:bg-muted"
                 >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isUpdating}>
-                  {isUpdating && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Button 
+                  type="submit" 
+                  disabled={isUpdating}
+                  className="h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all"
+                >
+                  {isUpdating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Changes
+                    </>
                   )}
-                  Save Changes
                 </Button>
               </div>
             </form>

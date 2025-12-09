@@ -1,6 +1,5 @@
 "use client";
 
-import { LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { ReactNode } from "react";
@@ -8,7 +7,7 @@ import { ReactNode } from "react";
 interface StatCardProps {
   title: string;
   value: string | number;
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string }>;
   iconColor?: string;
   iconBg?: string;
   description?: string;
