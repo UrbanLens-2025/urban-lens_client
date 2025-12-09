@@ -329,7 +329,6 @@ export default function AdminEventsPage() {
                       >
                         Created
                       </SortableTableHeader>
-                      <TableHead className='text-right'>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -407,14 +406,6 @@ export default function AdminEventsPage() {
                           <span className='text-sm text-muted-foreground'>
                             {formatDateTime(event.createdAt)}
                           </span>
-                        </TableCell>
-                        <TableCell className='text-right'>
-                          <Button asChild variant='outline' size='sm' className='gap-2'>
-                            <Link href={`/admin/events/${event.id}`}>
-                              <IconEye className='h-4 w-4' />
-                              <span className='hidden sm:inline'>View</span>
-                            </Link>
-                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
