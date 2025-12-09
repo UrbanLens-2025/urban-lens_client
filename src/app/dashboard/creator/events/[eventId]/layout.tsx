@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function EventDetailLayoutContent({
   eventId,
@@ -103,6 +104,12 @@ function EventDetailLayoutContent({
 
   const handlePublishConfirm = () => {
     if (event && event.status === "DRAFT") {
+      // Double-check payment status before publishing
+      if (!hasPaymentMade) {
+        toast.error("Payment must be completed before publishing the event. Please complete the payment for your location booking first.");
+        setIsPublishDialogOpen(false);
+        return;
+      }
       publishEvent.mutate(eventId);
       setIsPublishDialogOpen(false);
     }
@@ -129,8 +136,14 @@ function EventDetailLayoutContent({
   const hasLocation = !!event?.locationId;
   const hasDocuments = !!(event?.eventValidationDocuments && event.eventValidationDocuments.length > 0);
   
+  // Check if payment has been made for location booking
+  // Payment is confirmed if at least one locationBooking has a referencedTransactionId
+  const hasPaymentMade = event?.locationBookings && event.locationBookings.length > 0
+    ? event.locationBookings.some(booking => booking.referencedTransactionId !== null)
+    : false;
+  
   const isDraft = event?.status?.toUpperCase() === "DRAFT";
-  const canPublish = hasNameAndDescription && hasDates && hasLocation && hasDocuments;
+  const canPublish = hasNameAndDescription && hasDates && hasLocation && hasDocuments && hasPaymentMade;
 
   const formatCompactDateTime = (iso: string) => {
     const date = new Date(iso);
@@ -600,7 +613,11 @@ function EventDetailLayoutContent({
                         </TooltipTrigger>
                         {!canPublish && (
                           <TooltipContent>
-                            <p>Complete all checklist items to publish your event</p>
+                            <p>
+                              {!hasPaymentMade 
+                                ? "Complete payment for location booking before publishing"
+                                : "Complete all checklist items to publish your event"}
+                            </p>
                           </TooltipContent>
                         )}
                       </Tooltip>
@@ -773,6 +790,39 @@ function EventDetailLayoutContent({
                       }}
                     >
                       Add
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-3">
+                  {hasPaymentMade ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <p className={cn(
+                      "text-sm font-medium",
+                      hasPaymentMade ? "text-foreground" : "text-muted-foreground"
+                    )}>
+                      Complete payment for location booking
+                    </p>
+                    {!hasPaymentMade && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Payment must be completed before publishing the event
+                      </p>
+                    )}
+                  </div>
+                  {!hasPaymentMade && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        router.push(`/dashboard/creator/events/${eventId}/location`);
+                      }}
+                    >
+                      Pay
                     </Button>
                   )}
                 </div>
