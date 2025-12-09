@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAdminTags } from "@/hooks/admin/useAdminTags";
-import { Tag, SortState } from "@/types";
-
+import { useTagStats } from "@/hooks/admin/useTagStats";
+import { useTagGroups } from "@/hooks/admin/useTagGroups";
+import { Tag } from "@/types";
+import { SortableTableHeader, SortDirection } from "@/components/shared/SortableTableHeader";
+import { TableFilters } from "@/components/shared/TableFilters";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { PageContainer } from "@/components/shared/PageContainer";
+import { StatsCard } from "@/components/dashboard";
 import {
   Card,
   CardContent,
@@ -20,49 +26,63 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ArrowUp, ArrowDown, Edit, Tag as TagIcon, Search, RefreshCw } from "lucide-react";
+import {
+  Loader2,
+  PlusCircle,
+  Edit,
+  Tag as TagIcon,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { TagFormModal } from "@/components/admin/TagFormModal";
 import { Badge } from "@/components/ui/badge";
 import { useDebounce } from "use-debounce";
-import { Input } from "@/components/ui/input";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { formatDateTime, formatGroupName } from "@/lib/utils";
 
 export default function AdminTagsPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<SortState>({
+  const [sort, setSort] = useState<{ column: string; direction: SortDirection }>({
     column: "displayName",
     direction: "ASC",
   });
-
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+  const [visibilityFilter, setVisibilityFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<Tag | undefined>(undefined);
 
+  // Fetch unique tag groups for category filter
+  const { groups: tagGroups, isLoading: isLoadingGroups } = useTagGroups();
+
+  const sortBy = sort.direction ? `${sort.column}:${sort.direction}` : "displayName:ASC";
+  const isVisibleFilter =
+    visibilityFilter === "all" ? undefined : visibilityFilter === "visible";
+  const groupNameFilter = categoryFilter === "all" ? undefined : categoryFilter;
+
   const { data: response, isLoading } = useAdminTags({
     page,
-    sortBy: `${sort.column}:${sort.direction}`,
+    sortBy,
     search: debouncedSearchTerm,
+    isVisible: isVisibleFilter,
+    groupName: groupNameFilter,
   });
 
   const tags = response?.data || [];
   const meta = response?.meta;
 
-  const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['adminTags'] });
-  };
+  // Fetch accurate statistics from API
+  const tagStats = useTagStats();
 
-  // Calculate statistics
-  const stats = useMemo(() => {
-    return {
-      total: meta?.totalItems || 0,
-      visible: tags.filter((t: Tag) => t.isVisible !== false).length,
-      hidden: tags.filter((t: Tag) => t.isVisible === false).length,
-    };
-  }, [tags, meta]);
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["adminTags"] });
+    queryClient.invalidateQueries({ queryKey: ["tagStats"] });
+  };
 
   const openNewModal = () => {
     setSelectedTag(undefined);
@@ -74,204 +94,353 @@ export default function AdminTagsPage() {
     setIsFormModalOpen(true);
   };
 
-  const handleSort = (columnName: string) => {
-    setSort((currentSort) => ({
-      column: columnName,
-      direction:
-        currentSort.column === columnName && currentSort.direction === "DESC"
-          ? "ASC"
-          : "DESC",
-    }));
+  const handleSort = (column: string, direction: SortDirection) => {
+    setSort({ column, direction: direction || "ASC" });
     setPage(1);
   };
 
-  const SortIcon = ({ column }: { column: string }) => {
-    if (sort.column !== column) return null;
-    return sort.direction === "ASC" ? (
-      <ArrowUp className="ml-2 h-4 w-4" />
-    ) : (
-      <ArrowDown className="ml-2 h-4 w-4" />
-    );
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setVisibilityFilter("all");
+    setCategoryFilter("all");
+    setSort({ column: "displayName", direction: "ASC" });
+    setPage(1);
   };
 
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (visibilityFilter !== "all") count++;
+    if (categoryFilter !== "all") count++;
+    if (debouncedSearchTerm) count++;
+    return count;
+  }, [visibilityFilter, categoryFilter, debouncedSearchTerm]);
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tag Management</h1>
-          <p className="text-muted-foreground mt-1">
-            Create and manage tags for events and locations
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={refresh} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+    <PageContainer>
+      <PageHeader
+        title="Tag Management"
+        description="Create and manage tags for events and locations"
+        icon={TagIcon}
+        actions={
           <Button onClick={openNewModal}>
             <PlusCircle className="mr-2 h-4 w-4" /> Create New Tag
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tags</CardTitle>
-            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-              <TagIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              All tags on platform
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatsCard
+          title="Total Tags"
+          value={tagStats.isLoading ? "—" : tagStats.total.toLocaleString()}
+          change={tagStats.isLoading ? "Loading..." : `${tags.length} on this page`}
+          icon={TagIcon}
+          color="blue"
+          variant="minimal"
+          isLoading={tagStats.isLoading}
+        />
 
-        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Visible</CardTitle>
-            <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
-              <IconTag className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.visible}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Active tags
-            </p>
-          </CardContent>
-        </Card>
+        <StatsCard
+          title="Visible Tags"
+          value={tagStats.isLoading ? "—" : tagStats.visible.toLocaleString()}
+          change={
+            tagStats.isLoading
+              ? "Loading..."
+              : `${tagStats.total > 0 ? Math.round((tagStats.visible / tagStats.total) * 100) : 0}% of total`
+          }
+          icon={Eye}
+          color="green"
+          variant="minimal"
+          isLoading={tagStats.isLoading}
+        />
 
-        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-gray-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hidden</CardTitle>
-            <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-950 flex items-center justify-center">
-              <IconTag className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-600 dark:text-gray-400">{stats.hidden}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Hidden tags
-            </p>
-          </CardContent>
-        </Card>
+        <StatsCard
+          title="Hidden Tags"
+          value={tagStats.isLoading ? "—" : tagStats.hidden.toLocaleString()}
+          change={
+            tagStats.isLoading
+              ? "Loading..."
+              : `${tagStats.total > 0 ? Math.round((tagStats.hidden / tagStats.total) * 100) : 0}% of total`
+          }
+          icon={EyeOff}
+          color="orange"
+          variant="minimal"
+          isLoading={tagStats.isLoading}
+        />
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+      {/* Main Table Card */}
+      <Card className="border-border/60 shadow-sm">
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <CardTitle>All Tags ({meta?.totalItems || 0})</CardTitle>
+              <CardTitle>All Tags</CardTitle>
               <CardDescription className="mt-1">
-                Showing page {meta?.currentPage || 1} of {meta?.totalPages || 1}
+                Showing {tags.length} of {meta?.totalItems || 0} tags
+                {(visibilityFilter !== "all" || categoryFilter !== "all") && (
+                  <span>
+                    {" "}
+                    ({[
+                      visibilityFilter !== "all" && visibilityFilter,
+                      categoryFilter !== "all" && formatGroupName(categoryFilter),
+                    ]
+                      .filter(Boolean)
+                      .join(", ")})
+                  </span>
+                )}
               </CardDescription>
-            </div>
-            <div className="relative w-[300px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by display name..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(1);
-                }}
-                className="pl-9"
-              />
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
+          {/* Filters */}
+          <TableFilters
+            searchValue={searchTerm}
+            onSearchChange={(value) => {
+              setSearchTerm(value);
+              setPage(1);
+            }}
+            searchPlaceholder="Search tags by display name..."
+            filters={[
+              {
+                key: "visibility",
+                label: "Visibility",
+                value: visibilityFilter,
+                options: [
+                  { value: "all", label: "All Tags" },
+                  { value: "visible", label: "Visible Only" },
+                  { value: "hidden", label: "Hidden Only" },
+                ],
+                onValueChange: (value) => {
+                  setVisibilityFilter(value);
+                  setPage(1);
+                },
+              },
+              {
+                key: "category",
+                label: "Category",
+                value: categoryFilter,
+                options: isLoadingGroups
+                  ? [{ value: "all", label: "Loading categories..." }]
+                  : tagGroups.length > 0
+                  ? [
+                      { value: "all", label: "All Categories" },
+                      ...tagGroups.map((group) => ({
+                        value: group,
+                        label: formatGroupName(group),
+                      })),
+                    ]
+                  : [{ value: "all", label: "All Categories" }],
+                onValueChange: (value) => {
+                  setCategoryFilter(value);
+                  setPage(1);
+                },
+              },
+            ]}
+            activeFiltersCount={activeFiltersCount}
+            onClearFilters={handleClearFilters}
+          />
+
+          {/* Table */}
           {isLoading && !response ? (
-            <div className="flex items-center justify-center">
-              <Loader2 className="h-12 w-12 animate-spin" />
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : tags.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <TagIcon className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">
+                {searchTerm || visibilityFilter !== "all" || categoryFilter !== "all"
+                  ? "No tags found"
+                  : "No tags yet"}
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-md">
+                {searchTerm || visibilityFilter !== "all" || categoryFilter !== "all"
+                  ? "Try adjusting your search terms or filters"
+                  : "Create your first tag to get started"}
+              </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Preview</TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort("displayName")}
-                    >
-                      Display Name <SortIcon column="displayName" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>Color</TableHead>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort("createdAt")}
-                    >
-                      Created At <SortIcon column="createdAt" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="text-right">Edit</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tags.map((tag: Tag) => (
-                  <TableRow key={tag.id}>
-                    <TableCell>
-                      <Badge
-                        style={{ backgroundColor: tag.color, color: "#fff" }}
+            <>
+              <div className="rounded-md border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-[200px]">Preview</TableHead>
+                      <SortableTableHeader
+                        column="displayName"
+                        currentSort={sort}
+                        onSort={handleSort}
                       >
-                        {tag.icon} {tag.displayName}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{tag.displayName}</TableCell>
-                    <TableCell>{tag.color}</TableCell>
-                    <TableCell>
-                      {new Date(tag.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditModal(tag)}
+                        Display Name
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="groupName"
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className="hidden md:table-cell"
                       >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                        Group
+                      </SortableTableHeader>
+                      <TableHead className="hidden lg:table-cell">Color</TableHead>
+                      <TableHead>Status</TableHead>
+                      <SortableTableHeader
+                        column="createdAt"
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className="hidden sm:table-cell"
+                      >
+                        Created
+                      </SortableTableHeader>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tags.map((tag: Tag) => (
+                      <TableRow key={tag.id} className="hover:bg-muted/50 transition-colors">
+                        <TableCell>
+                          <Badge
+                            style={{
+                              backgroundColor: tag.color,
+                              color: "#fff",
+                            }}
+                            className="flex items-center gap-1.5 w-fit"
+                          >
+                            <span>{tag.icon}</span>
+                            <span className="font-medium">{tag.displayName}</span>
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{tag.displayName}</TableCell>
+                        <TableCell className="hidden md:table-cell text-muted-foreground">
+                          {formatGroupName(tag.groupName)}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-6 h-6 rounded border-2 border-border"
+                              style={{ backgroundColor: tag.color }}
+                            />
+                            <span className="text-sm font-mono">{tag.color}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {(tag as any).isVisible !== false ? (
+                            <Badge
+                              variant="outline"
+                              className="flex items-center w-fit bg-green-100 text-green-700 hover:bg-green-100 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"
+                            >
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Visible
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="flex items-center w-fit bg-gray-100 text-gray-700 hover:bg-gray-100 border-gray-200 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800"
+                            >
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Hidden
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
+                          {formatDateTime(tag.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditModal(tag)}
+                            className="h-8 w-8"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Enhanced Pagination */}
+              {meta && meta.totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t px-6 pb-4">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {(meta.currentPage - 1) * (meta.itemsPerPage || 20) + 1} to{" "}
+                    {Math.min(meta.currentPage * (meta.itemsPerPage || 20), meta.totalItems)} of{" "}
+                    {meta.totalItems} tags
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(1)}
+                      disabled={meta.currentPage <= 1}
+                    >
+                      First
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page - 1)}
+                      disabled={meta.currentPage <= 1}
+                    >
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1 px-2">
+                      {[...Array(Math.min(5, meta.totalPages))].map((_, i) => {
+                        const pageNum =
+                          meta.totalPages <= 5
+                            ? i + 1
+                            : meta.currentPage <= 3
+                            ? i + 1
+                            : meta.currentPage >= meta.totalPages - 2
+                            ? meta.totalPages - 4 + i
+                            : meta.currentPage - 2 + i;
+                        if (pageNum > meta.totalPages) return null;
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={pageNum === meta.currentPage ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setPage(pageNum)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page + 1)}
+                      disabled={meta.currentPage >= meta.totalPages}
+                    >
+                      Next
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(meta.totalPages)}
+                      disabled={meta.currentPage >= meta.totalPages}
+                    >
+                      Last
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
-
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setPage(page - 1)}
-          disabled={!meta || meta.currentPage <= 1}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setPage(page + 1)}
-          disabled={!meta || meta.currentPage >= meta.totalPages}
-        >
-          Next
-        </Button>
-      </div>
 
       <TagFormModal
         open={isFormModalOpen}
         onOpenChange={setIsFormModalOpen}
         initialData={selectedTag}
       />
-    </div>
+    </PageContainer>
   );
 }

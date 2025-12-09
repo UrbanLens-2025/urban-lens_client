@@ -198,12 +198,25 @@ export const getTagsForAdmin = async ({
   limit = 20,
   sortBy = "displayName:ASC",
   search,
-}: GetTagsParams): Promise<PaginatedData<Tag>> => {
+  isVisible,
+  groupName,
+}: GetTagsParams & { 
+  isVisible?: boolean;
+  groupName?: string;
+}): Promise<PaginatedData<Tag>> => {
   const params: any = { page, limit, sortBy };
 
   if (search) {
     params.search = search;
     params.searchBy = ["displayName"];
+  }
+
+  if (isVisible !== undefined) {
+    params["filter.isVisible"] = `$eq:${isVisible}`;
+  }
+
+  if (groupName) {
+    params["filter.groupName"] = `$eq:${groupName}`;
   }
 
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Tag>>>(

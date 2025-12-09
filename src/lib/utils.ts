@@ -57,3 +57,16 @@ export function formatDocumentType(type: string): string {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 }
+
+/**
+ * Formats a group/category name for display.
+ * Converts technical names (e.g., "USER_TYPE") to readable format (e.g., "User Type").
+ */
+export function formatGroupName(groupName: string | null): string {
+  if (!groupName) return "—";
+  
+  return groupName
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
