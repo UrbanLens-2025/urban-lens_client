@@ -4,6 +4,7 @@ import { UseFormReturn, useFieldArray } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { FileUpload } from "@/components/shared/FileUpload";
 import { FileCheck, Plus, Trash2, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -39,14 +40,21 @@ export function Step3Documents({ form }: Step3DocumentsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-3 pb-2 border-b border-primary/10">
-        <div className="p-2 rounded-lg bg-primary/10 text-primary mt-1">
-          <FileCheck className="h-5 w-5" />
+      <div className="flex items-start gap-4 pb-4 border-b-2 border-primary/20">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary shadow-md">
+          <FileCheck className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h2 className="text-2xl font-semibold mb-1">Documents</h2>
-          <p className="text-muted-foreground text-sm">
-            Upload any required documents for your event request.
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+              Event Documents
+            </h2>
+            <Badge variant="secondary" className="text-xs font-medium px-2.5 py-1">
+              Optional
+            </Badge>
+          </div>
+          <p className="text-muted-foreground text-base">
+            Upload any required documents for your event request. This helps verify your event eligibility.
           </p>
         </div>
       </div>

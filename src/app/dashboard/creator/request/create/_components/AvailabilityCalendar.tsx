@@ -650,14 +650,14 @@ export function AvailabilityCalendar({
   // Get cell class names
   const getCellClassName = (status: CellStatus) => {
     return cn(
-      "w-full h-[36px] border-r border-b transition-all flex items-center justify-center text-xs font-medium",
+      "w-full h-[36px] border-r border-b transition-all duration-150 flex items-center justify-center text-xs font-medium relative group",
       {
-        "bg-green-500 border-green-600 text-white hover:bg-green-600 cursor-pointer": status === "selected",
-        "bg-white border-gray-200 text-gray-700 hover:bg-gray-50 cursor-pointer": status === "available",
-        "bg-blue-400 border-blue-500 text-white cursor-pointer": status === "dragging",
-        "bg-gray-300 border-gray-400 text-gray-500 cursor-not-allowed": status === "past",
-        "bg-red-500 border-red-600 text-white cursor-not-allowed": status === "booked",
-        "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed opacity-60": status === "unavailable",
+        "bg-gradient-to-br from-green-500 to-green-600 border-green-700 text-white hover:from-green-600 hover:to-green-700 cursor-pointer shadow-sm": status === "selected",
+        "bg-white border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300 cursor-pointer": status === "available",
+        "bg-gradient-to-br from-blue-400 to-blue-500 border-blue-600 text-white cursor-pointer shadow-md ring-2 ring-blue-300": status === "dragging",
+        "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed": status === "past",
+        "bg-gradient-to-br from-red-500 to-red-600 border-red-700 text-white cursor-not-allowed shadow-sm": status === "booked",
+        "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50": status === "unavailable",
       }
     );
   };
@@ -850,102 +850,105 @@ export function AvailabilityCalendar({
   }, [currentWeekStart]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Select Event Times</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Selected Slots Display - Fixed above week navigation */}
-        <div className="h-[72px] border-b">
-          {selectedSlotsList.length > 0 ? (
-            <div className="h-full flex flex-col">
-              <h4 className="text-sm font-medium mb-2">Selected Time Slots:</h4>
-              <div 
-                className="overflow-x-auto overflow-y-hidden flex-1" 
-                style={{ WebkitOverflowScrolling: 'touch' }}
-                onWheel={(e) => {
-                  // Only stop propagation for horizontal scrolling to prevent calendar scroll
-                  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-                    e.stopPropagation();
-                  }
-                }}
-              >
-                <div className="flex gap-2 pb-2 min-w-max">
-                  {selectedSlotsList.map((slot, index) => (
-                    <Badge key={`${slot.start.toISOString()}-${slot.end.toISOString()}-${index}`} variant="default" className="pl-3 pr-2 py-2 bg-green-500 shrink-0">
-                      <span className="text-xs whitespace-nowrap">
-                        {format(slot.start, "MMM dd, HH:mm")} -{" "}
-                        {format(slot.end, "HH:mm")}
-                      </span>
-                      <button
-                        onClick={() => handleRemoveSlot(slot.keys)}
-                        className="ml-2 rounded-full hover:bg-white/20 p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="h-full flex items-center">
-              <h4 className="text-sm font-medium text-gray-400">No time slots selected</h4>
-            </div>
-          )}
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-col gap-2 pb-2 border-b">
-          <div className="flex items-center justify-center gap-6 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-green-500 border border-green-600"></div>
-              <span>Selected</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-white border border-gray-200"></div>
-              <span>Available</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-red-500 border border-red-600"></div>
-              <span>Booked</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-gray-200 border border-gray-300 opacity-60"></div>
-              <span>Not Available</span>
+    <div className="space-y-4">
+      {/* Selected Slots Display */}
+      {selectedSlotsList.length > 0 && (
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-green-900 dark:text-green-100 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              Selected Time Slots ({selectedSlotsList.length})
+            </h4>
+          </div>
+          <div 
+            className="overflow-x-auto overflow-y-hidden scrollbar-thin scrollbar-thumb-green-300 scrollbar-track-transparent" 
+            style={{ WebkitOverflowScrolling: 'touch' }}
+            onWheel={(e) => {
+              if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                e.stopPropagation();
+              }
+            }}
+          >
+            <div className="flex gap-2 pb-1 min-w-max">
+              {selectedSlotsList.map((slot, index) => (
+                <Badge 
+                  key={`${slot.start.toISOString()}-${slot.end.toISOString()}-${index}`} 
+                  variant="default" 
+                  className="pl-3 pr-2 py-1.5 bg-green-600 hover:bg-green-700 text-white shrink-0 shadow-sm transition-all duration-200 group"
+                >
+                  <span className="text-xs font-medium whitespace-nowrap">
+                    {format(slot.start, "MMM dd, HH:mm")} - {format(slot.end, "HH:mm")}
+                  </span>
+                  <button
+                    onClick={() => handleRemoveSlot(slot.keys)}
+                    className="ml-2 rounded-full hover:bg-white/30 p-0.5 transition-colors"
+                    aria-label="Remove slot"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
             </div>
           </div>
-          {locationId && (
-            <div className="text-xs text-gray-500 text-center italic">
-              Note: Time slots marked as &quot;Not Available&quot; are unavailable because the location owner hasn&apos;t made them available for booking.
-            </div>
-          )}
         </div>
+      )}
+
+      {/* Legend and Info */}
+      <div className="flex items-start justify-between gap-4 pb-3 border-b">
+        <div className="flex items-center gap-6 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded border-2 border-green-600 bg-green-500 shadow-sm"></div>
+            <span className="font-medium text-foreground">Selected</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded border border-gray-300 bg-white shadow-sm"></div>
+            <span className="font-medium text-foreground">Available</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded border-2 border-red-600 bg-red-500 shadow-sm"></div>
+            <span className="font-medium text-foreground">Booked</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded border border-gray-300 bg-gray-100 opacity-60"></div>
+            <span className="font-medium text-muted-foreground">Unavailable</span>
+          </div>
+        </div>
+        {locationId && (
+          <div className="text-xs text-muted-foreground max-w-xs text-right">
+            <span className="font-medium">Tip:</span> Unavailable slots are not open for booking by the venue owner.
+          </div>
+        )}
+      </div>
 
         {/* Week Navigation */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between py-3 bg-muted/30 rounded-lg px-4">
           <Button
             variant="outline"
             size="sm"
             onClick={goToPreviousWeek}
-            className="h-8 px-3 flex items-center gap-2"
+            className="h-9 px-4 flex items-center gap-2 hover:bg-background transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
-            <span className="text-xs">{previousWeekRange}</span>
+            <span className="text-xs font-medium">{previousWeekRange}</span>
           </Button>
           
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">
-              {format(dates[0], "MMM d")} - {format(dates[6], "MMM d, yyyy")}
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="text-center">
+              <div className="text-sm font-semibold text-foreground">
+                {format(dates[0], "MMM d")} - {format(dates[6], "MMM d, yyyy")}
+              </div>
+              {isThisWeek && (
+                <div className="text-[10px] text-muted-foreground mt-0.5">Current Week</div>
+              )}
+            </div>
             {!isThisWeek && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={goToThisWeek}
-                className="h-8 text-xs"
+                className="h-9 text-xs hover:bg-background"
               >
-                This Week
+                Go to This Week
               </Button>
             )}
           </div>
@@ -954,47 +957,56 @@ export function AvailabilityCalendar({
             variant="outline"
             size="sm"
             onClick={goToNextWeek}
-            className="h-8 px-3 flex items-center gap-2"
+            className="h-9 px-4 flex items-center gap-2 hover:bg-background transition-colors"
           >
-            <span className="text-xs">{nextWeekRange}</span>
+            <span className="text-xs font-medium">{nextWeekRange}</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
         {/* Calendar Grid */}
-        <div className="overflow-x-auto" ref={calendarRef}>
+        <div className="overflow-x-auto rounded-lg border bg-white shadow-sm" ref={calendarRef}>
           <div className="inline-block min-w-full">
             <div 
-              className="border rounded-lg bg-gray-50 p-2 select-none"
+              className="select-none"
               onMouseLeave={handleCalendarMouseLeave}
             >
               {/* Header Row - Dates */}
-              <div className="grid grid-cols-[80px_repeat(7,1fr)] gap-0 mb-0">
-                <div className="h-12 flex items-center justify-center border-b border-r font-semibold text-sm text-gray-700 bg-gray-100">
+              <div className="grid grid-cols-[75px_repeat(7,1fr)] gap-0">
+                <div className="h-12 flex items-center justify-center border-b border-r font-semibold text-xs text-foreground bg-muted/50 sticky left-0 z-10">
                   Time
                 </div>
                 {dates.map((date, dateIndex) => {
                   const dateStart = startOfDay(date);
                   const isDatePast = isBefore(dateStart, today);
+                  const isToday = isSameDay(dateStart, today);
                   const hasSelected = hasSelectedSlots(dateIndex);
                   return (
                     <div
                       key={date.toISOString()}
                       onClick={() => !isDatePast && handleDateHeaderClick(dateIndex)}
                       className={cn(
-                        "h-12 text-center font-semibold text-sm border-b border-r flex items-center justify-center transition-colors",
+                        "h-12 text-center font-semibold border-b border-r flex flex-col items-center justify-center transition-all duration-200",
                         {
-                          "bg-gray-100 text-gray-700": !isDatePast && !hasSelected,
-                          "bg-green-100 text-green-700 border-green-300": !isDatePast && hasSelected,
-                          "text-gray-400 opacity-60 bg-gray-100 cursor-not-allowed": isDatePast,
-                          "cursor-pointer hover:bg-green-200": !isDatePast,
+                          "bg-muted/30 text-foreground cursor-pointer hover:bg-muted/50": !isDatePast && !hasSelected && !isToday,
+                          "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700 cursor-pointer hover:bg-green-200 dark:hover:bg-green-900/40": !isDatePast && hasSelected,
+                          "bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300": isToday && !hasSelected,
+                          "text-muted-foreground opacity-50 bg-muted/20 cursor-not-allowed": isDatePast,
                         }
                       )}
                     >
-                      <div>
-                        <div className="text-xs text-gray-500">{format(date, "EEE")}</div>
-                        <div>{format(date, "d/M")}</div>
+                      <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                        {format(date, "EEE")}
                       </div>
+                      <div className={cn("text-sm font-semibold", {
+                        "text-green-700 dark:text-green-300": hasSelected,
+                        "text-blue-700 dark:text-blue-300": isToday && !hasSelected,
+                      })}>
+                        {format(date, "d")}
+                      </div>
+                      {isToday && (
+                        <div className="absolute bottom-1 w-1 h-1 rounded-full bg-blue-500"></div>
+                      )}
                     </div>
                   );
                 })}
@@ -1007,10 +1019,10 @@ export function AvailabilityCalendar({
                   return (
                     <div
                       key={timeSlot.toISOString()}
-                      className="grid grid-cols-[80px_repeat(7,1fr)] gap-0"
+                      className="grid grid-cols-[75px_repeat(7,1fr)] gap-0"
                     >
                       {/* Time Label */}
-                      <div className="h-[36px] flex items-center justify-end pr-2 text-xs font-medium text-gray-600 border-r bg-white">
+                      <div className="h-[36px] flex items-center justify-end pr-3 text-xs font-medium text-muted-foreground border-r bg-muted/20 sticky left-0 z-10">
                         {timeLabel}
                       </div>
 
@@ -1025,12 +1037,28 @@ export function AvailabilityCalendar({
                             onMouseEnter={() => handleMouseEnter(dateIndex, timeIndex)}
                             onMouseUp={handleMouseUp}
                           >
-                            <div className={getCellClassName(status)} title={status === "unavailable" ? "This time slot is not available - the location owner hasn't made it available for booking" : status === "booked" ? "This time slot is already booked" : ""}>
+                            <div 
+                              className={getCellClassName(status)} 
+                              title={
+                                status === "unavailable" 
+                                  ? "This time slot is not available - the location owner hasn't made it available for booking" 
+                                  : status === "booked" 
+                                  ? "This time slot is already booked" 
+                                  : status === "available"
+                                  ? "Click to select this time slot"
+                                  : ""
+                              }
+                            >
                               {status === "booked" && (
-                                <span className="text-[7px] px-0.5 leading-tight">BOOKED</span>
+                                <span className="text-[8px] font-bold px-1 py-0.5 bg-red-700 rounded leading-tight">BOOKED</span>
                               )}
                               {status === "unavailable" && (
-                                <span className="text-[7px] px-0.5 leading-tight opacity-75">NOT AVAILABLE</span>
+                                <span className="text-[8px] px-1 opacity-60">—</span>
+                              )}
+                              {status === "selected" && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -1043,7 +1071,6 @@ export function AvailabilityCalendar({
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
   );
 }

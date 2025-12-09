@@ -126,7 +126,7 @@ export function Step4ReviewPayment({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleEditStep(1)}
+              onClick={() => handleEditStep(2)}
               className="text-xs"
             >
               <Edit className="h-3 w-3 mr-1" />
@@ -289,7 +289,7 @@ export function Step4ReviewPayment({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleEditStep(3)}
+              onClick={() => handleEditStep(1)}
               className="text-xs"
             >
               <Edit className="h-3 w-3 mr-1" />
@@ -359,7 +359,7 @@ export function Step4ReviewPayment({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleEditStep(4)}
+                onClick={() => handleEditStep(3)}
                 className="text-xs"
               >
                 <Edit className="h-3 w-3 mr-1" />

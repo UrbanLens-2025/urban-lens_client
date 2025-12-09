@@ -94,16 +94,17 @@ export function DateTimePicker({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <Label>{label}</Label>
+      <Label className="text-sm font-semibold text-foreground">{label}</Label>
       <div className="flex flex-wrap gap-2">
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               className={cn(
-                "flex-1 justify-start text-left font-normal min-w-[140px]",
-                !value && "text-muted-foreground",
-                error && "border-destructive"
+                "flex-1 justify-start text-left font-normal min-w-[160px] h-12 border-2 transition-all",
+                !value && "text-muted-foreground border-primary/20 hover:border-primary/40",
+                error && "border-destructive",
+                value && "border-primary/30"
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -149,7 +150,7 @@ export function DateTimePicker({
           value={timeString}
           onChange={handleTimeChange}
           error={error}
-          className="w-32"
+          className="w-36"
         />
       </div>
     </div>

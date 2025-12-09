@@ -13,9 +13,8 @@ import { Form } from "@/components/ui/form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, FileText, ArrowLeft, ArrowRight } from "lucide-react";
 import { StepIndicator } from "./_components/StepIndicator";
-import { Step1BasicInfo } from "./_components/Step1BasicInfo";
-import { Step2TagsSelection } from "./_components/Step2TagsSelection";
-import { Step3LocationSelection } from "./_components/Step3LocationSelection";
+import { Step1LocationSelection } from "./_components/Step3LocationSelection";
+import { Step2BasicInfo } from "./_components/Step1BasicInfo";
 import { Step3Documents } from "./_components/Step3Documents";
 import { Step4ReviewPayment } from "./_components/Step4ReviewPayment";
 import { CreateEventRequestPayload } from "@/types";
@@ -198,24 +197,22 @@ export default function CreateEventRequestPage() {
 
     switch (step) {
       case 1:
+        // Location step - optional, always valid
+        return true;
+      case 2:
         fieldsToValidate = [
           "eventName",
           "eventDescription",
           "expectedNumberOfParticipants",
           "startDate",
           "endDate",
+          "tagIds",
         ];
         break;
-      case 2:
-        fieldsToValidate = ["tagIds"];
-        break;
       case 3:
-        // Location step - optional, always valid
-        return true;
-      case 4:
         // Documents step - optional, always valid
         return true;
-      case 5:
+      case 4:
         // Validate entire form (location is optional but recommended)
         const isValid = await form.trigger();
         if (!isValid) {
@@ -272,6 +269,9 @@ export default function CreateEventRequestPage() {
     
     switch (currentStep) {
       case 1:
+        // Location step - optional, always valid to proceed
+        return true;
+      case 2:
         // Check required fields
         const basicFieldsValid = !errors.eventName && !errors.eventDescription && !errors.expectedNumberOfParticipants &&
                                  values.eventName && values.eventDescription && values.expectedNumberOfParticipants;
@@ -282,13 +282,11 @@ export default function CreateEventRequestPage() {
         const datesValid = (!hasStartDate && !hasEndDate) || // Both empty is valid
                           (hasStartDate && hasEndDate && !errors.startDate && !errors.endDate); // Both provided and no errors
         
-        return basicFieldsValid && datesValid;
-      case 2:
-        return !errors.tagIds && values.tagIds && values.tagIds.length > 0;
+        // Check tags
+        const tagsValid = !errors.tagIds && values.tagIds && values.tagIds.length > 0;
+        
+        return basicFieldsValid && datesValid && tagsValid;
       case 3:
-        // Location step - optional, always valid to proceed
-        return true;
-      case 4:
         // Documents step - optional, always valid to proceed
         return true;
       default:
@@ -298,7 +296,7 @@ export default function CreateEventRequestPage() {
 
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
-    if (isValid && currentStep < 5) {
+    if (isValid && currentStep < 4) {
       setShowValidationErrors(false);
       setCurrentStep(currentStep + 1);
       // Scroll to top of page when moving to next step
@@ -358,14 +356,12 @@ export default function CreateEventRequestPage() {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        return <Step1BasicInfo form={form} />;
+        return <Step1LocationSelection form={form} />;
       case 2:
-        return <Step2TagsSelection form={form} />;
+        return <Step2BasicInfo form={form} />;
       case 3:
-        return <Step3LocationSelection form={form} />;
-      case 4:
         return <Step3Documents form={form} />;
-      case 5:
+      case 4:
         return (
           <Step4ReviewPayment
             form={form}
@@ -386,18 +382,19 @@ export default function CreateEventRequestPage() {
 
     switch (step) {
       case 1:
+        // Location is optional
+        fieldsToCheck = [];
+        break;
+      case 2:
         fieldsToCheck = [
           "eventName",
           "eventDescription",
           "expectedNumberOfParticipants",
+          "tagIds",
         ];
         break;
-      case 2:
-        fieldsToCheck = ["tagIds"];
-        break;
       case 3:
-      case 4:
-        // Location and Documents are optional
+        // Documents are optional
         fieldsToCheck = [];
         break;
     }
@@ -413,75 +410,112 @@ export default function CreateEventRequestPage() {
       });
   };
 
+  const progressPercentage = ((currentStep - 1) / 3) * 100;
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6 py-8 px-4">
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10 text-primary">
-            <FileText className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Create Event Request</h1>
-            <p className="text-muted-foreground mt-1">
-              Fill out the form below to submit your event request
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      <div className="max-w-5xl mx-auto space-y-8 py-8 px-4 lg:px-6">
+        {/* Header Section */}
+        <div className="space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary shadow-lg">
+                <FileText className="h-7 w-7" />
+              </div>
+              <div>
+                <h1 className="text-3xl lg:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                  Create Event Request
+                </h1>
+                <p className="text-muted-foreground mt-2 text-base">
+                  Follow the steps below to create your event. You can save progress and return later.
+                </p>
+              </div>
+            </div>
+            {/* Progress Indicator */}
+            <div className="hidden md:flex flex-col items-end gap-2 min-w-[120px]">
+              <div className="text-sm font-semibold text-muted-foreground">
+                {currentStep} of 4
+              </div>
+              <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <StepIndicator currentStep={currentStep} />
+        {/* Step Indicator */}
+        <StepIndicator currentStep={currentStep} />
 
-      {showValidationErrors && currentStep !== 5 && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Validation Error</AlertTitle>
-          <AlertDescription>
-            Please fix the following fields to continue:{" "}
-            <strong>{getStepErrorFields(currentStep).join(", ")}</strong>
-          </AlertDescription>
-        </Alert>
-      )}
+        {/* Validation Alert */}
+        {showValidationErrors && currentStep !== 4 && (
+          <Alert variant="destructive" className="border-2 animate-in slide-in-from-top-2">
+            <AlertCircle className="h-5 w-5" />
+            <AlertTitle className="font-semibold">Please fix the following errors</AlertTitle>
+            <AlertDescription className="mt-1">
+              <ul className="list-disc list-inside space-y-1">
+                {getStepErrorFields(currentStep).map((field, idx) => (
+                  <li key={idx}>{field}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
 
-      <Form {...form}>
-        <Card className="border-2 border-primary/10 bg-gradient-to-br from-background to-primary/5">
-          <CardContent className="pt-6">{renderStepContent()}</CardContent>
-        </Card>
-      </Form>
+        {/* Main Content Card */}
+        <Form {...form}>
+          <Card className="border-2 border-primary/10 shadow-2xl bg-card/80 backdrop-blur-sm overflow-hidden">
+            <CardContent className="p-6 lg:p-8">
+              <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
+                {renderStepContent()}
+              </div>
+            </CardContent>
+          </Card>
+        </Form>
 
-      {/* Navigation Buttons */}
-      {currentStep !== 5 && (
-        <div className="flex flex-col sm:flex-row justify-between gap-4 pb-6">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 1 || createEvent.isPending}
-            className="w-full sm:w-auto"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Previous
-          </Button>
-          <div className="flex gap-2 w-full sm:w-auto">
-            {(currentStep === 3 || currentStep === 4) && (
+        {/* Navigation Footer */}
+        {currentStep !== 4 && (
+          <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t pt-4 pb-4 -mx-4 px-4 lg:-mx-6 lg:px-6">
+            <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
               <Button
-                variant="ghost"
-                onClick={handleNext}
-                disabled={createEvent.isPending}
-                className="w-full sm:w-auto"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 1 || createEvent.isPending}
+                className="w-full sm:w-auto min-w-[120px]"
+                size="lg"
               >
-                Skip {currentStep === 3 ? "Location" : "Documents"}
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Previous
               </Button>
-            )}
-            <Button
-              onClick={handleNext}
-              disabled={!isCurrentStepValid() || createEvent.isPending}
-              className="w-full sm:w-auto"
-            >
-              Continue
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+              
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                {(currentStep === 1 || currentStep === 3) && (
+                  <Button
+                    variant="ghost"
+                    onClick={handleNext}
+                    disabled={createEvent.isPending}
+                    className="text-muted-foreground hover:text-foreground"
+                    size="lg"
+                  >
+                    Skip {currentStep === 1 ? "Location" : "Documents"}
+                  </Button>
+                )}
+                <Button
+                  onClick={handleNext}
+                  disabled={!isCurrentStepValid() || createEvent.isPending}
+                  className="w-full sm:w-auto min-w-[140px] bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
+                  size="lg"
+                >
+                  {currentStep === 3 ? "Review" : "Continue"}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

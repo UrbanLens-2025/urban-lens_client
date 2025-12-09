@@ -17,3 +17,6 @@ export function Step3LocationSelection({ form }: Step3LocationSelectionProps) {
 
   return <Step3BusinessVenue form={form} />;
 }
+
+// Export alias for Step 1 (venue selection is now first step)
+export const Step1LocationSelection = Step3LocationSelection;

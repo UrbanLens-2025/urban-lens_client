@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { UseFormReturn, Controller } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -7,34 +8,83 @@ import { Textarea } from "@/components/ui/textarea";
 import { SocialLinksInput } from "./SocialLinksInput";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   Info, 
   Users, 
   FileText, 
   Globe,
   Image as ImageIcon,
-  Tag
+  Tag,
+  Tags,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Loader2
 } from "lucide-react";
 import { CreateEventRequestForm } from "../page";
 import { DateTimePicker } from "./DateTimePicker";
 import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
+import { useTagCategories } from "@/hooks/tags/useTagCategories";
+import { TagCategory } from "@/types";
+import { cn } from "@/lib/utils";
 
 interface Step1BasicInfoProps {
   form: UseFormReturn<CreateEventRequestForm>;
 }
 
+const INITIAL_DISPLAY_COUNT = 5;
+
 export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
+  const { data: tagCategories, isLoading: isLoadingTags } = useTagCategories("EVENT");
+  const selectedTagIds = form.watch("tagIds") || [];
+  
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filter tags based on search term
+  const filteredTags = useMemo(() => {
+    if (!tagCategories) return [];
+    const term = searchTerm.toLowerCase();
+    return tagCategories.filter((tag) =>
+      tag.name.toLowerCase().includes(term) ||
+      tag.description.toLowerCase().includes(term)
+    );
+  }, [tagCategories, searchTerm]);
+
+  // Get displayed tags (limited if not expanded)
+  const displayedTags = useMemo(() => {
+    return isExpanded ? filteredTags : filteredTags.slice(0, INITIAL_DISPLAY_COUNT);
+  }, [filteredTags, isExpanded]);
+
+  const hasMore = filteredTags.length > INITIAL_DISPLAY_COUNT;
+
+  // Allow multiple tag selections
+  const toggleTag = (tagId: number) => {
+    if (selectedTagIds.includes(tagId)) {
+      // Deselect if already selected
+      const newSelection = selectedTagIds.filter((id: number) => id !== tagId);
+      form.setValue("tagIds", newSelection, { shouldValidate: true });
+    } else {
+      // Add to current selection (multiple allowed)
+      form.setValue("tagIds", [...selectedTagIds, tagId], { shouldValidate: true });
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start gap-3 pb-2 border-b border-primary/10">
-        <div className="p-2 rounded-lg bg-primary/10 text-primary mt-1">
-          <FileText className="h-5 w-5" />
+    <div className="space-y-8">
+      <div className="flex items-start gap-4 pb-4 border-b-2 border-primary/20">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary shadow-md">
+          <FileText className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h2 className="text-2xl font-semibold mb-1">Basic Event Information</h2>
-          <p className="text-muted-foreground text-sm">
-            Provide the essential details about your event
+          <h2 className="text-2xl lg:text-3xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+            Basic Event Information
+          </h2>
+          <p className="text-muted-foreground text-base">
+            Provide the essential details about your event. All fields marked with * are required.
           </p>
         </div>
       </div>
@@ -46,14 +96,17 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
           name="eventName"
           render={({ field }) => (
             <FormItem>
-              <div className="flex items-center gap-2">
-                <FormLabel className="flex items-center gap-1.5">
-                  <Tag className="h-4 w-4 text-primary" />
-                  Event Name *
+              <div className="flex items-center gap-2 mb-2">
+                <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                  <div className="p-1 rounded-md bg-primary/10">
+                    <Tag className="h-4 w-4 text-primary" />
+                  </div>
+                  Event Name
+                  <span className="text-destructive">*</span>
                 </FormLabel>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Choose a clear, descriptive name for your event</p>
@@ -64,7 +117,7 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
                 <Input 
                   placeholder="Enter event name" 
                   {...field}
-                  className="h-11 border-primary/20 focus:border-primary/50 w-full"
+                  className="h-12 border-2 border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all w-full text-base"
                 />
               </FormControl>
               <FormMessage />
@@ -77,14 +130,17 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
           name="expectedNumberOfParticipants"
           render={({ field }) => (
             <FormItem>
-              <div className="flex items-center gap-2">
-                <FormLabel className="flex items-center gap-1.5">
-                  <Users className="h-4 w-4 text-primary" />
-                  Expected Participants *
+              <div className="flex items-center gap-2 mb-2">
+                <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                  <div className="p-1 rounded-md bg-primary/10">
+                    <Users className="h-4 w-4 text-primary" />
+                  </div>
+                  Expected Participants
+                  <span className="text-destructive">*</span>
                 </FormLabel>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Estimate the number of attendees for planning purposes</p>
@@ -102,7 +158,7 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
                       e.target.value ? Number.parseInt(e.target.value) : undefined
                     )
                   }
-                  className="h-11 border-primary/20 focus:border-primary/50"
+                  className="h-12 border-2 border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-base"
                   min={1}
                 />
               </FormControl>
@@ -118,14 +174,17 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
         name="eventDescription"
         render={({ field }) => (
           <FormItem>
-            <div className="flex items-center gap-2">
-              <FormLabel className="flex items-center gap-1.5">
-                <FileText className="h-4 w-4 text-primary" />
-                Description *
+            <div className="flex items-center gap-2 mb-2">
+              <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                <div className="p-1 rounded-md bg-primary/10">
+                  <FileText className="h-4 w-4 text-primary" />
+                </div>
+                Description
+                <span className="text-destructive">*</span>
               </FormLabel>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Provide a detailed description to help attendees understand your event</p>
@@ -135,9 +194,9 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
             <FormControl>
               <Textarea
                 placeholder="Describe your event, including what attendees can expect, key highlights, and any important information..."
-                rows={5}
+                rows={6}
                 {...field}
-                className="resize-none border-primary/20 focus:border-primary/50"
+                className="resize-none border-2 border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-base min-h-[120px]"
               />
             </FormControl>
             <div className="flex justify-between">
@@ -150,7 +209,7 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
         )}
       />
 
-      <Separator />
+      <Separator className="my-6" />
 
       {/* Start Date and End Date */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -187,7 +246,7 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
         />
       </div>
 
-      <Separator />
+      <Separator className="my-6" />
 
       {/* Cover Image and Avatar Image */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -196,14 +255,16 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
           name="coverUrl"
           render={({ field }) => (
             <FormItem>
-              <div className="flex items-center gap-2">
-                <FormLabel className="flex items-center gap-1.5">
-                  <ImageIcon className="h-4 w-4 text-primary" />
+              <div className="flex items-center gap-2 mb-2">
+                <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                  <div className="p-1 rounded-md bg-primary/10">
+                    <ImageIcon className="h-4 w-4 text-primary" />
+                  </div>
                   Cover Image
                 </FormLabel>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Upload a cover image for your event</p>
@@ -226,14 +287,16 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
           name="avatarUrl"
           render={({ field }) => (
             <FormItem>
-              <div className="flex items-center gap-2">
-                <FormLabel className="flex items-center gap-1.5">
-                  <ImageIcon className="h-4 w-4 text-primary" />
+              <div className="flex items-center gap-2 mb-2">
+                <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                  <div className="p-1 rounded-md bg-primary/10">
+                    <ImageIcon className="h-4 w-4 text-primary" />
+                  </div>
                   Avatar Image
                 </FormLabel>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Upload an avatar image for your event</p>
@@ -252,7 +315,177 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
         />
       </div>
 
-      <Separator />
+      <Separator className="my-6" />
+
+      {/* Tags Selection */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 pb-2">
+          <FormLabel className="flex items-center gap-2 text-base font-semibold">
+            <div className="p-1.5 rounded-md bg-primary/10">
+              <Tags className="h-4 w-4 text-primary" />
+            </div>
+            Event Tags *
+          </FormLabel>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Tags help categorize your event and make it easier for users to discover</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        
+        <FormField
+          control={form.control}
+          name="tagIds"
+          render={() => (
+            <FormItem>
+              <div className="border-2 border-primary/20 rounded-xl p-5 space-y-4 bg-gradient-to-br from-primary/5 to-primary/10/50 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <Tags className="h-4 w-4 text-primary" />
+                      Select Tags
+                    </h3>
+                    <Badge variant="secondary" className="text-xs">
+                      {filteredTags.length} available
+                    </Badge>
+                  </div>
+                  <div className="relative w-48">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="Search tags..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9 h-9 text-sm border-primary/20 focus:border-primary/50"
+                    />
+                    {searchTerm.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground p-1 rounded"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {isLoadingTags ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                    <span className="ml-3 text-sm text-muted-foreground">Loading tags...</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {displayedTags.map((tag: TagCategory) => {
+                        const isSelected = selectedTagIds.includes(tag.id);
+                        return (
+                          <Badge
+                            key={tag.id}
+                            variant={isSelected ? "default" : "outline"}
+                            style={
+                              isSelected
+                                ? { backgroundColor: tag.color, color: "#fff", borderColor: tag.color }
+                                : { borderColor: tag.color, color: tag.color }
+                            }
+                            className={cn(
+                              "cursor-pointer transition-all duration-200 px-3 py-1.5 text-sm font-medium",
+                              isSelected 
+                                ? "shadow-md ring-2 ring-offset-2 ring-primary/30 scale-105" 
+                                : "hover:shadow-sm hover:scale-105 hover:bg-muted/50"
+                            )}
+                            onClick={() => toggleTag(tag.id)}
+                            title={tag.description}
+                          >
+                            <span className="mr-1.5 text-base">{tag.icon}</span>
+                            {tag.name}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+
+                    {hasMore && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="w-full h-9 text-sm font-medium hover:bg-primary/10"
+                      >
+                        {isExpanded ? (
+                          <>
+                            <ChevronUp className="mr-2 h-4 w-4" />
+                            Show Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="mr-2 h-4 w-4" />
+                            View More ({filteredTags.length - INITIAL_DISPLAY_COUNT} more tags)
+                          </>
+                        )}
+                      </Button>
+                    )}
+
+                    {filteredTags.length === 0 && searchTerm && (
+                      <p className="text-xs text-muted-foreground text-center py-2">
+                        No tags found for "{searchTerm}"
+                      </p>
+                    )}
+
+                    {(!tagCategories || tagCategories.length === 0) && !isLoadingTags && (
+                      <div className="text-center py-4">
+                        <p className="text-muted-foreground text-sm">No tags available. Please contact support to add tags.</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {selectedTagIds.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Selected ({selectedTagIds.length})
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTagIds.map((id: number) => {
+                      const tag = tagCategories?.find((t: TagCategory) => t.id === id);
+                      if (!tag) return null;
+                      return (
+                        <Badge
+                          key={id}
+                          style={{ backgroundColor: tag.color, color: "#fff" }}
+                          className="pl-3 pr-2 py-1.5 flex items-center gap-1.5 shadow-sm"
+                        >
+                          <span className="text-sm">{tag.icon}</span>
+                          <span className="text-sm font-medium">{tag.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleTag(id)}
+                            className="ml-1 rounded-full hover:bg-white/30 p-0.5 transition-colors"
+                            aria-label={`Remove ${tag.name}`}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <Separator className="my-6" />
 
       {/* Social Links */}
       <Controller
@@ -264,4 +497,7 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
     </div>
   );
 }
+
+// Export alias for Step 2 (basic info is now second step)
+export const Step2BasicInfo = Step1BasicInfo;
 

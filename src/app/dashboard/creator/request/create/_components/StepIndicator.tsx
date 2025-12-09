@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, FileText, Tags, FileCheck, CheckCircle2, Building2 } from "lucide-react";
+import { Check, FileText, FileCheck, CheckCircle2, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StepIndicatorProps {
@@ -8,19 +8,18 @@ interface StepIndicatorProps {
 }
 
 const steps = [
-  { number: 1, label: "Basic Info", icon: FileText, description: "Event details" },
-  { number: 2, label: "Tags", icon: Tags, description: "Categorize" },
-  { number: 3, label: "Location", icon: Building2, description: "Choose venue" },
-  { number: 4, label: "Documents", icon: FileCheck, description: "Upload files" },
-  { number: 5, label: "Review", icon: CheckCircle2, description: "Submit" },
+  { number: 1, label: "Location", icon: Building2, description: "Choose venue" },
+  { number: 2, label: "Basic Info", icon: FileText, description: "Event details" },
+  { number: 3, label: "Documents", icon: FileCheck, description: "Upload files" },
+  { number: 4, label: "Review", icon: CheckCircle2, description: "Submit" },
 ];
 
 export function StepIndicator({ currentStep }: StepIndicatorProps) {
   return (
-    <div className="flex items-center justify-center w-full mb-8">
-        <div className="relative w-full max-w-4xl">
+    <div className="w-full">
+      <div className="relative w-full">
         {/* Connector Line Background */}
-        <div className="absolute top-6 left-0 right-0 h-1 bg-muted/50 rounded-full -z-0" />
+        <div className="absolute top-7 left-0 right-0 h-1.5 bg-muted/30 rounded-full" />
         
         {/* Steps Container */}
         <div className="relative flex items-start justify-between">
@@ -35,40 +34,40 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
                 {index < steps.length - 1 && (
                   <div
                     className={cn(
-                      "absolute top-6 left-1/2 w-full h-1 rounded-full transition-all duration-500",
+                      "absolute top-7 left-1/2 w-full h-1.5 rounded-full transition-all duration-700 ease-out",
                       index < completedUpTo 
-                        ? "bg-primary shadow-sm" 
-                        : "bg-muted/50"
+                        ? "bg-gradient-to-r from-primary via-primary/80 to-primary shadow-lg" 
+                        : "bg-muted/30"
                     )}
-                    style={{ width: 'calc(100% - 3rem)' }}
+                    style={{ width: 'calc(100% - 3.5rem)' }}
                   />
                 )}
                 
                 {/* Step Circle */}
                 <div
                   className={cn(
-                    "flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 relative z-10 bg-background shadow-sm",
+                    "flex items-center justify-center w-14 h-14 rounded-full border-2 transition-all duration-500 relative z-10 bg-background shadow-lg",
                     isCompleted
-                      ? "bg-primary border-primary text-primary-foreground shadow-md scale-105"
+                      ? "bg-gradient-to-br from-primary to-primary/90 border-primary text-primary-foreground shadow-xl scale-105"
                       : isCurrent
-                        ? "bg-primary border-primary text-primary-foreground shadow-lg ring-4 ring-primary/20 scale-110"
-                        : "bg-background border-muted-foreground/50 text-muted-foreground group-hover:border-muted-foreground"
+                        ? "bg-gradient-to-br from-primary to-primary/80 border-primary text-primary-foreground shadow-2xl ring-4 ring-primary/30 scale-110 animate-pulse"
+                        : "bg-background border-muted-foreground/30 text-muted-foreground group-hover:border-primary/50 group-hover:scale-105 transition-all"
                   )}
                 >
                   {isCompleted ? (
-                    <Check className="h-6 w-6" />
+                    <Check className="h-7 w-7" />
                   ) : isCurrent ? (
-                    <step.icon className="h-6 w-6 animate-pulse" />
+                    <step.icon className="h-7 w-7" />
                   ) : (
-                    <step.icon className="h-5 w-5" />
+                    <step.icon className="h-6 w-6" />
                   )}
                 </div>
                 
                 {/* Step Label */}
-                <div className="mt-3 text-center px-1">
+                <div className="mt-4 text-center px-1 max-w-[120px]">
                   <span
                     className={cn(
-                      "block text-xs sm:text-sm font-semibold",
+                      "block text-sm font-bold transition-colors",
                       isCurrent
                         ? "text-foreground"
                         : isCompleted
@@ -78,7 +77,10 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
                   >
                     {step.label}
                   </span>
-                  <span className="text-xs text-muted-foreground mt-0.5 block">
+                  <span className={cn(
+                    "text-xs mt-1 block transition-colors",
+                    isCurrent ? "text-foreground/70" : "text-muted-foreground"
+                  )}>
                     {step.description}
                   </span>
                 </div>
