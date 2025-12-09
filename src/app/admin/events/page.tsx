@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { Event, SortState } from '@/types';
 import { useAllEvents } from '@/hooks/admin/useAllEvents';
+import { useEventStats } from '@/hooks/admin/useEventStats';
 import Link from 'next/link';
 import { StatsCard } from '@/components/dashboard';
 import {
@@ -37,6 +38,7 @@ import {
   IconUsers,
   IconTrendingUp,
   IconFilter,
+  IconX,
 } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
@@ -74,6 +76,9 @@ export default function AdminEventsPage() {
   const events = eventsResponse?.data || [];
   const eventsMeta = eventsResponse?.meta;
 
+  // Fetch accurate statistics from API
+  const eventStats = useEventStats();
+
   // Filter events by status
   const filteredEvents = useMemo(() => {
     if (statusFilter === 'all') return events;
@@ -83,6 +88,7 @@ export default function AdminEventsPage() {
   // Refresh data
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['allEvents'] });
+    queryClient.invalidateQueries({ queryKey: ['eventStats'] });
   };
 
   // Clear search
@@ -97,53 +103,39 @@ export default function AdminEventsPage() {
     setPage(1);
   };
 
-  // Calculate statistics from all events (not just current page)
+  // Calculate accurate statistics from API
   const stats = useMemo(() => {
-    const total = eventsMeta?.totalItems || 0;
-    const published = events.filter((e) => e.status?.toUpperCase() === 'PUBLISHED').length;
-    const draft = events.filter((e) => e.status?.toUpperCase() === 'DRAFT').length;
-    const cancelled = events.filter((e) => e.status?.toUpperCase() === 'CANCELLED').length;
-    const uniqueCreators = new Set(events.map((e) => e.createdBy?.id).filter(Boolean)).size;
-
-    // Estimate totals based on current page if we have paginated data
-    const publishedEstimate = total > 0 && events.length > 0
-      ? Math.round((published / events.length) * total)
-      : published;
-    const draftEstimate = total > 0 && events.length > 0
-      ? Math.round((draft / events.length) * total)
-      : draft;
-
     return [
       {
         title: 'Total Events',
-        value: total.toString(),
+        value: eventStats.total.toLocaleString(),
         change: `${events.length} on this page`,
         icon: IconCalendar,
         color: 'blue' as const,
       },
       {
         title: 'Published',
-        value: publishedEstimate.toString(),
+        value: eventStats.published.toLocaleString(),
         change: 'Active events',
         icon: IconTrendingUp,
         color: 'green' as const,
       },
       {
         title: 'Draft',
-        value: draftEstimate.toString(),
+        value: eventStats.draft.toLocaleString(),
         change: 'Unpublished events',
         icon: IconCalendar,
         color: 'orange' as const,
       },
       {
-        title: 'Creators',
-        value: uniqueCreators.toString(),
-        change: 'Unique creators',
-        icon: IconUsers,
-        color: 'purple' as const,
+        title: 'Cancelled',
+        value: eventStats.cancelled.toLocaleString(),
+        change: 'Cancelled events',
+        icon: IconX,
+        color: 'red' as const,
       },
     ];
-  }, [events, eventsMeta]);
+  }, [eventStats, events.length]);
 
   const getStatusBadge = (status: string) => {
     const statusUpper = status?.toUpperCase();
@@ -211,6 +203,7 @@ export default function AdminEventsPage() {
             icon={stat.icon}
             color={stat.color}
             variant="minimal"
+            isLoading={eventStats.isLoading}
           />
         ))}
       </div>

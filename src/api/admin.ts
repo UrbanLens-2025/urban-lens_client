@@ -135,12 +135,32 @@ export const getAllLocationsForAdmin = async ({
   limit = 10,
   search,
   sortBy,
-}: GetLocationsParams): Promise<PaginatedData<Location>> => {
+  isBusiness,
+  isVisibleOnMap,
+}: GetLocationsParams & { 
+  isBusiness?: boolean;
+  isVisibleOnMap?: boolean;
+}): Promise<PaginatedData<Location>> => {
   const params: any = { page, limit };
 
   if (search) {
     params.search = search;
     params.searchBy = ["name"];
+  }
+
+  if (isBusiness !== undefined) {
+    // Filter by businessId: not null for business locations, null for public locations
+    if (isBusiness) {
+      // Business locations have a businessId (not null)
+      params["filter.businessId"] = "$ne:null";
+    } else {
+      // Public locations don't have a businessId (null)
+      params["filter.businessId"] = "$eq:null";
+    }
+  }
+
+  if (isVisibleOnMap !== undefined) {
+    params["filter.isVisibleOnMap"] = `$eq:${isVisibleOnMap}`;
   }
 
   if (sortBy) {
@@ -301,12 +321,17 @@ export const getAllEventsForAdmin = async ({
   limit = 10,
   search,
   sortBy,
-}: GetEventsParams): Promise<PaginatedData<Event>> => {
+  status,
+}: GetEventsParams & { status?: string }): Promise<PaginatedData<Event>> => {
   const params: any = { page, limit };
 
   if (search) {
     params.search = search;
     params.searchBy = ["displayName", "description"];
+  }
+
+  if (status) {
+    params["filter.status"] = `$eq:${status}`;
   }
 
   if (sortBy) {

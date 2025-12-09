@@ -32,6 +32,7 @@ import {
 import { Loader2, MapPin, Building2, Globe, Eye } from 'lucide-react';
 import { Location } from '@/types';
 import { useAllLocations } from '@/hooks/admin/useAllLocations';
+import { useLocationStats } from '@/hooks/admin/useLocationStats';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatShortDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -89,8 +90,12 @@ export default function LocationDashboardPage() {
   const locations = data?.data || [];
   const meta = data?.meta;
 
+  // Fetch accurate statistics from API
+  const locationStats = useLocationStats();
+
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['allLocations'] });
+    queryClient.invalidateQueries({ queryKey: ['locationStats'] });
   };
 
   // Filter locations by type
@@ -99,28 +104,6 @@ export default function LocationDashboardPage() {
     if (typeFilter === "business") return locations.filter((loc: Location) => loc.business);
     return locations.filter((loc: Location) => !loc.business);
   }, [locations, typeFilter]);
-
-  // Calculate statistics - show accurate totals and current view stats
-  const stats = useMemo(() => {
-    const totalLocations = meta?.totalItems || 0;
-    
-    // Current view stats (from filtered/paginated data)
-    const currentViewBusiness = filteredLocations.filter((loc: Location) => loc.business).length;
-    const currentViewPublic = filteredLocations.filter((loc: Location) => !loc.business).length;
-    const currentViewVisible = filteredLocations.filter((loc: Location) => loc.isVisibleOnMap).length;
-    
-    // Check if filters are active
-    const hasFilters = typeFilter !== "all" || !!debouncedSearchTerm;
-    
-    return {
-      totalLocations,
-      currentViewBusiness,
-      currentViewPublic,
-      currentViewVisible,
-      hasFilters,
-      currentViewTotal: filteredLocations.length,
-    };
-  }, [filteredLocations, meta, typeFilter, debouncedSearchTerm]);
 
   if (error) {
     return (
@@ -165,8 +148,8 @@ export default function LocationDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Locations"
-          value={stats.totalLocations.toLocaleString()}
-          description={stats.hasFilters ? `Showing ${stats.currentViewTotal} in current view` : "All approved locations"}
+          value={locationStats.isLoading ? "—" : locationStats.total.toLocaleString()}
+          description={locationStats.isLoading ? "Loading statistics..." : `${locations.length} on this page`}
           icon={MapPin}
           iconBg="bg-blue-100 dark:bg-blue-950"
           iconColor="text-blue-600 dark:text-blue-400"
@@ -174,10 +157,10 @@ export default function LocationDashboardPage() {
 
         <StatCard
           title="Business Locations"
-          value={stats.hasFilters ? stats.currentViewBusiness.toLocaleString() : "—"}
-          description={stats.hasFilters 
-            ? `In current view${stats.currentViewTotal > 0 ? ` (${Math.round((stats.currentViewBusiness / stats.currentViewTotal) * 100)}%)` : ''}`
-            : "Apply filters to see breakdown"}
+          value={locationStats.isLoading ? "—" : locationStats.business.toLocaleString()}
+          description={locationStats.isLoading 
+            ? "Loading statistics..." 
+            : `${locationStats.total > 0 ? Math.round((locationStats.business / locationStats.total) * 100) : 0}% of total`}
           icon={Building2}
           iconBg="bg-orange-100 dark:bg-orange-950"
           iconColor="text-orange-600 dark:text-orange-400"
@@ -185,10 +168,10 @@ export default function LocationDashboardPage() {
 
         <StatCard
           title="Public Locations"
-          value={stats.hasFilters ? stats.currentViewPublic.toLocaleString() : "—"}
-          description={stats.hasFilters
-            ? `In current view${stats.currentViewTotal > 0 ? ` (${Math.round((stats.currentViewPublic / stats.currentViewTotal) * 100)}%)` : ''}`
-            : "Apply filters to see breakdown"}
+          value={locationStats.isLoading ? "—" : locationStats.public.toLocaleString()}
+          description={locationStats.isLoading
+            ? "Loading statistics..."
+            : `${locationStats.total > 0 ? Math.round((locationStats.public / locationStats.total) * 100) : 0}% of total`}
           icon={Globe}
           iconBg="bg-purple-100 dark:bg-purple-950"
           iconColor="text-purple-600 dark:text-purple-400"
@@ -196,10 +179,10 @@ export default function LocationDashboardPage() {
 
         <StatCard
           title="Visible on Map"
-          value={stats.hasFilters ? stats.currentViewVisible.toLocaleString() : "—"}
-          description={stats.hasFilters
-            ? `In current view${stats.currentViewTotal > 0 ? ` (${Math.round((stats.currentViewVisible / stats.currentViewTotal) * 100)}%)` : ''}`
-            : "Apply filters to see breakdown"}
+          value={locationStats.isLoading ? "—" : locationStats.visible.toLocaleString()}
+          description={locationStats.isLoading
+            ? "Loading statistics..."
+            : `${locationStats.total > 0 ? Math.round((locationStats.visible / locationStats.total) * 100) : 0}% of total`}
           icon={Eye}
           iconBg="bg-green-100 dark:bg-green-950"
           iconColor="text-green-600 dark:text-green-400"
