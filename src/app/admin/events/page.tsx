@@ -20,8 +20,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  ArrowDown,
-  ArrowUp,
   X,
   RefreshCw,
   Calendar,
@@ -51,6 +49,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useQueryClient } from '@tanstack/react-query';
+import { SortableTableHeader, SortDirection } from '@/components/shared/SortableTableHeader';
 
 export default function AdminEventsPage() {
   const queryClient = useQueryClient();
@@ -60,17 +59,17 @@ export default function AdminEventsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sort, setSort] = useState<SortState>({
+  const [sort, setSort] = useState<{ column: string; direction: SortDirection }>({
     column: 'createdAt',
     direction: 'DESC',
   });
-  const sortByString = `${sort.column}:${sort.direction}`;
+  const sortByString = sort.direction ? `${sort.column}:${sort.direction}` : undefined;
 
   // Data fetching
   const { data: eventsResponse, isLoading } = useAllEvents(
     page,
     debouncedSearchTerm,
-    sortByString
+    sortByString || 'createdAt:DESC'
   );
   const events = eventsResponse?.data || [];
   const eventsMeta = eventsResponse?.meta;
@@ -93,19 +92,9 @@ export default function AdminEventsPage() {
   };
 
   // Sort
-  const handleSort = (columnName: string) => {
-    setSort((prev) => ({
-      column: columnName,
-      direction:
-        prev.column === columnName && prev.direction === 'DESC' ? 'ASC' : 'DESC',
-    }));
+  const handleSort = (column: string, direction: SortDirection) => {
+    setSort({ column, direction });
     setPage(1);
-  };
-
-  const SortIcon = ({ column }: { column: string }) => {
-    if (sort.column !== column) return null;
-    const IconComponent = sort.direction === 'ASC' ? ArrowUp : ArrowDown;
-    return <IconComponent className='ml-2 h-4 w-4' />;
   };
 
   // Calculate statistics from all events (not just current page)
@@ -301,35 +290,45 @@ export default function AdminEventsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className='bg-muted/50'>
-                      <TableHead className='w-[300px]'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('displayName')}
-                          className='h-auto p-0 font-semibold hover:bg-transparent'
-                        >
-                          Event Name <SortIcon column='displayName' />
-                        </Button>
-                      </TableHead>
-                      <TableHead className='hidden md:table-cell'>Creator</TableHead>
-                      <TableHead className='hidden lg:table-cell'>Location</TableHead>
-                      <TableHead>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('status')}
-                          className='h-auto p-0 font-semibold hover:bg-transparent'
-                        >
-                          Status <SortIcon column='status' />
-                        </Button>
-                      </TableHead>
-                      <TableHead className='hidden sm:table-cell'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('createdAt')}
-                          className='h-auto p-0 font-semibold hover:bg-transparent'
-                        >
-                          Created <SortIcon column='createdAt' />
-                        </Button>
-                      </TableHead>
+                      <SortableTableHeader
+                        column='displayName'
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className='w-[300px]'
+                      >
+                        Event Name
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column='createdBy.firstName'
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className='hidden md:table-cell'
+                      >
+                        Creator
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column='location.name'
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className='hidden lg:table-cell'
+                      >
+                        Location
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column='status'
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Status
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column='createdAt'
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className='hidden sm:table-cell'
+                      >
+                        Created
+                      </SortableTableHeader>
                       <TableHead className='text-right'>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
