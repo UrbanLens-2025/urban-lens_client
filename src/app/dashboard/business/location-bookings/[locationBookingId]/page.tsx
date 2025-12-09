@@ -207,12 +207,12 @@ export default function LocationBookingDetailPage({
     }
 
     if (pendingStatus === "APPROVED") {
-      approveBooking.mutate(bookingId, {
-        onSuccess: () => {
-          setProcessDialogOpen(false);
-          setPendingStatus(null);
-        },
-      });
+          approveBooking.mutate(bookingId, {
+            onSuccess: () => {
+              setProcessDialogOpen(false);
+              setPendingStatus(null);
+          },
+        });
     } else {
       // Reject the current booking
       rejectBookings.mutate([bookingId], {
@@ -726,7 +726,7 @@ export default function LocationBookingDetailPage({
             <AlertDialogTitle className="flex items-center gap-2">
               {pendingStatus === "APPROVED" ? (
                 <>
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CheckCircle className="h-5 w-5 text-green-600" />
                   Approve Booking
                 </>
               ) : (
@@ -737,38 +737,38 @@ export default function LocationBookingDetailPage({
               )}
             </AlertDialogTitle>
             <div className="text-muted-foreground text-sm space-y-3">
-              <p>
-                Are you sure you want to{" "}
-                <span className="font-semibold">
-                  {pendingStatus === "APPROVED" ? "approve" : "reject"}
-                </span>{" "}
-                this location booking? This action cannot be undone.
-              </p>
+                <p>
+                  Are you sure you want to{" "}
+                  <span className="font-semibold">
+                    {pendingStatus === "APPROVED" ? "approve" : "reject"}
+                  </span>{" "}
+                  this location booking? This action cannot be undone.
+                </p>
 
               {/* Booking Summary */}
-              <div className="border-t pt-3 space-y-1.5">
-                <div className="text-sm font-semibold">Booking Summary:</div>
-                <div className="text-xs space-y-1 text-muted-foreground">
-                  <div>
-                    <span className="font-medium">Event:</span>{" "}
-                    {booking?.referencedEventRequest?.eventName || formatBookingObject(booking?.bookingObject) || "N/A"}
-                  </div>
-                  <div>
-                    <span className="font-medium">Time Slots:</span>
-                    <div className="ml-4 mt-0.5 space-y-0.5">
-                      {booking?.dates.map((dateSlot, idx) => (
-                        <div key={idx} className="text-xs">
-                          • {formatDateTime(dateSlot.startDateTime)} - {format(new Date(dateSlot.endDateTime), "HH:mm")}
-                        </div>
-                      ))}
+                <div className="border-t pt-3 space-y-1.5">
+                  <div className="text-sm font-semibold">Booking Summary:</div>
+                  <div className="text-xs space-y-1 text-muted-foreground">
+                    <div>
+                      <span className="font-medium">Event:</span>{" "}
+                      {booking?.referencedEventRequest?.eventName || formatBookingObject(booking?.bookingObject) || "N/A"}
+                    </div>
+                    <div>
+                      <span className="font-medium">Time Slots:</span>
+                      <div className="ml-4 mt-0.5 space-y-0.5">
+                        {booking?.dates.map((dateSlot, idx) => (
+                          <div key={idx} className="text-xs">
+                            • {formatDateTime(dateSlot.startDateTime)} - {format(new Date(dateSlot.endDateTime), "HH:mm")}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-medium">Amount:</span>{" "}
+                      {formatCurrency(booking?.amountToPay || "0")}
                     </div>
                   </div>
-                  <div>
-                    <span className="font-medium">Amount:</span>{" "}
-                    {formatCurrency(booking?.amountToPay || "0")}
-                  </div>
                 </div>
-              </div>
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter>

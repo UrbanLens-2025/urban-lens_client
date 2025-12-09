@@ -243,7 +243,7 @@ export default function AvailabilityPage({
         minGapBetweenBookingsMinutes: data.minGapBetweenBookingsMinutes,
       };
       updateConfig.mutate({
-        configId: existingConfig?.id || locationId,
+        configId: existingConfig.id || locationId, // Use config ID if available, fallback to locationId
         locationId,
         payload: updatePayload,
       });
