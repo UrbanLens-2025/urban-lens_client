@@ -18,7 +18,6 @@ export function useRejectLocationBookings() {
       );
       queryClient.invalidateQueries({ queryKey: ['locationBookingDetail'] });
       queryClient.invalidateQueries({ queryKey: ['ownerLocationBookings'] });
-      queryClient.invalidateQueries({ queryKey: ['conflictingBookings'] });
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to reject location bookings.");

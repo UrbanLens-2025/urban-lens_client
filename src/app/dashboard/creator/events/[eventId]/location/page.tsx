@@ -18,7 +18,7 @@ import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps
 import { toast } from "sonner";
 import type { LocationBooking } from "@/types";
 import { PaymentModal } from "@/components/shared/PaymentModal";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { initiateLocationBookingPayment } from "@/api/events";
 import { useEventLocationBookings } from "@/hooks/events/useEventLocationBookings";
 import { CancelBookingDialog } from "./_components/CancelBookingDialog";
@@ -298,6 +298,7 @@ export default function EventLocationPage({
 }) {
   const { eventId } = use(params);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: event, isLoading: isEventLoading, refetch } = useEventById(eventId);
   const { data: locationBookings, isLoading: isBookingsLoading, refetch: refetchBookings } = useEventLocationBookings(eventId);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
@@ -308,6 +309,19 @@ export default function EventLocationPage({
   const { openBookLocationTab } = useEventTabs();
 
   const isEventCancelled = event?.status?.toUpperCase() === "CANCELLED";
+
+  // Refetch data when page regains focus (e.g., after returning from payment gateway)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Refetch event and bookings to check for payment status updates
+      refetch();
+      refetchBookings();
+      queryClient.invalidateQueries({ queryKey: ['eventDetail', eventId] });
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [eventId, refetch, refetchBookings, queryClient]);
 
   // Get the latest booking with relevant statuses (awaiting approval, approved, paid, rejected)
   const currentBooking = locationBookings
@@ -329,8 +343,13 @@ export default function EventLocationPage({
     },
     onSuccess: () => {
       toast.success("Payment completed successfully.");
-      router.refresh();
+      // Invalidate all relevant queries to refresh payment status
+      queryClient.invalidateQueries({ queryKey: ['eventDetail', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['eventLocationBookings', eventId] });
+      // Refetch event and bookings data
+      refetch();
       refetchBookings();
+      router.refresh();
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to complete payment.");

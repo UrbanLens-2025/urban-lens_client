@@ -13,7 +13,6 @@ export function useApproveLocationBooking() {
       toast.success("Location booking has been approved.");
       queryClient.invalidateQueries({ queryKey: ['locationBookingDetail'] });
       queryClient.invalidateQueries({ queryKey: ['ownerLocationBookings'] });
-      queryClient.invalidateQueries({ queryKey: ['conflictingBookings'] });
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to approve location booking.");

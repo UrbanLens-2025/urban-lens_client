@@ -1,17 +1,28 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function SepayReturnContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [isMobile, setIsMobile] = useState(false);
   const [hasRedirected, setHasRedirected] = useState(false);
   const [showManualButton, setShowManualButton] = useState(false);
 
   useEffect(() => {
+    // Invalidate all relevant queries when returning from payment
+    // This ensures event data, bookings, and wallet data are refreshed
+    queryClient.invalidateQueries({ queryKey: ['eventDetail'] });
+    queryClient.invalidateQueries({ queryKey: ['eventLocationBookings'] });
+    queryClient.invalidateQueries({ queryKey: ['wallet'] });
+    queryClient.invalidateQueries({ queryKey: ['walletTransactions'] });
+    queryClient.invalidateQueries({ queryKey: ['eventRequests'] });
+    
     // Detect if user is on mobile device
     const checkMobile = () => {
       const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
@@ -39,7 +50,7 @@ function SepayReturnContent() {
 
       return () => clearTimeout(fallbackTimer);
     }
-  }, [searchParams]);
+  }, [searchParams, queryClient]);
 
   const handleManualRedirect = () => {
     const deepLink = "urbanlens://registered-user/wallet/deposit-status";

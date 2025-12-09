@@ -1,12 +1,13 @@
 "use client";
 
 import type React from "react";
-import { use, useState, useEffect, useRef } from "react";
+import { use, useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useEventById } from "@/hooks/events/useEventById";
 import { usePublishEvent } from "@/hooks/events/usePublishEvent";
 import { useFinishEvent } from "@/hooks/events/useFinishEvent";
 import { useEventTickets } from "@/hooks/events/useEventTickets";
+import { useEventLocationBookings } from "@/hooks/events/useEventLocationBookings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,8 +94,9 @@ function EventDetailLayoutContent({
   const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
   const [isFinishDialogOpen, setIsFinishDialogOpen] = useState(false);
 
-  const { data: event, isLoading, isError } = useEventById(eventId);
+  const { data: event, isLoading, isError, refetch: refetchEvent } = useEventById(eventId);
   const { data: tickets } = useEventTickets(eventId);
+  const { data: locationBookings } = useEventLocationBookings(eventId);
   const publishEvent = usePublishEvent();
   const finishEvent = useFinishEvent();
 
@@ -137,10 +139,28 @@ function EventDetailLayoutContent({
   const hasDocuments = !!(event?.eventValidationDocuments && event.eventValidationDocuments.length > 0);
   
   // Check if payment has been made for location booking
-  // Payment is confirmed if at least one locationBooking has a referencedTransactionId
-  const hasPaymentMade = event?.locationBookings && event.locationBookings.length > 0
-    ? event.locationBookings.some(booking => booking.referencedTransactionId !== null)
-    : false;
+  // Payment is confirmed if at least one locationBooking has a referencedTransactionId OR status is PAYMENT_RECEIVED
+  // Check both event.locationBookings (from event API) and locationBookings (from location bookings API)
+  const hasPaymentMade = useMemo(() => {
+    // First check locationBookings from the dedicated API (most up-to-date)
+    if (locationBookings && locationBookings.length > 0) {
+      const hasPaidInLocationBookings = locationBookings.some(booking => 
+        booking.referencedTransactionId !== null || 
+        booking.status?.toUpperCase() === "PAYMENT_RECEIVED"
+      );
+      if (hasPaidInLocationBookings) return true;
+    }
+    
+    // Fallback to event.locationBookings if available
+    if (event?.locationBookings && event.locationBookings.length > 0) {
+      return event.locationBookings.some(booking => 
+        booking.referencedTransactionId !== null || 
+        booking.status?.toUpperCase() === "PAYMENT_RECEIVED"
+      );
+    }
+    
+    return false;
+  }, [locationBookings, event?.locationBookings]);
   
   const isDraft = event?.status?.toUpperCase() === "DRAFT";
   const canPublish = hasNameAndDescription && hasDates && hasLocation && hasDocuments && hasPaymentMade;
@@ -394,6 +414,18 @@ function EventDetailLayoutContent({
       setPreventAutoOpenEditEvent(false);
     }
   }, [isEditEventRoute, preventAutoOpenEditEvent]);
+
+  // Refetch event data when page becomes visible (e.g., after returning from payment)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refetchEvent();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [refetchEvent]);
 
   if (isLoading) {
     return (

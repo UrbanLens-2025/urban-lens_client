@@ -6,12 +6,9 @@ import { useRouter } from "next/navigation";
 import { useLocationBookingById } from "@/hooks/locations/useLocationBookingById";
 import { useApproveLocationBooking } from "@/hooks/locations/useApproveLocationBooking";
 import { useRejectLocationBookings } from "@/hooks/locations/useRejectLocationBookings";
-import { useConflictingBookings } from "@/hooks/locations/useConflictingBookings";
-import { useUser } from "@/hooks/user/useUser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,13 +37,12 @@ import {
   Globe,
   CreditCard,
   X,
-  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { formatDocumentType } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 
 function InfoRow({
@@ -169,181 +165,6 @@ const formatBookingObject = (bookingObject: string | null | undefined): string =
   return formatted;
 };
 
-// Component to display conflict item with user name fetching
-function ConflictItem({ 
-  conflict, 
-  index 
-}: { 
-  conflict: { booking: any; conflictingSlots: any[] }; 
-  index: number;
-}) {
-  // Try to get user info from createdBy first, if not available, fetch by ID
-  const hasCreatedBy = conflict.booking.createdBy && 
-    (conflict.booking.createdBy.firstName || conflict.booking.createdBy.email);
-  
-  const { user: fetchedUser, isLoading: isLoadingUser } = useUser(
-    !hasCreatedBy && conflict.booking.createdById ? conflict.booking.createdById : null
-  );
-
-  const customerName = useMemo(() => {
-    // First try to get from existing createdBy object
-    if (conflict.booking?.createdBy) {
-      const createdBy = conflict.booking.createdBy;
-      if ((createdBy as any)?.creatorProfile?.displayName) {
-        return (createdBy as any).creatorProfile.displayName;
-      }
-      if (createdBy.firstName && createdBy.lastName) {
-        return `${createdBy.firstName} ${createdBy.lastName}`;
-      }
-      if (createdBy.email) {
-        return createdBy.email;
-      }
-    }
-    
-    // If not available, try fetched user
-    if (fetchedUser) {
-      if (fetchedUser.firstName && fetchedUser.lastName) {
-        return `${fetchedUser.firstName} ${fetchedUser.lastName}`;
-      }
-      if (fetchedUser.email) {
-        return fetchedUser.email;
-      }
-    }
-    
-    // Fallback
-    if (isLoadingUser) {
-      return "Loading...";
-    }
-    
-    return "Unknown";
-  }, [conflict.booking?.createdBy, fetchedUser, isLoadingUser]);
-
-  const eventName =
-    conflict.booking?.referencedEventRequest?.eventName ||
-    formatBookingObject(conflict.booking?.bookingObject) ||
-    "Unknown Event";
-
-  const bookingId = conflict.booking?.id;
-  if (!bookingId) return null;
-
-  return (
-    <Link
-      href={`/dashboard/business/location-bookings/${bookingId}`}
-      className="flex items-start gap-2 hover:bg-orange-100/50 dark:hover:bg-orange-900/20 rounded-md p-2 -m-2 transition-colors group"
-    >
-      <span className="font-medium">•</span>
-      <div className="flex-1">
-        <span className="font-semibold group-hover:text-orange-700 dark:group-hover:text-orange-300">
-          {eventName}
-        </span>
-        {" "}by <span className="font-medium">{customerName}</span>
-                                <span className="text-xs ml-2">
-                                  ({getStatusBadge(conflict.booking?.status || "")})
-                                </span>
-        <span className="text-xs text-blue-600 dark:text-blue-400 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          View details →
-        </span>
-      </div>
-    </Link>
-  );
-}
-
-// Component for conflict item in dialog
-function ConflictDialogItem({ 
-  conflict, 
-  index 
-}: { 
-  conflict: { booking: any; conflictingSlots: any[] }; 
-  index: number;
-}) {
-  // Try to get user info from createdBy first, if not available, fetch by ID
-  const hasCreatedBy = conflict.booking?.createdBy && 
-    (conflict.booking.createdBy.firstName || conflict.booking.createdBy.email);
-  
-  const userIdToFetch = !hasCreatedBy && conflict.booking?.createdById 
-    ? conflict.booking.createdById 
-    : null;
-  
-  const { user: fetchedUser, isLoading: isLoadingUser } = useUser(userIdToFetch);
-
-  const customerName = useMemo(() => {
-    // First try to get from existing createdBy object
-    if (conflict.booking?.createdBy) {
-      const createdBy = conflict.booking.createdBy;
-      if ((createdBy as any)?.creatorProfile?.displayName) {
-        return (createdBy as any).creatorProfile.displayName;
-      }
-      if (createdBy.firstName && createdBy.lastName) {
-        return `${createdBy.firstName} ${createdBy.lastName}`;
-      }
-      if (createdBy.email) {
-        return createdBy.email;
-      }
-    }
-    
-    // If not available, try fetched user
-    if (fetchedUser) {
-      if (fetchedUser.firstName && fetchedUser.lastName) {
-        return `${fetchedUser.firstName} ${fetchedUser.lastName}`;
-      }
-      if (fetchedUser.email) {
-        return fetchedUser.email;
-      }
-    }
-    
-    // Fallback
-    if (isLoadingUser) {
-      return "Loading...";
-    }
-    
-    return "Unknown";
-  }, [conflict.booking?.createdBy, fetchedUser, isLoadingUser]);
-
-  const eventName =
-    conflict.booking?.referencedEventRequest?.eventName ||
-    formatBookingObject(conflict.booking?.bookingObject) ||
-    "Unknown Event";
-
-  const bookingId = conflict.booking?.id;
-  if (!bookingId) return null;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="font-semibold text-sm text-orange-900 dark:text-orange-200 truncate">{eventName}</span>
-            {getStatusBadge(conflict.booking?.status || "")}
-          </div>
-          <div className="text-xs text-orange-700 dark:text-orange-300 flex items-center gap-1">
-            <User className="h-3 w-3" />
-            <span>{customerName}</span>
-          </div>
-        </div>
-        <Link
-          href={`/dashboard/business/location-bookings/${bookingId}`}
-          className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex-shrink-0 whitespace-nowrap"
-          onClick={(e) => e.stopPropagation()}
-        >
-          View →
-        </Link>
-      </div>
-      <div className="text-xs text-orange-600 dark:text-orange-400 space-y-1">
-        {conflict.conflictingSlots.slice(0, 2).map((slot, slotIdx) => (
-          <div key={slotIdx} className="flex items-center gap-2">
-            <Clock className="h-3 w-3 flex-shrink-0" />
-            <span>{format(slot.start, "MMM dd, HH:mm")} - {format(slot.end, "HH:mm")}</span>
-          </div>
-        ))}
-        {conflict.conflictingSlots.length > 2 && (
-          <div className="text-xs text-muted-foreground italic pl-5">
-            +{conflict.conflictingSlots.length - 2} more time slot{conflict.conflictingSlots.length - 2 > 1 ? "s" : ""}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export default function LocationBookingDetailPage({
   params,
@@ -357,7 +178,6 @@ export default function LocationBookingDetailPage({
   const [currentImageSrc, setCurrentImageSrc] = useState("");
   const [processDialogOpen, setProcessDialogOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<"APPROVED" | "REJECTED" | null>(null);
-  const [rejectConflictingBookings, setRejectConflictingBookings] = useState(false);
 
   const { data: booking, isLoading, isError } =
     useLocationBookingById(locationBookingId);
@@ -366,35 +186,8 @@ export default function LocationBookingDetailPage({
 
   const canProcess = booking?.status === "AWAITING_BUSINESS_PROCESSING";
 
-  // Fetch conflicting bookings using the dedicated API
-  const { data: conflictingBookingsData } = useConflictingBookings(locationBookingId);
-
-  // Transform conflicting bookings data for display
-  const conflictingBookings = useMemo(() => {
-    if (!conflictingBookingsData || conflictingBookingsData.length === 0) return [];
-
-    // Filter out the current booking from the conflicting bookings list
-    const otherConflictingBookings = conflictingBookingsData.filter(
-      (conflictBooking) => conflictBooking.id !== locationBookingId
-    );
-
-    return otherConflictingBookings.map((conflictBooking) => {
-      // Extract conflicting slots (all dates from the conflicting booking)
-      const conflictingSlots = conflictBooking.dates?.map(d => ({
-        start: new Date(d.startDateTime),
-        end: new Date(d.endDateTime),
-      })) || [];
-
-      return {
-        booking: conflictBooking,
-        conflictingSlots,
-      };
-    });
-  }, [conflictingBookingsData, locationBookingId]);
-
   const handleProcessClick = (status: "APPROVED" | "REJECTED") => {
     setPendingStatus(status);
-    setRejectConflictingBookings(false);
     setProcessDialogOpen(true);
   };
 
@@ -414,57 +207,18 @@ export default function LocationBookingDetailPage({
     }
 
     if (pendingStatus === "APPROVED") {
-      // If approving with conflicts and user wants to reject conflicting bookings
-      if (rejectConflictingBookings && conflictingBookings.length > 0) {
-        const conflictingIds = conflictingBookings
-          .map(c => c.booking?.id)
-          .filter((id): id is string => 
-            !!id && 
-            typeof id === 'string' && 
-            isValidUUID(id)
-          );
-        
-        if (conflictingIds.length === 0) {
-          // No valid conflicting IDs, just approve
-          approveBooking.mutate(bookingId, {
-            onSuccess: () => {
-              setProcessDialogOpen(false);
-              setPendingStatus(null);
-              setRejectConflictingBookings(false);
-            },
-          });
-          return;
-        }
-
-        // First reject conflicting bookings, then approve the current one
-        rejectBookings.mutate(conflictingIds, {
-          onSuccess: () => {
-            approveBooking.mutate(bookingId, {
-              onSuccess: () => {
-                setProcessDialogOpen(false);
-                setPendingStatus(null);
-                setRejectConflictingBookings(false);
-              },
-            });
-          },
-        });
-      } else {
-        // Just approve the current booking
-        approveBooking.mutate(bookingId, {
-          onSuccess: () => {
-            setProcessDialogOpen(false);
-            setPendingStatus(null);
-            setRejectConflictingBookings(false);
-          },
-        });
-      }
+      approveBooking.mutate(bookingId, {
+        onSuccess: () => {
+          setProcessDialogOpen(false);
+          setPendingStatus(null);
+        },
+      });
     } else {
       // Reject the current booking
       rejectBookings.mutate([bookingId], {
         onSuccess: () => {
           setProcessDialogOpen(false);
           setPendingStatus(null);
-          setRejectConflictingBookings(false);
         },
       });
     }
@@ -520,31 +274,6 @@ export default function LocationBookingDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Conflict Warning */}
-              {conflictingBookings.length > 0 && (
-                <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950/20">
-                  <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                  <AlertTitle className="text-orange-800 dark:text-orange-300">
-                    Time Slot Conflict Detected
-                  </AlertTitle>
-                  <AlertDescription className="text-orange-700 dark:text-orange-400 mt-2">
-                    <div className="space-y-2">
-                      <p>
-                        This booking overlaps with {conflictingBookings.length} other booking{conflictingBookings.length > 1 ? "s" : ""} at the same time slot{conflictingBookings.length > 1 ? "s" : ""}.
-                      </p>
-                      <div className="space-y-1 text-sm">
-                        {conflictingBookings.map((conflict, idx) => (
-                          <ConflictItem key={idx} conflict={conflict} index={idx} />
-                        ))}
-                      </div>
-                      <p className="text-xs mt-2 italic">
-                        Please review carefully before approving this booking.
-                      </p>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
-
               <InfoRow
                 label="Booking Status"
                 value={getStatusBadge(booking.status)}
@@ -580,56 +309,55 @@ export default function LocationBookingDetailPage({
                 />
               )}
 
-              {/* Booking Dates Calendar */}
+              {/* Booking Time Slots Table */}
               <div className="mt-6">
                 <p className="text-sm font-semibold text-muted-foreground mb-3">
                   Booking Time Slots
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Calendar View */}
-                  <div className="border rounded-lg p-4 bg-muted/30">
-                    <CalendarComponent
-                      mode="multiple"
-                      selected={booking.dates.map(dateSlot => {
-                        const date = new Date(dateSlot.startDateTime);
-                        date.setHours(0, 0, 0, 0);
-                        return date;
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Day</TableHead>
+                        <TableHead>Start Time</TableHead>
+                        <TableHead>End Time</TableHead>
+                        <TableHead>Duration</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {booking.dates.map((dateSlot, index) => {
+                        const startDate = new Date(dateSlot.startDateTime);
+                        const endDate = new Date(dateSlot.endDateTime);
+                        const durationMs = endDate.getTime() - startDate.getTime();
+                        const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
+                        const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+                        const durationText = durationHours > 0 
+                          ? `${durationHours}h ${durationMinutes > 0 ? `${durationMinutes}m` : ''}`.trim()
+                          : `${durationMinutes}m`;
+                        
+                        return (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">
+                              {format(startDate, "MMM dd, yyyy")}
+                            </TableCell>
+                            <TableCell>
+                              {format(startDate, "EEEE")}
+                            </TableCell>
+                            <TableCell>
+                              {format(startDate, "HH:mm")}
+                            </TableCell>
+                            <TableCell>
+                              {format(endDate, "HH:mm")}
+                            </TableCell>
+                            <TableCell>
+                              {durationText}
+                            </TableCell>
+                          </TableRow>
+                        );
                       })}
-                      className="rounded-md border-0"
-                      modifiers={{
-                        booked: booking.dates.map(dateSlot => {
-                          const date = new Date(dateSlot.startDateTime);
-                          date.setHours(0, 0, 0, 0);
-                          return date;
-                        }),
-                      }}
-                      modifiersClassNames={{
-                        booked: "bg-primary text-primary-foreground font-semibold",
-                      }}
-                    />
-                  </div>
-                  {/* Time Slots List */}
-                  <div className="space-y-2">
-                    {booking.dates.map((dateSlot, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-3 border rounded-lg bg-background"
-                      >
-                        <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm">
-                            {format(new Date(dateSlot.startDateTime), "MMM dd, yyyy")}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {format(new Date(dateSlot.startDateTime), "HH:mm")} - {format(new Date(dateSlot.endDateTime), "HH:mm")}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            {format(new Date(dateSlot.startDateTime), "EEEE")}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             </CardContent>
@@ -998,14 +726,8 @@ export default function LocationBookingDetailPage({
             <AlertDialogTitle className="flex items-center gap-2">
               {pendingStatus === "APPROVED" ? (
                 <>
-                  {conflictingBookings.length > 0 ? (
-                    <AlertTriangle className="h-5 w-5 text-orange-600" />
-                  ) : (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  )}
-                  {conflictingBookings.length > 0 
-                    ? `Approve Booking (${conflictingBookings.length} Conflict${conflictingBookings.length > 1 ? "s" : ""})`
-                    : "Approve Booking"}
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Approve Booking
                 </>
               ) : (
                 <>
@@ -1015,117 +737,38 @@ export default function LocationBookingDetailPage({
               )}
             </AlertDialogTitle>
             <div className="text-muted-foreground text-sm space-y-3">
-              {conflictingBookings.length === 0 && (
-                <p>
-                  Are you sure you want to{" "}
-                  <span className="font-semibold">
-                    {pendingStatus === "APPROVED" ? "approve" : "reject"}
-                  </span>{" "}
-                  this location booking? This action cannot be undone.
-                </p>
-              )}
+              <p>
+                Are you sure you want to{" "}
+                <span className="font-semibold">
+                  {pendingStatus === "APPROVED" ? "approve" : "reject"}
+                </span>{" "}
+                this location booking? This action cannot be undone.
+              </p>
 
-              {/* Conflict Warning in Dialog */}
-              {pendingStatus === "APPROVED" && conflictingBookings.length > 0 && (
-                <div className="space-y-3">
-                  {/* Main Conflict Alert */}
-                  <Alert className="border-orange-500 bg-gradient-to-r from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20">
-                    <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                    <AlertTitle className="text-orange-900 dark:text-orange-200 text-base font-bold">
-                      ⚠️ Time Slot Conflict Detected
-                    </AlertTitle>
-                    <AlertDescription className="text-orange-800 dark:text-orange-300 mt-2">
-                      <span className="font-semibold">
-                        This booking overlaps with {conflictingBookings.length} other active booking{conflictingBookings.length > 1 ? "s" : ""} at the same time slot{conflictingBookings.length > 1 ? "s" : ""}.
-                      </span>
-                    </AlertDescription>
-                  </Alert>
-
-                  {/* Conflicting Bookings List */}
-                  <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-300 dark:border-orange-700 rounded-lg p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                      <span className="font-semibold text-orange-900 dark:text-orange-200 text-sm">
-                        Conflicting Booking{conflictingBookings.length > 1 ? "s" : ""} ({conflictingBookings.length})
-                      </span>
-                    </div>
-                    <div className="space-y-2 max-h-28 overflow-y-auto">
-                      {conflictingBookings.map((conflict, idx) => (
-                        <div key={idx} className="bg-white dark:bg-gray-800 rounded-md p-2 border border-orange-200 dark:border-orange-800">
-                          <ConflictDialogItem conflict={conflict} index={idx} />
+              {/* Booking Summary */}
+              <div className="border-t pt-3 space-y-1.5">
+                <div className="text-sm font-semibold">Booking Summary:</div>
+                <div className="text-xs space-y-1 text-muted-foreground">
+                  <div>
+                    <span className="font-medium">Event:</span>{" "}
+                    {booking?.referencedEventRequest?.eventName || formatBookingObject(booking?.bookingObject) || "N/A"}
+                  </div>
+                  <div>
+                    <span className="font-medium">Time Slots:</span>
+                    <div className="ml-4 mt-0.5 space-y-0.5">
+                      {booking?.dates.map((dateSlot, idx) => (
+                        <div key={idx} className="text-xs">
+                          • {formatDateTime(dateSlot.startDateTime)} - {format(new Date(dateSlot.endDateTime), "HH:mm")}
                         </div>
                       ))}
                     </div>
                   </div>
-
-                  {/* Warning and Action Box */}
-                  <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-400 dark:border-yellow-700 rounded-lg p-3">
-                    <div className="flex items-start gap-2 mb-2">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="font-semibold text-yellow-900 dark:text-yellow-200 mb-1.5 text-xs">
-                          ⚠️ Important Considerations
-                        </p>
-                        <ul className="text-xs text-yellow-800 dark:text-yellow-300 space-y-0.5 list-disc list-inside">
-                          <li>Approving will create a <strong>double-booking situation</strong></li>
-                          <li>Both bookings will be <strong>active simultaneously</strong> at overlapping times</li>
-                          <li>Consider <strong>rejecting this booking</strong> or the conflicting one(s) instead</li>
-                        </ul>
-                      </div>
-                    </div>
-                    
-                    {/* Auto-Reject Option */}
-                    <div className="mt-2 pt-2 border-t border-yellow-300 dark:border-yellow-700">
-                      <div className="flex items-start gap-2 bg-white dark:bg-gray-800 rounded-md p-2 border border-yellow-400 dark:border-yellow-600">
-                        <Checkbox
-                          id="reject-conflicts"
-                          checked={rejectConflictingBookings}
-                          onCheckedChange={(checked) => setRejectConflictingBookings(checked === true)}
-                          className="mt-0.5"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <label
-                            htmlFor="reject-conflicts"
-                            className="text-sm font-semibold text-yellow-900 dark:text-yellow-200 cursor-pointer block mb-1"
-                          >
-                            Auto-resolve: Reject {conflictingBookings.length} conflicting booking{conflictingBookings.length > 1 ? "s" : ""}
-                          </label>
-                          <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                            The conflicting booking{conflictingBookings.length > 1 ? "s will" : " will"} be rejected first, then this booking will be approved.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                  <div>
+                    <span className="font-medium">Amount:</span>{" "}
+                    {formatCurrency(booking?.amountToPay || "0")}
                   </div>
                 </div>
-              )}
-
-              {/* Booking Summary - Only show when no conflicts */}
-              {conflictingBookings.length === 0 && (
-                <div className="border-t pt-3 space-y-1.5">
-                  <div className="text-sm font-semibold">Booking Summary:</div>
-                  <div className="text-xs space-y-1 text-muted-foreground">
-                    <div>
-                      <span className="font-medium">Event:</span>{" "}
-                      {booking?.referencedEventRequest?.eventName || formatBookingObject(booking?.bookingObject) || "N/A"}
-                    </div>
-                    <div>
-                      <span className="font-medium">Time Slots:</span>
-                      <div className="ml-4 mt-0.5 space-y-0.5">
-                        {booking?.dates.map((dateSlot, idx) => (
-                          <div key={idx} className="text-xs">
-                            • {formatDateTime(dateSlot.startDateTime)} - {format(new Date(dateSlot.endDateTime), "HH:mm")}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="font-medium">Amount:</span>{" "}
-                      {formatCurrency(booking?.amountToPay || "0")}
-                    </div>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1138,8 +781,6 @@ export default function LocationBookingDetailPage({
               className={
                 pendingStatus === "REJECTED"
                   ? "bg-red-600 hover:bg-red-700"
-                  : conflictingBookings.length > 0 && pendingStatus === "APPROVED"
-                  ? "bg-orange-600 hover:bg-orange-700"
                   : ""
               }
             >
@@ -1150,9 +791,6 @@ export default function LocationBookingDetailPage({
                 </>
               ) : (
                 <>
-                  {pendingStatus === "APPROVED" && conflictingBookings.length > 0 && (
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                  )}
                   Confirm {pendingStatus === "APPROVED" ? "Approval" : "Rejection"}
                 </>
               )}
