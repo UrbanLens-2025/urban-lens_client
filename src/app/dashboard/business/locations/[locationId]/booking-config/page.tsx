@@ -54,7 +54,7 @@ const bookingConfigSchema = z
       .number()
       .positive("Base booking price must be greater than 0")
       .min(0.01, "Base booking price must be at least 0.01"),
-    currency: z.string().min(1, "Currency is required"),
+    currency: z.literal("VND"),
     minBookingDurationMinutes: z
       .number()
       .int("Must be a whole number")
@@ -161,7 +161,7 @@ export default function LocationBookingConfigPage({
       form.reset({
         allowBooking: existingConfig.allowBooking,
         baseBookingPrice: parseFloat(existingConfig.baseBookingPrice),
-        currency: existingConfig.currency,
+        currency: "VND",
         minBookingDurationMinutes: existingConfig.minBookingDurationMinutes,
         maxBookingDurationMinutes: existingConfig.maxBookingDurationMinutes,
         minGapBetweenBookingsMinutes:
@@ -183,7 +183,7 @@ export default function LocationBookingConfigPage({
       const updatePayload: UpdateLocationBookingConfigPayload = {
         allowBooking: data.allowBooking,
         baseBookingPrice: data.baseBookingPrice,
-        currency: data.currency,
+        currency: "VND",
         minBookingDurationMinutes: data.minBookingDurationMinutes,
         maxBookingDurationMinutes: data.maxBookingDurationMinutes,
         minGapBetweenBookingsMinutes: data.minGapBetweenBookingsMinutes,
@@ -216,6 +216,7 @@ export default function LocationBookingConfigPage({
         {
           locationId,
           ...data,
+          currency: "VND",
         },
         {
           onSuccess: () => {
@@ -402,17 +403,14 @@ export default function LocationBookingConfigPage({
                           </FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="VND"
-                              maxLength={3}
-                              className="h-12 border-2 border-primary/20 focus:ring-2 focus:ring-primary/20 uppercase"
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(e.target.value.toUpperCase())
-                              }
+                              value="VND"
+                              readOnly
+                              disabled
+                              className="h-12 border-2 border-primary/20 bg-muted cursor-not-allowed uppercase"
                             />
                           </FormControl>
                           <FormDescription>
-                            Currency code (e.g., VND, USD)
+                            Currency is fixed to VND
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

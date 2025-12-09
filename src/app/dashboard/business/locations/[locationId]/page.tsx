@@ -1513,7 +1513,7 @@ const bookingConfigSchema = z
       .number()
       .positive("Base booking price must be greater than 0")
       .min(0.01, "Base booking price must be at least 0.01"),
-    currency: z.string().min(1, "Currency is required"),
+    currency: z.literal("VND").default("VND"),
     minBookingDurationMinutes: z
       .number()
       .int("Must be a whole number")
@@ -1660,7 +1660,7 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
       form.reset({
         allowBooking: existingConfig.allowBooking,
         baseBookingPrice: parseFloat(existingConfig.baseBookingPrice),
-        currency: existingConfig.currency,
+        currency: "VND",
         minBookingDurationMinutes: existingConfig.minBookingDurationMinutes,
         maxBookingDurationMinutes: existingConfig.maxBookingDurationMinutes,
         minGapBetweenBookingsMinutes: existingConfig.minGapBetweenBookingsMinutes,
@@ -1673,7 +1673,7 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
       const updatePayload: UpdateLocationBookingConfigPayload = {
         allowBooking: data.allowBooking,
         baseBookingPrice: data.baseBookingPrice,
-        currency: data.currency,
+        currency: "VND",
         minBookingDurationMinutes: data.minBookingDurationMinutes,
         maxBookingDurationMinutes: data.maxBookingDurationMinutes,
         minGapBetweenBookingsMinutes: data.minGapBetweenBookingsMinutes,
@@ -1686,6 +1686,7 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
       createConfig.mutate({
         locationId,
         ...data,
+        currency: "VND",
       });
     }
   }, [hasConfig, locationId, updateConfig, createConfig]);
@@ -1769,10 +1770,15 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
                           <FormItem>
                             <FormLabel className="text-xs">Currency</FormLabel>
                             <FormControl>
-                              <Input placeholder="VND" maxLength={3} {...field} className="h-8" />
+                              <Input 
+                                value="VND" 
+                                readOnly 
+                                disabled 
+                                className="h-8 bg-muted cursor-not-allowed uppercase" 
+                              />
                             </FormControl>
                             <FormDescription className="text-xs">
-                              Currency code (e.g., VND, USD)
+                              Currency is fixed to VND
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
