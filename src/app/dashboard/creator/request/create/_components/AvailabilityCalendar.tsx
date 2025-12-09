@@ -328,10 +328,15 @@ export function AvailabilityCalendar({
   const [hasValidatedInitialSlots, setHasValidatedInitialSlots] = useState(false);
 
   // Helper function to filter slots by event time range
+  // Slots must be completely within event time (start >= eventStart AND end <= eventEnd)
   const filterSlotsByEventTime = (slots: Array<{ startDateTime: Date; endDateTime: Date }>) => {
     if (!eventStartDate || !eventEndDate) return slots;
     return slots.filter((slot) => {
-      return slot.startDateTime >= eventStartDate! && slot.endDateTime <= eventEndDate!;
+      // Slot must start at or after event start time
+      // Slot must end at or before event end time
+      const startsAfterEventStart = slot.startDateTime >= eventStartDate;
+      const endsBeforeEventEnd = slot.endDateTime <= eventEndDate;
+      return startsAfterEventStart && endsBeforeEventEnd;
     });
   };
 
@@ -519,9 +524,10 @@ export function AvailabilityCalendar({
         const slotEndDateTime = addHours(slotDateTime, 1);
         
         // Check if slot is outside event time range
+        // Slot must start at or after eventStartDate AND end at or before eventEndDate
         if (eventStartDate && eventEndDate) {
           if (slotDateTime < eventStartDate || slotEndDateTime > eventEndDate) {
-            continue; // Skip slots outside event time
+            continue; // Skip slots that start before event or end after event
           }
         }
 

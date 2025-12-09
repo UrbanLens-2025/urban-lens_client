@@ -153,7 +153,14 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   }, [startDate, endDate, selectedLocationId, getInitialSlotsFromEventDates, form, dateRanges]);
 
   const handleSlotsChange = (slots: Array<{ startDateTime: Date; endDateTime: Date }>) => {
-    form.setValue("dateRanges" as any, slots, { shouldValidate: true });
+    // Validate that all slots are within event time
+    const validSlots = slots.filter((slot) => {
+      if (!startDate || !endDate) return true;
+      // Slot must start at or after event start and end at or before event end
+      return slot.startDateTime >= startDate && slot.endDateTime <= endDate;
+    });
+    
+    form.setValue("dateRanges" as any, validSlots, { shouldValidate: true });
     // Don't close dialog automatically - let user edit freely
   };
 
