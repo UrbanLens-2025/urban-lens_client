@@ -67,7 +67,6 @@ const adminNavGroups = [
       { title: 'Location Requests', url: '/admin/location-requests', icon: IconClipboardList },
       { title: 'Business Registrations', url: '/admin/business', icon: IconBriefcase },
       { title: 'Reports', url: '/admin/reports', icon: IconFlag },
-      { title: 'Wallet Withdrawals', url: '/admin/wallet-withdrawals', icon: IconWallet },
     ]
   },
   {
