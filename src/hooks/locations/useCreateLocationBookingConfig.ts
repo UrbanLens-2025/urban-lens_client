@@ -31,8 +31,8 @@ export function useUpdateLocationBookingConfig() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: ({ locationId, payload }: { locationId: string; payload: UpdateLocationBookingConfigPayload }) =>
-      updateLocationBookingConfig(locationId, payload),
+    mutationFn: ({ configId, locationId, payload }: { configId: string; locationId: string; payload: UpdateLocationBookingConfigPayload }) =>
+      updateLocationBookingConfig(configId, payload),
     onSuccess: (_, variables) => {
       toast.success("Booking configuration updated successfully!");
       queryClient.invalidateQueries({ queryKey: ['ownerLocationBookingConfig', variables.locationId] });

@@ -587,6 +587,7 @@ export interface CreateEventRequestPayload {
 }
 
 export interface LocationBookingConfig {
+  id?: string;
   locationId: string;
   allowBooking: boolean;
   baseBookingPrice: string;

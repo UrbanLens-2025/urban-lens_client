@@ -334,11 +334,11 @@ export const createLocationBookingConfig = async (
 };
 
 export const updateLocationBookingConfig = async (
-  locationId: string,
+  configId: string,
   payload: UpdateLocationBookingConfigPayload
 ): Promise<void> => {
   await axiosInstance.put<ApiResponse<void>>(
-    `/v1/owner/location-booking-config/${locationId}`,
+    `/v1/owner/location-booking-config/${configId}`,
     payload
   );
 };

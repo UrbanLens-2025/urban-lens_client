@@ -195,6 +195,7 @@ export default function LocationBookingConfigPage({
       };
       updateConfig.mutate(
         {
+          configId: existingConfig?.id || locationId,
           locationId,
           payload: updatePayload,
         },
