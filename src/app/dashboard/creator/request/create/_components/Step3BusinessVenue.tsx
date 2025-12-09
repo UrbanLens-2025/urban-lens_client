@@ -86,61 +86,36 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     }
   }, [selectedLocationId, form]);
 
-  // Generate initial slots from event dates if they exist
+  // Generate initial slots from event dates using minimum booking duration
   const getInitialSlotsFromEventDates = useMemo(() => {
-    if (!startDate || !endDate) return [];
+    if (!startDate || !endDate || !location) return [];
     
-    // Create slots from startDate to endDate
-    // If it's a single day, create one slot for that day
-    // If it spans multiple days, create slots for each day
+    // Get minimum booking duration from venue's booking config (default to 60 minutes if not available)
+    const minDurationMinutes = location.bookingConfig?.minBookingDurationMinutes || 60;
+    const minDurationMs = minDurationMinutes * 60 * 1000;
+    
     const slots: Array<{ startDateTime: Date; endDateTime: Date }> = [];
-    
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    // If same day, create one slot
-    if (start.toDateString() === end.toDateString()) {
-      slots.push({
-        startDateTime: start,
-        endDateTime: end,
-      });
-    } else {
-      // Multiple days - create slots for each day
-      let currentDate = new Date(start);
-      currentDate.setHours(0, 0, 0, 0);
-      
-      while (currentDate <= end) {
-        const dayStart = new Date(currentDate);
-        const dayEnd = new Date(currentDate);
-        
-        // First day: use actual start time
-        if (currentDate.toDateString() === start.toDateString()) {
-          dayStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
-          dayEnd.setHours(23, 59, 59, 999);
-        }
-        // Last day: use actual end time
-        else if (currentDate.toDateString() === end.toDateString()) {
-          dayStart.setHours(0, 0, 0, 0);
-          dayEnd.setHours(end.getHours(), end.getMinutes(), 0, 0);
-        }
-        // Middle days: full day
-        else {
-          dayStart.setHours(0, 0, 0, 0);
-          dayEnd.setHours(23, 59, 59, 999);
-        }
-        
-        slots.push({
-          startDateTime: dayStart,
-          endDateTime: dayEnd,
-        });
-        
-        // Move to next day
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-    }
+    // Calculate the duration of the event
+    const eventDurationMs = end.getTime() - start.getTime();
+    
+    // If event duration is less than minimum, use the minimum duration
+    const slotDurationMs = Math.max(eventDurationMs, minDurationMs);
+    
+    // Create a slot starting from event start time with minimum duration
+    // But don't exceed event end time
+    const slotStart = new Date(start);
+    const slotEnd = new Date(Math.min(start.getTime() + slotDurationMs, end.getTime()));
+    
+    slots.push({
+      startDateTime: slotStart,
+      endDateTime: slotEnd,
+    });
     
     return slots;
-  }, [startDate, endDate]);
+  }, [startDate, endDate, location]);
 
   // Automatically set time slots from event dates when they're available and no slots exist
   useEffect(() => {
@@ -618,6 +593,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 initialWeekStart={startDate}
                 eventStartDate={startDate}
                 eventEndDate={endDate}
+                minBookingDurationMinutes={location?.bookingConfig?.minBookingDurationMinutes}
               />
             )}
           </div>

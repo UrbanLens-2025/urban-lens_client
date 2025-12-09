@@ -17,6 +17,7 @@ interface AvailabilityCalendarProps {
   initialWeekStart?: Date;
   eventStartDate?: Date;
   eventEndDate?: Date;
+  minBookingDurationMinutes?: number;
 }
 
 type CellStatus = "available" | "selected" | "dragging" | "past" | "booked" | "unavailable";
@@ -38,6 +39,7 @@ export function AvailabilityCalendar({
   initialWeekStart,
   eventStartDate,
   eventEndDate,
+  minBookingDurationMinutes,
 }: AvailabilityCalendarProps) {
   // Week navigation state
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
@@ -327,16 +329,30 @@ export function AvailabilityCalendar({
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
   const [hasValidatedInitialSlots, setHasValidatedInitialSlots] = useState(false);
 
-  // Helper function to filter slots by event time range
+  // Helper function to filter slots by event time range and minimum duration
   // Slots must be completely within event time (start >= eventStart AND end <= eventEnd)
+  // Slots must meet minimum booking duration (if specified)
   const filterSlotsByEventTime = (slots: Array<{ startDateTime: Date; endDateTime: Date }>) => {
-    if (!eventStartDate || !eventEndDate) return slots;
     return slots.filter((slot) => {
-      // Slot must start at or after event start time
-      // Slot must end at or before event end time
-      const startsAfterEventStart = slot.startDateTime >= eventStartDate;
-      const endsBeforeEventEnd = slot.endDateTime <= eventEndDate;
-      return startsAfterEventStart && endsBeforeEventEnd;
+      // Check event time constraints
+      if (eventStartDate && eventEndDate) {
+        const startsAfterEventStart = slot.startDateTime >= eventStartDate;
+        const endsBeforeEventEnd = slot.endDateTime <= eventEndDate;
+        if (!startsAfterEventStart || !endsBeforeEventEnd) {
+          return false;
+        }
+      }
+      
+      // Check minimum duration constraint (slot can be >= minimum, but not less)
+      if (minBookingDurationMinutes) {
+        const slotDurationMs = slot.endDateTime.getTime() - slot.startDateTime.getTime();
+        const minDurationMs = minBookingDurationMinutes * 60 * 1000;
+        if (slotDurationMs < minDurationMs) {
+          return false;
+        }
+      }
+      
+      return true;
     });
   };
 
