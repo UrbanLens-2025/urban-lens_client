@@ -27,8 +27,16 @@ export const getReports = async (
     queryParams["filter.status"] = `$eq:${params.status}`;
   }
 
+  // According to Swagger docs: targetType and targetid are query parameters
+  // filter.targetType and filter.targetid are filter parameters
+  // We'll use filter parameters for flexibility
   if (params.targetType) {
     queryParams["filter.targetType"] = `$eq:${params.targetType}`;
+  }
+
+  if (params.targetId) {
+    // API uses lowercase 'targetid' in filter
+    queryParams["filter.targetid"] = `$eq:${params.targetId}`;
   }
 
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Report>>>(

@@ -1266,6 +1266,7 @@ export interface GetReportsParams {
   search?: string;
   status?: ReportStatus;
   targetType?: ReportTargetType;
+  targetId?: string;
 }
 
 export interface ProcessReportPayload {

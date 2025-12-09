@@ -65,6 +65,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { formatShortDate, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { SortableTableHeader, SortDirection } from '@/components/shared/SortableTableHeader';
 
 function getStatusBadge(status: ReportStatus) {
   switch (status) {
@@ -131,6 +132,19 @@ export default function ReportsPage() {
     (searchParams.get('type') as ReportTargetType) || 'all'
   );
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
+  const [sort, setSort] = useState<{ column: string; direction: SortDirection }>(() => {
+    const sortParam = searchParams.get('sort');
+    if (sortParam) {
+      const [column, direction] = sortParam.split(':');
+      if (column && (direction === 'ASC' || direction === 'DESC')) {
+        return { column, direction: direction as SortDirection };
+      }
+    }
+    return {
+      column: 'createdAt',
+      direction: 'DESC',
+    };
+  });
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isProcessDialogOpen, setIsProcessDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -168,8 +182,18 @@ export default function ReportsPage() {
       params.delete('page');
     }
 
+    // Sync sort to URL
+    if (sort.column !== 'createdAt' || sort.direction !== 'DESC') {
+      params.set('sort', `${sort.column}:${sort.direction}`);
+    } else {
+      params.delete('sort');
+    }
+
     router.replace(`${pathname}?${params.toString()}`);
-  }, [debouncedSearchTerm, statusFilter, typeFilter, page, pathname, router, searchParams]);
+  }, [debouncedSearchTerm, statusFilter, typeFilter, page, sort, pathname, router, searchParams]);
+
+  // Build sortBy string
+  const sortBy = sort.direction ? `${sort.column}:${sort.direction}` : 'createdAt:DESC';
 
   // Data fetching
   const { data, isLoading, error } = useReports({
@@ -178,7 +202,7 @@ export default function ReportsPage() {
     search: debouncedSearchTerm.trim() || undefined,
     status: statusFilter !== 'all' ? statusFilter : undefined,
     targetType: typeFilter !== 'all' ? typeFilter : undefined,
-    sortBy: 'createdAt:DESC',
+    sortBy,
   });
 
   const { mutate: processReport, isPending: isProcessing } = useProcessReport();
@@ -189,6 +213,11 @@ export default function ReportsPage() {
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['adminReports'] });
+  };
+
+  const handleSort = (column: string, direction: SortDirection) => {
+    setSort({ column, direction });
+    setPage(1);
   };
 
   // Calculate statistics from actual reports data
@@ -212,21 +241,38 @@ export default function ReportsPage() {
           PostReportResolutionActions.NO_ACTION_TAKEN,
           PostReportResolutionActions.MALICIOUS_REPORT,
           PostReportResolutionActions.BAN_POST,
-        ];
+        ] as unknown as ReportResolutionActions[];
       case 'location':
         return [
           LocationReportResolutionActions.NO_ACTION_TAKEN,
           LocationReportResolutionActions.MALICIOUS_REPORT,
-        ];
+        ] as unknown as ReportResolutionActions[];
       case 'event':
         return [
           EventReportResolutionActions.CANCEL_EVENT,
           EventReportResolutionActions.NO_ACTION_TAKEN,
           EventReportResolutionActions.MALICIOUS_REPORT,
-        ];
+        ] as unknown as ReportResolutionActions[];
       default:
         return [];
     }
+  };
+
+  const getResolutionActionLabel = (action: ReportResolutionActions): string => {
+    const actionStr = String(action);
+    if (actionStr === 'NO_ACTION_TAKEN') {
+      return 'No Action Taken';
+    }
+    if (actionStr === 'MALICIOUS_REPORT') {
+      return 'Malicious Report';
+    }
+    if (actionStr === 'BAN_POST') {
+      return 'Ban Post';
+    }
+    if (actionStr === 'CANCEL_EVENT') {
+      return 'Cancel Event';
+    }
+    return actionStr;
   };
 
   const handleProcessReport = () => {
@@ -482,11 +528,41 @@ export default function ReportsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12">#</TableHead>
-                      <TableHead>Reporter</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
+                      <SortableTableHeader
+                        column="createdBy.firstName"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Reporter
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="targetType"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Type
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="title"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Reason
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="status"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Status
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="createdAt"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Created
+                      </SortableTableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -646,23 +722,11 @@ export default function ReportsPage() {
                   <SelectValue placeholder="Select action" />
                 </SelectTrigger>
                 <SelectContent>
-                  {getAvailableResolutionActions(selectedReport?.targetType).map((action) => {
-                    const labels: Record<ReportResolutionActions, string> = {
-                      [PostReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
-                      [PostReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
-                      [PostReportResolutionActions.BAN_POST]: 'Ban Post',
-                      [LocationReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
-                      [LocationReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
-                      [EventReportResolutionActions.CANCEL_EVENT]: 'Cancel Event',
-                      [EventReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
-                      [EventReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
-                    };
-                    return (
-                      <SelectItem key={action} value={action}>
-                        {labels[action]}
-                      </SelectItem>
-                    );
-                  })}
+                  {getAvailableResolutionActions(selectedReport?.targetType).map((action) => (
+                    <SelectItem key={action} value={action}>
+                      {getResolutionActionLabel(action)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

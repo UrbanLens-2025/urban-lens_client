@@ -12,29 +12,31 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  IconFlag,
-  IconClock,
-  IconCheck,
-  IconX,
-  IconArrowLeft,
-  IconUser,
-  IconCalendar,
-  IconFileText,
-  IconAlertTriangle,
-  IconPhoto,
-  IconExternalLink,
-  IconCopy,
-  IconStar,
-  IconWorld,
-  IconLock,
-  IconUsers,
-} from '@tabler/icons-react';
+  Flag,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  ArrowLeft,
+  User,
+  Calendar,
+  FileText,
+  AlertCircle,
+  ImageIcon,
+  Copy,
+  Star,
+  Globe,
+  Lock,
+  Users,
+  Mail,
+  MapPin,
+  Loader2,
+} from 'lucide-react';
 import { useReportById } from '@/hooks/admin/useReportById';
 import { useProcessReport } from '@/hooks/admin/useProcessReport';
+import { useRelatedReports } from '@/hooks/admin/useRelatedReports';
 import { format } from 'date-fns';
-import { Loader2 } from 'lucide-react';
 import { ReportTargetType, ScheduledJobStatus, ReportResolutionActions, PostReportResolutionActions, LocationReportResolutionActions, EventReportResolutionActions } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, formatShortDate } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -55,45 +57,62 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { PageContainer } from '@/components/shared/PageContainer';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { ImageViewer } from '@/components/shared/ImageViewer';
+import type React from 'react';
+
+function InfoRow({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon?: React.ComponentType<{ className?: string }>;
+}) {
+  if (!value) return null;
+  return (
+    <div className='flex gap-3 py-2'>
+      {Icon && (
+        <Icon className='h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5' />
+      )}
+      <div className='flex-1 min-w-0'>
+        <p className='text-sm font-semibold text-muted-foreground mb-1'>{label}</p>
+        <div className='text-base text-foreground break-words'>{value}</div>
+      </div>
+    </div>
+  );
+}
 
 function getStatusBadge(status: string) {
   switch (status) {
     case 'PENDING':
       return (
         <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700">
-          <IconClock className="h-3 w-3 mr-1" />
+          <Clock className="h-3 w-3 mr-1" />
           Pending
         </Badge>
       );
     case 'IN_PROGRESS':
       return (
         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-700">
-          <IconAlertTriangle className="h-3 w-3 mr-1" />
+          <AlertCircle className="h-3 w-3 mr-1" />
           In Progress
         </Badge>
       );
     case 'RESOLVED':
       return (
         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700">
-          <IconCheck className="h-3 w-3 mr-1" />
+          <CheckCircle2 className="h-3 w-3 mr-1" />
           Resolved
         </Badge>
       );
     case 'REJECTED':
       return (
         <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700">
-          <IconX className="h-3 w-3 mr-1" />
+          <XCircle className="h-3 w-3 mr-1" />
           Rejected
         </Badge>
       );
@@ -109,7 +128,7 @@ function getScheduledJobStatusBadge(status: ScheduledJobStatus | null | undefine
     case ScheduledJobStatus.PENDING:
       return (
         <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700">
-          <IconClock className="h-3 w-3 mr-1" />
+          <Clock className="h-3 w-3 mr-1" />
           Job Pending
         </Badge>
       );
@@ -123,14 +142,14 @@ function getScheduledJobStatusBadge(status: ScheduledJobStatus | null | undefine
     case ScheduledJobStatus.COMPLETED:
       return (
         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700">
-          <IconCheck className="h-3 w-3 mr-1" />
+          <CheckCircle2 className="h-3 w-3 mr-1" />
           Job Completed
         </Badge>
       );
     case ScheduledJobStatus.FAILED:
       return (
         <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700">
-          <IconX className="h-3 w-3 mr-1" />
+          <XCircle className="h-3 w-3 mr-1" />
           Job Failed
         </Badge>
       );
@@ -153,6 +172,42 @@ function getTypeBadge(type: ReportTargetType) {
   );
 }
 
+const getResolutionActionLabel = (action: string | null): string => {
+  if (!action) return '';
+  const actionStr = String(action);
+  if (actionStr === 'NO_ACTION_TAKEN') {
+    return 'No Action Taken';
+  }
+  if (actionStr === 'MALICIOUS_REPORT') {
+    return 'Malicious Report';
+  }
+  if (actionStr === 'BAN_POST') {
+    return 'Ban Post';
+  }
+  if (actionStr === 'CANCEL_EVENT') {
+    return 'Cancel Event';
+  }
+  return actionStr.replace(/_/g, ' ');
+};
+
+const getResolutionActionColor = (action: string | null): string => {
+  if (!action) return '';
+  const actionStr = String(action);
+  if (actionStr === 'NO_ACTION_TAKEN') {
+    return 'bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-950 dark:text-gray-300';
+  }
+  if (actionStr === 'MALICIOUS_REPORT') {
+    return 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300';
+  }
+  if (actionStr === 'BAN_POST') {
+    return 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950 dark:text-purple-300';
+  }
+  if (actionStr === 'CANCEL_EVENT') {
+    return 'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950 dark:text-orange-300';
+  }
+  return '';
+};
+
 export default function ReportDetailPage({
   params,
 }: {
@@ -162,12 +217,18 @@ export default function ReportDetailPage({
   const router = useRouter();
   const { data: report, isLoading, error } = useReportById(reportId);
   const { mutate: processReport, isPending: isProcessing } = useProcessReport();
+  const { data: relatedReportsData, isLoading: isLoadingRelated } = useRelatedReports(
+    report?.targetId,
+    report?.targetType,
+    reportId
+  );
   const [isProcessDialogOpen, setIsProcessDialogOpen] = useState(false);
   const [processStatus, setProcessStatus] = useState<'RESOLVED' | 'REJECTED'>('RESOLVED');
   const [resolutionAction, setResolutionAction] = useState<ReportResolutionActions | ''>('');
   const [adminNotes, setAdminNotes] = useState('');
-  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
-  const [selectedImageSource, setSelectedImageSource] = useState<'attached' | 'post' | null>(null);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState('');
+  const [currentImageAlt, setCurrentImageAlt] = useState('');
   const [copiedId, setCopiedId] = useState(false);
 
   const copyToClipboard = (text: string) => {
@@ -179,29 +240,9 @@ export default function ReportDetailPage({
 
   const getResolutionActionBadge = (action: string | null) => {
     if (!action) return null;
-    const colors: Record<string, string> = {
-      [PostReportResolutionActions.NO_ACTION_TAKEN]: 'bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-950 dark:text-gray-300',
-      [PostReportResolutionActions.MALICIOUS_REPORT]: 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300',
-      [PostReportResolutionActions.BAN_POST]: 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950 dark:text-purple-300',
-      [LocationReportResolutionActions.NO_ACTION_TAKEN]: 'bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-950 dark:text-gray-300',
-      [LocationReportResolutionActions.MALICIOUS_REPORT]: 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300',
-      [EventReportResolutionActions.CANCEL_EVENT]: 'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950 dark:text-orange-300',
-      [EventReportResolutionActions.NO_ACTION_TAKEN]: 'bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-950 dark:text-gray-300',
-      [EventReportResolutionActions.MALICIOUS_REPORT]: 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300',
-    };
-    const labels: Record<string, string> = {
-      [PostReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
-      [PostReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
-      [PostReportResolutionActions.BAN_POST]: 'Ban Post',
-      [LocationReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
-      [LocationReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
-      [EventReportResolutionActions.CANCEL_EVENT]: 'Cancel Event',
-      [EventReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
-      [EventReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
-    };
     return (
-      <Badge variant="outline" className={colors[action] || ''}>
-        {labels[action] || action.replace(/_/g, ' ')}
+      <Badge variant="outline" className={getResolutionActionColor(action)}>
+        {getResolutionActionLabel(action)}
       </Badge>
     );
   };
@@ -215,18 +256,18 @@ export default function ReportDetailPage({
           PostReportResolutionActions.NO_ACTION_TAKEN,
           PostReportResolutionActions.MALICIOUS_REPORT,
           PostReportResolutionActions.BAN_POST,
-        ];
+        ] as unknown as ReportResolutionActions[];
       case 'location':
         return [
           LocationReportResolutionActions.NO_ACTION_TAKEN,
           LocationReportResolutionActions.MALICIOUS_REPORT,
-        ];
+        ] as unknown as ReportResolutionActions[];
       case 'event':
         return [
           EventReportResolutionActions.CANCEL_EVENT,
           EventReportResolutionActions.NO_ACTION_TAKEN,
           EventReportResolutionActions.MALICIOUS_REPORT,
-        ];
+        ] as unknown as ReportResolutionActions[];
       default:
         return [];
     }
@@ -255,95 +296,89 @@ export default function ReportDetailPage({
           setAdminNotes('');
           setResolutionAction('');
           toast.success('Report processed successfully');
+          router.push('/admin/reports');
         },
       }
     );
   };
 
+  const handleImageClick = (src: string, alt: string) => {
+    setCurrentImageSrc(src);
+    setCurrentImageAlt(alt);
+    setIsImageViewerOpen(true);
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <PageContainer>
+        <div className="flex h-[60vh] items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Loading report details...</p>
+          </div>
+        </div>
+      </PageContainer>
     );
   }
 
   if (error || !report) {
     return (
-      <div className="space-y-6">
-        <Card>
+      <PageContainer>
+        <Card className="border-destructive">
           <CardContent className="pt-6">
-            <p className="text-red-600">Error loading report. Please try again.</p>
-            <Button variant="outline" className="mt-4" onClick={() => router.back()}>
-              Go Back
-            </Button>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Error Loading Report</h2>
+              <p className="text-muted-foreground mb-4">
+                Unable to load report details. Please try again.
+              </p>
+              <Button variant="outline" onClick={() => router.back()}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Go Back
+              </Button>
+            </div>
           </CardContent>
         </Card>
-      </div>
+      </PageContainer>
     );
   }
 
+  const isPending = report.status === 'PENDING' || report.status === 'IN_PROGRESS';
+
+  // Action buttons for header
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="icon" onClick={() => router.back()}>
+        <ArrowLeft className="h-4 w-4" />
+      </Button>
+      {isPending && (
+        <Button
+          onClick={() => {
+            setProcessStatus('RESOLVED');
+            setResolutionAction('');
+            setAdminNotes('');
+            setIsProcessDialogOpen(true);
+          }}
+        >
+          <CheckCircle2 className="h-4 w-4 mr-2" />
+          Process Report
+        </Button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push('/admin/reports')}
-            className="h-8"
-          >
-            Reports
-          </Button>
-          <span>/</span>
-          <span className="text-foreground font-medium">Report Details</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.back()}
-            >
-              <IconArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold tracking-tight">Report Details</h1>
-                {getStatusBadge(report.status)}
-                {getScheduledJobStatusBadge(report.scheduledJobStatus)}
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <p className="text-muted-foreground text-sm">
-                  Report ID: <span className="font-mono">{report.id}</span>
-                </p>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => copyToClipboard(report.id)}
-                  title="Copy ID"
-                >
-                  <IconCopy className={cn("h-3 w-3", copiedId && "text-green-600")} />
-                </Button>
-              </div>
-            </div>
-          </div>
-          {(report.status === 'PENDING' || report.status === 'IN_PROGRESS') && (
-            <Button
-              onClick={() => {
-                setProcessStatus('RESOLVED');
-                setResolutionAction('');
-                setAdminNotes('');
-                setIsProcessDialogOpen(true);
-              }}
-            >
-              <IconCheck className="h-4 w-4 mr-2" />
-              Process Report
-            </Button>
-          )}
-        </div>
+    <PageContainer maxWidth="xl">
+      {/* Page Header */}
+      <PageHeader
+        title={`Report #${report.id.slice(0, 8)}`}
+        description={`Created ${formatShortDate(report.createdAt)}`}
+        icon={Flag}
+        actions={headerActions}
+      />
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        {getStatusBadge(report.status)}
+        {getScheduledJobStatusBadge(report.scheduledJobStatus)}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -353,56 +388,64 @@ export default function ReportDetailPage({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <IconFlag className="h-5 w-5" />
+                <Flag className="h-5 w-5" />
                 Report Information
               </CardTitle>
+              <CardDescription>
+                Basic details about this report
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wide">Target Type</Label>
-                  <div className="mt-2">{getTypeBadge(report.targetType)}</div>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wide">Target ID</Label>
-                  <div className="mt-2 flex items-center gap-2">
-                    <p className="font-mono text-sm">{report.targetId}</p>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => copyToClipboard(report.targetId)}
-                      title="Copy Target ID"
-                    >
-                      <IconCopy className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wide">Report Reason</Label>
-                  <p className="mt-2 text-sm font-medium">
-                    {report.reportedReasonEntity?.displayName || report.reportedReasonKey}
-                  </p>
-                  {report.reportedReasonEntity?.description && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {report.reportedReasonEntity.description}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wide">Created At</Label>
-                  <p className="mt-2 text-sm">
-                    {format(new Date(report.createdAt), 'MMM dd, yyyy HH:mm')}
-                  </p>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InfoRow
+                  label="Target Type"
+                  value={getTypeBadge(report.targetType)}
+                />
+                <InfoRow
+                  label="Target ID"
+                  value={
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm">{report.targetId}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => copyToClipboard(report.targetId)}
+                        title="Copy Target ID"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  }
+                />
+                <InfoRow
+                  label="Report Reason"
+                  value={
+                    <div>
+                      <p className="font-medium">
+                        {report.reportedReasonEntity?.displayName || report.reportedReasonKey}
+                      </p>
+                      {report.reportedReasonEntity?.description && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {report.reportedReasonEntity.description}
+                        </p>
+                      )}
+                    </div>
+                  }
+                />
+                <InfoRow
+                  label="Created At"
+                  value={format(new Date(report.createdAt), 'MMM dd, yyyy HH:mm')}
+                  icon={Calendar}
+                />
               </div>
               {report.resolutionAction && (
                 <>
                   <Separator />
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Resolution Action</Label>
-                    <div className="mt-2">{getResolutionActionBadge(report.resolutionAction)}</div>
-                  </div>
+                  <InfoRow
+                    label="Resolution Action"
+                    value={getResolutionActionBadge(report.resolutionAction)}
+                  />
                 </>
               )}
             </CardContent>
@@ -412,78 +455,81 @@ export default function ReportDetailPage({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <IconFileText className="h-5 w-5" />
+                <FileText className="h-5 w-5" />
                 Reason & Description
               </CardTitle>
+              <CardDescription>
+                Details provided by the reporter
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label className="text-xs text-muted-foreground">Title</Label>
-                <p className="mt-1 text-sm font-medium">{report.title}</p>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Description</Label>
-                <p className="mt-1 text-sm whitespace-pre-wrap">{report.description}</p>
-              </div>
-              {report.reportedReasonEntity && (
-                <div>
-                  <Label className="text-xs text-muted-foreground">Report Reason</Label>
-                  <p className="mt-1 text-sm font-medium">{report.reportedReasonEntity.displayName}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{report.reportedReasonEntity.description}</p>
-                </div>
-              )}
+              <InfoRow
+                label="Title"
+                value={report.title}
+              />
+              <InfoRow
+                label="Description"
+                value={<p className="whitespace-pre-wrap">{report.description}</p>}
+              />
               {report.attachedImageUrls && report.attachedImageUrls.length > 0 && (
-                <div>
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                    <IconPhoto className="h-4 w-4" />
-                    Attached Images ({report.attachedImageUrls.length})
-                  </Label>
-                  <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {report.attachedImageUrls.map((url, index) => (
-                      <div
-                        key={index}
-                        className="relative group cursor-pointer rounded-lg border overflow-hidden bg-muted"
-                        onClick={() => {
-                          setSelectedImageIndex(index);
-                          setSelectedImageSource('attached');
-                        }}
-                      >
-                        <img
-                          src={url}
-                          alt={`Attachment ${index + 1}`}
-                          className="object-cover h-32 w-full transition-transform group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                          <IconPhoto className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                <>
+                  <Separator />
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm font-semibold text-muted-foreground">
+                        Attached Images ({report.attachedImageUrls.length})
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {report.attachedImageUrls.map((url, index) => (
+                        <div
+                          key={index}
+                          className="relative group cursor-pointer rounded-lg border overflow-hidden bg-muted aspect-video"
+                          onClick={() => handleImageClick(url, `Attachment ${index + 1}`)}
+                        >
+                          <img
+                            src={url}
+                            alt={`Attachment ${index + 1}`}
+                            className="object-cover w-full h-full transition-transform group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <ImageIcon className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </CardContent>
           </Card>
 
-          {/* Referenced Target - Post UI */}
+          {/* Referenced Target - Post */}
           {report.referencedTargetPost && (
-            <Card className="border-2">
-              <CardHeader className="pb-3">
+            <Card className="border-2 border-primary/10">
+              <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Reported Post</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Reported Post
+                  </CardTitle>
                   <Badge variant="outline" className="text-xs">
                     {report.referencedTargetPost.type}
                   </Badge>
                 </div>
+                <CardDescription>
+                  Content that was reported
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Post-like UI */}
                 <div className="space-y-4">
                   {/* Author Header */}
                   <div className="flex items-center gap-3 pb-3 border-b">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src="" alt="Author" />
                       <AvatarFallback className="bg-primary/10 text-primary">
-                        <IconUser className="h-5 w-5" />
+                        <User className="h-5 w-5" />
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
@@ -493,7 +539,7 @@ export default function ReportDetailPage({
                         </p>
                         {report.referencedTargetPost.isVerified && (
                           <Badge variant="secondary" className="h-4 px-1.5 text-xs">
-                            <IconCheck className="h-3 w-3 mr-0.5" />
+                            <CheckCircle2 className="h-3 w-3 mr-0.5" />
                             Verified
                           </Badge>
                         )}
@@ -505,17 +551,17 @@ export default function ReportDetailPage({
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           {report.referencedTargetPost.visibility === 'PUBLIC' ? (
                             <>
-                              <IconWorld className="h-3 w-3" />
+                              <Globe className="h-3 w-3" />
                               Public
                             </>
                           ) : report.referencedTargetPost.visibility === 'PRIVATE' ? (
                             <>
-                              <IconLock className="h-3 w-3" />
+                              <Lock className="h-3 w-3" />
                               Private
                             </>
                           ) : (
                             <>
-                              <IconUsers className="h-3 w-3" />
+                              <Users className="h-3 w-3" />
                               {report.referencedTargetPost.visibility}
                             </>
                           )}
@@ -534,17 +580,20 @@ export default function ReportDetailPage({
                     {report.referencedTargetPost.rating !== null && report.referencedTargetPost.rating > 0 && (
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <IconStar
-                              key={i}
-                              className={cn(
-                                "h-4 w-4",
-                                i < Math.round(report.referencedTargetPost.rating!)
-                                  ? "fill-yellow-400 text-yellow-400"
-                                  : "text-muted-foreground"
-                              )}
-                            />
-                          ))}
+                          {Array.from({ length: 5 }).map((_, i) => {
+                            const rating = report.referencedTargetPost?.rating ?? 0;
+                            return (
+                              <Star
+                                key={i}
+                                className={cn(
+                                  "h-4 w-4",
+                                  i < Math.round(rating)
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "text-muted-foreground"
+                                )}
+                              />
+                            );
+                          })}
                         </div>
                         <span className="text-sm font-medium text-muted-foreground">
                           {report.referencedTargetPost.rating.toFixed(1)}
@@ -562,22 +611,19 @@ export default function ReportDetailPage({
                         "grid-cols-2"
                       )}>
                         {report.referencedTargetPost.imageUrls.map((url, index) => {
+                          const imageUrls = report.referencedTargetPost?.imageUrls ?? [];
                           const isFirstImage = index === 0;
-                          const isThreeImages = report.referencedTargetPost.imageUrls.length === 3;
-                          const isLargeImage = isFirstImage && (report.referencedTargetPost.imageUrls.length === 1 || isThreeImages);
+                          const isThreeImages = imageUrls.length === 3;
+                          const isLargeImage = isFirstImage && (imageUrls.length === 1 || isThreeImages);
                           
                           return (
                             <div
                               key={index}
                               className={cn(
-                                "relative group cursor-pointer overflow-hidden bg-muted rounded-lg",
-                                isLargeImage && isThreeImages ? "row-span-2" : "",
-                                isLargeImage ? "aspect-square" : "aspect-square"
+                                "relative group cursor-pointer overflow-hidden bg-muted rounded-lg aspect-square",
+                                isLargeImage && isThreeImages ? "row-span-2" : ""
                               )}
-                              onClick={() => {
-                                setSelectedImageIndex(index);
-                                setSelectedImageSource('post');
-                              }}
+                              onClick={() => handleImageClick(url, `Post image ${index + 1}`)}
                             >
                               <img
                                 src={url}
@@ -585,10 +631,10 @@ export default function ReportDetailPage({
                                 className="object-cover w-full h-full transition-transform group-hover:scale-105"
                               />
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                              {report.referencedTargetPost.imageUrls.length > 4 && index === 3 && (
+                              {imageUrls.length > 4 && index === 3 && (
                                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                                   <span className="text-white font-semibold text-lg">
-                                    +{report.referencedTargetPost.imageUrls.length - 4}
+                                    +{imageUrls.length - 4}
                                   </span>
                                 </div>
                               )}
@@ -600,52 +646,220 @@ export default function ReportDetailPage({
                   </div>
 
                   {/* Post Footer Info */}
-                  <div className="pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center gap-4">
-                      <span>Post ID: <span className="font-mono">{report.referencedTargetPost.postId.slice(0, 8)}...</span></span>
-                      {report.referencedTargetPost.isHidden && (
-                        <Badge variant="destructive" className="text-xs">
-                          Hidden
-                        </Badge>
-                      )}
+                  {report.referencedTargetPost?.postId && (
+                    <div className="pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center gap-4">
+                        <span>Post ID: <span className="font-mono">{report.referencedTargetPost.postId?.slice?.(0, 8) || report.referencedTargetPost.postId || 'N/A'}...</span></span>
+                        {report.referencedTargetPost.isHidden && (
+                          <Badge variant="destructive" className="text-xs">
+                            Hidden
+                          </Badge>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          if (report.referencedTargetPost?.postId) {
+                            copyToClipboard(report.referencedTargetPost.postId);
+                          }
+                        }}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy ID
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => copyToClipboard(report.referencedTargetPost.postId)}
-                    >
-                      <IconCopy className="h-3 w-3 mr-1" />
-                      Copy ID
-                    </Button>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           )}
+
+          {/* Referenced Target - Event */}
           {report.referencedTargetEvent && (
             <Card>
               <CardHeader>
-                <CardTitle>Reported Event</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Reported Event
+                </CardTitle>
+                <CardDescription>
+                  Event that was reported
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Title</Label>
-                  <p className="mt-1 text-sm font-medium">{report.referencedTargetEvent.title}</p>
-                </div>
+              <CardContent className="space-y-4">
+                <InfoRow
+                  label="Event Title"
+                  value={report.referencedTargetEvent.title}
+                />
+                {report.referencedTargetEvent.description && (
+                  <InfoRow
+                    label="Description"
+                    value={report.referencedTargetEvent.description}
+                  />
+                )}
+                {report.referencedTargetEvent.startDate && (
+                  <InfoRow
+                    label="Start Date"
+                    value={format(new Date(report.referencedTargetEvent.startDate), 'MMM dd, yyyy HH:mm')}
+                    icon={Calendar}
+                  />
+                )}
+                {report.referencedTargetEvent.endDate && (
+                  <InfoRow
+                    label="End Date"
+                    value={format(new Date(report.referencedTargetEvent.endDate), 'MMM dd, yyyy HH:mm')}
+                    icon={Calendar}
+                  />
+                )}
+                {report.referencedTargetEvent?.eventId && (
+                  <div className="pt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Event ID:</span>
+                      <span className="font-mono text-sm">{report.referencedTargetEvent.eventId?.slice?.(0, 8) || report.referencedTargetEvent.eventId || 'N/A'}...</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          if (report.referencedTargetEvent?.eventId) {
+                            copyToClipboard(report.referencedTargetEvent.eventId);
+                          }
+                        }}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
+
+          {/* Referenced Target - Location */}
           {report.referencedTargetLocation && (
             <Card>
               <CardHeader>
-                <CardTitle>Reported Location</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Reported Location
+                </CardTitle>
+                <CardDescription>
+                  Location that was reported
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <InfoRow
+                  label="Location Name"
+                  value={report.referencedTargetLocation.name}
+                />
+                {report.referencedTargetLocation.description && (
+                  <InfoRow
+                    label="Description"
+                    value={report.referencedTargetLocation.description}
+                  />
+                )}
+                {report.referencedTargetLocation?.locationId && (
+                  <div className="pt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Location ID:</span>
+                      <span className="font-mono text-sm">{report.referencedTargetLocation.locationId?.slice?.(0, 8) || report.referencedTargetLocation.locationId || 'N/A'}...</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          if (report.referencedTargetLocation?.locationId) {
+                            copyToClipboard(report.referencedTargetLocation.locationId);
+                          }
+                        }}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Related Reports */}
+          {report.targetId && report.targetType && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Flag className="h-5 w-5" />
+                  Related Reports
+                </CardTitle>
+                <CardDescription>
+                  Other reports about the same {report.targetType}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Name</Label>
-                  <p className="mt-1 text-sm font-medium">{report.referencedTargetLocation.name}</p>
-                </div>
+                {isLoadingRelated ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : relatedReportsData && relatedReportsData.data.length > 0 ? (
+                  <div className="space-y-3">
+                    {relatedReportsData.data.map((relatedReport) => (
+                        <div
+                          key={relatedReport.id}
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/admin/reports/${relatedReport.id}`)}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              {getStatusBadge(relatedReport.status)}
+                              {getTypeBadge(relatedReport.targetType)}
+                            </div>
+                            <p className="text-sm font-medium truncate">{relatedReport.title}</p>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              <span>Report #{relatedReport.id.slice(0, 8)}</span>
+                              <span>•</span>
+                              <span>{formatShortDate(relatedReport.createdAt)}</span>
+                              {relatedReport.createdBy && (
+                                <>
+                                  <span>•</span>
+                                  <span>
+                                    {relatedReport.createdBy.firstName} {relatedReport.createdBy.lastName}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/admin/reports/${relatedReport.id}`);
+                            }}
+                          >
+                            View
+                          </Button>
+                        </div>
+                      ))}
+                    {relatedReportsData.meta.totalItems > relatedReportsData.data.length && (
+                      <div className="pt-2 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            router.push(`/admin/reports?targetId=${report.targetId}&targetType=${report.targetType}`);
+                          }}
+                        >
+                          View All Related Reports ({relatedReportsData.meta.totalItems})
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No other reports found for this {report.targetType}
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}
@@ -657,28 +871,38 @@ export default function ReportDetailPage({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <IconUser className="h-5 w-5" />
+                <User className="h-5 w-5" />
                 Reporter
               </CardTitle>
+              <CardDescription>
+                Information about the person who submitted this report
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               {report.createdBy ? (
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Name</Label>
-                    <p className="mt-1 text-sm font-medium">
-                      {report.createdBy.firstName} {report.createdBy.lastName}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Email</Label>
-                    <p className="mt-1 text-sm">{report.createdBy.email}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Role</Label>
-                    <p className="mt-1 text-sm">{report.createdBy.role}</p>
-                  </div>
-                </div>
+                <>
+                  <InfoRow
+                    label="Full Name"
+                    value={`${report.createdBy.firstName} ${report.createdBy.lastName}`}
+                    icon={User}
+                  />
+                  <InfoRow
+                    label="Email"
+                    value={
+                      <a
+                        href={`mailto:${report.createdBy.email}`}
+                        className="text-primary hover:underline"
+                      >
+                        {report.createdBy.email}
+                      </a>
+                    }
+                    icon={Mail}
+                  />
+                  <InfoRow
+                    label="Role"
+                    value={<Badge variant="outline">{report.createdBy.role}</Badge>}
+                  />
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground">Reporter information not available</p>
               )}
@@ -689,9 +913,12 @@ export default function ReportDetailPage({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <IconCalendar className="h-5 w-5" />
+                <Calendar className="h-5 w-5" />
                 Timeline
               </CardTitle>
+              <CardDescription>
+                Report activity timeline
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="relative pl-6 space-y-4">
@@ -702,7 +929,7 @@ export default function ReportDetailPage({
                 <div className="relative">
                   <div className="absolute left-[-22px] top-1 h-3 w-3 rounded-full bg-blue-500 border-2 border-background" />
                   <div>
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Created</Label>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Created</p>
                     <p className="mt-1 text-sm font-medium">
                       {format(new Date(report.createdAt), 'MMM dd, yyyy')}
                     </p>
@@ -717,7 +944,7 @@ export default function ReportDetailPage({
                   <div className="relative">
                     <div className="absolute left-[-22px] top-1 h-3 w-3 rounded-full bg-muted-foreground border-2 border-background" />
                     <div>
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">Last Updated</Label>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Last Updated</p>
                       <p className="mt-1 text-sm font-medium">
                         {format(new Date(report.updatedAt), 'MMM dd, yyyy')}
                       </p>
@@ -733,7 +960,7 @@ export default function ReportDetailPage({
                   <div className="relative">
                     <div className="absolute left-[-22px] top-1 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
                     <div>
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">Resolved</Label>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Resolved</p>
                       <p className="mt-1 text-sm font-medium">
                         {format(new Date(report.resolvedAt), 'MMM dd, yyyy')}
                       </p>
@@ -758,27 +985,29 @@ export default function ReportDetailPage({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   {report.status === 'RESOLVED' ? (
-                    <IconCheck className="h-5 w-5 text-green-600" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
                   ) : (
-                    <IconX className="h-5 w-5 text-red-600" />
+                    <XCircle className="h-5 w-5 text-red-600" />
                   )}
                   Resolution Details
                 </CardTitle>
+                <CardDescription>
+                  Information about how this report was resolved
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 {report.resolutionAction && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Action Taken</Label>
-                    <div className="mt-2">{getResolutionActionBadge(report.resolutionAction)}</div>
-                  </div>
+                  <InfoRow
+                    label="Action Taken"
+                    value={getResolutionActionBadge(report.resolutionAction)}
+                  />
                 )}
                 {report.resolvedAt && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Resolved At</Label>
-                    <p className="mt-1 text-sm">
-                      {format(new Date(report.resolvedAt), 'MMM dd, yyyy HH:mm')}
-                    </p>
-                  </div>
+                  <InfoRow
+                    label="Resolved At"
+                    value={format(new Date(report.resolvedAt), 'MMM dd, yyyy HH:mm')}
+                    icon={Calendar}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -808,13 +1037,13 @@ export default function ReportDetailPage({
                 <SelectContent>
                   <SelectItem value="RESOLVED">
                     <div className="flex items-center gap-2">
-                      <IconCheck className="h-4 w-4 text-green-600" />
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
                       Resolved
                     </div>
                   </SelectItem>
                   <SelectItem value="REJECTED">
                     <div className="flex items-center gap-2">
-                      <IconX className="h-4 w-4 text-red-600" />
+                      <XCircle className="h-4 w-4 text-red-600" />
                       Rejected
                     </div>
                   </SelectItem>
@@ -832,23 +1061,11 @@ export default function ReportDetailPage({
                   <SelectValue placeholder="Select action" />
                 </SelectTrigger>
                 <SelectContent>
-                  {getAvailableResolutionActions().map((action) => {
-                    const labels: Record<ReportResolutionActions, string> = {
-                      [PostReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
-                      [PostReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
-                      [PostReportResolutionActions.BAN_POST]: 'Ban Post',
-                      [LocationReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
-                      [LocationReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
-                      [EventReportResolutionActions.CANCEL_EVENT]: 'Cancel Event',
-                      [EventReportResolutionActions.NO_ACTION_TAKEN]: 'No Action Taken',
-                      [EventReportResolutionActions.MALICIOUS_REPORT]: 'Malicious Report',
-                    };
-                    return (
-                      <SelectItem key={action} value={action}>
-                        {labels[action]}
-                      </SelectItem>
-                    );
-                  })}
+                  {getAvailableResolutionActions().map((action) => (
+                    <SelectItem key={action} value={action}>
+                      {getResolutionActionLabel(action)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
@@ -894,12 +1111,12 @@ export default function ReportDetailPage({
                 <>
                   {processStatus === 'RESOLVED' ? (
                     <>
-                      <IconCheck className="h-4 w-4 mr-2" />
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
                       Resolve Report
                     </>
                   ) : (
                     <>
-                      <IconX className="h-4 w-4 mr-2" />
+                      <XCircle className="h-4 w-4 mr-2" />
                       Reject Report
                     </>
                   )}
@@ -910,87 +1127,13 @@ export default function ReportDetailPage({
         </DialogContent>
       </Dialog>
 
-      {/* Image Lightbox */}
-      {selectedImageIndex !== null && selectedImageSource && (
-        <AlertDialog 
-          open={selectedImageIndex !== null} 
-          onOpenChange={() => {
-            setSelectedImageIndex(null);
-            setSelectedImageSource(null);
-          }}
-        >
-          <AlertDialogContent className="max-w-4xl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {selectedImageSource === 'attached' 
-                  ? `Attachment ${selectedImageIndex + 1} of ${report.attachedImageUrls?.length || 0}`
-                  : `Post Image ${selectedImageIndex + 1} of ${report.referencedTargetPost?.imageUrls?.length || 0}`
-                }
-              </AlertDialogTitle>
-            </AlertDialogHeader>
-            <div className="relative">
-              <img
-                src={
-                  selectedImageSource === 'attached'
-                    ? report.attachedImageUrls![selectedImageIndex]
-                    : report.referencedTargetPost!.imageUrls[selectedImageIndex]
-                }
-                alt={`${selectedImageSource === 'attached' ? 'Attachment' : 'Post image'} ${selectedImageIndex + 1}`}
-                className="w-full h-auto rounded-lg"
-              />
-            </div>
-            <AlertDialogFooter>
-              <div className="flex items-center gap-2 w-full justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedImageIndex(Math.max(0, selectedImageIndex - 1))}
-                  disabled={selectedImageIndex === 0}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const imageUrl = selectedImageSource === 'attached'
-                      ? report.attachedImageUrls![selectedImageIndex]
-                      : report.referencedTargetPost!.imageUrls[selectedImageIndex];
-                    window.open(imageUrl, '_blank');
-                  }}
-                >
-                  <IconExternalLink className="h-4 w-4 mr-2" />
-                  Open Full Size
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const maxIndex = selectedImageSource === 'attached'
-                      ? (report.attachedImageUrls?.length || 0) - 1
-                      : (report.referencedTargetPost?.imageUrls?.length || 0) - 1;
-                    setSelectedImageIndex(Math.min(maxIndex, selectedImageIndex + 1));
-                  }}
-                  disabled={
-                    selectedImageIndex === (selectedImageSource === 'attached'
-                      ? (report.attachedImageUrls?.length || 0) - 1
-                      : (report.referencedTargetPost?.imageUrls?.length || 0) - 1)
-                  }
-                >
-                  Next
-                </Button>
-              </div>
-              <AlertDialogCancel
-                onClick={() => {
-                  setSelectedImageIndex(null);
-                  setSelectedImageSource(null);
-                }}
-              >
-                Close
-              </AlertDialogCancel>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
-    </div>
+      {/* Image Viewer */}
+      <ImageViewer
+        src={currentImageSrc}
+        alt={currentImageAlt}
+        open={isImageViewerOpen}
+        onOpenChange={setIsImageViewerOpen}
+      />
+    </PageContainer>
   );
 }
-
-
