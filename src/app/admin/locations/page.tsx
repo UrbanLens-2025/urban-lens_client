@@ -151,8 +151,8 @@ export default function LocationDashboardPage() {
           value={locationStats.isLoading ? "—" : locationStats.total.toLocaleString()}
           description={locationStats.isLoading ? "Loading statistics..." : `${locations.length} on this page`}
           icon={MapPin}
-          iconBg="bg-blue-100 dark:bg-blue-950"
-          iconColor="text-blue-600 dark:text-blue-400"
+          color="blue"
+          isLoading={locationStats.isLoading}
         />
 
         <StatCard
@@ -162,8 +162,8 @@ export default function LocationDashboardPage() {
             ? "Loading statistics..." 
             : `${locationStats.total > 0 ? Math.round((locationStats.business / locationStats.total) * 100) : 0}% of total`}
           icon={Building2}
-          iconBg="bg-orange-100 dark:bg-orange-950"
-          iconColor="text-orange-600 dark:text-orange-400"
+          color="orange"
+          isLoading={locationStats.isLoading}
         />
 
         <StatCard
@@ -173,8 +173,8 @@ export default function LocationDashboardPage() {
             ? "Loading statistics..."
             : `${locationStats.total > 0 ? Math.round((locationStats.public / locationStats.total) * 100) : 0}% of total`}
           icon={Globe}
-          iconBg="bg-purple-100 dark:bg-purple-950"
-          iconColor="text-purple-600 dark:text-purple-400"
+          color="purple"
+          isLoading={locationStats.isLoading}
         />
 
         <StatCard
@@ -184,8 +184,8 @@ export default function LocationDashboardPage() {
             ? "Loading statistics..."
             : `${locationStats.total > 0 ? Math.round((locationStats.visible / locationStats.total) * 100) : 0}% of total`}
           icon={Eye}
-          iconBg="bg-green-100 dark:bg-green-950"
-          iconColor="text-green-600 dark:text-green-400"
+          color="green"
+          isLoading={locationStats.isLoading}
         />
       </div>
 

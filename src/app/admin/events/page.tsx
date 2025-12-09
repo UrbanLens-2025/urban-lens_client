@@ -25,12 +25,13 @@ import {
   Calendar,
   MapPin,
   User,
+  TrendingUp,
 } from 'lucide-react';
 import { Event, SortState } from '@/types';
 import { useAllEvents } from '@/hooks/admin/useAllEvents';
 import { useEventStats } from '@/hooks/admin/useEventStats';
 import Link from 'next/link';
-import { StatsCard } from '@/components/dashboard';
+import { StatCard } from '@/components/shared/StatCard';
 import {
   IconCalendar,
   IconEye,
@@ -108,30 +109,30 @@ export default function AdminEventsPage() {
     return [
       {
         title: 'Total Events',
-        value: eventStats.total.toLocaleString(),
-        change: `${events.length} on this page`,
-        icon: IconCalendar,
+        value: eventStats.isLoading ? '—' : eventStats.total.toLocaleString(),
+        description: eventStats.isLoading ? 'Loading...' : `${events.length} on this page`,
+        icon: Calendar,
         color: 'blue' as const,
       },
       {
         title: 'Published',
-        value: eventStats.published.toLocaleString(),
-        change: 'Active events',
-        icon: IconTrendingUp,
+        value: eventStats.isLoading ? '—' : eventStats.published.toLocaleString(),
+        description: eventStats.isLoading ? 'Loading...' : 'Active events',
+        icon: TrendingUp,
         color: 'green' as const,
       },
       {
         title: 'Draft',
-        value: eventStats.draft.toLocaleString(),
-        change: 'Unpublished events',
-        icon: IconCalendar,
+        value: eventStats.isLoading ? '—' : eventStats.draft.toLocaleString(),
+        description: eventStats.isLoading ? 'Loading...' : 'Unpublished events',
+        icon: Calendar,
         color: 'orange' as const,
       },
       {
         title: 'Cancelled',
-        value: eventStats.cancelled.toLocaleString(),
-        change: 'Cancelled events',
-        icon: IconX,
+        value: eventStats.isLoading ? '—' : eventStats.cancelled.toLocaleString(),
+        description: eventStats.isLoading ? 'Loading...' : 'Cancelled events',
+        icon: X,
         color: 'red' as const,
       },
     ];
@@ -195,14 +196,13 @@ export default function AdminEventsPage() {
       {/* Statistics Cards */}
       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
         {stats.map((stat) => (
-          <StatsCard
+          <StatCard
             key={stat.title}
             title={stat.title}
             value={stat.value}
-            change={stat.change}
+            description={stat.description}
             icon={stat.icon}
             color={stat.color}
-            variant="minimal"
             isLoading={eventStats.isLoading}
           />
         ))}

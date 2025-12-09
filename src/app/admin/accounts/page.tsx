@@ -31,8 +31,9 @@ import {
 import { IconSearch, IconFilter, IconUsers, IconUserCheck, IconUserX, IconShieldCheck, IconBriefcase, IconStar, IconUser } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
 import { useAllAccounts } from '@/hooks/admin/useAllAccounts';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Users, UserCheck, UserX, ShieldCheck } from 'lucide-react';
 import { SortableTableHeader, SortDirection } from '@/components/shared/SortableTableHeader';
+import { StatCard } from '@/components/shared/StatCard';
 
 export default function AccountsPage() {
     const router = useRouter();
@@ -200,56 +201,35 @@ export default function AccountsPage() {
         <div className="space-y-6">
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
-                        <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-                            <IconUsers className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold">{stats.total}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            {stats.onboarded} onboarded
-                        </p>
-                    </CardContent>
-                </Card>
+                <StatCard
+                    title="Total Accounts"
+                    value={stats.total.toLocaleString()}
+                    description={`${stats.onboarded} onboarded`}
+                    icon={Users}
+                    color="blue"
+                />
 
-                <Card className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active</CardTitle>
-                        <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
-                            <IconUserCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.active}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Not locked accounts
-                        </p>
-                    </CardContent>
-                </Card>
+                <StatCard
+                    title="Active"
+                    value={stats.active.toLocaleString()}
+                    description="Not locked accounts"
+                    icon={UserCheck}
+                    color="green"
+                />
 
-                <Card className="hover:shadow-md transition-shadow border-l-4 border-l-red-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Locked</CardTitle>
-                        <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center">
-                            <IconUserX className="h-5 w-5 text-red-600 dark:text-red-400" />
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-red-600 dark:text-red-400">{stats.locked}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Restricted accounts
-                        </p>
-                    </CardContent>
-                </Card>
+                <StatCard
+                    title="Locked"
+                    value={stats.locked.toLocaleString()}
+                    description="Restricted accounts"
+                    icon={UserX}
+                    color="red"
+                />
 
-                <Card className="hover:shadow-md transition-shadow border-l-4 border-l-purple-500">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">By Role</CardTitle>
-                        <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-950 flex items-center justify-center">
-                            <IconShieldCheck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                <Card className="border-2 border-primary/10 shadow-xl hover:shadow-2xl transition-all duration-300 bg-card/80 backdrop-blur-sm overflow-hidden">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold text-muted-foreground">By Role</CardTitle>
+                        <div className="h-10 w-10 rounded-xl flex items-center justify-center shadow-md bg-purple-100 dark:bg-purple-900/30">
+                            <ShieldCheck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                         </div>
                     </CardHeader>
                     <CardContent>

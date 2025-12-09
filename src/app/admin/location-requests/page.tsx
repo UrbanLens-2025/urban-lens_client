@@ -8,7 +8,7 @@ import { SortableTableHeader, SortDirection } from '@/components/shared/Sortable
 import { TableFilters } from '@/components/shared/TableFilters';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { PageContainer } from '@/components/shared/PageContainer';
-import { StatsCard } from '@/components/dashboard';
+import { StatCard } from '@/components/shared/StatCard';
 import {
   Card,
   CardContent,
@@ -253,55 +253,51 @@ export default function LocationRequestsPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
+        <StatCard
           title="Total Requests"
           value={stats.isLoading ? '—' : stats.total.toLocaleString()}
-          change={stats.isLoading ? 'Loading...' : `${requests.length} on this page`}
+          description={stats.isLoading ? 'Loading...' : `${requests.length} on this page`}
           icon={MapPin}
           color="blue"
-          variant="minimal"
           isLoading={stats.isLoading}
         />
 
-        <StatsCard
+        <StatCard
           title="Pending Review"
           value={stats.isLoading ? '—' : stats.pending.toLocaleString()}
-          change={
+          description={
             stats.isLoading
               ? 'Loading...'
               : `${stats.total > 0 ? Math.round((stats.pending / stats.total) * 100) : 0}% of total`
           }
           icon={Clock}
           color="orange"
-          variant="minimal"
           isLoading={stats.isLoading}
         />
 
-        <StatsCard
+        <StatCard
           title="Approved"
           value={stats.isLoading ? '—' : stats.approved.toLocaleString()}
-          change={
+          description={
             stats.isLoading
               ? 'Loading...'
               : `${stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0}% of total`
           }
           icon={CheckCircle2}
           color="green"
-          variant="minimal"
           isLoading={stats.isLoading}
         />
 
-        <StatsCard
+        <StatCard
           title="Rejected"
           value={stats.isLoading ? '—' : stats.rejected.toLocaleString()}
-          change={
+          description={
             stats.isLoading
               ? 'Loading...'
               : `${stats.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : 0}% of total`
           }
           icon={XCircle}
           color="red"
-          variant="minimal"
           isLoading={stats.isLoading}
         />
       </div>

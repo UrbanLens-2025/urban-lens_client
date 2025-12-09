@@ -9,7 +9,7 @@ import { SortableTableHeader, SortDirection } from "@/components/shared/Sortable
 import { TableFilters } from "@/components/shared/TableFilters";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { StatsCard } from "@/components/dashboard";
+import { StatCard } from "@/components/shared/StatCard";
 import {
   Card,
   CardContent,
@@ -130,41 +130,38 @@ export default function AdminTagsPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatsCard
+        <StatCard
           title="Total Tags"
           value={tagStats.isLoading ? "—" : tagStats.total.toLocaleString()}
-          change={tagStats.isLoading ? "Loading..." : `${tags.length} on this page`}
+          description={tagStats.isLoading ? "Loading..." : `${tags.length} on this page`}
           icon={TagIcon}
           color="blue"
-          variant="minimal"
           isLoading={tagStats.isLoading}
         />
 
-        <StatsCard
+        <StatCard
           title="Visible Tags"
           value={tagStats.isLoading ? "—" : tagStats.visible.toLocaleString()}
-          change={
+          description={
             tagStats.isLoading
               ? "Loading..."
               : `${tagStats.total > 0 ? Math.round((tagStats.visible / tagStats.total) * 100) : 0}% of total`
           }
           icon={Eye}
           color="green"
-          variant="minimal"
           isLoading={tagStats.isLoading}
         />
 
-        <StatsCard
+        <StatCard
           title="Hidden Tags"
           value={tagStats.isLoading ? "—" : tagStats.hidden.toLocaleString()}
-          change={
+          description={
             tagStats.isLoading
               ? "Loading..."
               : `${tagStats.total > 0 ? Math.round((tagStats.hidden / tagStats.total) * 100) : 0}% of total`
           }
           icon={EyeOff}
           color="orange"
-          variant="minimal"
           isLoading={tagStats.isLoading}
         />
       </div>
