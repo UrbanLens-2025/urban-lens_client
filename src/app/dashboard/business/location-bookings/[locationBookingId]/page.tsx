@@ -311,22 +311,29 @@ export default function LocationBookingDetailPage({
 
               {/* Booking Time Slots Table */}
               <div className="mt-6">
-                <p className="text-sm font-semibold text-muted-foreground mb-3">
-                  Booking Time Slots
-                </p>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm font-semibold text-foreground">
+                    Booking Time Slots
+                  </p>
+                  <Badge variant="secondary" className="text-xs">
+                    {booking.dates.length} slot{booking.dates.length !== 1 ? 's' : ''}
+                  </Badge>
+                </div>
                 <div className="border rounded-lg overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Day</TableHead>
-                        <TableHead>Start Time</TableHead>
-                        <TableHead>End Time</TableHead>
-                        <TableHead>Duration</TableHead>
+                        <TableHead className="w-[140px]">Date</TableHead>
+                        <TableHead className="w-[100px]">Day</TableHead>
+                        <TableHead className="w-[100px]">Start Time</TableHead>
+                        <TableHead className="w-[100px]">End Time</TableHead>
+                        <TableHead className="w-[100px]">Duration</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {booking.dates.map((dateSlot, index) => {
+                      {(() => {
+                        const sortedDates = [...booking.dates].sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
+                        return sortedDates.map((dateSlot, index) => {
                         const startDate = new Date(dateSlot.startDateTime);
                         const endDate = new Date(dateSlot.endDateTime);
                         const durationMs = endDate.getTime() - startDate.getTime();
@@ -336,26 +343,37 @@ export default function LocationBookingDetailPage({
                           ? `${durationHours}h ${durationMinutes > 0 ? `${durationMinutes}m` : ''}`.trim()
                           : `${durationMinutes}m`;
                         
+                        // Check if this is a different date from the previous slot
+                        const prevSlot = index > 0 ? sortedDates[index - 1] : null;
+                        const prevDate = prevSlot ? format(new Date(prevSlot.startDateTime), "yyyy-MM-dd") : null;
+                        const currentDate = format(startDate, "yyyy-MM-dd");
+                        const isNewDate = prevDate !== currentDate;
+                        
                         return (
-                          <TableRow key={index}>
+                          <TableRow 
+                            key={index}
+                            className={isNewDate ? "border-t-2 border-t-muted" : ""}
+                          >
                             <TableCell className="font-medium">
                               {format(startDate, "MMM dd, yyyy")}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-muted-foreground">
                               {format(startDate, "EEEE")}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="font-mono">
                               {format(startDate, "HH:mm")}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="font-mono">
                               {format(endDate, "HH:mm")}
                             </TableCell>
                             <TableCell>
-                              {durationText}
+                              <Badge variant="outline" className="font-normal">
+                                {durationText}
+                              </Badge>
                             </TableCell>
                           </TableRow>
                         );
-                      })}
+                      });})()}
                     </TableBody>
                   </Table>
                 </div>
@@ -755,12 +773,31 @@ export default function LocationBookingDetailPage({
                     </div>
                     <div>
                       <span className="font-medium">Time Slots:</span>
-                      <div className="ml-4 mt-0.5 space-y-0.5">
-                        {booking?.dates.map((dateSlot, idx) => (
-                          <div key={idx} className="text-xs">
-                            • {formatDateTime(dateSlot.startDateTime)} - {format(new Date(dateSlot.endDateTime), "HH:mm")}
-                          </div>
-                        ))}
+                      <div className="ml-4 mt-1.5 space-y-1.5">
+                        {(() => {
+                          const sortedDates = [...(booking?.dates || [])].sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
+                          return sortedDates.map((dateSlot, idx) => {
+                            const startDate = new Date(dateSlot.startDateTime);
+                            const endDate = new Date(dateSlot.endDateTime);
+                            const isSameDay = idx > 0 && 
+                              format(new Date(sortedDates[idx - 1].startDateTime), "yyyy-MM-dd") === 
+                              format(startDate, "yyyy-MM-dd");
+                            
+                            return (
+                              <div key={idx} className="flex items-center gap-2 text-xs">
+                                {!isSameDay && (
+                                  <span className="font-medium text-muted-foreground min-w-[90px]">
+                                    {format(startDate, "MMM dd")}:
+                                  </span>
+                                )}
+                                {isSameDay && <span className="min-w-[90px]"></span>}
+                                <span className="font-mono text-foreground">
+                                  {format(startDate, "HH:mm")} - {format(endDate, "HH:mm")}
+                                </span>
+                              </div>
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                     <div>

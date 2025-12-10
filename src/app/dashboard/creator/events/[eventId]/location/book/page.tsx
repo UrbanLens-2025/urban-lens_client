@@ -2,7 +2,7 @@
 
 import { use, useState, useMemo, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, Loader2, MapPin as MapPinIcon, ArrowLeft, Mail, Phone, Star, ChevronLeft, ChevronRight, Calendar, Search, ChevronDown, DollarSign, Clock, ChevronUp, RotateCcw } from "lucide-react";
+import { Building2, Loader2, MapPin as MapPinIcon, ArrowLeft, Mail, Phone, Star, ChevronLeft, ChevronRight, Calendar, Search, ChevronDown, DollarSign, Clock, ChevronUp, RotateCcw, AlertCircle } from "lucide-react";
 import { useBookableLocations } from "@/hooks/events/useBookableLocations";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
 import { useEventById } from "@/hooks/events/useEventById";
@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { DateTimePicker } from "@/app/dashboard/creator/request/create/_components/DateTimePicker";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AvailabilityCalendar } from "@/app/dashboard/creator/request/create/_components/AvailabilityCalendar";
@@ -123,18 +122,16 @@ function MapController({
 }
 
 // Location Details Overlay Component
-function LocationDetailsOverlay({ 
-  location, 
+function LocationDetailsOverlay({
+  location,
   onClose,
   eventId,
-  startTime,
-  endTime
+  eventDetail
 }: { 
   location: BookableLocation | null; 
   onClose: () => void;
   eventId: string;
-  startTime?: Date;
-  endTime?: Date;
+  eventDetail?: { startDate?: string; endDate?: string };
 }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -526,12 +523,7 @@ function LocationDetailsOverlay({
       <div className="p-4 border-t bg-background">
         <Button
           onClick={() => {
-            // Pre-fill slots if startTime and endTime are provided
-            if (startTime && endTime) {
-              setSelectedSlots(splitRangeIntoDailySlots(startTime, endTime));
-            } else {
-              setSelectedSlots([]);
-            }
+            setSelectedSlots([]);
             setShowCalendar(true);
           }}
           disabled={isLoadingDetails}
@@ -544,7 +536,12 @@ function LocationDetailsOverlay({
       </div>
 
       {/* Booking Calendar Dialog */}
-      <Dialog open={showCalendar} onOpenChange={setShowCalendar}>
+      <Dialog open={showCalendar} onOpenChange={(open) => {
+        setShowCalendar(open);
+        if (!open) {
+          setSelectedSlots([]);
+        }
+      }}>
         <DialogContent className="w-[90vw] !max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Select Booking Time Slots</DialogTitle>
@@ -554,13 +551,42 @@ function LocationDetailsOverlay({
               locationId={displayLocation.id}
               initialSlots={selectedSlots}
               onSlotsChange={setSelectedSlots}
-              initialWeekStart={startTime}
+              eventStartDate={eventDetail?.startDate ? new Date(eventDetail.startDate) : undefined}
+              eventEndDate={eventDetail?.endDate ? new Date(eventDetail.endDate) : undefined}
+              minBookingDurationMinutes={displayLocation.bookingConfig?.minBookingDurationMinutes}
             />
           )}
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button
               variant="outline"
               onClick={() => {
+                // Quick validation check - clear invalid slots on cancel
+                if (eventDetail?.startDate && eventDetail?.endDate && selectedSlots.length > 0) {
+                  const eventStart = new Date(eventDetail.startDate);
+                  eventStart.setMilliseconds(0);
+                  const eventEnd = new Date(eventDetail.endDate);
+                  eventEnd.setMilliseconds(0);
+                  
+                  const allSlotStarts = selectedSlots.map(slot => {
+                    const d = new Date(slot.startDateTime);
+                    d.setMilliseconds(0);
+                    return d.getTime();
+                  });
+                  const allSlotEnds = selectedSlots.map(slot => {
+                    const d = new Date(slot.endDateTime);
+                    d.setMilliseconds(0);
+                    return d.getTime();
+                  });
+                  
+                  const earliestStart = new Date(Math.min(...allSlotStarts));
+                  const latestEnd = new Date(Math.max(...allSlotEnds));
+                  
+                  // Quick check - if slots don't cover event, clear them
+                  if (earliestStart.getTime() > eventStart.getTime() || 
+                      latestEnd.getTime() < eventEnd.getTime()) {
+                    setSelectedSlots([]);
+                  }
+                }
                 setShowCalendar(false);
                 setSelectedSlots([]);
               }}
@@ -569,15 +595,213 @@ function LocationDetailsOverlay({
             </Button>
             <Button
               onClick={async () => {
-                if (!displayLocation || collapsedSlotRanges.length === 0) return;
+                // Dismiss any existing toasts first
+                toast.dismiss();
                 
-                // Map slots to API format (only the merged selections)
+                if (!displayLocation || selectedSlots.length === 0) {
+                  toast.error("No time slots selected", {
+                    description: "Please select at least one time slot to continue.",
+                    icon: <Calendar className="h-4 w-4" />,
+                    duration: 4000,
+                  });
+                  return;
+                }
+
+                // Validate that selected slots cover event dates
+                if (eventDetail?.startDate && eventDetail?.endDate) {
+                  const eventStart = new Date(eventDetail.startDate);
+                  eventStart.setMilliseconds(0);
+                  const eventEnd = new Date(eventDetail.endDate);
+                  eventEnd.setMilliseconds(0);
+                  
+                  const allSlotStarts = selectedSlots.map(slot => {
+                    const d = new Date(slot.startDateTime);
+                    d.setMilliseconds(0);
+                    return d.getTime();
+                  });
+                  const allSlotEnds = selectedSlots.map(slot => {
+                    const d = new Date(slot.endDateTime);
+                    d.setMilliseconds(0);
+                    return d.getTime();
+                  });
+                  
+                  const earliestStart = new Date(Math.min(...allSlotStarts));
+                  const latestEnd = new Date(Math.max(...allSlotEnds));
+                  
+                  const errors: Array<{ title: string; description: React.ReactNode; icon: React.ReactNode }> = [];
+                  
+                  // Check: earliest booking start must be <= event start
+                  if (earliestStart.getTime() > eventStart.getTime()) {
+                    const eventStartStr = eventStart.toLocaleString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric', 
+                      year: 'numeric',
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      hour12: true 
+                    });
+                    const earliestStartStr = earliestStart.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                    errors.push({
+                      title: "Booking slots don't cover event start",
+                      description: (
+                        <div className="space-y-1.5 mt-1">
+                          <p className="text-sm">Your earliest booking slot starts <strong className="text-destructive">{earliestStartStr}</strong>, but the event starts <strong>{eventStartStr}</strong>.</p>
+                          <p className="text-xs text-muted-foreground">Please select slots that start on or before the event start time.</p>
+                        </div>
+                      ),
+                      icon: <Clock className="h-4 w-4" />,
+                    });
+                  }
+                  
+                  // Check: latest booking end must be >= event end
+                  if (latestEnd.getTime() < eventEnd.getTime()) {
+                    const eventEndStr = eventEnd.toLocaleString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric', 
+                      year: 'numeric',
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      hour12: true 
+                    });
+                    const latestEndStr = latestEnd.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                    errors.push({
+                      title: "Booking slots don't cover event end",
+                      description: (
+                        <div className="space-y-1.5 mt-1">
+                          <p className="text-sm">Your latest booking slot ends <strong className="text-destructive">{latestEndStr}</strong>, but the event ends <strong>{eventEndStr}</strong>.</p>
+                          <p className="text-xs text-muted-foreground">Please select slots that end on or after the event end time.</p>
+                        </div>
+                      ),
+                      icon: <Clock className="h-4 w-4" />,
+                    });
+                  }
+                  
+                  // Check for gaps
+                  const sortedSlots = [...selectedSlots].sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+                  const eventStartTime = eventStart.getTime();
+                  const eventEndTime = eventEnd.getTime();
+                  const uncoveredRanges: Array<{ start: Date; end: Date }> = [];
+                  
+                  let currentCheckTime = eventStartTime;
+                  let slotIndex = 0;
+                  
+                  while (currentCheckTime < eventEndTime && slotIndex < sortedSlots.length) {
+                    const slot = sortedSlots[slotIndex];
+                    const slotStart = slot.startDateTime.getTime();
+                    const slotEnd = slot.endDateTime.getTime();
+                    
+                    if (currentCheckTime < slotStart) {
+                      uncoveredRanges.push({
+                        start: new Date(currentCheckTime),
+                        end: new Date(Math.min(slotStart, eventEndTime)),
+                      });
+                      currentCheckTime = slotEnd;
+                    } else if (currentCheckTime < slotEnd) {
+                      currentCheckTime = Math.max(currentCheckTime, slotEnd);
+                    }
+                    slotIndex++;
+                  }
+                  
+                  if (currentCheckTime < eventEndTime) {
+                    uncoveredRanges.push({
+                      start: new Date(currentCheckTime),
+                      end: new Date(eventEndTime),
+                    });
+                  }
+                  
+                  if (uncoveredRanges.length > 0) {
+                    const gapMessages = uncoveredRanges.map(range => {
+                      const startStr = range.start.toLocaleString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: true 
+                      });
+                      const endStr = range.end.toLocaleString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: true 
+                      });
+                      return `${startStr} - ${endStr}`;
+                    }).join(', ');
+                    
+                    const eventStartStr = eventStart.toLocaleString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric', 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      hour12: true 
+                    });
+                    const eventEndStr = eventEnd.toLocaleString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric', 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      hour12: true 
+                    });
+                    
+                    errors.push({
+                      title: "Time slots have gaps",
+                      description: (
+                        <div className="space-y-2 mt-1">
+                          <p className="text-sm">Your selected slots don't continuously cover the event period.</p>
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">Event period:</p>
+                            <p className="text-xs bg-muted px-2 py-1 rounded font-mono">{eventStartStr} - {eventEndStr}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-destructive">Missing coverage:</p>
+                            <div className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded font-mono">
+                              {gapMessages}
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">Please select consecutive slots without gaps.</p>
+                        </div>
+                      ),
+                      icon: <AlertCircle className="h-4 w-4" />,
+                    });
+                  }
+                  
+                  // Show only the first error (most critical)
+                  if (errors.length > 0) {
+                    const firstError = errors[0];
+                    toast.error(firstError.title, {
+                      description: firstError.description,
+                      icon: firstError.icon,
+                      duration: 10000,
+                    });
+                    // Clear invalid slots
+                    setSelectedSlots([]);
+                    return;
+                  }
+                }
+                
+                // Validate minimum duration per slot
+                if (displayLocation.bookingConfig?.minBookingDurationMinutes) {
+                  const minDurationMs = displayLocation.bookingConfig.minBookingDurationMinutes * 60 * 1000;
+                  const invalidSlots = selectedSlots.filter((slot) => {
+                    const slotDurationMs = slot.endDateTime.getTime() - slot.startDateTime.getTime();
+                    return slotDurationMs < minDurationMs;
+                  });
+                  
+                  if (invalidSlots.length > 0) {
+                    toast.error("Slot duration too short", {
+                      description: `Each booking slot must be at least ${displayLocation.bookingConfig.minBookingDurationMinutes} minutes long. Please adjust your selection.`,
+                      icon: <Clock className="h-4 w-4" />,
+                      duration: 5000,
+                    });
+                    return;
+                  }
+                }
+                
+                // Map slots to API format
                 const dates = collapsedSlotRanges.map((slot) => ({
                   startDateTime: slot.start.toISOString(),
                   endDateTime: slot.end.toISOString(),
                 }));
-
-                // alert(JSON.stringify(dates));
 
                 addLocationBookingMutation.mutate(
                   {
@@ -615,31 +839,12 @@ export default function BookLocationPage({
   const { data: eventDetail } = useEventById(eventId);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [startTime, setStartTime] = useState<Date | undefined>(undefined);
-  const [endTime, setEndTime] = useState<Date | undefined>(undefined);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
   const [maxCapacity, setMaxCapacity] = useState<number | undefined>(undefined);
   const [isMoreFiltersOpen, setIsMoreFiltersOpen] = useState(false);
 
-  // Calculate minimum end time (4 hours after start time)
-  const minEndTime = useMemo(() => {
-    if (!startTime) return undefined;
-    const minEnd = new Date(startTime);
-    minEnd.setHours(minEnd.getHours() + 4);
-    return minEnd;
-  }, [startTime]);
-
-  // Validate end time is at least 4 hours after start time
-  useEffect(() => {
-    if (startTime && endTime && minEndTime && endTime < minEndTime) {
-      setEndTime(minEndTime);
-    }
-  }, [startTime, endTime, minEndTime]);
-
   // Debounce filter fields
   const [debouncedSearchQuery] = useDebounce(searchQuery, 500);
-  const [debouncedStartTime] = useDebounce(startTime, 500);
-  const [debouncedEndTime] = useDebounce(endTime, 500);
   const [debouncedPriceRange] = useDebounce(priceRange, 500);
   const [debouncedMaxCapacity] = useDebounce(maxCapacity, 500);
 
@@ -647,8 +852,6 @@ export default function BookLocationPage({
     page: 1, 
     limit: 100,
     search: debouncedSearchQuery || undefined,
-    startTime: debouncedStartTime?.toISOString(),
-    endTime: debouncedEndTime?.toISOString(),
     minPrice: debouncedPriceRange[0] > 0 ? debouncedPriceRange[0] : undefined,
     maxPrice: debouncedPriceRange[1] < 1000000 ? debouncedPriceRange[1] : undefined,
     maxCapacity: debouncedMaxCapacity,
@@ -706,45 +909,6 @@ export default function BookLocationPage({
 
   return (
     <div className="space-y-6">
-      {/* Date Selection - Main Filters */}
-      <div className="space-y-4 p-4 rounded-lg bg-background/80 border border-border/50 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          <p className="text-base font-semibold text-foreground">
-            When do you want to make your booking?
-          </p>
-        </div>
-        <p className="text-sm text-muted-foreground ml-7">
-          Leave blank to search all available dates
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          {/* Start Date */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-foreground">Start Date</Label>
-            <DateTimePicker
-              label=""
-              value={startTime}
-              onChange={setStartTime}
-              eventStartDate={eventDetail?.startDate ? new Date(eventDetail.startDate) : undefined}
-              eventEndDate={eventDetail?.endDate ? new Date(eventDetail.endDate) : undefined}
-            />
-          </div>
-
-          {/* End Date */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-foreground">End Date (min 4h)</Label>
-            <DateTimePicker
-              label=""
-              value={endTime}
-              onChange={setEndTime}
-              defaultTime="11:59"
-              eventStartDate={eventDetail?.startDate ? new Date(eventDetail.startDate) : undefined}
-              eventEndDate={eventDetail?.endDate ? new Date(eventDetail.endDate) : undefined}
-            />
-          </div>
-        </div>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -874,8 +1038,7 @@ export default function BookLocationPage({
                 location={selectedLocation}
                 onClose={() => setSelectedLocationId(null)}
                 eventId={eventId}
-                startTime={startTime}
-                endTime={endTime}
+                eventDetail={eventDetail}
               />
             )}
           </div>

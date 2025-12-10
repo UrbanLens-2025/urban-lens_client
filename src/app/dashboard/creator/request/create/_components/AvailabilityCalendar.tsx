@@ -88,11 +88,18 @@ export function AvailabilityCalendar({
   // Map dayOfWeek to date-fns day numbers (0 = Sunday, 1 = Monday, etc.)
 
   // Create availability slots for the current week
+  // Only slots marked as available by the business owner will be included
   const availabilitySlots = useMemo(() => {
+    // If no location is selected, return empty set (all slots will be considered unavailable until location is selected)
+    if (!locationId) return new Set<string>();
+    
+    // If location is selected but availability data hasn't loaded yet, return empty set
+    // This ensures slots are unavailable until we know what the business owner has made available
     if (!weeklyAvailability || !dates.length) return new Set<string>();
 
     const slots = new Set<string>();
     
+    // Build set of available slots based on business owner's weekly availability
     weeklyAvailability.forEach((avail) => {
       const dayNumber = dayOfWeekToNumber[avail.dayOfWeek];
       
@@ -114,6 +121,7 @@ export function AvailabilityCalendar({
           endTime.setHours(endHour, endMinute, 0, 0);
           
           // Generate slots every hour within the availability range
+          // Only these slots will be available for selection
           while (currentTime < endTime) {
             const dateKey = format(startOfDay(date), "yyyy-MM-dd");
             const timeKey = format(currentTime, "HH:mm");
@@ -127,7 +135,7 @@ export function AvailabilityCalendar({
     });
     
     return slots;
-  }, [weeklyAvailability, dates]);
+  }, [locationId, weeklyAvailability, dates]);
 
   // Create booked slots set
   const bookedSlotsSet = useMemo(() => {
@@ -329,31 +337,12 @@ export function AvailabilityCalendar({
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
   const [hasValidatedInitialSlots, setHasValidatedInitialSlots] = useState(false);
 
-  // Helper function to filter slots by event time range and minimum duration
-  // Slots must be completely within event time (start >= eventStart AND end <= eventEnd)
-  // Slots must meet minimum booking duration (if specified)
+  // Helper function - no filtering during selection, allow all slots
+  // Validation for minimum duration and event coverage happens when saving
   const filterSlotsByEventTime = (slots: Array<{ startDateTime: Date; endDateTime: Date }>) => {
-    return slots.filter((slot) => {
-      // Check event time constraints
-      if (eventStartDate && eventEndDate) {
-        const startsAfterEventStart = slot.startDateTime >= eventStartDate;
-        const endsBeforeEventEnd = slot.endDateTime <= eventEndDate;
-        if (!startsAfterEventStart || !endsBeforeEventEnd) {
-          return false;
-        }
-      }
-      
-      // Check minimum duration constraint (slot can be >= minimum, but not less)
-      if (minBookingDurationMinutes) {
-        const slotDurationMs = slot.endDateTime.getTime() - slot.startDateTime.getTime();
-        const minDurationMs = minBookingDurationMinutes * 60 * 1000;
-        if (slotDurationMs < minDurationMs) {
-          return false;
-        }
-      }
-      
-      return true;
-    });
+    // Don't filter during selection - allow users to select freely
+    // Validation happens in Step3BusinessVenue when saving
+    return slots;
   };
 
   // Drag state management
@@ -380,12 +369,8 @@ export function AvailabilityCalendar({
     slotDateTime.setHours(timeSlot.getHours(), timeSlot.getMinutes(), 0, 0);
     const slotEndDateTime = addHours(slotDateTime, 1);
     
-    // Check if slot is outside event time range
-    if (eventStartDate && eventEndDate) {
-      if (slotDateTime < eventStartDate || slotEndDateTime > eventEndDate) {
-        return "unavailable";
-      }
-    }
+    // Allow selecting all available slots regardless of event time
+    // Users can select any slot that the business has marked as available
 
     const dateKey = format(dateStart, "yyyy-MM-dd");
     const timeKey = format(timeSlot, "HH:mm");
@@ -396,7 +381,9 @@ export function AvailabilityCalendar({
       return "booked";
     }
 
-    // Check if within availability hours (if locationId is provided)
+    // CRITICAL: Check if business owner has made this slot available
+    // If locationId exists, only slots in availabilitySlots are available
+    // All other slots are unavailable (business owner hasn't opened them for booking)
     if (locationId && !availabilitySlots.has(key)) {
       return "unavailable";
     }
@@ -438,25 +425,18 @@ export function AvailabilityCalendar({
     const timeSlot = timeSlots[timeIndex];
     const slotDateTime = new Date(dateStart);
     slotDateTime.setHours(timeSlot.getHours(), timeSlot.getMinutes(), 0, 0);
-    const slotEndDateTime = addHours(slotDateTime, 1);
-    
-    // Check if slot is outside event time range
-    if (eventStartDate && eventEndDate) {
-      if (slotDateTime < eventStartDate || slotEndDateTime > eventEndDate) {
-        return; // Can't select slots outside event time
-      }
-    }
-
     const dateKey = format(dateStart, "yyyy-MM-dd");
     const timeKey = format(timeSlot, "HH:mm");
     const key = `${dateKey}_${timeKey}`;
 
-    if (bookedSlotsSet.has(key)) {
-      return; // Can't select booked slots
+    // CRITICAL: Prevent interaction with unavailable slots
+    // If locationId exists, only slots explicitly marked available by business owner can be selected
+    if (locationId && !availabilitySlots.has(key)) {
+      return; // Business owner has not made this time available - cannot interact
     }
 
-    if (locationId && !availabilitySlots.has(key)) {
-      return; // Can't select slots outside availability
+    if (bookedSlotsSet.has(key)) {
+      return; // Slot is already booked - cannot interact
     }
     
     setIsDragging(true);
@@ -485,23 +465,18 @@ export function AvailabilityCalendar({
       slotDateTime.setHours(timeSlot.getHours(), timeSlot.getMinutes(), 0, 0);
       const slotEndDateTime = addHours(slotDateTime, 1);
       
-      // Check if slot is outside event time range
-      if (eventStartDate && eventEndDate) {
-        if (slotDateTime < eventStartDate || slotEndDateTime > eventEndDate) {
-          return; // Can't drag to slots outside event time
-        }
-      }
-
+      // Check if slot is available - disable unavailable and booked slots
       const dateKey = format(dateStart, "yyyy-MM-dd");
       const timeKey = format(timeSlot, "HH:mm");
       const key = `${dateKey}_${timeKey}`;
 
-      if (bookedSlotsSet.has(key)) {
-        return; // Can't drag to booked slots
+      // CRITICAL: Prevent dragging to unavailable slots
+      if (locationId && !availabilitySlots.has(key)) {
+        return; // Business owner has not made this time available - cannot drag here
       }
 
-      if (locationId && !availabilitySlots.has(key)) {
-        return; // Can't drag to slots outside availability
+      if (bookedSlotsSet.has(key)) {
+        return; // Slot is already booked - cannot drag here
       }
       
       setDragCurrent({ dateIndex, timeIndex });
@@ -524,7 +499,8 @@ export function AvailabilityCalendar({
       const minIndex = Math.min(dragStart.timeIndex, dragCurrent.timeIndex);
       const maxIndex = Math.max(dragStart.timeIndex, dragCurrent.timeIndex);
 
-      // Filter out past slots, booked slots, unavailable slots, and slots outside event time
+      // Filter out past slots, booked slots, and unavailable slots
+      // Allow selecting all available slots regardless of event time
       const validSlots: number[] = [];
       for (let i = minIndex; i <= maxIndex; i++) {
         const isDatePast = isBefore(dateStart, today);
@@ -535,18 +511,6 @@ export function AvailabilityCalendar({
 
         // Check if slot is available
         const timeSlot = timeSlots[i];
-        const slotDateTime = new Date(dateStart);
-        slotDateTime.setHours(timeSlot.getHours(), timeSlot.getMinutes(), 0, 0);
-        const slotEndDateTime = addHours(slotDateTime, 1);
-        
-        // Check if slot is outside event time range
-        // Slot must start at or after eventStartDate AND end at or before eventEndDate
-        if (eventStartDate && eventEndDate) {
-          if (slotDateTime < eventStartDate || slotEndDateTime > eventEndDate) {
-            continue; // Skip slots that start before event or end after event
-          }
-        }
-
         const dateKey = format(dateStart, "yyyy-MM-dd");
         const timeKey = format(timeSlot, "HH:mm");
         const key = `${dateKey}_${timeKey}`;
@@ -555,8 +519,9 @@ export function AvailabilityCalendar({
           continue; // Skip booked slots
         }
 
+        // CRITICAL: Only allow slots that business owner has made available
         if (locationId && !availabilitySlots.has(key)) {
-          continue; // Skip slots outside availability
+          continue; // Business owner has not made this time available - skip it
         }
 
         validSlots.push(i);
@@ -638,6 +603,8 @@ export function AvailabilityCalendar({
 
           // Filter out past slots, booked slots, and unavailable slots
           const validSlots: number[] = [];
+          const dateKey = format(dateStart, "yyyy-MM-dd");
+          
           for (let i = minIndex; i <= maxIndex; i++) {
             const isDatePast = isBefore(dateStart, today);
             const isTimePast = isSameDay(dateStart, today) && i < new Date().getHours();
@@ -647,7 +614,6 @@ export function AvailabilityCalendar({
 
             // Check if slot is available
             const timeSlot = timeSlots[i];
-            const dateKey = format(dateStart, "yyyy-MM-dd");
             const timeKey = format(timeSlot, "HH:mm");
             const key = `${dateKey}_${timeKey}`;
 
@@ -655,8 +621,9 @@ export function AvailabilityCalendar({
               continue; // Skip booked slots
             }
 
+            // CRITICAL: Only allow slots that business owner has made available
             if (locationId && !availabilitySlots.has(key)) {
-              continue; // Skip slots outside availability
+              continue; // Business owner has not made this time available - skip it
             }
 
             validSlots.push(i);
@@ -668,8 +635,6 @@ export function AvailabilityCalendar({
             setDragCurrent(null);
             return;
           }
-
-          const dateKey = format(dateStart, "yyyy-MM-dd");
           
           // Check if all valid slots in the range are currently selected
           const allSelected = validSlots.every((idx) => {
@@ -728,14 +693,14 @@ export function AvailabilityCalendar({
   // Get cell class names
   const getCellClassName = (status: CellStatus) => {
     return cn(
-      "w-full h-[36px] border-r border-b transition-all duration-150 flex items-center justify-center text-xs font-medium relative group",
+      "w-full h-[28px] border-r border-b transition-all duration-150 flex items-center justify-center text-[10px] font-medium relative group",
       {
-        "bg-gradient-to-br from-green-500 to-green-600 border-green-700 text-white hover:from-green-600 hover:to-green-700 cursor-pointer shadow-sm": status === "selected",
-        "bg-white border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300 cursor-pointer": status === "available",
+        "bg-gradient-to-br from-green-500 to-green-600 border-green-700 text-white hover:from-green-600 hover:to-green-700 cursor-pointer shadow-sm active:scale-95": status === "selected",
+        "bg-white border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300 cursor-pointer active:bg-blue-100": status === "available",
         "bg-gradient-to-br from-blue-400 to-blue-500 border-blue-600 text-white cursor-pointer shadow-md ring-2 ring-blue-300": status === "dragging",
         "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed": status === "past",
         "bg-gradient-to-br from-red-500 to-red-600 border-red-700 text-white cursor-not-allowed shadow-sm": status === "booked",
-        "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50": status === "unavailable",
+        "bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed": status === "unavailable",
       }
     );
   };
@@ -866,23 +831,14 @@ export function AvailabilityCalendar({
       const isTimePast = isSameDay(dateStart, today) && timeIndex < new Date().getHours();
       if (isTimePast) return;
 
-      const slotDateTime = new Date(dateStart);
-      slotDateTime.setHours(timeSlot.getHours(), timeSlot.getMinutes(), 0, 0);
-      const slotEndDateTime = addHours(slotDateTime, 1);
-      
-      // Check if slot is outside event time range
-      if (eventStartDate && eventEndDate) {
-        if (slotDateTime < eventStartDate || slotEndDateTime > eventEndDate) {
-          return; // Skip slots outside event time
-        }
-      }
+      // Allow selecting all available slots regardless of event time
 
       const timeKey = format(timeSlot, "HH:mm");
       const key = `${dateKey}_${timeKey}`;
 
-      // Only include slots that are available (within availability hours and not booked)
+      // CRITICAL: Only include slots that business owner has made available and are not booked
       if (bookedSlotsSet.has(key)) return;
-      if (locationId && !availabilitySlots.has(key)) return;
+      if (locationId && !availabilitySlots.has(key)) return; // Business owner has not made this time available
 
       dateSlotKeys.push(key);
     });
@@ -942,10 +898,10 @@ export function AvailabilityCalendar({
     <div className="space-y-4">
       {/* Selected Slots Display */}
       {selectedSlotsList.length > 0 && (
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-green-900 dark:text-green-100 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-semibold text-green-900 dark:text-green-100 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
               Selected Time Slots ({selectedSlotsList.length})
             </h4>
           </div>
@@ -983,51 +939,51 @@ export function AvailabilityCalendar({
       )}
 
       {/* Legend and Info */}
-      <div className="flex items-start justify-between gap-4 pb-3 border-b">
-        <div className="flex items-center gap-6 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded border-2 border-green-600 bg-green-500 shadow-sm"></div>
+      <div className="flex items-center justify-between gap-4 pb-2 border-b">
+        <div className="flex items-center gap-4 text-[10px]">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded border border-green-600 bg-green-500 shadow-sm"></div>
             <span className="font-medium text-foreground">Selected</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded border border-gray-300 bg-white shadow-sm"></div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded border border-gray-300 bg-white shadow-sm"></div>
             <span className="font-medium text-foreground">Available</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded border-2 border-red-600 bg-red-500 shadow-sm"></div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded border border-red-600 bg-red-500 shadow-sm"></div>
             <span className="font-medium text-foreground">Booked</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded border border-gray-300 bg-gray-100 opacity-60"></div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded border border-gray-300 bg-gray-200"></div>
             <span className="font-medium text-muted-foreground">Unavailable</span>
           </div>
         </div>
         {locationId && (
-          <div className="text-xs text-muted-foreground max-w-xs text-right">
-            <span className="font-medium">Tip:</span> Unavailable slots are not open for booking by the venue owner.
+          <div className="text-[10px] text-muted-foreground max-w-xs text-right leading-tight">
+            <span className="font-medium">Tip:</span> Unavailable times are disabled - venue owner hasn't opened them for booking
           </div>
         )}
       </div>
 
         {/* Week Navigation */}
-        <div className="flex items-center justify-between py-3 bg-muted/30 rounded-lg px-4">
+        <div className="flex items-center justify-between py-2 bg-muted/30 rounded-lg px-3">
           <Button
             variant="outline"
             size="sm"
             onClick={goToPreviousWeek}
-            className="h-9 px-4 flex items-center gap-2 hover:bg-background transition-colors"
+            className="h-8 px-3 flex items-center gap-1.5 hover:bg-background transition-colors"
           >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="text-xs font-medium">{previousWeekRange}</span>
+            <ChevronLeft className="h-3.5 w-3.5" />
+            <span className="text-[10px] font-medium">{previousWeekRange}</span>
           </Button>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="text-center">
-              <div className="text-sm font-semibold text-foreground">
+              <div className="text-xs font-semibold text-foreground">
                 {format(dates[0], "MMM d")} - {format(dates[6], "MMM d, yyyy")}
               </div>
               {isThisWeek && (
-                <div className="text-[10px] text-muted-foreground mt-0.5">Current Week</div>
+                <div className="text-[9px] text-muted-foreground mt-0.5">Current Week</div>
               )}
             </div>
             {!isThisWeek && (
@@ -1035,9 +991,9 @@ export function AvailabilityCalendar({
                 variant="ghost"
                 size="sm"
                 onClick={goToThisWeek}
-                className="h-9 text-xs hover:bg-background"
+                className="h-8 text-[10px] hover:bg-background px-2"
               >
-                Go to This Week
+                Today
               </Button>
             )}
           </div>
@@ -1046,10 +1002,10 @@ export function AvailabilityCalendar({
             variant="outline"
             size="sm"
             onClick={goToNextWeek}
-            className="h-9 px-4 flex items-center gap-2 hover:bg-background transition-colors"
+            className="h-8 px-3 flex items-center gap-1.5 hover:bg-background transition-colors"
           >
-            <span className="text-xs font-medium">{nextWeekRange}</span>
-            <ChevronRight className="h-4 w-4" />
+            <span className="text-[10px] font-medium">{nextWeekRange}</span>
+            <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </div>
 
@@ -1059,10 +1015,11 @@ export function AvailabilityCalendar({
             <div 
               className="select-none"
               onMouseLeave={handleCalendarMouseLeave}
+              style={{ maxHeight: 'calc(85vh - 280px)', overflowY: 'auto' }}
             >
               {/* Header Row - Dates */}
-              <div className="grid grid-cols-[75px_repeat(7,1fr)] gap-0">
-                <div className="h-12 flex items-center justify-center border-b border-r font-semibold text-xs text-foreground bg-muted/50 sticky left-0 z-10">
+              <div className="grid grid-cols-[70px_repeat(7,1fr)] gap-0">
+                <div className="h-10 flex items-center justify-center border-b border-r font-semibold text-xs text-foreground bg-muted/50 sticky left-0 z-10">
                   Time
                 </div>
                 {dates.map((date, dateIndex) => {
@@ -1075,7 +1032,7 @@ export function AvailabilityCalendar({
                       key={date.toISOString()}
                       onClick={() => !isDatePast && handleDateHeaderClick(dateIndex)}
                       className={cn(
-                        "h-12 text-center font-semibold border-b border-r flex flex-col items-center justify-center transition-all duration-200",
+                        "h-10 text-center font-semibold border-b border-r flex flex-col items-center justify-center transition-all duration-200",
                         {
                           "bg-muted/30 text-foreground cursor-pointer hover:bg-muted/50": !isDatePast && !hasSelected && !isToday,
                           "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700 cursor-pointer hover:bg-green-200 dark:hover:bg-green-900/40": !isDatePast && hasSelected,
@@ -1111,30 +1068,35 @@ export function AvailabilityCalendar({
                       className="grid grid-cols-[75px_repeat(7,1fr)] gap-0"
                     >
                       {/* Time Label */}
-                      <div className="h-[36px] flex items-center justify-end pr-3 text-xs font-medium text-muted-foreground border-r bg-muted/20 sticky left-0 z-10">
+                      <div className="h-[28px] flex items-center justify-end pr-2 text-[10px] font-medium text-muted-foreground border-r bg-muted/20 sticky left-0 z-10">
                         {timeLabel}
                       </div>
 
                       {/* Date Cells */}
                       {dates.map((date, dateIndex) => {
                         const status = getCellStatus(dateIndex, timeIndex);
+                        const isDisabled = status === "unavailable" || status === "booked" || status === "past";
                         return (
                           <div
                             key={`${date.toISOString()}_${timeSlot.toISOString()}`}
-                            className="h-[36px] border-r border-b"
-                            onMouseDown={(e) => handleMouseDown(e, dateIndex, timeIndex)}
-                            onMouseEnter={() => handleMouseEnter(dateIndex, timeIndex)}
+                            className="h-[28px] border-r border-b"
+                            onMouseDown={(e) => !isDisabled && handleMouseDown(e, dateIndex, timeIndex)}
+                            onMouseEnter={() => !isDisabled && handleMouseEnter(dateIndex, timeIndex)}
                             onMouseUp={handleMouseUp}
                           >
                             <div 
                               className={getCellClassName(status)} 
                               title={
                                 status === "unavailable" 
-                                  ? "This time slot is not available - the location owner hasn't made it available for booking" 
+                                  ? "Not available - venue owner hasn't opened this time for booking" 
                                   : status === "booked" 
-                                  ? "This time slot is already booked" 
+                                  ? "Already booked" 
+                                  : status === "past"
+                                  ? "Past time - cannot select"
                                   : status === "available"
                                   ? "Click to select this time slot"
+                                  : status === "selected"
+                                  ? "Selected - click to deselect"
                                   : ""
                               }
                             >
@@ -1142,7 +1104,7 @@ export function AvailabilityCalendar({
                                 <span className="text-[8px] font-bold px-1 py-0.5 bg-red-700 rounded leading-tight">BOOKED</span>
                               )}
                               {status === "unavailable" && (
-                                <span className="text-[8px] px-1 opacity-60">—</span>
+                                <span className="text-[8px] px-1 text-gray-500">—</span>
                               )}
                               {status === "selected" && (
                                 <div className="absolute inset-0 flex items-center justify-center">

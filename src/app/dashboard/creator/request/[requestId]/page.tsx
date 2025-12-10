@@ -11,7 +11,7 @@ import { useEventRequestById } from "@/hooks/events/useEventRequestById";
 import { EventRequest } from "@/types";
 
 // --- UI Components ---
-import { Loader2, ArrowLeft, Calendar, MapPin, User, FileText, ImageIcon, Layers, Users, Building, Ticket, CreditCard, Phone, Wallet } from "lucide-react";
+import { Loader2, ArrowLeft, Calendar, MapPin, User, FileText, ImageIcon, Layers, Users, Building, Ticket, CreditCard, Phone, Wallet, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { ImageViewer } from "@/components/shared/ImageViewer";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
 import { usePayForEventBooking } from "@/hooks/events/usePayForEventBooking";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 // --- Component con: InfoRow ---
 function InfoRow({ label, value, icon: Icon }: { label: string, value: React.ReactNode, icon?: React.ComponentType<{ className?: string }> }) {
@@ -192,13 +194,53 @@ export default function EventRequestDetailsPage({
               <InfoRow label="Special Requirements" value={request.specialRequirements} />
               {request.referencedLocationBooking?.dates && request.referencedLocationBooking.dates.length > 0 && (
                 <div>
-                  <p className="text-sm font-semibold text-muted-foreground mb-2">Requested Time Slots</p>
-                  <div className="flex flex-wrap gap-2">
-                    {request.referencedLocationBooking.dates.map((d, i) => (
-                      <Badge key={i} variant="secondary" className="whitespace-nowrap">
-                        {formatDateTime(d.startDateTime)} - {formatDateTime(d.endDateTime)}
-                      </Badge>
-                    ))}
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-foreground">Requested Time Slots</p>
+                    <Badge variant="secondary" className="text-xs">
+                      {request.referencedLocationBooking.dates.length} slot{request.referencedLocationBooking.dates.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    {(() => {
+                      const sortedDates = [...request.referencedLocationBooking.dates].sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
+                      return sortedDates.map((d, i) => {
+                        const startDate = new Date(d.startDateTime);
+                        const endDate = new Date(d.endDateTime);
+                        const prevDate = i > 0 ? new Date(sortedDates[i - 1].startDateTime) : null;
+                        const isSameDay = prevDate && format(prevDate, "yyyy-MM-dd") === format(startDate, "yyyy-MM-dd");
+                        
+                        return (
+                          <div 
+                            key={i} 
+                            className={cn(
+                              "flex items-center gap-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors",
+                              !isSameDay && i > 0 && "mt-3 border-t-2 border-t-muted-foreground/20 pt-3"
+                            )}
+                          >
+                            {!isSameDay && (
+                              <div className="flex-shrink-0">
+                                <div className="text-xs font-semibold text-muted-foreground">
+                                  {format(startDate, "MMM dd")}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {format(startDate, "EEEE")}
+                                </div>
+                              </div>
+                            )}
+                            {isSameDay && <div className="w-[70px]"></div>}
+                            <div className="flex-1 flex items-center gap-2">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                              <span className="font-mono text-sm">
+                                {format(startDate, "HH:mm")} - {format(endDate, "HH:mm")}
+                              </span>
+                              <Badge variant="outline" className="ml-auto text-xs">
+                                {Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60))} min
+                              </Badge>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
               )}

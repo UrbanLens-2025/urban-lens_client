@@ -540,17 +540,67 @@ export default function EventLocationPage({
                             }
                           });
                           
+                          // Sort processed dates chronologically
+                          const sortedDates = [...processedDates].sort((a, b) => {
+                            // First sort by date
+                            const dateCompare = a.date.getTime() - b.date.getTime();
+                            if (dateCompare !== 0) return dateCompare;
+                            // If same date, sort by start time
+                            return a.startTime.getTime() - b.startTime.getTime();
+                          });
+                          
                           return (
-                            <ul className="space-y-3 list-disc list-inside">
-                              {processedDates.map((item, index) => (
-                                <li key={index} className="text-base">
-                                  {format(item.date, "EEEE, MMM d, yyyy")} - {item.isAllDay 
-                                    ? `All day (${format(item.startTime, "HH:mm")} - ${format(item.endTime, "HH:mm")})`
-                                    : `${format(item.startTime, "HH:mm")} - ${format(item.endTime, "HH:mm")}`
-                                  }
-                                </li>
-                              ))}
-                            </ul>
+                            <div className="border rounded-lg overflow-hidden">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="w-[200px]">Date</TableHead>
+                                    <TableHead className="w-[100px]">Day</TableHead>
+                                    <TableHead className="w-[140px]">Start Time</TableHead>
+                                    <TableHead className="w-[140px]">End Time</TableHead>
+                                    <TableHead className="w-[120px]">Duration</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {sortedDates.map((item, index) => {
+                                    const duration = Math.round((item.endTime.getTime() - item.startTime.getTime()) / (1000 * 60));
+                                    const hours = Math.floor(duration / 60);
+                                    const minutes = duration % 60;
+                                    const durationText = hours > 0 
+                                      ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`.trim()
+                                      : `${minutes}m`;
+                                    
+                                    const prevItem = index > 0 ? sortedDates[index - 1] : null;
+                                    const isNewDate = !prevItem || format(prevItem.date, "yyyy-MM-dd") !== format(item.date, "yyyy-MM-dd");
+                                    
+                                    return (
+                                      <TableRow 
+                                        key={index}
+                                        className={isNewDate ? "border-t-2 border-t-muted" : ""}
+                                      >
+                                        <TableCell className="font-medium">
+                                          {format(item.date, "MMM dd, yyyy")}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                          {format(item.date, "EEEE")}
+                                        </TableCell>
+                                        <TableCell className="font-mono">
+                                          {format(item.startTime, "HH:mm")}
+                                        </TableCell>
+                                        <TableCell className="font-mono">
+                                          {format(item.endTime, "HH:mm")}
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge variant="outline" className="font-normal">
+                                            {durationText}
+                                          </Badge>
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
                           );
                         })()}
                         

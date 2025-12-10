@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, FileText, ArrowLeft, ArrowRight } from "lucide-react";
+import { AlertCircle, FileText, ArrowLeft, ArrowRight, Clock, AlertTriangle, XCircle } from "lucide-react";
 import { StepIndicator } from "./_components/StepIndicator";
 import { Step1LocationSelection } from "./_components/Step3LocationSelection";
 import { Step2BasicInfo } from "./_components/Step1BasicInfo";
@@ -134,7 +134,9 @@ const formSchema = z
           path: ["endDate"],
         });
       }
-      if (data.startDate <= new Date()) {
+      // When venue is selected, allow more flexibility with dates
+      // Only validate future dates if no venue is selected
+      if (!data.locationId && data.startDate <= new Date()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Start date must be in the future",
@@ -143,7 +145,7 @@ const formSchema = z
       }
     }
 
-    // Legacy validation for dateRanges (if still used)
+    // Validate dateRanges cover event dates (if both exist)
     if (data.dateRanges && data.dateRanges.length > 0) {
       for (const range of data.dateRanges) {
         if (range.endDateTime <= range.startDateTime) {
@@ -161,6 +163,137 @@ const formSchema = z
           });
         }
       }
+      
+      // CRITICAL: Validate that dateRanges cover the event period if event dates are provided
+      // This is REQUIRED - booking slots MUST cover the entire event period
+      if (data.startDate && data.endDate) {
+        const eventStart = new Date(data.startDate);
+        eventStart.setMilliseconds(0);
+        const eventEnd = new Date(data.endDate);
+        eventEnd.setMilliseconds(0);
+        
+        // Find earliest start and latest end across all slots
+        const allSlotStarts = data.dateRanges.map(range => {
+          const d = new Date(range.startDateTime);
+          d.setMilliseconds(0);
+          return d.getTime();
+        });
+        const allSlotEnds = data.dateRanges.map(range => {
+          const d = new Date(range.endDateTime);
+          d.setMilliseconds(0);
+          return d.getTime();
+        });
+        
+        if (allSlotStarts.length === 0 || allSlotEnds.length === 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Booking slots are required and must cover the event period",
+            path: ["dateRanges"],
+          });
+          return; // Exit early if no valid slots
+        }
+        
+        const earliestStart = new Date(Math.min(...allSlotStarts));
+        const latestEnd = new Date(Math.max(...allSlotEnds));
+        
+        // CRITICAL VALIDATION RULES:
+        // 1. booking start <= event start
+        // 2. booking end >= event end
+        // 3. (booking end - booking start) >= (event end - event start) - booking must cover full event duration
+        
+        // Validate: earliest booking start must be <= event start
+        if (earliestStart.getTime() > eventStart.getTime()) {
+          const earliestStartStr = earliestStart.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+          const eventStartStr = eventStart.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Booking start date (${earliestStartStr}) must be <= event start date (${eventStartStr}). Please select slots that start on or before the event start.`,
+            path: ["dateRanges"],
+          });
+        }
+        
+        // Validate: latest booking end must be >= event end
+        if (latestEnd.getTime() < eventEnd.getTime()) {
+          const latestEndStr = latestEnd.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+          const eventEndStr = eventEnd.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Booking end date (${latestEndStr}) must be >= event end date (${eventEndStr}). Please select slots that end on or after the event end.`,
+            path: ["dateRanges"],
+          });
+        }
+        
+        // CRITICAL: Check that slots continuously cover the entire event period (no gaps)
+        // Sort slots by start time
+        const sortedSlots = [...data.dateRanges].sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+        
+        // Check for gaps within the event period
+        const eventStartTime = eventStart.getTime();
+        const eventEndTime = eventEnd.getTime();
+        const uncoveredRanges: Array<{ start: Date; end: Date }> = [];
+        
+        // Start checking from event start
+        let currentCheckTime = eventStartTime;
+        let slotIndex = 0;
+        
+        while (currentCheckTime < eventEndTime && slotIndex < sortedSlots.length) {
+          const slot = sortedSlots[slotIndex];
+          const slotStart = slot.startDateTime.getTime();
+          const slotEnd = slot.endDateTime.getTime();
+          
+          // If current check time is before this slot starts, there's a gap
+          if (currentCheckTime < slotStart) {
+            uncoveredRanges.push({
+              start: new Date(currentCheckTime),
+              end: new Date(Math.min(slotStart, eventEndTime)),
+            });
+            currentCheckTime = slotEnd;
+          } else if (currentCheckTime < slotEnd) {
+            currentCheckTime = Math.max(currentCheckTime, slotEnd);
+          }
+          
+          slotIndex++;
+        }
+        
+        // Check if there's a gap at the end
+        if (currentCheckTime < eventEndTime) {
+          uncoveredRanges.push({
+            start: new Date(currentCheckTime),
+            end: new Date(eventEndTime),
+          });
+        }
+        
+        // If there are uncovered gaps, add validation error
+        if (uncoveredRanges.length > 0) {
+          const gapMessages = uncoveredRanges.map(range => {
+            const startStr = range.start.toLocaleString('en-US', { 
+              month: 'short', 
+              day: 'numeric', 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: true 
+            });
+            const endStr = range.end.toLocaleString('en-US', { 
+              month: 'short', 
+              day: 'numeric', 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: true 
+            });
+            return `${startStr} - ${endStr}`;
+          }).join(', ');
+          
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Selected slots have gaps and do not continuously cover the event period. Missing coverage: ${gapMessages}. Please select consecutive slots that cover the entire event period without gaps.`,
+            path: ["dateRanges"],
+          });
+        }
+      }
+    } else if (data.locationId && data.startDate && data.endDate) {
+      // If location is selected and event dates exist, but no dateRanges provided
+      // This is not an error (venue is optional), but we warn if they have a location
+      // Actually, let's not require it - venue booking is optional
     }
   });
 
@@ -217,13 +350,23 @@ export default function CreateEventRequestPage() {
         // Validate entire form (location is optional but recommended)
         const isValid = await form.trigger();
         if (!isValid) {
+          toast.dismiss(); // Dismiss any existing toasts
           const errors = form.formState.errors;
           const errorMessages = Object.entries(errors)
             .map(([field, error]) => `${field}: ${error.message}`)
             .join(", ");
-          toast.error("Please fix all validation errors before submitting", {
-            description: errorMessages.substring(0, 150) + (errorMessages.length > 150 ? "..." : ""),
-          });
+        toast.error("Validation errors", {
+          description: (
+            <div className="space-y-1 mt-1">
+              <p className="text-sm">Please fix the following errors before submitting:</p>
+              <p className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
+                {errorMessages.substring(0, 200) + (errorMessages.length > 200 ? "..." : "")}
+              </p>
+            </div>
+          ),
+          icon: <XCircle className="h-4 w-4" />,
+          duration: 8000,
+        });
         }
         return isValid;
     }
@@ -232,6 +375,8 @@ export default function CreateEventRequestPage() {
     
     // Show error toast with specific field errors
     if (!result) {
+      toast.dismiss(); // Dismiss any existing toasts
+      
       const errors = form.formState.errors;
       const errorFields = fieldsToValidate.filter(field => errors[field]);
       
@@ -243,8 +388,17 @@ export default function CreateEventRequestPage() {
           })
           .join(", ");
         
-        toast.error(`Please fix the following errors to continue:`, {
-          description: errorMessages.substring(0, 150) + (errorMessages.length > 150 ? "..." : ""),
+        toast.error("Form validation errors", {
+          description: (
+            <div className="space-y-1 mt-1">
+              <p className="text-sm">Please fix the following errors to continue:</p>
+              <p className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
+                {errorMessages.substring(0, 200) + (errorMessages.length > 200 ? "..." : "")}
+              </p>
+            </div>
+          ),
+          icon: <AlertCircle className="h-4 w-4" />,
+          duration: 6000,
         });
 
         // Scroll to first error field
@@ -317,12 +471,160 @@ export default function CreateEventRequestPage() {
   };
 
   const handleSubmit = async () => {
+    // Dismiss any existing toasts first
+    toast.dismiss();
+    
     const isValid = await validateStep(5);
     if (!isValid) {
       return;
     }
 
     const values = form.getValues();
+    
+      // CRITICAL: Additional validation for booking slots coverage
+      // Rules: 
+      // 1. booking start <= event start
+      // 2. booking end >= event end
+      // 3. (booking end - booking start) >= (event end - event start) - booking must cover full event duration
+    if (values.dateRanges && values.dateRanges.length > 0 && values.startDate && values.endDate) {
+      const eventStart = new Date(values.startDate);
+      eventStart.setMilliseconds(0);
+      const eventEnd = new Date(values.endDate);
+      eventEnd.setMilliseconds(0);
+      
+      const allSlotStarts = values.dateRanges.map(range => {
+        const d = new Date(range.startDateTime);
+        d.setMilliseconds(0);
+        return d.getTime();
+      });
+      const allSlotEnds = values.dateRanges.map(range => {
+        const d = new Date(range.endDateTime);
+        d.setMilliseconds(0);
+        return d.getTime();
+      });
+      
+      const earliestStart = new Date(Math.min(...allSlotStarts));
+      const latestEnd = new Date(Math.max(...allSlotEnds));
+      
+      // Collect all validation errors first
+      const errors: Array<{ title: string; description: React.ReactNode; icon: React.ReactNode }> = [];
+      
+      // Validate: booking start <= event start
+      if (earliestStart.getTime() > eventStart.getTime()) {
+        const earliestStartStr = earliestStart.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+        const eventStartStr = eventStart.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+        errors.push({
+          title: "Cannot submit: Booking slots don't cover event start",
+          description: (
+            <div className="space-y-1.5 mt-1">
+              <p className="text-sm">Booking start date <strong className="text-destructive">{earliestStartStr}</strong> must be ≤ event start date <strong>{eventStartStr}</strong>.</p>
+              <p className="text-xs text-muted-foreground">Please select slots that start on or before the event start.</p>
+            </div>
+          ),
+          icon: <Clock className="h-4 w-4" />,
+        });
+      }
+      
+      // Validate: booking end >= event end
+      if (latestEnd.getTime() < eventEnd.getTime()) {
+        const latestEndStr = latestEnd.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+        const eventEndStr = eventEnd.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+        errors.push({
+          title: "Cannot submit: Booking slots don't cover event end",
+          description: (
+            <div className="space-y-1.5 mt-1">
+              <p className="text-sm">Booking end date <strong className="text-destructive">{latestEndStr}</strong> must be ≥ event end date <strong>{eventEndStr}</strong>.</p>
+              <p className="text-xs text-muted-foreground">Please select slots that end on or after the event end.</p>
+            </div>
+          ),
+          icon: <Clock className="h-4 w-4" />,
+        });
+      }
+      
+      // Validate: booking duration >= event duration
+      // CRITICAL: Check that slots continuously cover the entire event period (no gaps)
+      const sortedSlots = [...values.dateRanges].sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+      
+      const eventStartTime = eventStart.getTime();
+      const eventEndTime = eventEnd.getTime();
+      const uncoveredRanges: Array<{ start: Date; end: Date }> = [];
+      
+      let currentCheckTime = eventStartTime;
+      let slotIndex = 0;
+      
+      while (currentCheckTime < eventEndTime && slotIndex < sortedSlots.length) {
+        const slot = sortedSlots[slotIndex];
+        const slotStart = slot.startDateTime.getTime();
+        const slotEnd = slot.endDateTime.getTime();
+        
+        if (currentCheckTime < slotStart) {
+          uncoveredRanges.push({
+            start: new Date(currentCheckTime),
+            end: new Date(Math.min(slotStart, eventEndTime)),
+          });
+          currentCheckTime = slotEnd;
+        } else if (currentCheckTime < slotEnd) {
+          currentCheckTime = Math.max(currentCheckTime, slotEnd);
+        }
+        
+        slotIndex++;
+      }
+      
+      if (currentCheckTime < eventEndTime) {
+        uncoveredRanges.push({
+          start: new Date(currentCheckTime),
+          end: new Date(eventEndTime),
+        });
+      }
+      
+      if (uncoveredRanges.length > 0) {
+        const gapMessages = uncoveredRanges.map(range => {
+          const startStr = range.start.toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+          });
+          const endStr = range.end.toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+          });
+          return `${startStr} - ${endStr}`;
+        }).join(', ');
+        
+        errors.push({
+          title: "Cannot submit: Time slots have gaps",
+          description: (
+            <div className="space-y-2 mt-1">
+              <p className="text-sm">Selected slots don't continuously cover the event period.</p>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-destructive">Missing coverage:</p>
+                <div className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded font-mono">
+                  {gapMessages}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Please select consecutive slots without gaps.</p>
+            </div>
+          ),
+          icon: <AlertTriangle className="h-4 w-4" />,
+        });
+      }
+      
+      // Show only the first error (most critical)
+      if (errors.length > 0) {
+        const firstError = errors[0];
+        toast.error(firstError.title, {
+          description: firstError.description,
+          icon: firstError.icon,
+          duration: 10000,
+        });
+        return;
+      }
+    }
 
     // Build payload according to new API structure
     const payload: any = {

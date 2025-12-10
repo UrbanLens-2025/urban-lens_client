@@ -23,6 +23,7 @@ interface DateTimePickerProps {
   defaultTime?: string;
   eventStartDate?: Date;
   eventEndDate?: Date;
+  allowFlexibleDates?: boolean;
 }
 
 export function DateTimePicker({
@@ -34,6 +35,7 @@ export function DateTimePicker({
   defaultTime = "00:00",
   eventStartDate,
   eventEndDate,
+  allowFlexibleDates = false,
 }: DateTimePickerProps) {
   const normalizedDefault =
     /^\d{2}:\d{2}$/.test(defaultTime) ? defaultTime : "00:00";
@@ -117,8 +119,12 @@ export function DateTimePicker({
               selected={selectedDate}
               onSelect={handleDateSelect}
               disabled={(date) => {
+                // When venue is selected, allow more flexible date selection
+                // Still disable past dates, but allow more flexibility in date ranges
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
+                // Always disable past dates, but when venue is selected,
+                // we don't impose additional restrictions (like max date limits)
                 return date < today;
               }}
               modifiers={{

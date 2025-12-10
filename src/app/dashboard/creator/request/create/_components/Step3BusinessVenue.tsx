@@ -12,7 +12,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map, Star, RotateCcw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map, Star, RotateCcw, Search, List, Grid3x3, X, Clock, AlertTriangle, XCircle } from "lucide-react";
 import Image from "next/image";
 import {
   Select,
@@ -25,6 +26,9 @@ import { useBookableLocations } from "@/hooks/events/useBookableLocations";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
 import { useLocationById } from "@/hooks/locations/useLocationById";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useDebounce } from "use-debounce";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Step3BusinessVenueProps {
   form: UseFormReturn<CreateEventRequestForm>;
@@ -36,7 +40,10 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   );
   const [showCalendar, setShowCalendar] = useState(false);
   const [showMapView, setShowMapView] = useState(true); // Show map by default
+  const [viewMode, setViewMode] = useState<"map" | "list" | "grid">("map"); // View mode: map, list, or grid
   const [isInitializingCalendar, setIsInitializingCalendar] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch] = useDebounce(searchQuery, 300);
   
   // Get event dates from form
   const startDate = form.watch("startDate");
@@ -52,9 +59,21 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     sortBy: 'name:ASC',
     startTime,
     endTime,
+    search: debouncedSearch || undefined,
   });
 
   const locations = bookableLocationsData?.data || [];
+  
+  // Filter locations by search query (client-side fallback for name/address)
+  const filteredLocations = useMemo(() => {
+    if (!debouncedSearch) return locations;
+    const query = debouncedSearch.toLowerCase();
+    return locations.filter(loc => 
+      loc.name?.toLowerCase().includes(query) ||
+      loc.addressLine?.toLowerCase().includes(query) ||
+      loc.description?.toLowerCase().includes(query)
+    );
+  }, [locations, debouncedSearch]);
   const location = locations.find((loc) => loc.id === selectedLocationId);
   const dateRanges = form.watch("dateRanges") || [];
   const hasBookedSlots = dateRanges && dateRanges.length > 0;
@@ -86,74 +105,249 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     }
   }, [selectedLocationId, form]);
 
-  // Generate initial slots from event dates using minimum booking duration
-  const getInitialSlotsFromEventDates = useMemo(() => {
-    if (!startDate || !endDate || !location) return [];
-    
-    // Get minimum booking duration from venue's booking config (default to 60 minutes if not available)
-    const minDurationMinutes = location.bookingConfig?.minBookingDurationMinutes || 60;
-    const minDurationMs = minDurationMinutes * 60 * 1000;
-    
-    const slots: Array<{ startDateTime: Date; endDateTime: Date }> = [];
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    // Calculate the duration of the event
-    const eventDurationMs = end.getTime() - start.getTime();
-    
-    // If event duration is less than minimum, use the minimum duration
-    const slotDurationMs = Math.max(eventDurationMs, minDurationMs);
-    
-    // Create a slot starting from event start time with minimum duration
-    // But don't exceed event end time
-    const slotStart = new Date(start);
-    const slotEnd = new Date(Math.min(start.getTime() + slotDurationMs, end.getTime()));
-    
-    slots.push({
-      startDateTime: slotStart,
-      endDateTime: slotEnd,
-    });
-    
-    return slots;
-  }, [startDate, endDate, location]);
 
-  // Automatically set time slots from event dates when they're available and no slots exist
-  useEffect(() => {
-    if (startDate && endDate && (!dateRanges || dateRanges.length === 0) && selectedLocationId) {
-      const initialSlots = getInitialSlotsFromEventDates;
-      if (initialSlots.length > 0) {
-        form.setValue("dateRanges" as any, initialSlots, { shouldValidate: false });
-      }
-    }
-  }, [startDate, endDate, selectedLocationId, getInitialSlotsFromEventDates, form, dateRanges]);
 
   const handleSlotsChange = (slots: Array<{ startDateTime: Date; endDateTime: Date }>) => {
-    // Validate that all slots are within event time
-    const validSlots = slots.filter((slot) => {
-      if (!startDate || !endDate) return true;
-      // Slot must start at or after event start and end at or before event end
-      return slot.startDateTime >= startDate && slot.endDateTime <= endDate;
-    });
-    
-    form.setValue("dateRanges" as any, validSlots, { shouldValidate: true });
+    // Allow selecting all available slots - no filtering by event time
+    // Users can select any slot that the business has marked as available
+    // Save slots to form - validation happens when saving/closing dialog
+    form.setValue("dateRanges" as any, slots, { shouldValidate: true });
     // Don't close dialog automatically - let user edit freely
   };
 
   const handleSaveSlots = () => {
+    // Dismiss any existing toasts first
+    toast.dismiss();
+    
+    // Validate booking slots meet minimum duration and cover event dates
+    const currentSlots = form.watch("dateRanges") || [];
+    
+    if (currentSlots.length === 0) {
+      toast.error("No time slots selected", {
+        description: "Please select at least one time slot to continue.",
+        icon: <Calendar className="h-4 w-4" />,
+        duration: 4000,
+      });
+      return;
+    }
+    
+    // CRITICAL: Validate that selected slots cover the event start and end dates
+    if (startDate && endDate) {
+      // Normalize dates for accurate comparison (set milliseconds to 0 to avoid precision issues)
+      const eventStart = new Date(startDate);
+      eventStart.setMilliseconds(0);
+      const eventEnd = new Date(endDate);
+      eventEnd.setMilliseconds(0);
+      
+      // Find the earliest start time and latest end time across all selected slots
+      const allSlotStarts = currentSlots.map(slot => {
+        const d = new Date(slot.startDateTime);
+        d.setMilliseconds(0);
+        return d.getTime();
+      });
+      const allSlotEnds = currentSlots.map(slot => {
+        const d = new Date(slot.endDateTime);
+        d.setMilliseconds(0);
+        return d.getTime();
+      });
+      
+      const earliestStart = new Date(Math.min(...allSlotStarts));
+      const latestEnd = new Date(Math.max(...allSlotEnds));
+      
+      // CRITICAL VALIDATION RULES:
+      // 1. Booking start date must be <= event start date (booking can start before or at event start)
+      // 2. Booking end date must be >= event end date (booking can end after or at event end)
+      // 3. Booking duration must be >= event duration: (booking_end - booking_start) >= (event_end - event_start)
+      const errors: Array<{ title: string; description: React.ReactNode; icon: React.ReactNode }> = [];
+      
+      // Check: earliest booking start must be <= event start
+      if (earliestStart.getTime() > eventStart.getTime()) {
+        const eventStartStr = eventStart.toLocaleString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric',
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+        const earliestStartStr = earliestStart.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+        errors.push({
+          title: "Booking slots don't cover event start",
+          description: (
+            <div className="space-y-1.5 mt-1">
+              <p className="text-sm">Your earliest booking slot starts <strong className="text-destructive">{earliestStartStr}</strong>, but the event starts <strong>{eventStartStr}</strong>.</p>
+              <p className="text-xs text-muted-foreground">Please select slots that start on or before the event start time.</p>
+            </div>
+          ),
+          icon: <Clock className="h-4 w-4" />,
+        });
+      }
+      
+      // Check: latest booking end must be >= event end
+      if (latestEnd.getTime() < eventEnd.getTime()) {
+        const eventEndStr = eventEnd.toLocaleString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric',
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+        const latestEndStr = latestEnd.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+        errors.push({
+          title: "Booking slots don't cover event end",
+          description: (
+            <div className="space-y-1.5 mt-1">
+              <p className="text-sm">Your latest booking slot ends <strong className="text-destructive">{latestEndStr}</strong>, but the event ends <strong>{eventEndStr}</strong>.</p>
+              <p className="text-xs text-muted-foreground">Please select slots that end on or after the event end time.</p>
+            </div>
+          ),
+          icon: <Clock className="h-4 w-4" />,
+        });
+      }
+      
+      // CRITICAL: Check that slots continuously cover the entire event period (no gaps)
+      // This ensures that every moment of the event period is covered by at least one slot
+      // Sort slots by start time
+      const sortedSlots = [...currentSlots].sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+      
+      // Check for gaps within the event period
+      const eventStartTime = eventStart.getTime();
+      const eventEndTime = eventEnd.getTime();
+      const uncoveredRanges: Array<{ start: Date; end: Date }> = [];
+      
+      // Start checking from event start
+      let currentCheckTime = eventStartTime;
+      let slotIndex = 0;
+      
+      while (currentCheckTime < eventEndTime && slotIndex < sortedSlots.length) {
+        const slot = sortedSlots[slotIndex];
+        const slotStart = slot.startDateTime.getTime();
+        const slotEnd = slot.endDateTime.getTime();
+        
+        // If current check time is before this slot starts, there's a gap
+        if (currentCheckTime < slotStart) {
+          // Gap found - record it
+          uncoveredRanges.push({
+            start: new Date(currentCheckTime),
+            end: new Date(Math.min(slotStart, eventEndTime)),
+          });
+          currentCheckTime = slotEnd; // Move past this slot
+        } else if (currentCheckTime < slotEnd) {
+          // This slot covers current time, move to end of slot
+          currentCheckTime = Math.max(currentCheckTime, slotEnd);
+        }
+        
+        slotIndex++;
+      }
+      
+      // Check if there's a gap at the end
+      if (currentCheckTime < eventEndTime) {
+        uncoveredRanges.push({
+          start: new Date(currentCheckTime),
+          end: new Date(eventEndTime),
+        });
+      }
+      
+      // If there are uncovered gaps, add to errors
+      if (uncoveredRanges.length > 0) {
+        const gapMessages = uncoveredRanges.map(range => {
+          const startStr = range.start.toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+          });
+          const endStr = range.end.toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+          });
+          return `${startStr} - ${endStr}`;
+        }).join(', ');
+        
+        const eventStartStr = eventStart.toLocaleString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+        const eventEndStr = eventEnd.toLocaleString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+        
+        errors.push({
+          title: "Time slots have gaps",
+          description: (
+            <div className="space-y-2 mt-1">
+              <p className="text-sm">Your selected slots don't continuously cover the event period.</p>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Event period:</p>
+                <p className="text-xs bg-muted px-2 py-1 rounded font-mono">{eventStartStr} - {eventEndStr}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-destructive">Missing coverage:</p>
+                <div className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded font-mono">
+                  {gapMessages}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Please select consecutive slots without gaps.</p>
+            </div>
+          ),
+          icon: <AlertTriangle className="h-4 w-4" />,
+        });
+      }
+      
+      // Show only the first error (most critical)
+      if (errors.length > 0) {
+        const firstError = errors[0];
+        toast.error(firstError.title, {
+          description: firstError.description,
+          icon: firstError.icon,
+          duration: 10000,
+        });
+        
+        // Clear invalid slots from form and prevent closing dialog
+        form.setValue("dateRanges" as any, [], { shouldValidate: true });
+        // Don't close dialog - user needs to fix it
+        // The form validation will also catch this on final submit
+        return; // Don't close dialog, don't save
+      }
+    }
+    
+    // Validate minimum duration per slot (if venue is selected)
+    if (location?.bookingConfig?.minBookingDurationMinutes) {
+      const minDurationMs = location.bookingConfig.minBookingDurationMinutes * 60 * 1000;
+      const invalidSlots = currentSlots.filter((slot) => {
+        const slotDurationMs = slot.endDateTime.getTime() - slot.startDateTime.getTime();
+        return slotDurationMs < minDurationMs;
+      });
+      
+      if (invalidSlots.length > 0) {
+        toast.dismiss();
+        toast.error("Slot duration too short", {
+          description: `Each booking slot must be at least ${location.bookingConfig.minBookingDurationMinutes} minutes long. Please adjust your selection.`,
+          icon: <Clock className="h-4 w-4" />,
+          duration: 5000,
+        });
+        return;
+      }
+    }
+    
     setShowCalendar(false);
   };
 
   const handleBookNow = () => {
     if (!selectedLocationId) {
       return;
-    }
-    
-    // If we have event dates and no existing slots, initialize with event dates
-    if (startDate && endDate && (!dateRanges || dateRanges.length === 0)) {
-      const initialSlots = getInitialSlotsFromEventDates;
-      if (initialSlots.length > 0) {
-        form.setValue("dateRanges" as any, initialSlots, { shouldValidate: true });
-      }
     }
     
     setIsInitializingCalendar(true);
@@ -241,165 +435,400 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
 
       {/* Location Selection */}
       <div className="space-y-4">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
+        {/* Header with Search and View Toggle */}
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2">
               <Label htmlFor="location-select" className="text-base font-semibold flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-primary" />
                 Select Venue
               </Label>
               {selectedLocationId && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
                   Selected
                 </Badge>
               )}
+              {!isLoadingLocations && filteredLocations.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {filteredLocations.length} venue{filteredLocations.length !== 1 ? 's' : ''}
+                </Badge>
+              )}
             </div>
-            {locations.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowMapView(!showMapView)}
-                className="text-xs"
-              >
-                <Map className="h-3 w-3 mr-1" />
-                {showMapView ? "Hide Map" : "Show Map"}
-              </Button>
+            
+            {/* View Mode Toggle */}
+            {!isLoadingLocations && filteredLocations.length > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center border rounded-lg p-0.5 bg-muted/50">
+                  <Button
+                    variant={viewMode === "map" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("map")}
+                    className="h-7 text-xs"
+                  >
+                    <Map className="h-3 w-3 mr-1" />
+                    Map
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                    className="h-7 text-xs"
+                  >
+                    <List className="h-3 w-3 mr-1" />
+                    List
+                  </Button>
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                    className="h-7 text-xs"
+                  >
+                    <Grid3x3 className="h-3 w-3 mr-1" />
+                    Grid
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
           
-          {/* Map View - Show by default when locations are available */}
-          {showMapView && locations.length > 0 && (
-            <Card className="h-[500px] w-full border-2 border-primary/10 py-0">
-              <CardContent className="p-0 h-full">
-                <VenueMapSelector
-                  locations={locations.map((loc) => {
-                    // If this is the selected location and we have detailed data, use it
-                    const isSelected = loc.id === selectedLocationId;
-                    const detailedData = isSelected && locationDetails ? locationDetails : null;
-                    
-                    return {
-                      id: loc.id,
-                      name: loc.name,
-                      description: loc.description,
-                      latitude: Number(loc.latitude) || 0,
-                      longitude: Number(loc.longitude) || 0,
-                      addressLine: loc.addressLine,
-                      addressLevel1: loc.addressLevel1,
-                      addressLevel2: loc.addressLevel2,
-                      imageUrl: loc.imageUrl || [],
-                      bookingConfig: loc.bookingConfig,
-                      businessId: loc.businessId,
-                      // Add analytics if available from detailed data
-                      ...(detailedData && {
-                        totalCheckIns: (detailedData as any).totalCheckIns,
-                        analytics: {
-                          totalCheckIns: (detailedData as any).totalCheckIns 
-                            ? (typeof (detailedData as any).totalCheckIns === 'string' 
-                                ? parseInt((detailedData as any).totalCheckIns) 
-                                : (detailedData as any).totalCheckIns)
-                            : 0,
-                          totalReviews: (detailedData as any).totalReviews || 0,
-                          averageRating: (detailedData as any).averageRating 
-                            ? (typeof (detailedData as any).averageRating === 'string' 
-                                ? parseFloat((detailedData as any).averageRating) 
-                                : (detailedData as any).averageRating)
-                            : 0,
-                        },
-                      }),
-                    };
-                  })}
-                  onLocationSelect={handleLocationSelect}
-                  selectedLocationId={selectedLocationId}
-                />
-              </CardContent>
-            </Card>
-          )}
-          
-          {/* Dropdown Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="location-select" className="text-sm font-medium text-muted-foreground">
-              Or select from dropdown:
-            </Label>
-            <Select 
-              value={selectedLocationId} 
-              onValueChange={handleLocationSelect}
-            >
-              <SelectTrigger 
-                id="location-select"
-                className={cn(
-                  "w-full h-11 border-primary/20 focus:border-primary/50 transition-all",
-                  selectedLocationId && "border-green-500/50 focus:border-green-500"
-                )}
-              >
-                <SelectValue placeholder={isLoadingLocations ? "Loading venues..." : "Choose a venue (optional)..."} />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {isLoadingLocations ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    <span className="ml-2 text-sm text-muted-foreground">Loading venues...</span>
-                  </div>
-                ) : locations.length === 0 ? (
-                  <div className="py-4 text-center text-sm text-muted-foreground">
-                    No venues available
-                  </div>
-                ) : (
-                  locations.map((loc) => (
-                    <SelectItem key={loc.id} value={loc.id} className="py-2">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-medium text-sm">{loc.name}</span>
-                        <span className="text-xs text-muted-foreground line-clamp-1">
-                          {loc.addressLine}
-                          {loc.addressLevel1 && `, ${loc.addressLevel1}`}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {!isLoadingLocations && locations.length === 0 && (
-            <Alert variant="default">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                No venues available at the moment. You can skip this step and add a location later when editing your event.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {/* Show message when map is hidden */}
-          {!showMapView && locations.length > 0 && (
-            <Alert className="mt-2">
-              <Map className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                Click "Show Map" to view all available venues on the map with location pins.
-              </AlertDescription>
-            </Alert>
+          {/* Search Bar */}
+          {!isLoadingLocations && locations.length > 0 && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search venues by name, address, or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-10 h-11 border-2 focus:border-primary/50"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
-        {form.formState.errors.locationId && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="text-sm">
-              {form.formState.errors.locationId.message}
-            </AlertDescription>
-          </Alert>
+        {/* Loading State */}
+        {isLoadingLocations && (
+          <div className="space-y-3">
+            <Skeleton className="h-11 w-full" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="overflow-hidden">
+                  <Skeleton className="h-48 w-full" />
+                  <CardContent className="p-4 space-y-2">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         )}
 
-        {(form.formState.errors as any).dateRanges && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="text-sm">
-              {(form.formState.errors as any).dateRanges.message}
-            </AlertDescription>
-          </Alert>
+        {/* Map View */}
+        {!isLoadingLocations && viewMode === "map" && filteredLocations.length > 0 && (
+          <Card className="h-[500px] w-full border-2 border-primary/10 shadow-sm">
+            <CardContent className="p-0 h-full">
+              <VenueMapSelector
+                locations={filteredLocations.map((loc) => {
+                  const isSelected = loc.id === selectedLocationId;
+                  const detailedData = isSelected && locationDetails ? locationDetails : null;
+                  
+                  return {
+                    id: loc.id,
+                    name: loc.name,
+                    description: loc.description,
+                    latitude: Number(loc.latitude) || 0,
+                    longitude: Number(loc.longitude) || 0,
+                    addressLine: loc.addressLine,
+                    addressLevel1: loc.addressLevel1,
+                    addressLevel2: loc.addressLevel2,
+                    imageUrl: loc.imageUrl || [],
+                    bookingConfig: loc.bookingConfig,
+                    businessId: loc.businessId,
+                    ...(detailedData && {
+                      totalCheckIns: (detailedData as any).totalCheckIns,
+                      analytics: {
+                        totalCheckIns: (detailedData as any).totalCheckIns 
+                          ? (typeof (detailedData as any).totalCheckIns === 'string' 
+                              ? parseInt((detailedData as any).totalCheckIns) 
+                              : (detailedData as any).totalCheckIns)
+                          : 0,
+                        totalReviews: (detailedData as any).totalReviews || 0,
+                        averageRating: (detailedData as any).averageRating 
+                          ? (typeof (detailedData as any).averageRating === 'string' 
+                              ? parseFloat((detailedData as any).averageRating) 
+                              : (detailedData as any).averageRating)
+                          : 0,
+                      },
+                    }),
+                  };
+                })}
+                onLocationSelect={handleLocationSelect}
+                selectedLocationId={selectedLocationId}
+              />
+            </CardContent>
+          </Card>
         )}
 
-        {/* Location Details */}
-        {location && (
+        {/* List View */}
+        {!isLoadingLocations && viewMode === "list" && filteredLocations.length > 0 && (
+          <div className="space-y-3">
+            {filteredLocations.map((loc) => {
+              const isSelected = loc.id === selectedLocationId;
+              const locDetails = isSelected && locationDetails ? locationDetails : null;
+              
+              return (
+                <Card
+                  key={loc.id}
+                  className={cn(
+                    "cursor-pointer transition-all hover:shadow-md border-2",
+                    isSelected
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "border-border hover:border-primary/30"
+                  )}
+                  onClick={() => handleLocationSelect(loc.id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex gap-4">
+                      {/* Image */}
+                      {loc.imageUrl && loc.imageUrl.length > 0 ? (
+                        <div className="relative h-24 w-32 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
+                          <Image
+                            src={loc.imageUrl[0]}
+                            alt={loc.name || "Venue"}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-24 w-32 flex-shrink-0 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                          <Building2 className="h-8 w-8 text-primary/40" />
+                        </div>
+                      )}
+                      
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-base truncate">{loc.name}</h3>
+                              {isSelected && (
+                                <Badge className="bg-primary text-primary-foreground">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Selected
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1 mb-2">
+                              <MapPin className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {loc.addressLine}
+                                {loc.addressLevel1 && `, ${loc.addressLevel1}`}
+                              </span>
+                            </p>
+                            {loc.description && (
+                              <p className="text-sm text-foreground/80 line-clamp-2 mb-2">
+                                {loc.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Analytics */}
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                          {locDetails && (locDetails as any).averageRating > 0 && (
+                            <div className="flex items-center gap-1">
+                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                              <span className="font-medium text-foreground">
+                                {typeof (locDetails as any).averageRating === 'string' 
+                                  ? parseFloat((locDetails as any).averageRating).toFixed(1)
+                                  : (locDetails as any).averageRating.toFixed(1)}
+                              </span>
+                            </div>
+                          )}
+                          {locDetails && (locDetails as any).totalCheckIns > 0 && (
+                            <span>
+                              {(locDetails as any).totalCheckIns} check-in{(locDetails as any).totalCheckIns !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {locDetails && (locDetails as any).totalReviews > 0 && (
+                            <span>
+                              {(locDetails as any).totalReviews} review{(locDetails as any).totalReviews !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {loc.bookingConfig && (
+                            <Badge variant="outline" className="text-xs">
+                              Bookable
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Grid View */}
+        {!isLoadingLocations && viewMode === "grid" && filteredLocations.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredLocations.map((loc) => {
+              const isSelected = loc.id === selectedLocationId;
+              const locDetails = isSelected && locationDetails ? locationDetails : null;
+              
+              return (
+                <Card
+                  key={loc.id}
+                  className={cn(
+                    "cursor-pointer transition-all hover:shadow-lg border-2 overflow-hidden group",
+                    isSelected
+                      ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
+                      : "border-border hover:border-primary/50"
+                  )}
+                  onClick={() => handleLocationSelect(loc.id)}
+                >
+                  {/* Image */}
+                  {loc.imageUrl && loc.imageUrl.length > 0 ? (
+                    <div className="relative h-48 w-full overflow-hidden bg-muted">
+                      <Image
+                        src={loc.imageUrl[0]}
+                        alt={loc.name || "Venue"}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      {isSelected && (
+                        <div className="absolute top-2 right-2">
+                          <Badge className="bg-primary text-primary-foreground shadow-lg">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Selected
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="relative h-48 w-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                      <Building2 className="h-16 w-16 text-primary/40" />
+                      {isSelected && (
+                        <div className="absolute top-2 right-2">
+                          <Badge className="bg-primary text-primary-foreground shadow-lg">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Selected
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Content */}
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-base mb-2 line-clamp-1">{loc.name}</h3>
+                    <p className="text-sm text-muted-foreground flex items-start gap-1 mb-3 line-clamp-2">
+                      <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <span>
+                        {loc.addressLine}
+                        {loc.addressLevel1 && `, ${loc.addressLevel1}`}
+                      </span>
+                    </p>
+                    
+                    {/* Analytics */}
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground pt-3 border-t">
+                      {locDetails && (locDetails as any).averageRating > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          <span className="font-medium text-foreground">
+                            {typeof (locDetails as any).averageRating === 'string' 
+                              ? parseFloat((locDetails as any).averageRating).toFixed(1)
+                              : (locDetails as any).averageRating.toFixed(1)}
+                          </span>
+                        </div>
+                      )}
+                      {locDetails && (locDetails as any).totalCheckIns > 0 && (
+                        <span className="text-xs">
+                          {(locDetails as any).totalCheckIns} check-ins
+                        </span>
+                      )}
+                      {loc.bookingConfig && (
+                        <Badge variant="outline" className="text-xs ml-auto">
+                          Bookable
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+        
+        {/* No Results */}
+        {!isLoadingLocations && searchQuery && filteredLocations.length === 0 && (
+          <div className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-8 text-center">
+            <Search className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+            <p className="text-sm font-medium text-muted-foreground mb-1">
+              No venues found
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Try adjusting your search terms or clear the search to see all venues.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSearchQuery("")}
+              className="mt-4"
+            >
+              Clear Search
+            </Button>
+          </div>
+        )}
+        
+        {/* Empty State - No Venues */}
+        {!isLoadingLocations && !searchQuery && filteredLocations.length === 0 && locations.length === 0 && (
+          <div className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-8 text-center">
+            <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+            <p className="text-sm font-medium text-muted-foreground mb-1">
+              No venues available
+            </p>
+            <p className="text-xs text-muted-foreground">
+              No venues are available for your event dates. You can skip this step and add a location later when editing your event.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Form Errors */}
+      {form.formState.errors.locationId && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            {form.formState.errors.locationId.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {(form.formState.errors as any).dateRanges && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            {(form.formState.errors as any).dateRanges.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Location Details */}
+      {location && (
           <div 
             data-location-details-panel
             className="border-2 rounded-xl p-5 space-y-4 transition-all border-primary/10 bg-primary/5"
@@ -548,26 +977,25 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
           </div>
         )}
 
-        {/* No Location Selected State */}
-        {!selectedLocationId && !isLoadingLocations && (
-          <div className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-8 text-center">
-            <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-            <p className="text-sm font-medium text-muted-foreground mb-1">
-              No venue selected
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Select a venue above to view details and book time slots, or skip this step to continue.
-            </p>
-          </div>
-        )}
-      </div>
+      {/* No Location Selected State */}
+      {!selectedLocationId && !isLoadingLocations && (
+        <div className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-8 text-center">
+          <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+          <p className="text-sm font-medium text-muted-foreground mb-1">
+            No venue selected
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Select a venue above to view details and book time slots, or skip this step to continue.
+          </p>
+        </div>
+      )}
 
       {/* Availability Calendar Modal */}
       <Dialog open={showCalendar} onOpenChange={(open) => {
         setShowCalendar(open);
         setIsInitializingCalendar(false);
       }}>
-        <DialogContent className="w-[95vw] !max-w-6xl max-h-[88vh] overflow-hidden flex flex-col mt-6 p-0 gap-0">
+        <DialogContent className="w-[95vw] !max-w-5xl max-h-[85vh] overflow-hidden flex flex-col mt-6 p-0 gap-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-primary/5 to-primary/10">
             <div className="flex items-start justify-between">
               <div>
@@ -588,8 +1016,11 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
             {selectedLocationId && (
               <AvailabilityCalendar
                 locationId={selectedLocationId}
-                onSlotsChange={handleSlotsChange}
-                initialSlots={dateRanges && dateRanges.length > 0 ? dateRanges : getInitialSlotsFromEventDates}
+                onSlotsChange={(slots) => {
+                  // Allow slots to be updated, but validation happens on save
+                  handleSlotsChange(slots);
+                }}
+                initialSlots={dateRanges || []}
                 initialWeekStart={startDate}
                 eventStartDate={startDate}
                 eventEndDate={endDate}
@@ -597,20 +1028,66 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               />
             )}
           </div>
-          <div className="flex items-center justify-between px-6 py-4 border-t bg-muted/30">
-            <p className="text-xs text-muted-foreground">
-              Click and drag to select multiple time slots
-            </p>
+          <div className="flex items-center justify-between px-6 py-3 border-t bg-muted/30">
+            <div className="flex flex-col gap-0.5">
+              <p className="text-[10px] text-muted-foreground">
+                Click or drag to select time slots • Unavailable times are disabled
+              </p>
+              {startDate && endDate ? (
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                  ⚠ Selected slots must cover event period: {startDate?.toLocaleDateString() || ''} {startDate?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ''} - {endDate?.toLocaleDateString() || ''} {endDate?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ''}
+                </p>
+              ) : (
+                <p className="text-[10px] text-muted-foreground">
+                  Please set event dates in Step 1 to see available booking slots
+                </p>
+              )}
+            </div>
             <div className="flex items-center gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowCalendar(false)}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Clear slots if invalid before closing
+                  const currentSlots = form.watch("dateRanges") || [];
+                  if (currentSlots.length > 0 && startDate && endDate) {
+                    // Quick gap check - if invalid, clear and close
+                    const eventStart = new Date(startDate);
+                    eventStart.setMilliseconds(0);
+                    const eventEnd = new Date(endDate);
+                    eventEnd.setMilliseconds(0);
+                    const sortedSlots = [...currentSlots].sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+                    const eventStartTime = eventStart.getTime();
+                    const eventEndTime = eventEnd.getTime();
+                    let currentCheckTime = eventStartTime;
+                    let hasGap = false;
+                    
+                    for (let i = 0; i < sortedSlots.length && currentCheckTime < eventEndTime; i++) {
+                      const slot = sortedSlots[i];
+                      const slotStart = slot.startDateTime.getTime();
+                      const slotEnd = slot.endDateTime.getTime();
+                      
+                      if (currentCheckTime < slotStart) {
+                        hasGap = true;
+                        break;
+                      }
+                      if (currentCheckTime < slotEnd) {
+                        currentCheckTime = slotEnd;
+                      }
+                    }
+                    
+                    if (hasGap || currentCheckTime < eventEndTime) {
+                      // Clear invalid slots before closing
+                      form.setValue("dateRanges" as any, [], { shouldValidate: true });
+                    }
+                  }
+                  setShowCalendar(false);
+                }}
                 size="sm"
               >
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSaveSlots} 
+              <Button
+                onClick={handleSaveSlots}
                 size="sm"
                 className="min-w-[100px]"
               >

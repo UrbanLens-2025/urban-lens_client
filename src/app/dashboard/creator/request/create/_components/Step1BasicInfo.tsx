@@ -40,6 +40,7 @@ const INITIAL_DISPLAY_COUNT = 5;
 export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
   const { data: tagCategories, isLoading: isLoadingTags } = useTagCategories("EVENT");
   const selectedTagIds = form.watch("tagIds") || [];
+  const locationId = form.watch("locationId"); // Check if venue is selected
   
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -216,33 +217,43 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
         <FormField
           control={form.control}
           name="startDate"
-          render={({ field }) => (
-            <FormItem>
-              <DateTimePicker
-                label="Start Date"
-                value={field.value}
-                onChange={field.onChange}
-                error={form.formState.errors.startDate?.message}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const endDate = form.watch("endDate");
+            return (
+              <FormItem>
+                <DateTimePicker
+                  label="Start Date"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={form.formState.errors.startDate?.message}
+                  eventEndDate={endDate}
+                  allowFlexibleDates={!!locationId}
+                />
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
 
         <FormField
           control={form.control}
           name="endDate"
-          render={({ field }) => (
-            <FormItem>
-              <DateTimePicker
-                label="End Date"
-                value={field.value}
-                onChange={field.onChange}
-                error={form.formState.errors.endDate?.message}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const startDate = form.watch("startDate");
+            return (
+              <FormItem>
+                <DateTimePicker
+                  label="End Date"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={form.formState.errors.endDate?.message}
+                  eventStartDate={startDate}
+                  allowFlexibleDates={!!locationId}
+                />
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
       </div>
 
