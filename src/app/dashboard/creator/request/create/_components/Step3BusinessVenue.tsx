@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { UseFormReturn } from "react-hook-form";
+import { format } from "date-fns";
 import { CreateEventRequestForm } from "../page";
 import { VenueMapSelector } from "./VenueMapSelector";
 import { AvailabilityCalendar } from "./AvailabilityCalendar";
@@ -25,16 +26,21 @@ import {
 import { useBookableLocations } from "@/hooks/events/useBookableLocations";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
 import { useLocationById } from "@/hooks/locations/useLocationById";
+import { useWallet } from "@/hooks/user/useWallet";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRouter } from "next/navigation";
+import { DollarSign, Wallet, CreditCard } from "lucide-react";
 
 interface Step3BusinessVenueProps {
   form: UseFormReturn<CreateEventRequestForm>;
 }
 
 export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
+  const router = useRouter();
+  const { data: walletData } = useWallet();
   const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>(
     form.watch("locationId")
   );
@@ -44,6 +50,9 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   const [isInitializingCalendar, setIsInitializingCalendar] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch] = useDebounce(searchQuery, 300);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingSlots, setPendingSlots] = useState<Array<{ startDateTime: Date; endDateTime: Date }>>([]);
+  const [tempSlots, setTempSlots] = useState<Array<{ startDateTime: Date; endDateTime: Date }>>([]);
   
   // Get event dates from form
   const startDate = form.watch("startDate");
@@ -108,19 +117,16 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
 
 
   const handleSlotsChange = (slots: Array<{ startDateTime: Date; endDateTime: Date }>) => {
-    // Allow selecting all available slots - no filtering by event time
-    // Users can select any slot that the business has marked as available
-    // Save slots to form - validation happens when saving/closing dialog
-    form.setValue("dateRanges" as any, slots, { shouldValidate: true });
-    // Don't close dialog automatically - let user edit freely
+    // Store slots in temporary state - don't save to form until "Save Slots" is clicked
+    setTempSlots(slots);
   };
 
   const handleSaveSlots = () => {
     // Dismiss any existing toasts first
     toast.dismiss();
     
-    // Validate booking slots meet minimum duration and cover event dates
-    const currentSlots = form.watch("dateRanges") || [];
+    // Use tempSlots (from calendar) - these are the slots selected but not yet saved
+    const currentSlots = tempSlots;
     
     if (currentSlots.length === 0) {
       toast.error("No time slots selected", {
@@ -342,7 +348,106 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       }
     }
     
+    // Save slots to form and show confirmation dialog
+    form.setValue("dateRanges" as any, currentSlots, { shouldValidate: true });
+    setPendingSlots(currentSlots);
+    setShowConfirmDialog(true);
+  };
+
+  // Calculate estimated cost
+  const estimatedCost = useMemo(() => {
+    if (!location?.bookingConfig?.baseBookingPrice || pendingSlots.length === 0) {
+      return null;
+    }
+
+    const basePrice = parseFloat(location.bookingConfig.baseBookingPrice);
+    const currency = location.bookingConfig.currency || "VND";
+    
+    // Calculate total hours
+    let totalMilliseconds = 0;
+    pendingSlots.forEach(slot => {
+      const start = new Date(slot.startDateTime);
+      const end = new Date(slot.endDateTime);
+      totalMilliseconds += (end.getTime() - start.getTime());
+    });
+    
+    const totalHours = totalMilliseconds / (1000 * 60 * 60);
+    const totalCost = basePrice * totalHours;
+    
+    return {
+      totalHours,
+      totalCost,
+      currency,
+      basePrice,
+    };
+  }, [pendingSlots, location?.bookingConfig]);
+
+  // Get wallet balance
+  const walletBalance = walletData ? parseFloat(walletData.balance) : 0;
+  const walletCurrency = walletData?.currency || "VND";
+  const hasInsufficientBalance = estimatedCost && walletBalance < estimatedCost.totalCost;
+
+  // Calculate refund information
+  const refundInfo = useMemo(() => {
+    if (!estimatedCost || !location?.bookingConfig?.refundEnabled) {
+      return null;
+    }
+
+    const config = location.bookingConfig;
+    const totalCost = estimatedCost.totalCost;
+    
+    // Find earliest booking slot start time for cutoff calculation
+    const earliestSlotStart = pendingSlots.length > 0 
+      ? new Date(Math.min(...pendingSlots.map(s => s.startDateTime.getTime())))
+      : null;
+
+    const refundBeforeCutoff = config.refundPercentageBeforeCutoff !== undefined
+      ? totalCost * config.refundPercentageBeforeCutoff
+      : totalCost; // Default to 100% if not specified
+    
+    const refundAfterCutoff = config.refundPercentageAfterCutoff !== undefined
+      ? totalCost * config.refundPercentageAfterCutoff
+      : 0; // Default to 0% if not specified
+
+    // Calculate cutoff time (hours before earliest slot start)
+    const cutoffTime = earliestSlotStart && config.refundCutoffHours !== undefined
+      ? new Date(earliestSlotStart.getTime() - config.refundCutoffHours * 60 * 60 * 1000)
+      : null;
+
+    return {
+      enabled: true,
+      cutoffHours: config.refundCutoffHours,
+      percentageBeforeCutoff: config.refundPercentageBeforeCutoff ?? 1,
+      percentageAfterCutoff: config.refundPercentageAfterCutoff ?? 0,
+      refundBeforeCutoff,
+      refundAfterCutoff,
+      cutoffTime,
+      currency: estimatedCost.currency,
+    };
+  }, [estimatedCost, location?.bookingConfig, pendingSlots]);
+
+  // Handle confirmation
+  const handleConfirmBooking = () => {
+    if (hasInsufficientBalance) {
+      // Redirect to wallet deposit page
+      router.push('/dashboard/creator/wallet?action=deposit');
+      toast.info("Please deposit funds to continue with booking", {
+        description: `You need ${estimatedCost?.totalCost.toLocaleString("vi-VN")} ${estimatedCost?.currency} but have ${walletBalance.toLocaleString("vi-VN")} ${walletCurrency}`,
+        duration: 6000,
+      });
+      return;
+    }
+
+    // Save slots to form
+    form.setValue("dateRanges" as any, pendingSlots, { shouldValidate: true });
+    setShowConfirmDialog(false);
     setShowCalendar(false);
+    setPendingSlots([]);
+    
+    toast.success("Time slots saved successfully", {
+      description: `Payment of ${estimatedCost?.totalCost.toLocaleString("vi-VN")} ${estimatedCost?.currency} will be processed when you submit the event request.`,
+      duration: 5000,
+    });
   };
 
   const handleBookNow = () => {
@@ -350,6 +455,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       return;
     }
     
+    // Initialize tempSlots with existing dateRanges when opening calendar
+    setTempSlots(dateRanges || []);
     setIsInitializingCalendar(true);
     setShowCalendar(true);
     // Reset initialization flag after a short delay to allow calendar to initialize
@@ -403,7 +510,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
             </Badge>
           </div>
           <p className="text-muted-foreground text-base mb-3">
-            Select a venue and book your event time slots. You can skip this step and add a location later.
+            Select a venue and book your event time slots. This step is required to continue.
           </p>
           {isLocationComplete && (
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
@@ -802,7 +909,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               No venues available
             </p>
             <p className="text-xs text-muted-foreground">
-              No venues are available for your event dates. You can skip this step and add a location later when editing your event.
+              No venues are available for your event dates. Please adjust your event dates or contact support for assistance.
             </p>
           </div>
         )}
@@ -959,6 +1066,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => {
+                      // Initialize tempSlots with existing dateRanges when opening calendar
+                      setTempSlots(dateRanges || []);
                       setIsInitializingCalendar(true);
                       setShowCalendar(true);
                       // Reset initialization flag after a short delay to allow calendar to initialize
@@ -1012,6 +1121,30 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               )}
             </div>
           </DialogHeader>
+          
+          {/* Event Time Alert */}
+          {startDate && endDate && (
+            <div className="px-6 pt-4">
+              <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  <p className="font-medium mb-1">Event Time Period</p>
+                  <p className="text-sm">
+                    Your event runs from{" "}
+                    <span className="font-semibold">
+                      {format(startDate, "MMM dd, yyyy 'at' h:mm a")}
+                    </span>{" "}
+                    to{" "}
+                    <span className="font-semibold">
+                      {format(endDate, "MMM dd, yyyy 'at' h:mm a")}
+                    </span>
+                    . Please select time slots that cover this entire period.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+          
           <div className="flex-1 overflow-y-auto px-6 py-4">
             {selectedLocationId && (
               <AvailabilityCalendar
@@ -1020,7 +1153,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                   // Allow slots to be updated, but validation happens on save
                   handleSlotsChange(slots);
                 }}
-                initialSlots={dateRanges || []}
+                initialSlots={tempSlots.length > 0 ? tempSlots : (dateRanges || [])}
                 initialWeekStart={startDate}
                 eventStartDate={startDate}
                 eventEndDate={endDate}
@@ -1080,6 +1213,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                       form.setValue("dateRanges" as any, [], { shouldValidate: true });
                     }
                   }
+                  // Reset tempSlots when canceling
+                  setTempSlots([]);
                   setShowCalendar(false);
                 }}
                 size="sm"
@@ -1094,6 +1229,137 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 Save Slots
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="pb-3">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Confirm Booking & Payment
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-3">
+            {/* Booking Summary */}
+            <div className="bg-muted p-3 rounded-lg space-y-1.5">
+              {estimatedCost && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{pendingSlots.length} slot{pendingSlots.length !== 1 ? 's' : ''} • {estimatedCost.totalHours.toFixed(2)}h</span>
+                    <span className="font-bold text-primary text-base">
+                      {estimatedCost.totalCost.toLocaleString("vi-VN")} {estimatedCost.currency}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground pt-1 border-t">
+                    {estimatedCost.basePrice.toLocaleString("vi-VN")} {estimatedCost.currency}/hour
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Wallet Balance */}
+            <div className={`p-2.5 rounded-lg border ${hasInsufficientBalance ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800' : 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800'}`}>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Wallet className="h-3.5 w-3.5" />
+                  Balance:
+                </span>
+                <span className={`font-semibold ${hasInsufficientBalance ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                  {walletBalance.toLocaleString("vi-VN")} {walletCurrency}
+                </span>
+              </div>
+              {estimatedCost && !hasInsufficientBalance && (
+                <div className="flex justify-between items-center text-xs text-muted-foreground mt-1.5 pt-1.5 border-t">
+                  <span>After payment:</span>
+                  <span>{(walletBalance - estimatedCost.totalCost).toLocaleString("vi-VN")} {walletCurrency}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Refund Policy */}
+            {refundInfo && (
+              <div className="bg-muted p-2.5 rounded-lg">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-medium">Refund Policy</span>
+                </div>
+                <div className="space-y-1 text-xs">
+                  {refundInfo.cutoffTime && (
+                    <div className="text-muted-foreground mb-1.5">
+                      Cutoff: {format(refundInfo.cutoffTime, "MMM dd, h:mm a")} ({refundInfo.cutoffHours}h before)
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Before cutoff ({Math.round(refundInfo.percentageBeforeCutoff * 100)}%):</span>
+                    <span className="font-medium text-green-600 dark:text-green-400">
+                      {refundInfo.refundBeforeCutoff.toLocaleString("vi-VN")} {refundInfo.currency}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">After cutoff ({Math.round(refundInfo.percentageAfterCutoff * 100)}%):</span>
+                    <span className="font-medium text-amber-600 dark:text-amber-400">
+                      {refundInfo.refundAfterCutoff.toLocaleString("vi-VN")} {refundInfo.currency}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Insufficient Balance Warning */}
+            {hasInsufficientBalance && (
+              <Alert className="bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800 py-2">
+                <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                <AlertDescription className="text-red-800 dark:text-red-200 text-sm">
+                  <span className="font-medium">Insufficient balance.</span> Need {estimatedCost?.totalCost.toLocaleString("vi-VN")} {estimatedCost?.currency}, have {walletBalance.toLocaleString("vi-VN")} {walletCurrency}.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Info Alert */}
+            {!hasInsufficientBalance && (
+              <Alert className="py-2">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  Balance will be reduced by {estimatedCost?.totalCost.toLocaleString("vi-VN")} {estimatedCost?.currency} on confirmation.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowConfirmDialog(false);
+                setPendingSlots([]);
+              }}
+            >
+              Cancel
+            </Button>
+            {hasInsufficientBalance ? (
+              <Button
+                onClick={() => {
+                  router.push('/dashboard/creator/wallet?action=deposit');
+                  setShowConfirmDialog(false);
+                }}
+                className="bg-primary"
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                Deposit Funds
+              </Button>
+            ) : (
+              <Button
+                onClick={handleConfirmBooking}
+                className="bg-primary"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Confirm Booking
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

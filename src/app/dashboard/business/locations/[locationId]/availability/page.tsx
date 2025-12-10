@@ -84,7 +84,17 @@ const transformApiResponse = (apiData: WeeklyAvailabilityResponse[]): WeeklyAvai
   return apiData.map((item) => {
     // Parse time strings like "11:00" to hour numbers
     const startHour = parseInt(item.startTime.split(":")[0], 10);
-    const endHour = parseInt(item.endTime.split(":")[0], 10);
+    let endHour = parseInt(item.endTime.split(":")[0], 10);
+    
+    // If endTime is "23:59", it means midnight (hour 24)
+    // Convert back to internal representation of 24
+    if (item.endTime === "23:59") {
+      endHour = 24;
+    }
+    // Also handle "00:00" as midnight for backward compatibility
+    else if (endHour === 0 && item.endTime === "00:00") {
+      endHour = 24;
+    }
 
     return {
       id: item.id,
@@ -706,10 +716,12 @@ export default function AvailabilityPage({
 
   // Convert internal format to API format for creation (single entry)
   const convertToApiFormat = (slot: WeeklyAvailabilitySlot) => {
+    // Convert endHour 24 (midnight) to "23:59" for API format
+    const endTimeStr = slot.endHour === 24 ? "23:59" : `${String(slot.endHour).padStart(2, '0')}:00`;
     return {
       dayOfWeek: DAY_OF_WEEK_REVERSE_MAP[slot.dayOfWeek] as "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY",
       startTime: `${String(slot.startHour).padStart(2, '0')}:00`,
-      endTime: `${String(slot.endHour).padStart(2, '0')}:00`,
+      endTime: endTimeStr,
     };
   };
 
@@ -932,9 +944,11 @@ export default function AvailabilityPage({
       return;
     }
 
+    // Convert endHour 24 (midnight) to "23:59" for API format
+    const endTimeStr = editedEndHour === 24 ? "23:59" : `${String(editedEndHour).padStart(2, '0')}:00`;
     const payload = {
       startTime: `${String(editedStartHour).padStart(2, '0')}:00`,
-      endTime: `${String(editedEndHour).padStart(2, '0')}:00`,
+      endTime: endTimeStr,
     };
 
     updateWeeklyAvailability(
@@ -1054,6 +1068,11 @@ export default function AvailabilityPage({
     const formatSingleHour = (h: number): string => {
       return `${String(h).padStart(2, '0')}:00`;
     };
+
+    // For hour 23 (11 PM), show "23:00 - 23:59" instead of "23:00 - 00:00"
+    if (hour === 23) {
+      return "23:00 - 23:59";
+    }
 
     const nextHour = (hour + 1) % 24;
     return `${formatSingleHour(hour)} - ${formatSingleHour(nextHour)}`;

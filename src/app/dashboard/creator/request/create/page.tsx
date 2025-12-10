@@ -96,13 +96,13 @@ const formSchema = z
 
     // Legacy fields (for backward compatibility)
     venueType: z.literal("business"),
-    locationId: z.string().uuid("Invalid location ID").optional(),
+    locationId: z.string().uuid("Invalid location ID").min(1, "Please select a venue"),
     dateRanges: z.array(
       z.object({
         startDateTime: z.date(),
         endDateTime: z.date(),
       })
-    ).optional(),
+    ).min(1, "Please select at least one time slot for your event"),
   })
   .superRefine((data, ctx) => {
     // If either date has a value, both must have values
@@ -134,13 +134,31 @@ const formSchema = z
           path: ["endDate"],
         });
       }
-      // When venue is selected, allow more flexibility with dates
-      // Only validate future dates if no venue is selected
-      if (!data.locationId && data.startDate <= new Date()) {
+      // Validate future dates
+      if (data.startDate <= new Date()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Start date must be in the future",
           path: ["startDate"],
+        });
+      }
+    }
+
+    // Require locationId and dateRanges when venue type is business
+    if (data.venueType === "business") {
+      if (!data.locationId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please select a venue",
+          path: ["locationId"],
+        });
+      }
+      
+      if (!data.dateRanges || data.dateRanges.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please select at least one time slot for your event",
+          path: ["dateRanges"],
         });
       }
     }
@@ -290,10 +308,6 @@ const formSchema = z
           });
         }
       }
-    } else if (data.locationId && data.startDate && data.endDate) {
-      // If location is selected and event dates exist, but no dateRanges provided
-      // This is not an error (venue is optional), but we warn if they have a location
-      // Actually, let's not require it - venue booking is optional
     }
   });
 
@@ -439,8 +453,11 @@ export default function CreateEventRequestPage() {
         
         return basicFieldsValid && datesValid && tagsValid;
       case 2:
-        // Location step - optional, always valid to proceed
-        return true;
+        // Location step - REQUIRED: must have locationId and dateRanges
+        const locationValid = !errors.locationId && !errors.dateRanges && 
+                             values.locationId && 
+                             values.dateRanges && values.dateRanges.length > 0;
+        return locationValid;
       case 3:
         // Documents step - optional, always valid to proceed
         return true;
@@ -460,6 +477,7 @@ export default function CreateEventRequestPage() {
       setShowValidationErrors(true);
     }
   };
+
 
   const handlePrevious = () => {
     if (currentStep > 1) {
@@ -794,7 +812,7 @@ export default function CreateEventRequestPage() {
               </Button>
               
               <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                {(currentStep === 2 || currentStep === 3) && (
+                {currentStep === 3 && (
                   <Button
                     variant="ghost"
                     onClick={handleNext}
@@ -802,7 +820,7 @@ export default function CreateEventRequestPage() {
                     className="text-muted-foreground hover:text-foreground"
                     size="lg"
                   >
-                    Skip {currentStep === 2 ? "Location" : "Documents"}
+                    Skip Documents
                   </Button>
                 )}
                 <Button

@@ -2,7 +2,7 @@
 
 import { use, useState, useMemo, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, Loader2, MapPin as MapPinIcon, ArrowLeft, Mail, Phone, Star, ChevronLeft, ChevronRight, Calendar, Search, ChevronDown, DollarSign, Clock, ChevronUp, RotateCcw, AlertCircle } from "lucide-react";
+import { Building2, Loader2, MapPin as MapPinIcon, ArrowLeft, Mail, Phone, Star, ChevronLeft, ChevronRight, Calendar, Search, ChevronDown, Clock, ChevronUp, RotateCcw, AlertCircle, CreditCard, Wallet, Info, CheckCircle2, DollarSign } from "lucide-react";
 import { useBookableLocations } from "@/hooks/events/useBookableLocations";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
 import { useEventById } from "@/hooks/events/useEventById";
@@ -14,12 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AvailabilityCalendar } from "@/app/dashboard/creator/request/create/_components/AvailabilityCalendar";
 import { useDebounce } from "use-debounce";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAddLocationBooking } from "@/hooks/events/useAddLocationBooking";
+import { useWallet } from "@/hooks/user/useWallet";
 import type { BookableLocation } from "@/types";
 import { format, addDays, startOfDay, isSameDay } from "date-fns";
 
@@ -138,6 +140,8 @@ function LocationDetailsOverlay({
   const [isAvailabilityExpanded, setIsAvailabilityExpanded] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedSlots, setSelectedSlots] = useState<SlotSelection[]>([]);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingBookingData, setPendingBookingData] = useState<{ locationId: string; dates: Array<{ startDateTime: string; endDateTime: string }> } | null>(null);
   const collapsedSlotRanges = useMemo<DayRange[]>(() => {
     if (selectedSlots.length === 0) return [];
 
@@ -179,6 +183,7 @@ function LocationDetailsOverlay({
 
   const router = useRouter();
   const addLocationBookingMutation = useAddLocationBooking(eventId);
+  const { data: walletData } = useWallet();
 
   // Fetch detailed location data
   const { data: detailedLocation, isLoading: isLoadingDetails } = useBookableLocationById(
@@ -187,6 +192,97 @@ function LocationDetailsOverlay({
 
   // Use detailed location data if available, otherwise fall back to basic location data
   const displayLocation = detailedLocation || location;
+
+  // Calculate estimated total cost based on selected slots
+  const estimatedCost = useMemo(() => {
+    if (!displayLocation?.bookingConfig?.baseBookingPrice || selectedSlots.length === 0) {
+      return null;
+    }
+
+    const basePrice = parseFloat(displayLocation.bookingConfig.baseBookingPrice);
+    const currency = displayLocation.bookingConfig.currency || "VND";
+    
+    // Calculate total hours
+    let totalMilliseconds = 0;
+    selectedSlots.forEach(slot => {
+      const start = new Date(slot.startDateTime);
+      const end = new Date(slot.endDateTime);
+      totalMilliseconds += (end.getTime() - start.getTime());
+    });
+    
+    const totalHours = totalMilliseconds / (1000 * 60 * 60);
+    const totalCost = basePrice * totalHours;
+    
+    return {
+      totalHours,
+      totalCost,
+      currency,
+      basePrice,
+    };
+  }, [selectedSlots, displayLocation?.bookingConfig]);
+
+  // Get wallet balance
+  const walletBalance = walletData ? parseFloat(walletData.balance) : 0;
+  const walletCurrency = walletData?.currency || "VND";
+  const hasInsufficientBalance = estimatedCost ? walletBalance < estimatedCost.totalCost : false;
+
+  // Calculate refund information
+  const refundInfo = useMemo(() => {
+    if (!estimatedCost || !displayLocation?.bookingConfig?.refundEnabled) {
+      return null;
+    }
+
+    const config = displayLocation.bookingConfig;
+    const totalCost = estimatedCost.totalCost;
+    
+    // Find earliest booking slot start time for cutoff calculation
+    const earliestSlotStart = selectedSlots.length > 0 
+      ? new Date(Math.min(...selectedSlots.map(s => s.startDateTime.getTime())))
+      : null;
+
+    const refundBeforeCutoff = config.refundPercentageBeforeCutoff !== undefined
+      ? totalCost * config.refundPercentageBeforeCutoff
+      : totalCost; // Default to 100% if not specified
+    
+    const refundAfterCutoff = config.refundPercentageAfterCutoff !== undefined
+      ? totalCost * config.refundPercentageAfterCutoff
+      : 0; // Default to 0% if not specified
+
+    // Calculate cutoff time (hours before earliest slot start)
+    const cutoffTime = earliestSlotStart && config.refundCutoffHours !== undefined
+      ? new Date(earliestSlotStart.getTime() - config.refundCutoffHours * 60 * 60 * 1000)
+      : null;
+
+    return {
+      enabled: true,
+      cutoffHours: config.refundCutoffHours,
+      percentageBeforeCutoff: config.refundPercentageBeforeCutoff ?? 1,
+      percentageAfterCutoff: config.refundPercentageAfterCutoff ?? 0,
+      refundBeforeCutoff,
+      refundAfterCutoff,
+      cutoffTime,
+      currency: estimatedCost.currency,
+    };
+  }, [estimatedCost, displayLocation?.bookingConfig, selectedSlots]);
+
+  // Handle confirmation
+  const handleConfirmBooking = () => {
+    if (!pendingBookingData) return;
+
+    addLocationBookingMutation.mutate(
+      pendingBookingData,
+      {
+        onSuccess: () => {
+          setShowCalendar(false);
+          setShowConfirmDialog(false);
+          setSelectedSlots([]);
+          setPendingBookingData(null);
+          router.push(`/dashboard/creator/events/${eventId}/location`);
+          router.refresh();
+        },
+      }
+    );
+  };
 
   // Get business contact info and analytics from detailed location
   type LocationWithBusiness = BookableLocation & { 
@@ -803,26 +899,280 @@ function LocationDetailsOverlay({
                   endDateTime: slot.end.toISOString(),
                 }));
 
-                addLocationBookingMutation.mutate(
-                  {
-                    locationId: displayLocation.id,
-                    dates,
-                  },
-                  {
-                    onSuccess: () => {
-                      toast.success("Booking created successfully");
-                      setShowCalendar(false);
-                      setSelectedSlots([]);
-                      router.push(`/dashboard/creator/events/${eventId}/location`);
-                      router.refresh();
-                    },
-                  }
-                );
+                // Store booking data and show confirmation dialog (Step 2)
+                setPendingBookingData({
+                  locationId: displayLocation.id,
+                  dates,
+                });
+                setShowCalendar(false);
+                setShowConfirmDialog(true);
               }}
               disabled={selectedSlots.length === 0 || addLocationBookingMutation.isPending}
             >
-              {addLocationBookingMutation.isPending ? "Creating..." : "Confirm Booking"}
+              {addLocationBookingMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Continue to Payment
+                </>
+              )}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Step 2: Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="w-[95vw] !max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-8 pt-6 pb-4 border-b">
+            <DialogTitle className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <CreditCard className="h-5 w-5 text-primary" />
+              </div>
+              Confirm Booking & Payment
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
+              Review your booking details, wallet balance, and refund policy before confirming.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto px-8 py-5">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Booking Summary */}
+              <div className="bg-background p-5 rounded-xl border border-border/60 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16"></div>
+                <div className="relative">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Calendar className="h-4 w-4 text-primary" />
+                    </div>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Booking Details
+                    </p>
+                  </div>
+                  {estimatedCost && (
+                    <div className="space-y-3">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-sm text-muted-foreground">Slots</span>
+                        <span className="text-sm font-semibold text-foreground">
+                          {selectedSlots.length} slot{selectedSlots.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-sm text-muted-foreground">Duration</span>
+                        <span className="text-sm font-semibold text-foreground">
+                          {estimatedCost.totalHours.toFixed(2)}h
+                        </span>
+                      </div>
+                      <div className="pt-3 border-t border-border/50">
+                        <div className="flex items-baseline justify-between mb-2">
+                          <span className="text-sm text-muted-foreground">Rate</span>
+                          <span className="text-sm font-medium text-foreground">
+                            {estimatedCost.basePrice.toLocaleString("vi-VN")} {estimatedCost.currency}/h
+                          </span>
+                        </div>
+                      </div>
+                      <div className="pt-3 border-t-2 border-primary/20 bg-primary/5 rounded-lg p-3 -mx-3">
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Total</span>
+                          <span className="text-xl font-bold text-primary">
+                            {estimatedCost.totalCost.toLocaleString("vi-VN")} {estimatedCost.currency}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Wallet Balance */}
+              <div className={`p-5 rounded-xl border shadow-sm relative overflow-hidden ${
+                hasInsufficientBalance 
+                  ? 'bg-gradient-to-br from-red-50 via-red-50/80 to-red-100/50 border-red-300/60 dark:from-red-950/40 dark:via-red-950/30 dark:to-red-900/20 dark:border-red-800/60' 
+                  : 'bg-gradient-to-br from-green-50 via-emerald-50/80 to-emerald-50 border-green-300/60 dark:from-green-950/40 dark:via-emerald-950/30 dark:to-emerald-950/20 dark:border-green-800/60'
+              }`}>
+                <div className="absolute top-0 right-0 w-32 h-32 rounded-full -mr-16 -mt-16 opacity-20" style={{
+                  backgroundColor: hasInsufficientBalance ? 'rgb(239 68 68)' : 'rgb(34 197 94)'
+                }}></div>
+                <div className="relative">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className={`p-2 rounded-lg ${
+                      hasInsufficientBalance 
+                        ? 'bg-red-100 dark:bg-red-900/40' 
+                        : 'bg-green-100 dark:bg-green-900/40'
+                    }`}>
+                      <Wallet className={`h-4 w-4 ${
+                        hasInsufficientBalance 
+                          ? 'text-red-600 dark:text-red-400' 
+                          : 'text-green-600 dark:text-green-500'
+                      }`} />
+                    </div>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Wallet Balance
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="pb-3 border-b border-border/30">
+                      <p className="text-sm text-muted-foreground mb-1.5">Current</p>
+                      <p className={`text-xl font-bold ${
+                        hasInsufficientBalance 
+                          ? 'text-red-600 dark:text-red-400' 
+                          : 'text-green-600 dark:text-green-400'
+                      }`}>
+                        {walletBalance.toLocaleString("vi-VN")} {walletCurrency}
+                      </p>
+                    </div>
+                    {estimatedCost && !hasInsufficientBalance && (
+                      <div className="pt-2">
+                        <p className="text-sm text-muted-foreground mb-1">After Payment</p>
+                        <p className="text-base font-semibold text-muted-foreground">
+                          {(walletBalance - estimatedCost.totalCost).toLocaleString("vi-VN")} {walletCurrency}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Refund Policy */}
+              {refundInfo && (
+                <div className="col-span-2 bg-background p-5 rounded-xl border border-border/60 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/5 rounded-full -mr-20 -mt-20"></div>
+                  <div className="relative">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/40">
+                        <RotateCcw className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <p className="text-xs font-bold text-foreground uppercase tracking-wider">Refund Policy</p>
+                    </div>
+                    {refundInfo.cutoffTime && (
+                      <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20 rounded-lg border border-blue-200/50 dark:border-blue-800/40">
+                        <div className="flex items-start gap-3">
+                          <div className="p-1.5 rounded bg-blue-200/50 dark:bg-blue-900/50">
+                            <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-muted-foreground mb-1.5 uppercase tracking-wide">Cutoff Time</p>
+                            <p className="text-sm font-mono font-bold text-foreground mb-1">
+                              {format(refundInfo.cutoffTime, "MMM dd, yyyy 'at' h:mm a")}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {refundInfo.cutoffHours} hours before booking starts
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-gradient-to-br from-green-50 via-emerald-50 to-green-50 dark:from-green-950/30 dark:via-emerald-950/20 dark:to-green-950/30 rounded-lg border-2 border-green-300/50 dark:border-green-800/40 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-green-400/10 rounded-full -mr-10 -mt-10"></div>
+                        <div className="relative">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Before Cutoff</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-2">{Math.round(refundInfo.percentageBeforeCutoff * 100)}% refundable</p>
+                          <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                            {refundInfo.refundBeforeCutoff.toLocaleString("vi-VN")} {refundInfo.currency}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="p-4 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-amber-950/30 rounded-lg border-2 border-amber-300/50 dark:border-amber-800/40 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-amber-400/10 rounded-full -mr-10 -mt-10"></div>
+                        <div className="relative">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="h-2 w-2 rounded-full bg-amber-500"></div>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">After Cutoff</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-2">{Math.round(refundInfo.percentageAfterCutoff * 100)}% refundable</p>
+                          <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
+                            {refundInfo.refundAfterCutoff.toLocaleString("vi-VN")} {refundInfo.currency}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Insufficient Balance Warning */}
+              {hasInsufficientBalance && (
+                <div className="col-span-2">
+                <Alert className="bg-gradient-to-r from-red-50 via-orange-50 to-red-50 border-2 border-red-300/60 dark:from-red-950/40 dark:via-orange-950/30 dark:to-red-950/40 dark:border-red-800/60 shadow-sm rounded-lg py-3">
+                  <div className="p-1.5 rounded bg-red-100 dark:bg-red-900/50">
+                    <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  </div>
+                  <AlertDescription className="text-red-900 dark:text-red-100">
+                    <p className="font-bold mb-1 text-sm">Insufficient Balance</p>
+                    <p className="text-xs leading-relaxed">
+                      You need <span className="font-bold text-red-700 dark:text-red-300">{estimatedCost?.totalCost.toLocaleString("vi-VN")} {estimatedCost?.currency}</span> but only have <span className="font-bold text-red-700 dark:text-red-300">{walletBalance.toLocaleString("vi-VN")} {walletCurrency}</span>. Please deposit funds to continue.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+                </div>
+              )}
+
+              {/* Info Alert */}
+              {!hasInsufficientBalance && (
+                <div className="col-span-2">
+                <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800 rounded-lg py-3">
+                  <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <AlertDescription className="text-blue-900 dark:text-blue-100">
+                    <p className="text-xs">
+                      Your wallet balance will be reduced by <span className="font-semibold">{estimatedCost?.totalCost.toLocaleString("vi-VN")} {estimatedCost?.currency}</span> when you confirm this booking.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 px-8 py-5 border-t bg-muted/30 flex-shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowConfirmDialog(false);
+                setPendingBookingData(null);
+              }}
+              className="font-medium"
+            >
+              Cancel
+            </Button>
+            {hasInsufficientBalance ? (
+              <Button
+                onClick={() => {
+                  router.push('/dashboard/creator/wallet?action=deposit');
+                  setShowConfirmDialog(false);
+                }}
+                className="bg-primary font-semibold"
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                Deposit Funds
+              </Button>
+            ) : (
+              <Button
+                onClick={handleConfirmBooking}
+                disabled={addLocationBookingMutation.isPending}
+                className="bg-primary font-semibold shadow-md hover:shadow-lg transition-all min-w-[160px]"
+              >
+                {addLocationBookingMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Confirm & Pay
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

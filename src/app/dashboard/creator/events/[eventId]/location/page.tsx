@@ -746,16 +746,18 @@ export default function EventLocationPage({
                     );
                   })()}
                 </div>
-              ) : !hasLocation ? (
+              ) : (
                 <div className="text-center py-16 border rounded-lg bg-muted/10">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <Building2 className="h-8 w-8 text-primary" />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">
-                    No Venue Booked Yet
+                    {hasLocation ? "No Active Booking" : "No Venue Booked Yet"}
                   </h3>
                   <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                    Your event needs a location. Browse our available venues to find the perfect spot for your event.
+                    {hasLocation 
+                      ? "Your previous booking has been cancelled. You can now book a new venue for your event."
+                      : "Your event needs a location. Browse our available venues to find the perfect spot for your event."}
                   </p>
                   {!isEventCancelled && (
                     <Button size="lg" onClick={() => {
@@ -763,14 +765,9 @@ export default function EventLocationPage({
                       router.push(`/dashboard/creator/events/${eventId}/location/book`);
                     }}>
                       <Plus className="h-4 w-4 mr-2" />
-                      Book a Venue
+                      {hasLocation ? "Book a New Venue" : "Book a Venue"}
                     </Button>
                   )}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <MapPin className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                  <p>Location details coming soon.</p>
                 </div>
               )}
             </TabsContent>
