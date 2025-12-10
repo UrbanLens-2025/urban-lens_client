@@ -50,11 +50,11 @@ export function formatDocumentType(type: string): string {
   if (DOCUMENT_TYPE_LABELS[type]) {
     return DOCUMENT_TYPE_LABELS[type];
   }
-  
+
   // Fallback: format the string by splitting on underscores and capitalizing
   return type
     .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 }
 
@@ -63,10 +63,18 @@ export function formatDocumentType(type: string): string {
  * Converts technical names (e.g., "USER_TYPE") to readable format (e.g., "User Type").
  */
 export function formatGroupName(groupName: string | null): string {
-  if (!groupName) return "—";
-  
+  if (!groupName) return '—';
+
   return groupName
     .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
+}
+
+export function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    minimumFractionDigits: 0,
+  }).format(amount);
 }

@@ -20,7 +20,8 @@ import {
   IconFlag,
   IconSettings,
   IconClock,
-} from "@tabler/icons-react";
+  IconBuildingPlus,
+} from '@tabler/icons-react';
 
 import {
   Sidebar,
@@ -48,47 +49,77 @@ const adminOverview = [
 const adminNavGroups = [
   {
     groupLabel: 'User Management',
-    items: [
-      { title: 'All Accounts', url: '/admin/accounts', icon: IconUsers },
-    ]
+    items: [{ title: 'All Accounts', url: '/admin/accounts', icon: IconUsers }],
   },
   {
     groupLabel: 'Content Management',
     items: [
       { title: 'Locations', url: '/admin/locations', icon: IconMapPin },
-      { title: 'Add Public Location', url: '/admin/locations/create', icon: IconPlus },
+      {
+        title: 'Public new Location',
+        url: '/admin/locations/create',
+        icon: IconBuildingPlus,
+      },
       { title: 'Events', url: '/admin/events', icon: IconCalendar },
       { title: 'Tags', url: '/admin/tags', icon: IconTag },
-    ]
+    ],
   },
   {
     groupLabel: 'Review Requests',
     items: [
-      { title: 'Location Requests', url: '/admin/location-requests', icon: IconClipboardList },
-      { title: 'Business Registrations', url: '/admin/business', icon: IconBriefcase },
+      {
+        title: 'Location Requests',
+        url: '/admin/location-requests',
+        icon: IconClipboardList,
+      },
+      {
+        title: 'Business Registrations',
+        url: '/admin/business',
+        icon: IconBriefcase,
+      },
       { title: 'Reports', url: '/admin/reports', icon: IconFlag },
-    ]
+    ],
   },
   {
     groupLabel: 'Financial',
     items: [
       { title: 'Wallet', url: '/admin/wallet', icon: IconWallet },
-      { title: 'External Transactions', url: '/admin/wallet/external-transactions', icon: IconFileText },
-    ]
+      {
+        title: 'External Transactions',
+        url: '/admin/wallet/external-transactions',
+        icon: IconFileText,
+      },
+    ],
   },
   {
     groupLabel: 'System Settings',
     items: [
-      { title: 'Scheduled Jobs', url: '/admin/system/scheduled-jobs', icon: IconClock },
-      { title: 'System Config Table', url: '/admin/system/configuration', icon: IconSettings },
-    ]
+      {
+        title: 'Scheduled Jobs',
+        url: '/admin/system/scheduled-jobs',
+        icon: IconClock,
+      },
+      {
+        title: 'System Config Table',
+        url: '/admin/system/configuration',
+        icon: IconSettings,
+      },
+    ],
   },
 ];
 
 const getBusinessOverview = () => [
   { title: 'Overview', url: '/dashboard/business', icon: IconDashboard },
-  { title: 'Add location', url: '/dashboard/business/locations/create', icon: IconPlus },
-  { title: 'My Locations', url: '/dashboard/business/locations', icon: IconMapPin },
+  {
+    title: 'Add location',
+    url: '/dashboard/business/locations/create',
+    icon: IconPlus,
+  },
+  {
+    title: 'My Locations',
+    url: '/dashboard/business/locations',
+    icon: IconMapPin,
+  },
   { title: 'Wallet', url: '/dashboard/business/wallet', icon: IconWallet },
 ];
 
@@ -96,17 +127,29 @@ const businessNavGroups = [
   {
     groupLabel: 'Requests',
     items: [
-      { title: 'Location Requests', url: '/dashboard/business/location-requests', icon: IconClipboardList },
-      { title: 'Location Bookings', url: '/dashboard/business/location-bookings', icon: IconBrandBooking },
-    ]
+      {
+        title: 'Location Requests',
+        url: '/dashboard/business/location-requests',
+        icon: IconClipboardList,
+      },
+      {
+        title: 'Location Bookings',
+        url: '/dashboard/business/location-bookings',
+        icon: IconBrandBooking,
+      },
+    ],
   },
 ];
 
 const getCreatorNav = () => [
-  { title: "Overview", url: "/dashboard/creator", icon: IconCalendar },
-  { title: "Create event", url: "/dashboard/creator/request/create", icon: IconPlus },
-  { title: "My Events", url: "/dashboard/creator/events", icon: IconCalendar },
-  { title: "Wallet", url: "/dashboard/creator/wallet", icon: IconWallet },
+  { title: 'Overview', url: '/dashboard/creator', icon: IconCalendar },
+  {
+    title: 'Create event',
+    url: '/dashboard/creator/request/create',
+    icon: IconPlus,
+  },
+  { title: 'My Events', url: '/dashboard/creator/events', icon: IconCalendar },
+  { title: 'Wallet', url: '/dashboard/creator/wallet', icon: IconWallet },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -173,9 +216,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const navSecondary = React.useMemo(() => {
     if (!user) {
-      return [
-        { title: 'Toggle theme', url: '#theme-toggle', icon: IconHelp },
-      ];
+      return [{ title: 'Toggle theme', url: '#theme-toggle', icon: IconHelp }];
     }
 
     switch (user.role) {
@@ -225,18 +266,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible='icon' {...props}>
-      <SidebarHeader className="border-b border-sidebar-border/50">
+      <SidebarHeader className='border-b border-sidebar-border/50'>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={() => router.push(dashboardUrl)}
               className={cn(
-                "data-[slot=sidebar-menu-button]:!p-2 transition-all duration-200 hover:bg-sidebar-accent/50"
+                'data-[slot=sidebar-menu-button]:!p-2 transition-all duration-200 hover:bg-sidebar-accent/50'
               )}
             >
-              <IconInnerShadowTop className={cn(
-                "!size-5 transition-transform duration-200"
-              )} />
+              <IconInnerShadowTop
+                className={cn('!size-5 transition-transform duration-200')}
+              />
               <span className='text-base font-semibold transition-all duration-200'>
                 {dashboardTitle}
               </span>
@@ -244,7 +285,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className="gap-0">
+      <SidebarContent className='gap-0'>
         {navOverview.length > 0 && <NavMain items={navOverview} />}
         {navGroups.length > 0 ? (
           <NavMainGrouped groups={navGroups} />
@@ -253,7 +294,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         )}
         <NavSecondary items={navSecondary} className='mt-auto' />
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border/50">
+      <SidebarFooter className='border-t border-sidebar-border/50'>
         <NavUser
           user={{
             name: `${user?.firstName} ${user?.lastName}`,
