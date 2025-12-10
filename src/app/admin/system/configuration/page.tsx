@@ -55,6 +55,30 @@ const getConfigKeyLabel = (key: string): string => {
   return keyMap[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 };
 
+// Format relative time
+const getRelativeTime = (dateString: string): string => {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) {
+    return 'Just now';
+  }
+
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
+  }
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+  }
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+};
+
 const createUpdateConfigSchema = (key: string) => {
   const isPercentage = key.includes('PERCENTAGE');
   
@@ -177,6 +201,13 @@ export default function SystemConfigurationPage() {
       });
     }
 
+    // Sort by label
+    filtered = [...filtered].sort((a, b) => {
+      const labelA = getConfigKeyLabel(a.key).toLowerCase();
+      const labelB = getConfigKeyLabel(b.key).toLowerCase();
+      return labelA.localeCompare(labelB);
+    });
+
     return filtered;
   }, [configValues, debouncedSearchTerm]);
 
@@ -242,6 +273,7 @@ export default function SystemConfigurationPage() {
                     <TableHead className="font-semibold">Label</TableHead>
                     <TableHead className="font-semibold">Value</TableHead>
                     <TableHead className="font-semibold">Updated By</TableHead>
+                    <TableHead className="font-semibold">Updated At</TableHead>
                     <TableHead className="w-24 font-semibold pr-6">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -272,6 +304,9 @@ export default function SystemConfigurationPage() {
                             <span className="text-muted-foreground">—</span>
                           )}
                         </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {getRelativeTime(config.updatedAt)}
+                        </TableCell>
                         <TableCell className="pr-6">
                           <Button
                             variant="ghost"
@@ -286,7 +321,7 @@ export default function SystemConfigurationPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                         {debouncedSearchTerm
                           ? 'No configuration values match your search'
                           : 'No configuration values found'}
