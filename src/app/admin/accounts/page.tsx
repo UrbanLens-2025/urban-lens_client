@@ -5,418 +5,576 @@ import { useDebounce } from 'use-debounce';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
-import { IconSearch, IconFilter, IconUsers, IconUserCheck, IconUserX, IconShieldCheck, IconBriefcase, IconStar, IconUser } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAllAccounts } from '@/hooks/admin/useAllAccounts';
-import { Loader2, Users, UserCheck, UserX, ShieldCheck } from 'lucide-react';
-import { SortableTableHeader, SortDirection } from '@/components/shared/SortableTableHeader';
-import { StatCard } from '@/components/shared/StatCard';
+import {
+  Loader2,
+  Users,
+  UserCheck,
+  UserX,
+  ShieldCheck,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  Building2,
+  Star,
+  User,
+  Mail,
+  Phone,
+  AlertTriangle,
+} from 'lucide-react';
+import {
+  SortableTableHeader,
+  SortDirection,
+} from '@/components/shared/SortableTableHeader';
 
 export default function AccountsPage() {
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-    // Initialize state from URL params or defaults
-    const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
-    const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-    const [roleFilter, setRoleFilter] = useState(searchParams.get('role') || 'ALL');
-    const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
-    const [sort, setSort] = useState<{ column: string; direction: SortDirection }>({
-        column: 'createdAt',
-        direction: 'DESC',
-    });
-    const itemsPerPage = 10;
+  const [searchTerm, setSearchTerm] = useState(
+    searchParams.get('search') || ''
+  );
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+  const [roleFilter, setRoleFilter] = useState(
+    searchParams.get('role') || 'ALL'
+  );
+  const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
+  const [sort, setSort] = useState<{
+    column: string;
+    direction: SortDirection;
+  }>({
+    column: 'createdAt',
+    direction: 'DESC',
+  });
+  const itemsPerPage = 7;
 
-    // Update URL when filters change
-    useEffect(() => {
-        const params = new URLSearchParams(searchParams.toString());
-        const trimmedSearch = debouncedSearchTerm.trim();
-        
-        if (trimmedSearch) {
-            params.set('search', trimmedSearch);
-        } else {
-            params.delete('search');
-        }
-        
-        if (roleFilter !== 'ALL') {
-            params.set('role', roleFilter);
-        } else {
-            params.delete('role');
-        }
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    const trimmedSearch = debouncedSearchTerm.trim();
 
-        if (page > 1) {
-            params.set('page', page.toString());
-        } else {
-            params.delete('page');
-        }
-
-        router.push(`${pathname}?${params.toString()}`);
-    }, [debouncedSearchTerm, roleFilter, page, pathname, router, searchParams]);
-
-    const sortBy = sort.direction 
-        ? [`${sort.column}:${sort.direction}`]
-        : ['createdAt:DESC'];
-
-    // Fetch accounts from API
-    const { data, isLoading, error } = useAllAccounts({
-        page,
-        limit: itemsPerPage,
-        search: debouncedSearchTerm.trim() || undefined,
-        searchBy: debouncedSearchTerm.trim() ? ['email', 'firstName', 'lastName', 'phoneNumber'] : undefined,
-        filterRole: roleFilter !== 'ALL' ? `$eq:${roleFilter}` : undefined,
-        sortBy: sortBy,
-    });
-
-    const accounts = data?.data?.data || [];
-    const meta = data?.data?.meta;
-
-    // Calculate statistics from actual accounts data
-    const stats = useMemo(() => {
-        const total = meta?.totalItems || 0;
-        const active = accounts.filter((acc: any) => !acc.isLocked).length;
-        const locked = accounts.filter((acc: any) => acc.isLocked).length;
-        const onboarded = accounts.filter((acc: any) => acc.hasOnboarded).length;
-
-        // Count by role from current page
-        const byRoleCounts: Record<string, number> = {
-            'ADMIN': 0,
-            'BUSINESS_OWNER': 0,
-            'EVENT_CREATOR': 0,
-            'USER': 0
-        };
-
-        accounts.forEach((acc: any) => {
-            if (byRoleCounts[acc.role] !== undefined) {
-                byRoleCounts[acc.role]++;
-            }
-        });
-
-        // Estimate totals based on current page if we have paginated data
-        const activeEstimate = total > 0 && accounts.length > 0
-            ? Math.round((active / accounts.length) * total)
-            : active;
-        const lockedEstimate = total > 0 && accounts.length > 0
-            ? Math.round((locked / accounts.length) * total)
-            : locked;
-        const onboardedEstimate = total > 0 && accounts.length > 0
-            ? Math.round((onboarded / accounts.length) * total)
-            : onboarded;
-
-        return {
-            total,
-            active: activeEstimate,
-            locked: lockedEstimate,
-            onboarded: onboardedEstimate,
-            byRole: byRoleCounts
-        };
-    }, [accounts, meta]);
-
-    const getRoleBadgeColor = (role: string) => {
-        switch (role) {
-            case 'ADMIN':
-                return 'default';
-            case 'BUSINESS_OWNER':
-                return 'secondary';
-            case 'EVENT_CREATOR':
-                return 'outline';
-            default:
-                return 'secondary';
-        }
-    };
-
-    const getRoleBadgeStyles = (role: string) => {
-        switch (role) {
-            case 'ADMIN':
-                return 'bg-violet-100 text-violet-700 hover:bg-violet-100 border-violet-200';
-            case 'BUSINESS_OWNER':
-                return 'bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200';
-            case 'EVENT_CREATOR':
-                return 'bg-pink-100 text-pink-700 hover:bg-pink-100 border-pink-200';
-            default:
-                return 'bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200';
-        }
-    };
-
-    const getRoleIcon = (role: string) => {
-        switch (role) {
-            case 'ADMIN':
-                return <IconShieldCheck className="h-3 w-3 mr-1" />;
-            case 'BUSINESS_OWNER':
-                return <IconBriefcase className="h-3 w-3 mr-1" />;
-            case 'EVENT_CREATOR':
-                return <IconStar className="h-3 w-3 mr-1" />;
-            default:
-                return <IconUser className="h-3 w-3 mr-1" />;
-        }
-    };
-
-    const getStatusColor = (isLocked: boolean) => {
-        return isLocked
-            ? 'text-red-600 bg-red-100'
-            : 'text-green-600 bg-green-100';
-    };
-
-    const handleSort = (column: string, direction: SortDirection) => {
-        setSort({ column, direction });
-        setPage(1);
-    };
-
-    if (error) {
-        return (
-            <div className="space-y-6">
-                <Card>
-                    <CardContent className="pt-6">
-                        <p className="text-red-600">Error loading accounts. Please try again.</p>
-                    </CardContent>
-                </Card>
-            </div>
-        );
+    if (trimmedSearch) {
+      params.set('search', trimmedSearch);
+    } else {
+      params.delete('search');
     }
 
+    if (roleFilter !== 'ALL') {
+      params.set('role', roleFilter);
+    } else {
+      params.delete('role');
+    }
+
+    if (page > 1) {
+      params.set('page', page.toString());
+    } else {
+      params.delete('page');
+    }
+
+    router.push(`${pathname}?${params.toString()}`);
+  }, [debouncedSearchTerm, roleFilter, page, pathname, router, searchParams]);
+
+  const sortBy = sort.direction
+    ? [`${sort.column}:${sort.direction}`]
+    : ['createdAt:DESC'];
+
+  const { data, isLoading, error } = useAllAccounts({
+    page,
+    limit: itemsPerPage,
+    search: debouncedSearchTerm.trim() || undefined,
+    searchBy: debouncedSearchTerm.trim()
+      ? ['email', 'firstName', 'lastName', 'phoneNumber']
+      : undefined,
+    filterRole: roleFilter !== 'ALL' ? `$eq:${roleFilter}` : undefined,
+    sortBy: sortBy,
+  });
+
+  const accounts = data?.data?.data || [];
+  const meta = data?.data?.meta;
+
+  const stats = useMemo(() => {
+    const total = meta?.totalItems || 0;
+    const currentPageActive = accounts.filter(
+      (acc: any) => !acc.isLocked
+    ).length;
+    const currentPageLocked = accounts.filter(
+      (acc: any) => acc.isLocked
+    ).length;
+    const currentPageOnboarded = accounts.filter(
+      (acc: any) => acc.hasOnboarded
+    ).length;
+
+    const byRoleCounts: Record<string, number> = {
+      BUSINESS_OWNER: 0,
+      EVENT_CREATOR: 0,
+      USER: 0,
+    };
+
+    accounts.forEach((acc: any) => {
+      if (byRoleCounts[acc.role] !== undefined) {
+        byRoleCounts[acc.role]++;
+      }
+    });
+
+    const currentPageTotal = accounts.length;
+    const activeEstimate =
+      total > 0 && currentPageTotal > 0
+        ? Math.round((currentPageActive / currentPageTotal) * total)
+        : currentPageActive;
+    const lockedEstimate =
+      total > 0 && currentPageTotal > 0
+        ? Math.round((currentPageLocked / currentPageTotal) * total)
+        : currentPageLocked;
+    const onboardedEstimate =
+      total > 0 && currentPageTotal > 0
+        ? Math.round((currentPageOnboarded / currentPageTotal) * total)
+        : currentPageOnboarded;
+
+    return {
+      total,
+      active: Math.min(activeEstimate, total),
+      locked: Math.min(lockedEstimate, total),
+      onboarded: Math.min(onboardedEstimate, total),
+      byRole: byRoleCounts,
+    };
+  }, [accounts, meta]);
+
+  const getRoleBadgeStyles = (role: string) => {
+    switch (role) {
+      case 'BUSINESS_OWNER':
+        return 'bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200';
+      case 'EVENT_CREATOR':
+        return 'bg-pink-100 text-pink-700 hover:bg-pink-100 border-pink-200';
+      default:
+        return 'bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200';
+    }
+  };
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'BUSINESS_OWNER':
+        return <Building2 className='h-3 w-3 mr-1.5' />;
+      case 'EVENT_CREATOR':
+        return <Star className='h-3 w-3 mr-1.5' />;
+      default:
+        return <User className='h-3 w-3 mr-1.5' />;
+    }
+  };
+
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  };
+
+  const formatRoleName = (role: string) => {
+    return role
+      .split('_')
+      .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  const handleSort = (column: string, direction: SortDirection) => {
+    setSort({ column, direction });
+    setPage(1);
+  };
+
+  if (error) {
     return (
-        <div className="space-y-6">
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                    title="Total Accounts"
-                    value={stats.total.toLocaleString()}
-                    description={`${stats.onboarded} onboarded`}
-                    icon={Users}
-                    color="blue"
-                />
-
-                <StatCard
-                    title="Active"
-                    value={stats.active.toLocaleString()}
-                    description="Not locked accounts"
-                    icon={UserCheck}
-                    color="green"
-                />
-
-                <StatCard
-                    title="Locked"
-                    value={stats.locked.toLocaleString()}
-                    description="Restricted accounts"
-                    icon={UserX}
-                    color="red"
-                />
-
-                <Card className="border-2 border-primary/10 shadow-xl hover:shadow-2xl transition-all duration-300 bg-card/80 backdrop-blur-sm overflow-hidden">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                        <CardTitle className="text-sm font-semibold text-muted-foreground">By Role</CardTitle>
-                        <div className="h-10 w-10 rounded-xl flex items-center justify-center shadow-md bg-purple-100 dark:bg-purple-900/30">
-                            <ShieldCheck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            {Object.entries(stats.byRole).map(([role, count]: [string, any]) => (
-                                <div key={role} className="flex justify-between items-center">
-                                    <span className="text-xs text-muted-foreground">{role.replace('_', ' ')}</span>
-                                    <span className="text-sm font-semibold">{count}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+      <div className='space-y-6'>
+        <Card className='border-red-200 dark:border-red-800'>
+          <CardContent className='pt-6'>
+            <div className='flex items-center gap-3 text-red-600 dark:text-red-400'>
+              <AlertTriangle className='h-5 w-5' />
+              <p>Error loading accounts data. Please try again.</p>
             </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                        <span>All Accounts ({meta?.totalItems || 0})</span>
-                        <div className="flex items-center gap-2">
-                            <div className="relative">
-                                <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search accounts..."
-                                    className="pl-8 w-[250px]"
-                                    value={searchTerm}
-                                    onChange={(e) => {
-                                        setSearchTerm(e.target.value);
-                                        setPage(1);
-                                    }}
-                                />
-                            </div>
-                            <Select
-                                value={roleFilter}
-                                onValueChange={(value) => {
-                                    setRoleFilter(value);
-                                    setPage(1);
-                                }}
-                            >
-                                <SelectTrigger className="w-[180px]">
-                                    <div className="flex items-center gap-2">
-                                        <IconFilter className="h-4 w-4" />
-                                        <SelectValue placeholder="Filter by Role" />
-                                    </div>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">All Roles</SelectItem>
-                                    <SelectItem value="ADMIN">Admin</SelectItem>
-                                    <SelectItem value="BUSINESS_OWNER">Business Owner</SelectItem>
-                                    <SelectItem value="EVENT_CREATOR">Event Creator</SelectItem>
-                                    <SelectItem value="USER">User</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </CardTitle>
-                    <CardDescription className="hidden">
-                        Manage users, business owners, and administrators.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <div className="flex items-center justify-center h-64">
-                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        </div>
-                    ) : (
-                        <>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-muted/50">
-                                        <TableHead className="w-[50px]">#</TableHead>
-                                        <SortableTableHeader
-                                            column="firstName"
-                                            currentSort={sort}
-                                            onSort={handleSort}
-                                        >
-                                            Name
-                                        </SortableTableHeader>
-                                        <SortableTableHeader
-                                            column="email"
-                                            currentSort={sort}
-                                            onSort={handleSort}
-                                        >
-                                            Email
-                                        </SortableTableHeader>
-                                        <SortableTableHeader
-                                            column="role"
-                                            currentSort={sort}
-                                            onSort={handleSort}
-                                        >
-                                            Role
-                                        </SortableTableHeader>
-                                        <SortableTableHeader
-                                            column="isLocked"
-                                            currentSort={sort}
-                                            onSort={handleSort}
-                                        >
-                                            Status
-                                        </SortableTableHeader>
-                                        <SortableTableHeader
-                                            column="hasOnboarded"
-                                            currentSort={sort}
-                                            onSort={handleSort}
-                                        >
-                                            Onboarded
-                                        </SortableTableHeader>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {accounts.map((account: any, index: number) => (
-                                        <TableRow key={account.id}>
-                                            <TableCell className="font-medium text-muted-foreground">
-                                                {(page - 1) * itemsPerPage + index + 1}
-                                            </TableCell>
-                                            <TableCell className="font-medium">
-                                                <Link
-                                                    href={`/admin/accounts/${account.id}`}
-                                                    className="hover:underline text-blue-600 hover:text-blue-800"
-                                                >
-                                                    {account.firstName} {account.lastName}
-                                                </Link>
-                                            </TableCell>
-                                            <TableCell>{account.email}</TableCell>
-                                            <TableCell>
-                                                <Badge 
-                                                    variant="outline" 
-                                                    className={`flex items-center w-fit ${getRoleBadgeStyles(account.role)}`}
-                                                >
-                                                    {getRoleIcon(account.role)}
-                                                    {account.role.replace('_', ' ')}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <span
-                                                    className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                                        account.isLocked
-                                                    )}`}
-                                                >
-                                                    {account.isLocked ? 'LOCKED' : 'ACTIVE'}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell>
-                                                {account.hasOnboarded ? (
-                                                    <Badge variant="outline" className="text-green-600">Yes</Badge>
-                                                ) : (
-                                                    <Badge variant="outline" className="text-gray-600">No</Badge>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {accounts.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} className="text-center h-24">
-                                                No accounts found matching your criteria.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-
-                            {/* Pagination */}
-                            {meta && meta.totalPages > 1 && (
-                                <div className="flex items-center justify-end space-x-2 py-4">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setPage(page - 1)}
-                                        disabled={page <= 1}
-                                    >
-                                        Previous
-                                    </Button>
-                                    <div className="text-sm text-muted-foreground">
-                                        Page {page} of {meta.totalPages}
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setPage(page + 1)}
-                                        disabled={page >= meta.totalPages}
-                                    >
-                                        Next
-                                    </Button>
-                                </div>
-                            )}
-                        </>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
+          </CardContent>
+        </Card>
+      </div>
     );
+  }
+
+  return (
+    <div className='space-y-4'>
+      {/* Statistics Cards */}
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
+        <Card className='hover:shadow-lg transition-shadow border-l-4 border-l-blue-500'>
+          <CardContent className='p-6'>
+            <div className='flex items-center justify-between'>
+              <div className='space-y-1'>
+                <p className='text-md font-medium text-muted-foreground'>
+                  Total accounts
+                </p>
+                <p className='text-2xl font-bold'>
+                  {stats.total.toLocaleString()}
+                </p>
+                <p className='text-xs text-muted-foreground'>
+                  {stats.onboarded} accounts have completed onboarding
+                </p>
+              </div>
+              <div className='h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center'>
+                <Users className='h-6 w-6 text-blue-600 dark:text-blue-400' />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className='hover:shadow-lg transition-shadow border-l-4 border-l-green-500'>
+          <CardContent className='p-6'>
+            <div className='flex items-center justify-between'>
+              <div className='space-y-1'>
+                <p className='text-md font-medium text-muted-foreground'>
+                  Active accounts
+                </p>
+                <p className='text-2xl font-bold'>
+                  {stats.active.toLocaleString()}
+                </p>
+                <p className='text-xs text-muted-foreground'>
+                  Accounts are not locked
+                </p>
+              </div>
+              <div className='h-12 w-12 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center'>
+                <UserCheck className='h-6 w-6 text-green-600 dark:text-green-400' />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className='hover:shadow-lg transition-shadow border-l-4 border-l-red-500'>
+          <CardContent className='p-6'>
+            <div className='flex items-center justify-between'>
+              <div className='space-y-1'>
+                <p className='text-md font-medium text-muted-foreground'>
+                  Locked accounts
+                </p>
+                <p className='text-2xl font-bold'>
+                  {stats.locked.toLocaleString()}
+                </p>
+                <p className='text-xs text-muted-foreground'>
+                  Accounts are restricted
+                </p>
+              </div>
+              <div className='h-12 w-12 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center'>
+                <UserX className='h-6 w-6 text-red-600 dark:text-red-400' />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className='hover:shadow-lg transition-shadow border-l-4 border-l-purple-500'>
+          <CardHeader>
+            <div className='flex items-center justify-between'>
+              <CardTitle className='text-md font-medium text-muted-foreground'>
+                Classify by role
+              </CardTitle>
+              <div className='h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-950 flex items-center justify-center'>
+                <ShieldCheck className='h-5 w-5 text-purple-600 dark:text-purple-400' />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className='space-y-2'>
+              {Object.entries(stats.byRole)
+                .filter(([_, count]) => count > 0)
+                .map(([role, count]: [string, any]) => (
+                  <div key={role} className='flex justify-between items-center'>
+                    <div className='flex items-center gap-2'>
+                      {getRoleIcon(role)}
+                      <span className='text-sm text-muted-foreground'>
+                        {formatRoleName(role)}
+                      </span>
+                    </div>
+                    <Badge variant='secondary' className='font-semibold'>
+                      {count}
+                    </Badge>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
+            <div>
+              <CardTitle>All accounts</CardTitle>
+              <CardDescription className='mt-1'>
+                Total {meta?.totalItems || 0} accounts in the system
+              </CardDescription>
+            </div>
+            <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2'>
+              <div className='relative'>
+                <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+                <Input
+                  placeholder='Search by name, email...'
+                  className='pl-9 w-full sm:w-[280px]'
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+              <Select
+                value={roleFilter}
+                onValueChange={(value) => {
+                  setRoleFilter(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className='w-full sm:w-[200px]'>
+                  <div className='flex items-center gap-2'>
+                    <Filter className='h-4 w-4' />
+                    <SelectValue placeholder='Filter by role' />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='ALL'>All roles</SelectItem>
+                  <SelectItem value='BUSINESS_OWNER'>Business Owner</SelectItem>
+                  <SelectItem value='EVENT_CREATOR'>Event Creator</SelectItem>
+                  <SelectItem value='USER'>User</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className='flex flex-col items-center justify-center h-58 gap-2'>
+              <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
+              <p className='text-sm text-muted-foreground'>Loading data...</p>
+            </div>
+          ) : (
+            <>
+              <div className='rounded-md border overflow-x-auto'>
+                <Table>
+                  <TableHeader>
+                    <TableRow className='bg-muted/50 hover:bg-muted/50'>
+                      <TableHead className='w-[60px] text-center'>#</TableHead>
+                      <SortableTableHeader
+                        column='firstName'
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        User
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column='email'
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Email
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column='role'
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Role
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column='isLocked'
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Status
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column='hasOnboarded'
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Onboarding
+                      </SortableTableHeader>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {accounts.map((account: any, index: number) => (
+                      <TableRow
+                        key={account.id}
+                        className='hover:bg-muted/50 transition-colors'
+                      >
+                        <TableCell className='text-center text-muted-foreground font-medium'>
+                          {(page - 1) * itemsPerPage + index + 1}
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            href={`/admin/accounts/${account.id}`}
+                            className='flex items-center gap-3 group'
+                          >
+                            <Avatar className='h-10 w-10 border-2 border-background'>
+                              {account.avatarUrl && (
+                                <AvatarImage
+                                  src={account.avatarUrl}
+                                  alt={`${account.firstName} ${account.lastName}`}
+                                  className='object-cover'
+                                />
+                              )}
+                              <AvatarFallback className='bg-primary/10 text-primary font-semibold text-xs'>
+                                {getInitials(
+                                  account.firstName || '',
+                                  account.lastName || ''
+                                )}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className='flex-1 min-w-0'>
+                              <p className='font-medium group-hover:text-primary transition-colors truncate'>
+                                {account.firstName} {account.lastName}
+                              </p>
+                              {account.phoneNumber && (
+                                <p className='text-xs text-muted-foreground flex items-center gap-1 truncate'>
+                                  <Phone className='h-3 w-3 shrink-0' />
+                                  <span className='truncate'>
+                                    {account.phoneNumber}
+                                  </span>
+                                </p>
+                              )}
+                            </div>
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <div className='flex items-center gap-2 min-w-0'>
+                            <Mail className='h-4 w-4 text-muted-foreground shrink-0' />
+                            <span
+                              className='text-sm truncate'
+                              title={account.email}
+                            >
+                              {account.email}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant='outline'
+                            className={`flex items-center w-fit gap-1 ${getRoleBadgeStyles(
+                              account.role
+                            )}`}
+                          >
+                            {getRoleIcon(account.role)}
+                            <span>{formatRoleName(account.role)}</span>
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant='outline'
+                            className={`px-2.5 py-0.5 ${
+                              account.isLocked
+                                ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800'
+                                : 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800'
+                            }`}
+                          >
+                            {account.isLocked ? 'Locked' : 'Active'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant='outline'
+                            className={
+                              account.hasOnboarded
+                                ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800'
+                                : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950 dark:text-gray-400 dark:border-gray-800'
+                            }
+                          >
+                            {account.hasOnboarded ? 'Completed' : 'Pending'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {accounts.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className='text-center h-32'>
+                          <div className='flex flex-col items-center justify-center gap-2'>
+                            <Users className='h-12 w-12 text-muted-foreground/50' />
+                            <p className='text-muted-foreground font-medium'>
+                              No accounts found
+                            </p>
+                            <p className='text-sm text-muted-foreground'>
+                              Try changing filters or search keywords
+                            </p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              {meta && meta.totalPages > 1 && (
+                <div className='flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t'>
+                  <div className='text-sm text-muted-foreground'>
+                    Showing{' '}
+                    <span className='font-medium text-foreground'>
+                      {(page - 1) * itemsPerPage + 1}
+                    </span>{' '}
+                    -{' '}
+                    <span className='font-medium text-foreground'>
+                      {Math.min(page * itemsPerPage, meta.totalItems)}
+                    </span>{' '}
+                    of{' '}
+                    <span className='font-medium text-foreground'>
+                      {meta.totalItems}
+                    </span>{' '}
+                    accounts
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => setPage(page - 1)}
+                      disabled={page <= 1}
+                      className='gap-1'
+                    >
+                      <ChevronLeft className='h-4 w-4' />
+                      Previous
+                    </Button>
+                    <div className='flex items-center gap-1 px-3'>
+                      <span className='text-sm font-medium'>
+                        Page {page} of {meta.totalPages}
+                      </span>
+                    </div>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => setPage(page + 1)}
+                      disabled={page >= meta.totalPages}
+                      className='gap-1'
+                    >
+                      Next
+                      <ChevronRight className='h-4 w-4' />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

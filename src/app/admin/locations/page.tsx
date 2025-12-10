@@ -3,11 +3,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { SortableTableHeader, SortDirection } from '@/components/shared/SortableTableHeader';
-import { TableFilters } from '@/components/shared/TableFilters';
-import { PageHeader } from '@/components/shared/PageHeader';
-import { PageContainer } from '@/components/shared/PageContainer';
-import { StatCard } from '@/components/shared/StatCard';
+import Link from 'next/link';
+import {
+  SortableTableHeader,
+  SortDirection,
+} from '@/components/shared/SortableTableHeader';
 import {
   Card,
   CardContent,
@@ -26,10 +26,29 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  IconSearch,
-  IconRefresh,
-} from '@tabler/icons-react';
-import { Loader2, MapPin, Building2, Globe, Eye } from 'lucide-react';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Loader2,
+  MapPin,
+  Building2,
+  Globe,
+  Eye,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  MessageSquare,
+  CheckCircle,
+  FileText,
+  AlertTriangle,
+  Plus,
+} from 'lucide-react';
 import { Location } from '@/types';
 import { useAllLocations } from '@/hooks/admin/useAllLocations';
 import { useLocationStats } from '@/hooks/admin/useLocationStats';
@@ -44,29 +63,35 @@ export default function LocationDashboardPage() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
-  // Initialize state from URL params or defaults
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [searchTerm, setSearchTerm] = useState(
+    searchParams.get('search') || ''
+  );
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
-  const [sort, setSort] = useState<{ column: string; direction: SortDirection }>({
-    column: "createdAt",
-    direction: "DESC",
+  const [sort, setSort] = useState<{
+    column: string;
+    direction: SortDirection;
+  }>({
+    column: 'createdAt',
+    direction: 'DESC',
   });
-  const [typeFilter, setTypeFilter] = useState<string>(searchParams.get('type') || "all");
-  const itemsPerPage = 10;
+  const [typeFilter, setTypeFilter] = useState<string>(
+    searchParams.get('type') || 'all'
+  );
+  const itemsPerPage = 8;
 
   // Update URL when filters change
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
     const trimmedSearch = debouncedSearchTerm.trim();
-    
+
     if (trimmedSearch) {
       params.set('search', trimmedSearch);
     } else {
       params.delete('search');
     }
 
-    if (typeFilter !== "all") {
+    if (typeFilter !== 'all') {
       params.set('type', typeFilter);
     } else {
       params.delete('type');
@@ -81,16 +106,13 @@ export default function LocationDashboardPage() {
     router.replace(`${pathname}?${params.toString()}`);
   }, [debouncedSearchTerm, typeFilter, page, pathname, router, searchParams]);
 
-  const sortBy = sort.direction 
-    ? `${sort.column}:${sort.direction}` 
-    : "createdAt:DESC";
+  const sortBy = sort.direction
+    ? `${sort.column}:${sort.direction}`
+    : 'createdAt:DESC';
 
   // Convert typeFilter to isBusiness parameter for API
-  const isBusinessFilter = typeFilter === "all" 
-    ? undefined 
-    : typeFilter === "business" 
-      ? true 
-      : false; // public
+  const isBusinessFilter =
+    typeFilter === 'all' ? undefined : typeFilter === 'business' ? true : false; // public
 
   // Data fetching for locations
   const { data, isLoading, error } = useAllLocations(
@@ -104,7 +126,6 @@ export default function LocationDashboardPage() {
   const locations = data?.data || [];
   const meta = data?.meta;
 
-  // Fetch accurate statistics from API
   const locationStats = useLocationStats();
 
   const refresh = () => {
@@ -114,10 +135,12 @@ export default function LocationDashboardPage() {
 
   if (error) {
     return (
-      <div className="space-y-6">
+      <div className='space-y-6'>
         <Card>
-          <CardContent className="pt-6">
-            <p className="text-red-600">Error loading locations. Please try again.</p>
+          <CardContent className='pt-6'>
+            <p className='text-red-600'>
+              Error loading locations. Please try again.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -129,155 +152,204 @@ export default function LocationDashboardPage() {
     setPage(1);
   };
 
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    if (typeFilter !== "all") count++;
-    if (debouncedSearchTerm) count++;
-    return count;
-  }, [typeFilter, debouncedSearchTerm]);
-
-  const handleClearFilters = () => {
-    setSearchTerm("");
-    setTypeFilter("all");
-    setSort({ column: "createdAt", direction: "DESC" });
-    setPage(1);
-  };
-
   return (
-    <PageContainer>
-      <PageHeader
-        title="Location Management"
-        description="Manage and view all approved locations"
-        icon={MapPin}
-      />
-
+    <div className='space-y-6'>
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Locations"
-          value={locationStats.isLoading ? "—" : locationStats.total.toLocaleString()}
-          description={locationStats.isLoading ? "Loading statistics..." : `${locations.length} on this page`}
-          icon={MapPin}
-          color="blue"
-          isLoading={locationStats.isLoading}
-        />
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-blue-500'>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              Total Locations
+            </CardTitle>
+            <div className='h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center'>
+              <MapPin className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className='text-3xl font-bold'>
+              {locationStats.isLoading
+                ? '—'
+                : locationStats.total.toLocaleString()}
+            </div>
+            <p className='text-xs text-muted-foreground mt-1'>
+              {locations.length} on this page
+            </p>
+          </CardContent>
+        </Card>
 
-        <StatCard
-          title="Business Locations"
-          value={locationStats.isLoading ? "—" : locationStats.business.toLocaleString()}
-          description={locationStats.isLoading 
-            ? "Loading statistics..." 
-            : `${locationStats.total > 0 ? Math.round((locationStats.business / locationStats.total) * 100) : 0}% of total`}
-          icon={Building2}
-          color="orange"
-          isLoading={locationStats.isLoading}
-        />
+        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-orange-500'>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              Business Locations
+            </CardTitle>
+            <div className='h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-950 flex items-center justify-center'>
+              <Building2 className='h-5 w-5 text-orange-600 dark:text-orange-400' />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className='text-3xl font-bold'>
+              {locationStats.isLoading
+                ? '—'
+                : locationStats.business.toLocaleString()}
+            </div>
+            <p className='text-xs text-muted-foreground mt-1'>
+              {locationStats.total > 0
+                ? Math.round(
+                    (locationStats.business / locationStats.total) * 100
+                  )
+                : 0}
+              % of total
+            </p>
+          </CardContent>
+        </Card>
 
-        <StatCard
-          title="Public Locations"
-          value={locationStats.isLoading ? "—" : locationStats.public.toLocaleString()}
-          description={locationStats.isLoading
-            ? "Loading statistics..."
-            : `${locationStats.total > 0 ? Math.round((locationStats.public / locationStats.total) * 100) : 0}% of total`}
-          icon={Globe}
-          color="purple"
-          isLoading={locationStats.isLoading}
-        />
+        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-purple-500'>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              Public Locations
+            </CardTitle>
+            <div className='h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-950 flex items-center justify-center'>
+              <Globe className='h-5 w-5 text-purple-600 dark:text-purple-400' />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className='text-3xl font-bold'>
+              {locationStats.isLoading
+                ? '—'
+                : locationStats.public.toLocaleString()}
+            </div>
+            <p className='text-xs text-muted-foreground mt-1'>
+              {locationStats.total > 0
+                ? Math.round((locationStats.public / locationStats.total) * 100)
+                : 0}
+              % of total
+            </p>
+          </CardContent>
+        </Card>
 
-        <StatCard
-          title="Visible on Map"
-          value={locationStats.isLoading ? "—" : locationStats.visible.toLocaleString()}
-          description={locationStats.isLoading
-            ? "Loading statistics..."
-            : `${locationStats.total > 0 ? Math.round((locationStats.visible / locationStats.total) * 100) : 0}% of total`}
-          icon={Eye}
-          color="green"
-          isLoading={locationStats.isLoading}
-        />
+        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-green-500'>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              Visible on Map
+            </CardTitle>
+            <div className='h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center'>
+              <Eye className='h-5 w-5 text-green-600 dark:text-green-400' />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className='text-3xl font-bold'>
+              {locationStats.isLoading
+                ? '—'
+                : locationStats.visible.toLocaleString()}
+            </div>
+            <p className='text-xs text-muted-foreground mt-1'>
+              {locationStats.total > 0
+                ? Math.round(
+                    (locationStats.visible / locationStats.total) * 100
+                  )
+                : 0}
+              % of total
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main Card */}
-      <Card className="overflow-hidden border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
-        <CardContent className="p-0">
-          <div className="flex flex-col h-full">
-            {/* Filters */}
-            <TableFilters
-              searchValue={searchTerm}
-              onSearchChange={(value) => {
-                setSearchTerm(value);
-                setPage(1);
-              }}
-              searchPlaceholder="Search locations..."
-              filters={[
-                {
-                  key: "type",
-                  label: "Type",
-                  value: typeFilter,
-                  options: [
-                    { value: "all", label: "All Types" },
-                    { value: "business", label: "Business" },
-                    { value: "public", label: "Public" },
-                  ],
-                  onValueChange: (value) => {
-                    setTypeFilter(value);
+      <Card>
+        <CardHeader>
+          <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
+            <div>
+              <CardTitle>All Locations</CardTitle>
+              <CardDescription className='mt-1'>
+                Total {meta?.totalItems || 0} locations in the system
+              </CardDescription>
+            </div>
+            <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2'>
+              <div className='relative'>
+                <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+                <Input
+                  placeholder='Search locations...'
+                  className='pl-9 w-full sm:w-[280px]'
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
                     setPage(1);
-                  },
-                },
-              ]}
-              activeFiltersCount={activeFiltersCount}
-              onClearFilters={handleClearFilters}
-              actions={
-                <Button variant="outline" size="sm" onClick={refresh} disabled={isLoading} className="h-11 border-2 border-primary/20">
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <IconRefresh className="h-4 w-4" />
-                  )}
-                </Button>
-              }
-            />
-
-            {/* Table */}
-            <div className="flex-1 overflow-auto">
-              {isLoading ? (
-                <div className="flex items-center justify-center h-64">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
+                  }}
+                />
+              </div>
+              <Select
+                value={typeFilter}
+                onValueChange={(value) => {
+                  setTypeFilter(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className='w-full sm:w-[200px]'>
+                  <div className='flex items-center gap-2'>
+                    <Filter className='h-4 w-4' />
+                    <SelectValue placeholder='Filter by type' />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>All Types</SelectItem>
+                  <SelectItem value='business'>Business</SelectItem>
+                  <SelectItem value='public'>Public</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className='flex flex-col items-center justify-center h-64 gap-3'>
+              <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
+              <p className='text-sm text-muted-foreground'>Loading data...</p>
+            </div>
+          ) : (
+            <>
+              <div className='rounded-md border overflow-x-auto'>
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-[50px] font-semibold">#</TableHead>
+                    <TableRow className='bg-muted/50 hover:bg-muted/50'>
+                      <TableHead className='w-[60px] text-center'>#</TableHead>
                       <SortableTableHeader
-                        column="name"
+                        column='name'
                         currentSort={sort}
                         onSort={handleSort}
                       >
-                        Name
+                        Location
                       </SortableTableHeader>
                       <SortableTableHeader
-                        column="business"
+                        column='ownershipType'
                         currentSort={sort}
                         onSort={handleSort}
                       >
                         Type
                       </SortableTableHeader>
                       <SortableTableHeader
-                        column="addressLine"
+                        column='addressLine'
                         currentSort={sort}
                         onSort={handleSort}
                       >
                         Address
                       </SortableTableHeader>
                       <SortableTableHeader
-                        column="isVisibleOnMap"
+                        column='averageRating'
                         currentSort={sort}
                         onSort={handleSort}
                       >
-                        Visible
+                        Rating
+                      </SortableTableHeader>
+                      <TableHead className='text-center'>Stats</TableHead>
+                      <SortableTableHeader
+                        column='isVisibleOnMap'
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Status
                       </SortableTableHeader>
                       <SortableTableHeader
-                        column="createdAt"
+                        column='createdAt'
                         currentSort={sort}
                         onSort={handleSort}
                       >
@@ -288,140 +360,190 @@ export default function LocationDashboardPage() {
                   <TableBody>
                     {locations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-12">
-                          <div className="flex flex-col items-center justify-center text-muted-foreground">
-                            <MapPin className="h-12 w-12 mb-4 opacity-50" />
-                            <p className="font-medium">No locations found</p>
-                            <p className="text-sm mt-2">
-                              {debouncedSearchTerm || typeFilter !== "all"
-                                ? "Try adjusting your filters"
-                                : "No locations available"}
+                        <TableCell colSpan={8} className='text-center h-32'>
+                          <div className='flex flex-col items-center justify-center gap-2'>
+                            <MapPin className='h-12 w-12 text-muted-foreground/50' />
+                            <p className='text-muted-foreground font-medium'>
+                              No locations found
+                            </p>
+                            <p className='text-sm text-muted-foreground'>
+                              Try changing filters or search keywords
                             </p>
                           </div>
                         </TableCell>
                       </TableRow>
                     ) : (
-                      locations.map((loc: Location, index: number) => (
-                    <TableRow key={loc.id}>
-                      <TableCell className="font-medium text-muted-foreground">
-                        {(page - 1) * itemsPerPage + index + 1}
-                      </TableCell>
-                      <TableCell className="font-medium max-w-[200px]">
-                        <a
-                          href={`/admin/locations/${loc.id}`}
-                          className="hover:underline text-blue-600 hover:text-blue-800 flex items-center gap-3"
+                      locations.map((loc: any, index: number) => (
+                        <TableRow
+                          key={loc.id}
+                          className='hover:bg-muted/50 transition-colors'
                         >
-                          {loc.imageUrl && loc.imageUrl.length > 0 ? (
-                            <div className="relative h-10 w-10 flex-shrink-0 rounded-md overflow-hidden border border-border">
-                              <Image
-                                src={loc.imageUrl[0]}
-                                alt={loc.name}
-                                fill
-                                className="object-cover"
-                                sizes="40px"
-                              />
-                            </div>
-                          ) : (
-                            <div className="h-10 w-10 flex-shrink-0 rounded-md bg-muted border border-border flex items-center justify-center">
-                              <MapPin className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          )}
-                          <span className="truncate">{loc.name}</span>
-                        </a>
-                      </TableCell>
-                      <TableCell>
-                        {loc.business ? (
-                          <Badge 
-                            variant="outline" 
-                            className="flex items-center w-fit bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200"
-                          >
-                            <Building2 className="h-3 w-3 mr-1" />
-                            <a
-                              href={`/admin/business/${loc.business.accountId}`}
-                              className="hover:underline"
+                          <TableCell className='text-center text-muted-foreground font-medium'>
+                            {(page - 1) * itemsPerPage + index + 1}
+                          </TableCell>
+                          <TableCell>
+                            <Link
+                              href={`/admin/locations/${loc.id}`}
+                              className='flex items-center gap-3 group'
                             >
-                              Business
-                            </a>
-                          </Badge>
-                        ) : (
-                          <Badge 
-                            variant="outline" 
-                            className="flex items-center w-fit bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200"
-                          >
-                            <Globe className="h-3 w-3 mr-1" />
-                            <span>Public</span>
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                        {loc.addressLine}
-                        {loc.addressLevel1 && `, ${loc.addressLevel1}`}
-                      </TableCell>
-                      <TableCell>
-                        {loc.isVisibleOnMap ? (
-                          <Badge 
-                            variant="outline" 
-                            className="flex items-center w-fit bg-green-100 text-green-700 hover:bg-green-100 border-green-200"
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            Visible
-                          </Badge>
-                        ) : (
-                          <Badge 
-                            variant="outline" 
-                            className="flex items-center w-fit bg-gray-100 text-gray-700 hover:bg-gray-100 border-gray-200"
-                          >
-                            Hidden
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>{formatShortDate(loc.createdAt)}</TableCell>
-                    </TableRow>
+                              {loc.imageUrl && loc.imageUrl.length > 0 ? (
+                                <div className='relative h-10 w-10 flex-shrink-0 rounded-md overflow-hidden border-2 border-background'>
+                                  <Image
+                                    src={loc.imageUrl[0]}
+                                    alt={loc.name}
+                                    fill
+                                    className='object-cover'
+                                    sizes='40px'
+                                  />
+                                </div>
+                              ) : (
+                                <div className='h-10 w-10 flex-shrink-0 rounded-md bg-muted border-2 border-background flex items-center justify-center'>
+                                  <MapPin className='h-4 w-4 text-muted-foreground' />
+                                </div>
+                              )}
+                              <div className='flex-1 min-w-0'>
+                                <p className='font-medium group-hover:text-primary transition-colors truncate'>
+                                  {loc.name}
+                                </p>
+                                {loc.business && (
+                                  <p className='text-xs text-muted-foreground flex items-center gap-1 truncate'>
+                                    <Building2 className='h-3 w-3 shrink-0' />
+                                    <span className='truncate'>
+                                      {loc.business.name}
+                                    </span>
+                                  </p>
+                                )}
+                              </div>
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            {loc.ownershipType === 'OWNED_BY_BUSINESS' ? (
+                              <Badge
+                                variant='outline'
+                                className='flex items-center w-fit gap-1 bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200 dark:bg-orange-950 dark:text-orange-400 dark:border-orange-800'
+                              >
+                                <Building2 className='h-3 w-3' />
+                                Business
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant='outline'
+                                className='flex items-center w-fit gap-1 bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800'
+                              >
+                                <Globe className='h-3 w-3' />
+                                Public
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className='text-muted-foreground max-w-[200px]'>
+                            <div className='truncate' title={loc.addressLine}>
+                              {loc.addressLine}
+                              {loc.addressLevel1 && `, ${loc.addressLevel1}`}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className='flex items-center gap-1'>
+                              <Star className='h-4 w-4 text-yellow-500 fill-yellow-500' />
+                              <span className='font-medium'>
+                                {loc.averageRating
+                                  ? loc.averageRating.toFixed(1)
+                                  : '0.0'}
+                              </span>
+                              <span className='text-xs text-muted-foreground'>
+                                ({loc.totalReviews || 0})
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className='flex flex-col gap-1 text-xs text-center'>
+                              <div className='flex items-center justify-center gap-1'>
+                                <CheckCircle className='h-3 w-3 text-green-600' />
+                                <span>{loc.totalCheckIns || 0}</span>
+                              </div>
+                              <div className='flex items-center justify-center gap-1'>
+                                <FileText className='h-3 w-3 text-blue-600' />
+                                <span>{loc.totalPosts || 0}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {loc.isVisibleOnMap ? (
+                              <Badge
+                                variant='outline'
+                                className='px-2.5 py-0.5 bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800'
+                              >
+                                Visible
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant='outline'
+                                className='px-2.5 py-0.5 bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950 dark:text-gray-400 dark:border-gray-800'
+                              >
+                                Hidden
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className='text-sm text-muted-foreground'>
+                            {formatShortDate(loc.createdAt)}
+                          </TableCell>
+                        </TableRow>
                       ))
                     )}
                   </TableBody>
                 </Table>
-              )}
-            </div>
+              </div>
 
-            {/* Pagination */}
-            {meta && meta.totalPages > 1 && (
-              <div className="border-t border-primary/10 px-6 py-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Showing {((page - 1) * itemsPerPage) + 1} to{" "}
-                    {Math.min(page * itemsPerPage, meta.totalItems)} of{" "}
-                    {meta.totalItems} locations
-                  </p>
-                  <div className="flex items-center gap-2">
+              {/* Pagination */}
+              {meta && meta.totalPages > 1 && (
+                <div className='flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t'>
+                  <div className='text-sm text-muted-foreground'>
+                    Showing{' '}
+                    <span className='font-medium text-foreground'>
+                      {(page - 1) * itemsPerPage + 1}
+                    </span>{' '}
+                    -{' '}
+                    <span className='font-medium text-foreground'>
+                      {Math.min(page * itemsPerPage, meta.totalItems)}
+                    </span>{' '}
+                    of{' '}
+                    <span className='font-medium text-foreground'>
+                      {meta.totalItems}
+                    </span>{' '}
+                    locations
+                  </div>
+                  <div className='flex items-center gap-2'>
                     <Button
-                      variant="outline"
-                      size="sm"
+                      variant='outline'
+                      size='sm'
                       onClick={() => setPage(page - 1)}
-                      disabled={page <= 1 || isLoading}
-                      className="h-10"
+                      disabled={page <= 1}
+                      className='gap-1'
                     >
+                      <ChevronLeft className='h-4 w-4' />
                       Previous
                     </Button>
-                    <span className="text-sm text-muted-foreground px-2">
-                      Page {page} of {meta.totalPages}
-                    </span>
+                    <div className='flex items-center gap-1 px-3'>
+                      <span className='text-sm font-medium'>
+                        Page {page} of {meta.totalPages}
+                      </span>
+                    </div>
                     <Button
-                      variant="outline"
-                      size="sm"
+                      variant='outline'
+                      size='sm'
                       onClick={() => setPage(page + 1)}
-                      disabled={page >= meta.totalPages || isLoading}
-                      className="h-10"
+                      disabled={page >= meta.totalPages}
+                      className='gap-1'
                     >
                       Next
+                      <ChevronRight className='h-4 w-4' />
                     </Button>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
-      </PageContainer>
-    );
-  }
+    </div>
+  );
+}
