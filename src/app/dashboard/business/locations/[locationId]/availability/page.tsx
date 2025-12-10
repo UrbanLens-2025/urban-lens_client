@@ -1336,16 +1336,16 @@ export default function AvailabilityPage({
                   ))}
                 </div>
 
-                {/* Time Slot Rows - Show only business hours (6 AM - 10 PM) for shorter calendar */}
-                <div className="space-y-0.5 max-h-[480px] overflow-y-auto">
-                  {HOURS.filter(hour => hour >= 6 && hour < 22).map((hour) => {
-                    const isNightTime = hour >= 21 || hour <= 5;
+                {/* Time Slot Rows - Show all 24 hours (00:00 - 23:00) */}
+                <div className="space-y-0.5 overflow-y-auto" style={{ height: '600px', minHeight: '600px', maxHeight: '600px' }}>
+                  {HOURS.map((hour) => {
+                    const isNightTime = (hour >= 21 || hour <= 5);
                     const isBusinessHours = hour >= 9 && hour <= 17;
                     return (
                       <div
                         key={hour}
                         className={cn(
-                          "grid grid-cols-[80px_repeat(7,1fr)] gap-1 rounded px-0.5 py-0.5 transition-colors",
+                          "grid grid-cols-[80px_repeat(7,1fr)] gap-1 rounded px-0.5 py-0.5 transition-colors min-h-[22px]",
                           isNightTime && "bg-muted/20",
                           isBusinessHours && !isNightTime && "bg-muted/5"
                         )}

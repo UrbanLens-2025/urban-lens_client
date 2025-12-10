@@ -1015,7 +1015,12 @@ export function AvailabilityCalendar({
             <div 
               className="select-none"
               onMouseLeave={handleCalendarMouseLeave}
-              style={{ maxHeight: 'calc(85vh - 280px)', overflowY: 'auto' }}
+              style={{ 
+                maxHeight: 'calc(85vh - 280px)', 
+                overflowY: 'auto', 
+                minHeight: '672px',
+                height: '672px' // Fixed height to show all 24 hours (24 hours × 28px = 672px)
+              }}
             >
               {/* Header Row - Dates */}
               <div className="grid grid-cols-[70px_repeat(7,1fr)] gap-0">
