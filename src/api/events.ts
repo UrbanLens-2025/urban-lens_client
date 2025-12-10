@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axiosInstance from "./axios-config";
-import type { ApiResponse, PaginatedData, EventRequest, GetEventRequestsParams, CreateEventRequestPayload, GetBookableLocationsParams, BookableLocation, GetEventsParams, Event, UpdateEventPayload, AddEventTagsPayload, RemoveEventTagsPayload, EventTagResponse, CreateTicketPayload, UpdateTicketPayload, Ticket, EventAttendance, GetEventAttendanceParams, ConfirmAttendancePayload, LocationBooking } from "@/types";
+import type { ApiResponse, PaginatedData, EventRequest, GetEventRequestsParams, CreateEventRequestPayload, GetBookableLocationsParams, BookableLocation, GetEventsParams, Event, UpdateEventPayload, AddEventTagsPayload, RemoveEventTagsPayload, EventTagResponse, CreateTicketPayload, UpdateTicketPayload, Ticket, EventAttendance, GetEventAttendanceParams, ConfirmAttendancePayload, LocationBooking, Order } from "@/types";
 
 export const getEventRequests = async ({
   page = 1,
@@ -387,4 +387,29 @@ export const finishEvent = async (eventId: string): Promise<Event> => {
     {}
   );
   return data.data;
+};
+
+export const getEventOrderById = async (
+  eventId: string,
+  orderId: string
+): Promise<Order> => {
+  const { data } = await axiosInstance.get<ApiResponse<Order>>(
+    `/v1/creator/events/${eventId}/orders/${orderId}`
+  );
+  return data.data;
+};
+
+export interface ConfirmAttendanceV2Payload {
+  eventAttendanceIds: string[];
+  ticketOrderId: string;
+}
+
+export const confirmAttendanceV2 = async (
+  eventId: string,
+  payload: ConfirmAttendanceV2Payload
+): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>(
+    `/v1/creator/events/${eventId}/attendance/confirm-usage-v2`,
+    payload
+  );
 };

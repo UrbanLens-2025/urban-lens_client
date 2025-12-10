@@ -1058,8 +1058,28 @@ export interface Order {
   currency: string;
   status: string;
   referencedTransactionId: string | null;
+  refundedAt: string | null;
+  refundReason: string | null;
+  eventId: string;
   createdBy: User;
   orderDetails: OrderDetail[];
+  eventAttendances?: OrderEventAttendance[];
+}
+
+export interface OrderEventAttendance {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  orderId: string;
+  eventId: string;
+  status: string;
+  ownerId: string;
+  ownerEmail: string;
+  ownerPhoneNumber: string | null;
+  referencedTicketOrderId: string;
+  ticketId: string;
+  numberOfAttendees: number;
+  checkedInAt: string | null;
 }
 
 export interface EventAttendance {

@@ -1,10 +1,22 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Html5Qrcode } from "html5-qrcode";
 import { useEventById } from "@/hooks/events/useEventById";
-import { useConfirmAttendance } from "@/hooks/events/useConfirmAttendance";
+import { useEventOrder } from "@/hooks/events/useEventOrder";
+import { useConfirmAttendanceV2 } from "@/hooks/events/useConfirmAttendanceV2";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,8 +31,134 @@ import {
   User,
   ScanLine,
   RotateCcw,
+  Ticket,
+  CreditCard,
+  Mail,
+  Phone,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatDate } from "@/lib/utils";
+import type { Order, OrderEventAttendance } from "@/types";
+
+// Format relative time
+const getRelativeTime = (dateString: string): string => {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) {
+    return 'Just now';
+  }
+
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
+  }
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+  }
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) {
+    return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+  }
+
+  const diffInMonths = Math.floor(diffInDays / 30);
+  return `${diffInMonths} ${diffInMonths === 1 ? 'month' : 'months'} ago`;
+};
+
+const formatCurrency = (amount: number, currency: string) => {
+  if (currency === "VND") {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  }
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency,
+  }).format(amount);
+};
+
+// Helper to get attendance status display
+const getAttendanceStatusInfo = (status: string, checkedInAt: string | null) => {
+  const isCheckedIn = status.toUpperCase() === "ATTENDED" || checkedInAt !== null;
+  return {
+    isCheckedIn,
+    label: isCheckedIn ? "Checked In" : "Not Checked In",
+    className: isCheckedIn 
+      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+      : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  };
+};
+
+// Group attendances by ticket
+interface GroupedAttendance {
+  ticketId: string;
+  ticketName: string;
+  attendances: OrderEventAttendance[];
+  allCheckedIn: boolean;
+  checkedInCount: number;
+  totalCount: number;
+}
+
+const groupAttendancesByTicket = (
+  attendances: OrderEventAttendance[] | undefined,
+  orderDetails: Order['orderDetails']
+): GroupedAttendance[] => {
+  if (!attendances || attendances.length === 0) return [];
+
+  // Create a map to group attendances
+  const groupMap = new Map<string, OrderEventAttendance[]>();
+  
+  attendances.forEach((attendance) => {
+    const existing = groupMap.get(attendance.ticketId) || [];
+    groupMap.set(attendance.ticketId, [...existing, attendance]);
+  });
+
+  // Convert to array and enrich with ticket info
+  const groups: GroupedAttendance[] = [];
+  
+  groupMap.forEach((attendanceList, ticketId) => {
+    // Find ticket name from orderDetails
+    const orderDetail = orderDetails.find((d) => d.ticketId === ticketId);
+    const ticketName = orderDetail?.ticketSnapshot?.displayName 
+      || orderDetail?.ticket?.displayName 
+      || "Unknown Ticket";
+
+    // Sort: not checked in first, then checked in
+    const sortedAttendances = [...attendanceList].sort((a, b) => {
+      const aCheckedIn = a.status.toUpperCase() === "ATTENDED" || a.checkedInAt !== null;
+      const bCheckedIn = b.status.toUpperCase() === "ATTENDED" || b.checkedInAt !== null;
+      if (aCheckedIn === bCheckedIn) return 0;
+      return aCheckedIn ? 1 : -1;
+    });
+
+    const checkedInCount = sortedAttendances.filter(
+      (a) => a.status.toUpperCase() === "ATTENDED" || a.checkedInAt !== null
+    ).length;
+
+    groups.push({
+      ticketId,
+      ticketName,
+      attendances: sortedAttendances,
+      allCheckedIn: checkedInCount === sortedAttendances.length,
+      checkedInCount,
+      totalCount: sortedAttendances.length,
+    });
+  });
+
+  // Sort groups: groups with unchecked attendees first
+  return groups.sort((a, b) => {
+    if (a.allCheckedIn === b.allCheckedIn) return 0;
+    return a.allCheckedIn ? 1 : -1;
+  });
+};
 
 export default function QRScanPage({
   params,
@@ -34,11 +172,8 @@ export default function QRScanPage({
   const lastDimensionsRef = useRef<{ width: number; height: number } | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
-  const [scanResult, setScanResult] = useState<{
-    success: boolean;
-    message: string;
-    data?: any;
-  } | null>(null);
+  const [scannedOrderId, setScannedOrderId] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [containerDimensions, setContainerDimensions] = useState<{
@@ -49,8 +184,109 @@ export default function QRScanPage({
   const [currentCameraId, setCurrentCameraId] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
 
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [selectedAttendances, setSelectedAttendances] = useState<Set<string>>(new Set());
+  const [showCheckInConfirm, setShowCheckInConfirm] = useState(false);
+
   const { data: event, isLoading: isLoadingEvent } = useEventById(eventId);
-  const confirmAttendance = useConfirmAttendance(eventId);
+  const { data: orderData, isLoading: isLoadingOrder, error: orderError, refetch: refetchOrder } = useEventOrder(eventId, scannedOrderId);
+  const confirmAttendance = useConfirmAttendanceV2(eventId);
+
+  // Group attendances by ticket
+  const groupedAttendances = useMemo(() => {
+    if (!orderData) return [];
+    return groupAttendancesByTicket(orderData.eventAttendances, orderData.orderDetails);
+  }, [orderData]);
+
+  // Auto-collapse groups where all are checked in
+  useEffect(() => {
+    if (groupedAttendances.length > 0) {
+      const autoCollapse = new Set<string>();
+      groupedAttendances.forEach((group) => {
+        if (group.allCheckedIn) {
+          autoCollapse.add(group.ticketId);
+        }
+      });
+      setCollapsedGroups(autoCollapse);
+    }
+  }, [groupedAttendances]);
+
+  const toggleGroupCollapse = (ticketId: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(ticketId)) {
+        next.delete(ticketId);
+      } else {
+        next.add(ticketId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAttendanceSelection = (attendanceId: string) => {
+    setSelectedAttendances((prev) => {
+      const next = new Set(prev);
+      if (next.has(attendanceId)) {
+        next.delete(attendanceId);
+      } else {
+        next.add(attendanceId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllInGroup = (group: GroupedAttendance) => {
+    const uncheckedIds = group.attendances
+      .filter((a) => a.status.toUpperCase() !== "ATTENDED" && !a.checkedInAt)
+      .map((a) => a.id);
+    
+    setSelectedAttendances((prev) => {
+      const next = new Set(prev);
+      uncheckedIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  const deselectAllInGroup = (group: GroupedAttendance) => {
+    const groupIds = group.attendances.map((a) => a.id);
+    setSelectedAttendances((prev) => {
+      const next = new Set(prev);
+      groupIds.forEach((id) => next.delete(id));
+      return next;
+    });
+  };
+
+  const handleCheckInClick = () => {
+    if (selectedAttendances.size === 0) return;
+    setShowCheckInConfirm(true);
+  };
+
+  const handleConfirmCheckIn = async () => {
+    if (selectedAttendances.size === 0 || !orderData) return;
+
+    try {
+      await confirmAttendance.mutateAsync({
+        eventAttendanceIds: Array.from(selectedAttendances),
+        ticketOrderId: orderData.id,
+      });
+      setSelectedAttendances(new Set());
+      setShowCheckInConfirm(false);
+      refetchOrder();
+    } catch (error) {
+      // Error is handled by the hook
+      setShowCheckInConfirm(false);
+    }
+  };
+
+  const getSelectedCountInGroup = (group: GroupedAttendance) => {
+    return group.attendances.filter((a) => selectedAttendances.has(a.id)).length;
+  };
+
+  const getUncheckedCountInGroup = (group: GroupedAttendance) => {
+    return group.attendances.filter(
+      (a) => a.status.toUpperCase() !== "ATTENDED" && !a.checkedInAt
+    ).length;
+  };
 
   // Update container dimensions
   useEffect(() => {
@@ -159,6 +395,15 @@ export default function QRScanPage({
     };
   }, []);
 
+  // Handle order error
+  useEffect(() => {
+    if (orderError) {
+      const errorMessage = (orderError as any)?.response?.data?.message || "Failed to fetch order details";
+      setScanError(errorMessage);
+      toast.error(errorMessage);
+    }
+  }, [orderError]);
+
   const getQRBoxSize = (): { width: number; height: number } => {
     const element = document.getElementById("qr-reader");
     if (element) {
@@ -249,7 +494,7 @@ export default function QRScanPage({
           (decodedText) => {
             handleScanSuccess(decodedText);
           },
-          (errorMessage) => {
+          () => {
             // Error callback - ignore for continuous scanning
           }
         );
@@ -266,7 +511,7 @@ export default function QRScanPage({
           (decodedText) => {
             handleScanSuccess(decodedText);
           },
-          (errorMessage) => {
+          () => {
             // Error callback - ignore for continuous scanning
           }
         );
@@ -342,7 +587,8 @@ export default function QRScanPage({
     }
 
     setCameraError(null);
-    setScanResult(null);
+    setScanError(null);
+    setScannedOrderId(null);
     setIsStarting(true);
 
     // Show the scanner container first - this will trigger useEffect to initialize
@@ -370,27 +616,31 @@ export default function QRScanPage({
     }
   };
 
-  const parseQRCodeData = (qrText: string): {
-    eventAttendanceId?: string;
-    checkingInAccountId?: string;
-  } | null => {
-    try {
-      // Try to parse as JSON first
-      const parsed = JSON.parse(qrText);
-      return {
-        eventAttendanceId: parsed.eventAttendanceId || parsed.id,
-        checkingInAccountId: parsed.checkingInAccountId || parsed.accountId,
-      };
-    } catch {
-      // If not JSON, assume it's just the attendance ID
-      // Or it could be in format: attendanceId:accountId
-      if (qrText.includes(":")) {
-        const [eventAttendanceId, checkingInAccountId] = qrText.split(":");
-        return { eventAttendanceId, checkingInAccountId };
-      }
-      // Assume it's just the attendance ID
-      return { eventAttendanceId: qrText };
+  const parseQRCodeData = (qrText: string): string | null => {
+    // Trim whitespace
+    const trimmed = qrText.trim();
+    
+    // UUID regex pattern
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    if (uuidPattern.test(trimmed)) {
+      return trimmed;
     }
+    
+    // Try to extract UUID from JSON
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed.orderId && uuidPattern.test(parsed.orderId)) {
+        return parsed.orderId;
+      }
+      if (parsed.id && uuidPattern.test(parsed.id)) {
+        return parsed.id;
+      }
+    } catch {
+      // Not JSON, continue
+    }
+    
+    return null;
   };
 
   const handleScanSuccess = async (decodedText: string) => {
@@ -402,53 +652,39 @@ export default function QRScanPage({
     setLastScannedCode(decodedText);
     stopScanner();
 
-    const qrData = parseQRCodeData(decodedText);
+    const orderId = parseQRCodeData(decodedText);
 
-    if (!qrData) {
-      setScanResult({
-        success: false,
-        message: "Invalid QR code format",
-      });
+    if (!orderId) {
+      setScanError("Invalid QR code format. Expected a valid order ID.");
       toast.error("Invalid QR code format");
       return;
     }
 
-    // If we don't have checkingInAccountId, we might need to get it from the QR code
-    // or from the user context. For now, we'll require it in the QR code.
-    if (!qrData.eventAttendanceId || !qrData.checkingInAccountId) {
-      setScanResult({
-        success: false,
-        message:
-          "QR code is missing required information. Please ensure the QR code contains both attendance ID and account ID.",
-      });
-      toast.error("QR code missing required information");
-      return;
-    }
+    // Set the order ID to trigger the query
+    setScannedOrderId(orderId);
+    setScanError(null);
+  };
 
-    try {
-      await confirmAttendance.mutateAsync({
-        eventAttendanceId: qrData.eventAttendanceId,
-        checkingInAccountId: qrData.checkingInAccountId,
-      });
+  const resetScan = () => {
+    setScannedOrderId(null);
+    setScanError(null);
+    setLastScannedCode(null);
+    setCollapsedGroups(new Set());
+    setSelectedAttendances(new Set());
+  };
 
-      setScanResult({
-        success: true,
-        message: "Attendance confirmed successfully!",
-        data: qrData,
-      });
-
-      // Auto-restart scanner after 2 seconds
-      setTimeout(() => {
-        setScanResult(null);
-        setLastScannedCode(null);
-        startScanner();
-      }, 2000);
-    } catch (error) {
-      setScanResult({
-        success: false,
-        message: "Failed to confirm attendance. Please try again.",
-        data: qrData,
-      });
+  const getStatusBadge = (status: string) => {
+    switch (status.toUpperCase()) {
+      case "COMPLETED":
+      case "PAID":
+        return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">{status}</Badge>;
+      case "PENDING":
+        return <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">{status}</Badge>;
+      case "CANCELLED":
+      case "FAILED":
+        return <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">{status}</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
@@ -466,6 +702,402 @@ export default function QRScanPage({
         <div className="text-center py-20 text-red-500">
           <p className="font-medium">Event not found</p>
         </div>
+      </div>
+    );
+  }
+
+  // Show order details screen
+  if (scannedOrderId && (orderData || isLoadingOrder)) {
+    return (
+      <div className="space-y-6 p-6 max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={resetScan}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Order Details</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {event.displayName}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {isLoadingOrder ? (
+          <Card>
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center justify-center">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground">Loading order details...</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : orderData ? (
+          <>
+            {/* Success Banner */}
+            <div className="p-4 rounded-lg border-2 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-green-900 dark:text-green-200">
+                    Valid Ticket Found!
+                  </p>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    Order #{orderData.orderNumber}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Order Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Order Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Order Number</p>
+                    <p className="font-medium font-mono">{orderData.orderNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Status</p>
+                    <div className="mt-1">{getStatusBadge(orderData.status)}</div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Amount</p>
+                    <p className="font-semibold text-lg">
+                      {formatCurrency(Number(orderData.totalPaymentAmount), orderData.currency)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Order Date</p>
+                    <p className="font-medium">{formatDate(orderData.createdAt)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Customer Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Customer Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    {orderData.createdBy.avatarUrl ? (
+                      <img 
+                        src={orderData.createdBy.avatarUrl} 
+                        alt={`${orderData.createdBy.firstName} ${orderData.createdBy.lastName}`}
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-6 w-6 text-primary" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-lg">
+                      {orderData.createdBy.firstName} {orderData.createdBy.lastName}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{orderData.createdBy.email}</span>
+                  </div>
+                  {orderData.createdBy.phoneNumber && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{orderData.createdBy.phoneNumber}</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Event Attendances */}
+            {groupedAttendances.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Ticket className="h-5 w-5" />
+                      Attendees ({orderData.eventAttendances?.length || 0})
+                    </CardTitle>
+                    {selectedAttendances.size > 0 && (
+                      <Button
+                        size="sm"
+                        onClick={handleCheckInClick}
+                        disabled={confirmAttendance.isPending}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {confirmAttendance.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Checking in...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Check In ({selectedAttendances.size})
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  {groupedAttendances.map((group) => {
+                    const isCollapsed = collapsedGroups.has(group.ticketId);
+                    const selectedInGroup = getSelectedCountInGroup(group);
+                    const uncheckedInGroup = getUncheckedCountInGroup(group);
+                    
+                    return (
+                      <div key={group.ticketId}>
+                        {/* Ticket Group Header */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleGroupCollapse(group.ticketId)}
+                            className="flex-1 px-2 py-2 flex items-center justify-between text-sm hover:bg-muted/50 rounded-lg transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{group.ticketName}</span>
+                              <span className="text-muted-foreground">·</span>
+                              <span className={`text-xs ${group.allCheckedIn ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
+                                {group.checkedInCount}/{group.totalCount} checked in
+                              </span>
+                              {group.allCheckedIn && (
+                                <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                              )}
+                            </div>
+                            {isCollapsed ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                          {/* Select All / Deselect All for group */}
+                          {!isCollapsed && uncheckedInGroup > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs h-7 px-2"
+                              onClick={() => {
+                                if (selectedInGroup === uncheckedInGroup) {
+                                  deselectAllInGroup(group);
+                                } else {
+                                  selectAllInGroup(group);
+                                }
+                              }}
+                            >
+                              {selectedInGroup === uncheckedInGroup ? "Deselect" : "Select All"}
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Attendance List */}
+                        {!isCollapsed && (
+                          <div className="ml-4 border-l-2 border-muted pl-4 space-y-0.5 mt-1">
+                            {group.attendances.map((attendance, index) => {
+                              const statusInfo = getAttendanceStatusInfo(
+                                attendance.status,
+                                attendance.checkedInAt
+                              );
+                              const isSelected = selectedAttendances.has(attendance.id);
+
+                              return (
+                                <div
+                                  key={attendance.id}
+                                  className={`flex items-center gap-3 py-2 px-2 rounded-md transition-colors ${
+                                    isSelected ? "bg-green-50 dark:bg-green-950/20" : "hover:bg-muted/30"
+                                  }`}
+                                >
+                                  {/* Checkbox or status indicator */}
+                                  {!statusInfo.isCheckedIn ? (
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() => toggleAttendanceSelection(attendance.id)}
+                                      className="flex-shrink-0"
+                                    />
+                                  ) : (
+                                    <div className="h-4 w-4 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                                      <CheckCircle className="h-3 w-3 text-white" />
+                                    </div>
+                                  )}
+
+                                  {/* Number */}
+                                  <span className="text-xs text-muted-foreground font-mono w-5 flex-shrink-0">
+                                    #{index + 1}
+                                  </span>
+
+                                  {/* Content */}
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <span className={`font-medium ${
+                                        statusInfo.isCheckedIn 
+                                          ? "text-green-700 dark:text-green-400" 
+                                          : "text-foreground"
+                                      }`}>
+                                        {statusInfo.label}
+                                      </span>
+                                      {statusInfo.isCheckedIn && attendance.checkedInAt && (
+                                        <span className="text-xs text-muted-foreground">
+                                          · {formatDate(attendance.checkedInAt)} ({getRelativeTime(attendance.checkedInAt)})
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                      Purchased {getRelativeTime(attendance.createdAt)}
+                                    </p>
+                                  </div>
+                                  
+                                  {/* Uncheck button placeholder for checked-in items */}
+                                  {statusInfo.isCheckedIn && (
+                                    <div className="flex-shrink-0">
+                                      {/* Uncheck button will go here */}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Order Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Ticket className="h-5 w-5" />
+                  Order Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {orderData.orderDetails.map((detail) => (
+                    <div 
+                      key={detail.id} 
+                      className="flex items-center justify-between py-2 border-b last:border-b-0"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium">{detail.ticketSnapshot.displayName}</p>
+                      </div>
+                      <div className="text-right text-sm">
+                        <span className="text-muted-foreground">
+                          {detail.quantity} × {formatCurrency(Number(detail.unitPrice), detail.currency)}
+                        </span>
+                        <span className="ml-2 font-medium">
+                          = {formatCurrency(detail.subTotal, detail.currency)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-2 border-t font-semibold">
+                    <span>Total</span>
+                    <span>{formatCurrency(Number(orderData.totalPaymentAmount), orderData.currency)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <Button 
+                onClick={resetScan} 
+                variant="outline" 
+                className="flex-1"
+              >
+                <QrCode className="h-4 w-4 mr-2" />
+                Scan Another
+              </Button>
+              <Button 
+                onClick={() => router.push(`/dashboard/creator/events/${eventId}/attendance`)}
+                variant="outline"
+                className="flex-1"
+              >
+                Go to Attendance List
+              </Button>
+            </div>
+
+            {/* Check-in Confirmation Dialog */}
+            <AlertDialog open={showCheckInConfirm} onOpenChange={setShowCheckInConfirm}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm Check-in</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to check in {selectedAttendances.size} {selectedAttendances.size === 1 ? "attendee" : "attendees"}?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={confirmAttendance.isPending}>
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleConfirmCheckIn}
+                    disabled={confirmAttendance.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {confirmAttendance.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Checking in...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Yes, Check In
+                      </>
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
+        ) : null}
+
+        {/* Error State */}
+        {scanError && !isLoadingOrder && (
+          <Card>
+            <CardContent className="py-8">
+              <div className="flex flex-col items-center justify-center">
+                <XCircle className="h-12 w-12 text-red-500 mb-4" />
+                <p className="font-semibold text-red-600 dark:text-red-400 mb-2">
+                  Failed to Load Order
+                </p>
+                <p className="text-sm text-muted-foreground text-center mb-4">
+                  {scanError}
+                </p>
+                <div className="flex gap-3">
+                  <Button onClick={() => refetchOrder()} variant="outline">
+                    Try Again
+                  </Button>
+                  <Button onClick={resetScan} variant="outline">
+                    Scan Another
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
@@ -507,7 +1139,7 @@ export default function QRScanPage({
             2. Point your camera at the attendee's QR code ticket
           </p>
           <p className="text-sm text-muted-foreground">
-            3. The attendance will be confirmed automatically when a valid QR code is scanned
+            3. The ticket details will be displayed automatically when a valid QR code is scanned
           </p>
         </CardContent>
       </Card>
@@ -664,65 +1296,39 @@ export default function QRScanPage({
             </div>
           )}
 
-          {/* Scan Result */}
-          {scanResult && (
-            <div
-              className={`p-4 rounded-lg border-2 ${
-                scanResult.success
-                  ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-                  : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
-              }`}
-            >
+          {/* Scan Error */}
+          {scanError && !scannedOrderId && (
+            <div className="p-4 rounded-lg border-2 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
               <div className="flex items-start gap-3">
-                {scanResult.success ? (
-                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                ) : (
-                  <XCircle className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                )}
+                <XCircle className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p
-                    className={`font-semibold ${
-                      scanResult.success
-                        ? "text-green-900 dark:text-green-200"
-                        : "text-red-900 dark:text-red-200"
-                    }`}
-                  >
-                    {scanResult.success
-                      ? "Attendance Confirmed!"
-                      : "Confirmation Failed"}
+                  <p className="font-semibold text-red-900 dark:text-red-200">
+                    Scan Failed
                   </p>
-                  <p
-                    className={`text-sm mt-1 ${
-                      scanResult.success
-                        ? "text-green-700 dark:text-green-300"
-                        : "text-red-700 dark:text-red-300"
-                    }`}
-                  >
-                    {scanResult.message}
+                  <p className="text-sm mt-1 text-red-700 dark:text-red-300">
+                    {scanError}
                   </p>
-                  {scanResult.data && (
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      <p>Attendance ID: {scanResult.data.eventAttendanceId}</p>
-                      <p>Account ID: {scanResult.data.checkingInAccountId}</p>
-                    </div>
-                  )}
                 </div>
               </div>
-            </div>
-          )}
-
-          {confirmAttendance.isPending && (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-              <span className="text-sm text-muted-foreground">
-                Confirming attendance...
-              </span>
+              <div className="mt-4">
+                <Button 
+                  onClick={() => {
+                    setScanError(null);
+                    setLastScannedCode(null);
+                    startScanner();
+                  }} 
+                  size="sm"
+                  variant="outline"
+                >
+                  Try Again
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Manual Entry Option for Testing */}
+      {/* Manual Entry Option */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -732,33 +1338,34 @@ export default function QRScanPage({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            You can manually enter the QR code data:
+            You can manually enter the order ID from the QR code:
           </p>
           <div className="space-y-3">
             <div>
               <label className="text-sm font-medium mb-2 block">
-                QR Code Data (JSON or format: attendanceId:accountId)
+                Order ID (UUID)
               </label>
-              <textarea
-                className="w-full min-h-[100px] p-3 border rounded-md font-mono text-sm"
-                placeholder='{"eventAttendanceId": "xxx", "checkingInAccountId": "xxx"}'
+              <input
+                type="text"
+                className="w-full p-3 border rounded-md font-mono text-sm"
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                 id="manual-qr-input"
               />
             </div>
             <Button
               onClick={() => {
-                const input = document.getElementById("manual-qr-input") as HTMLTextAreaElement;
+                const input = document.getElementById("manual-qr-input") as HTMLInputElement;
                 const value = input?.value?.trim();
                 if (value) {
                   handleScanSuccess(value);
                   input.value = "";
                 } else {
-                  toast.error("Please enter QR code data");
+                  toast.error("Please enter an order ID");
                 }
               }}
               className="w-full"
             >
-              Confirm Attendance
+              Look Up Order
             </Button>
           </div>
           <div className="pt-4 border-t">
@@ -777,4 +1384,3 @@ export default function QRScanPage({
     </div>
   );
 }
-
