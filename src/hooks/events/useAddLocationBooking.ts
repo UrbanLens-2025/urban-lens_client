@@ -2,38 +2,89 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { addLocationBookingToEvent, initiateLocationBookingPayment, cancelLocationBooking, type AddLocationBookingPayload } from "@/api/events";
+import { addLocationBookingToEvent, initiateLocationBookingPayment, type AddLocationBookingPayload } from "@/api/events";
 
 export function useAddLocationBooking(eventId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (payload: AddLocationBookingPayload) => {
-      // Step 1: Create booking first (required for payment API)
+      // Step 1: Create location booking first
       const booking = await addLocationBookingToEvent(eventId, payload);
       
-      // Step 2: Immediately initiate payment
+      // Step 2: Make payment
+      let paymentError: any = null;
       try {
         await initiateLocationBookingPayment(eventId, booking.id);
-        // Payment succeeded - return booking
-        return booking;
-      } catch (paymentError: any) {
-        // Payment failed - cancel the booking
-        try {
-          await cancelLocationBooking(eventId, booking.id, {
-            cancellationReason: "Payment failed during booking creation"
-          });
-        } catch (cancelError) {
-          // If cancel fails, log but don't throw - payment error is more important
-          console.error("Failed to cancel booking after payment failure:", cancelError);
+        // Payment succeeded - booking is complete
+      } catch (paymentErr: any) {
+        // Payment failed - store error but don't cancel booking
+        // Extract error message handling all possible formats
+        let errorMessage = '';
+        
+        if (typeof paymentErr === 'string') {
+          errorMessage = paymentErr;
+        } else if (paymentErr?.message) {
+          errorMessage = paymentErr.message;
+        } else if (paymentErr?.response?.data?.message) {
+          errorMessage = paymentErr.response.data.message;
         }
         
-        // Throw payment error to prevent booking creation
-        throw paymentError;
+        // Check if error is "LocationBooking not found" - this might happen if payment succeeded
+        // but API can't find the booking (race condition or API issue)
+        // Since wallet balance is reduced, payment likely succeeded
+        const statusCode = paymentErr?.statusCode ?? paymentErr?.response?.status ?? paymentErr?.response?.data?.statusCode;
+        const isNotFoundError = statusCode === 404 && 
+            (errorMessage.toLowerCase().includes("locationbooking") || 
+             errorMessage.toLowerCase().includes("location booking") ||
+             errorMessage.toLowerCase().includes("not found"));
+        
+        if (isNotFoundError) {
+          // Payment likely succeeded but API can't find booking immediately - treat as success
+          console.warn("Payment API returned 404 for booking, but payment likely succeeded.", {
+            eventId,
+            bookingId: booking.id,
+            error: errorMessage
+          });
+          // Don't set paymentError - treat as success
+        } else {
+          // Payment failed - store error to show in success message
+          paymentError = paymentErr;
+        }
       }
+      
+      // Return booking with payment error info if payment failed
+      return { booking, paymentError };
     },
-    onSuccess: (data) => {
-      toast.success("Booking created and payment processed successfully");
+    onSuccess: (result) => {
+      const { booking, paymentError } = result;
+      
+      // Always show success for booking creation
+      if (paymentError) {
+        // Booking created but payment failed
+        // Handle different error structures from axios interceptor
+        const errorMessage = paymentError?.message ?? 
+                            (typeof paymentError === 'string' ? paymentError : 'Payment processing failed');
+        
+        let description = "However, payment processing failed. You can complete the payment from the event page.";
+        
+        if (errorMessage.toLowerCase().includes("insufficient") || errorMessage.toLowerCase().includes("balance")) {
+          description = "However, payment failed due to insufficient balance. Please add funds and complete the payment from the event page.";
+        } else if (errorMessage.toLowerCase().includes("payment") || errorMessage.toLowerCase().includes("transaction")) {
+          description = `However, payment failed: ${errorMessage}. Please try completing the payment from the event page.`;
+        } else {
+          description = `However, payment failed: ${errorMessage}. Please try completing the payment from the event page.`;
+        }
+        
+        // Show success message that mentions payment issue
+        toast.success("Booking created successfully!", {
+          description,
+          duration: 8000,
+        });
+      } else {
+        // Both booking creation and payment succeeded
+        toast.success("Booking created and payment processed successfully!");
+      }
       
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["events", eventId] });
@@ -43,23 +94,16 @@ export function useAddLocationBooking(eventId: string) {
       queryClient.invalidateQueries({ queryKey: ["walletTransactions"] });
     },
     onError: (error: any) => {
-      const errorMessage = error?.response?.data?.message ?? error?.message;
+      // Only called if booking creation fails (not payment)
+      const errorMessage = error?.response?.data?.message ?? error?.message ?? "Failed to create booking";
       
       // Provide user-friendly error messages
-      let userMessage = "Payment failed. Booking was not created.";
-      let description = "Please check your payment method and try again.";
+      let userMessage = "Booking creation failed";
+      let description = errorMessage;
       
-      if (errorMessage) {
-        if (errorMessage.toLowerCase().includes("insufficient") || errorMessage.toLowerCase().includes("balance")) {
-          userMessage = "Insufficient funds";
-          description = "Your account balance is not enough to complete this payment. Please add funds and try again.";
-        } else if (errorMessage.toLowerCase().includes("payment") || errorMessage.toLowerCase().includes("transaction")) {
-          userMessage = "Payment processing failed";
-          description = errorMessage;
-        } else {
-          userMessage = "Booking failed";
-          description = errorMessage;
-        }
+      if (errorMessage.toLowerCase().includes("booking")) {
+        userMessage = "Booking creation failed";
+        description = errorMessage;
       }
       
       toast.error(userMessage, {

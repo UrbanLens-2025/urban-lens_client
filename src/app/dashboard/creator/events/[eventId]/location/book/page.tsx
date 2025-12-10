@@ -280,6 +280,7 @@ function LocationDetailsOverlay({
           router.push(`/dashboard/creator/events/${eventId}/location`);
           router.refresh();
         },
+        // Error handling is done in the hook's onError
       }
     );
   };
