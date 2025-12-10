@@ -492,3 +492,46 @@ export const runScheduledJob = async (scheduledJobId: number): Promise<void> => 
     `/v1/admin/scheduled-jobs/${scheduledJobId}/run`
   );
 };
+
+export interface SystemConfigValue {
+  id: string;
+  key: string;
+  value: string | number;
+  createdAt: string;
+  updatedAt: string;
+  updatedById: string | null;
+  updatedBy: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    role: string;
+    avatarUrl: string | null;
+    coverUrl: string | null;
+    hasOnboarded: boolean;
+    isLocked: boolean;
+  } | null;
+}
+
+export interface UpdateSystemConfigValuePayload {
+  value: string;
+}
+
+export const getSystemConfigValues = async (): Promise<SystemConfigValue[]> => {
+  const { data } = await axiosInstance.get<ApiResponse<SystemConfigValue[]>>(
+    '/v1/admin/system-config/values'
+  );
+  return data.data;
+};
+
+export const updateSystemConfigValue = async (
+  key: string,
+  payload: UpdateSystemConfigValuePayload
+): Promise<SystemConfigValue> => {
+  const { data } = await axiosInstance.put<ApiResponse<SystemConfigValue>>(
+    `/v1/admin/system-config/value/${key}`,
+    payload
+  );
+  return data.data;
+};

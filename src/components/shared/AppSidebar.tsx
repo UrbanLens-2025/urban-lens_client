@@ -80,6 +80,7 @@ const adminNavGroups = [
     groupLabel: 'System Settings',
     items: [
       { title: 'Scheduled Jobs', url: '/admin/system/scheduled-jobs', icon: IconClock },
+      { title: 'System Config Table', url: '/admin/system/configuration', icon: IconSettings },
     ]
   },
 ];
