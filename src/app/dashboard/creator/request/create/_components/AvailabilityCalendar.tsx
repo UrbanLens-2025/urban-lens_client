@@ -762,8 +762,21 @@ export function AvailabilityCalendar({
     }
   }, [isDragging, dragStart, dragCurrent, dates, timeSlots, selectedSlots, onSlotsChange, availabilitySlots, bookedSlotsSet, locationId, today]);
 
+  // Check if a cell is within the event date range
+  const isCellInEventRange = (date: Date, timeSlot: Date): boolean => {
+    if (!eventStartDate || !eventEndDate) return false;
+    
+    const cellDateTime = new Date(date);
+    cellDateTime.setHours(timeSlot.getHours(), 0, 0, 0);
+    const cellEndDateTime = new Date(cellDateTime);
+    cellEndDateTime.setHours(cellDateTime.getHours() + 1, 0, 0, 0);
+    
+    // Check if cell overlaps with event range
+    return cellDateTime < eventEndDate && cellEndDateTime > eventStartDate;
+  };
+
   // Get cell class names
-  const getCellClassName = (status: CellStatus) => {
+  const getCellClassName = (status: CellStatus, isInEventRange: boolean) => {
     return cn(
       "w-full h-[28px] border-r border-b transition-all duration-150 flex items-center justify-center text-[10px] font-medium relative group",
       {
@@ -773,7 +786,9 @@ export function AvailabilityCalendar({
         "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed": status === "past",
         "bg-gradient-to-br from-red-500 to-red-600 border-red-700 text-white cursor-not-allowed shadow-sm": status === "booked",
         "bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed": status === "unavailable",
-      }
+      },
+      // Add border highlight for event range, but not for unavailable cells
+      isInEventRange && status !== "unavailable" && "ring-2 ring-amber-400 ring-inset"
     );
   };
 
@@ -1115,6 +1130,7 @@ export function AvailabilityCalendar({
                       {dates.map((date, dateIndex) => {
                         const status = getCellStatus(dateIndex, timeIndex);
                         const isDisabled = status === "unavailable" || status === "booked" || status === "past";
+                        const isInEventRange = isCellInEventRange(date, timeSlot);
                         return (
                           <div
                             key={`${date.toISOString()}_${timeSlot.toISOString()}`}
@@ -1124,7 +1140,7 @@ export function AvailabilityCalendar({
                             onMouseUp={handleMouseUp}
                           >
                             <div 
-                              className={getCellClassName(status)} 
+                              className={getCellClassName(status, isInEventRange)} 
                               title={
                                 status === "unavailable" 
                                   ? "Not available - venue owner hasn't opened this time for booking" 
