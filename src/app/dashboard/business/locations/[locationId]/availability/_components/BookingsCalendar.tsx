@@ -99,6 +99,32 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
     return bookingsData?.data || [];
   }, [bookingsData]);
 
+  // Generate consistent colors for each booking ID
+  const getBookingColor = (bookingId: string): { bg: string; border: string; text: string } => {
+    // Generate a hash from booking ID for consistent color
+    let hash = 0;
+    for (let i = 0; i < bookingId.length; i++) {
+      hash = bookingId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Use predefined color palette for better visibility
+    const colors = [
+      { bg: "bg-blue-500", border: "border-blue-600", text: "text-blue-50" },
+      { bg: "bg-emerald-500", border: "border-emerald-600", text: "text-emerald-50" },
+      { bg: "bg-purple-500", border: "border-purple-600", text: "text-purple-50" },
+      { bg: "bg-orange-500", border: "border-orange-600", text: "text-orange-50" },
+      { bg: "bg-pink-500", border: "border-pink-600", text: "text-pink-50" },
+      { bg: "bg-cyan-500", border: "border-cyan-600", text: "text-cyan-50" },
+      { bg: "bg-indigo-500", border: "border-indigo-600", text: "text-indigo-50" },
+      { bg: "bg-amber-500", border: "border-amber-600", text: "text-amber-50" },
+      { bg: "bg-teal-500", border: "border-teal-600", text: "text-teal-50" },
+      { bg: "bg-rose-500", border: "border-rose-600", text: "text-rose-50" },
+    ];
+    
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
   // Create a map of bookings by date and hour for quick lookup
   const bookingsMap = useMemo(() => {
     const map = new Map<string, Array<{
@@ -110,11 +136,22 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
       status: string;
       amount: string;
       booking: any;
+      bookingColor: { bg: string; border: string; text: string };
     }>>();
     
     if (!weekBookings) return map;
 
+    // Mock event name data (to be replaced when API returns event information)
+    const mockEventNames: Record<string, string> = {
+      "FOR_EVENT": "Bún Đậu Mẹt Tre - Food Festival 2025",
+      "FOR_OTHER": "Private Event",
+    };
+
     weekBookings.forEach((booking) => {
+      // Filter out cancelled bookings
+      const status = booking.status?.toUpperCase();
+      if (status === "CANCELLED" || status === "REJECTED") return;
+      
       if (!booking.dates) return;
       
       booking.dates.forEach((dateSlot) => {
@@ -145,16 +182,27 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
             booking.createdBy?.email ||
             "Unknown";
           
+          // Get event name with mock data fallback
+          const eventName = 
+            booking.referencedEventRequest?.eventName || 
+            (booking.bookingObject && mockEventNames[booking.bookingObject]) ||
+            formatBookingObject(booking.bookingObject) || 
+            "Bún Đậu Mẹt Tre - Food Festival 2025"; // Default mock event name
+          
+          // Get consistent color for this booking
+          const bookingColor = getBookingColor(booking.id);
+          
           // Store the full booking information for this hour
           map.get(key)!.push({
             id: booking.id,
             start,
             end,
-            eventName: booking.referencedEventRequest?.eventName || formatBookingObject(booking.bookingObject) || "Unknown Event",
+            eventName,
             customerName,
             status: booking.status,
             amount: booking.amountToPay,
             booking,
+            bookingColor,
           });
           
           // Move to next hour
@@ -226,8 +274,9 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
     }).format(num);
   };
   
-  // Get status badge color and background
-  const getStatusColor = (status: string) => {
+  // Get status badge color and background (status is primary, booking color is secondary for grouping)
+  const getStatusColor = (status: string, bookingColor?: { bg: string; border: string; text: string }) => {
+    // Always use status colors as primary
     switch (status.toUpperCase()) {
       case "PAYMENT_RECEIVED":
       case "APPROVED":
@@ -435,30 +484,35 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
         </div>
 
         {/* Enhanced Legend */}
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/10 bg-gradient-to-r from-muted/50 to-muted/30 px-3 py-2">
-          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
-            <Info className="h-3 w-3" />
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary/10 bg-gradient-to-r from-muted/50 to-muted/30 px-4 py-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+            <Info className="h-3.5 w-3.5" />
             <span>Status:</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-3 w-3 rounded bg-green-500 border border-green-600" />
-            <span className="text-[10px] font-medium text-foreground">Approved</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+            <div className="h-3 w-3 rounded-full bg-green-500 border border-green-600" />
+            <span className="text-xs font-medium text-green-700 dark:text-green-300">Approved</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-3 w-3 rounded bg-yellow-500 border border-yellow-600" />
-            <span className="text-[10px] font-medium text-foreground">Pending</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800">
+            <div className="h-3 w-3 rounded-full bg-yellow-500 border border-yellow-600" />
+            <span className="text-xs font-medium text-yellow-700 dark:text-yellow-300">Pending</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-3 w-3 rounded bg-blue-500 border border-blue-600" />
-            <span className="text-[10px] font-medium text-foreground">Locked</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+            <div className="h-3 w-3 rounded-full bg-blue-500 border border-blue-600" />
+            <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Locked</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-3 w-3 rounded bg-red-500 border border-red-600" />
-            <span className="text-[10px] font-medium text-foreground">Cancelled</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 border border-border ml-auto">
+            <div className="h-3 w-3 rounded-full bg-background border-2 border-border" />
+            <span className="text-xs font-medium text-muted-foreground">Available</span>
           </div>
-          <div className="flex items-center gap-1.5 ml-auto">
-            <div className="h-3 w-3 rounded bg-background border border-border" />
-            <span className="text-[10px] font-medium text-muted-foreground">Available</span>
+          <div className="w-full border-t border-primary/20 mt-2 pt-2">
+            <div className="flex items-center gap-2 text-xs">
+              <Info className="h-3.5 w-3.5 text-primary" />
+              <span className="font-semibold text-foreground">Tip:</span>
+              <span className="text-muted-foreground">
+                Color shows status. Slots with the same corner indicator belong to the same event. Hover to see event name.
+              </span>
+            </div>
           </div>
         </div>
 
@@ -540,10 +594,22 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
                         // Get the first booking for display (if multiple, show the first one)
                         const primaryBooking = bookings[0];
                         const isDateToday = isToday(date);
-                        const statusColors = primaryBooking ? getStatusColor(primaryBooking.status) : null;
+                        const bookingColor = primaryBooking?.bookingColor;
+                        const statusColors = primaryBooking ? getStatusColor(primaryBooking.status, bookingColor) : null;
 
                         const cellKey = `${dayIndex}_${hour}`;
                         const isPopoverOpen = openPopover === cellKey;
+                        
+                        // Check if this is part of a continuous booking (same booking in adjacent hours)
+                        const prevKey = `${dateKey}_${hour - 1}`;
+                        const nextKey = `${dateKey}_${hour + 1}`;
+                        const prevBookings = bookingsMap.get(prevKey) || [];
+                        const nextBookings = bookingsMap.get(nextKey) || [];
+                        const hasSameBookingBefore = prevBookings.some(b => b.id === primaryBooking?.id);
+                        const hasSameBookingAfter = nextBookings.some(b => b.id === primaryBooking?.id);
+                        const isContinuousStart = hasBooking && !hasSameBookingBefore;
+                        const isContinuousEnd = hasBooking && !hasSameBookingAfter;
+                        const isContinuousMiddle = hasBooking && hasSameBookingBefore && hasSameBookingAfter;
                         
                         return (
                           <div
@@ -557,13 +623,14 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
                                   <PopoverTrigger asChild>
                                     <div
                                       className={cn(
-                                        "w-full h-full rounded border transition-all flex items-center justify-center text-[8px] font-bold relative cursor-pointer shadow-sm",
-                                        statusColors?.bg,
-                                        statusColors?.border,
+                                        "w-full h-full rounded border-2 transition-all flex items-center justify-center text-[8px] font-bold relative cursor-pointer shadow-sm",
+                                        // Use the first booking's color for visual grouping
+                                        bookings[0]?.bookingColor?.bg || statusColors?.bg,
+                                        bookings[0]?.bookingColor?.border || statusColors?.border,
                                         statusColors?.hover,
                                         "text-white",
                                         "hover:shadow-md hover:scale-[1.08] hover:z-10",
-                                        isPopoverOpen && "ring-1 ring-offset-1 ring-primary z-20"
+                                        isPopoverOpen && "ring-2 ring-offset-1 ring-primary z-20"
                                       )}
                                     >
                                       <span className="font-bold">{bookings.length}</span>
@@ -586,7 +653,7 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
                                     </div>
                                     <div className="max-h-80 overflow-y-auto">
                                       {bookings.map((booking, idx) => {
-                                        const bookingStatusColors = getStatusColor(booking.status);
+                                        const bookingStatusColors = getStatusColor(booking.status, booking.bookingColor);
                                         const StatusIcon = bookingStatusColors.icon;
                                         return (
                                           <div
@@ -663,26 +730,55 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
                                   </PopoverContent>
                                 </Popover>
                               ) : (
-                                // Single booking
+                                // Single booking - show with color coding and visual connection
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                <div
-                                  onClick={() => handleBookingClick(primaryBooking.id)}
-                                  className={cn(
-                                    "w-full h-full rounded border transition-all flex items-center justify-center relative cursor-pointer shadow-sm",
-                                    statusColors?.bg,
-                                    statusColors?.border,
-                                    statusColors?.hover,
-                                    "text-white",
-                                    "hover:shadow-md hover:scale-[1.08] hover:z-10"
-                                  )}
-                                >
-                                  <span className="opacity-95 text-xs">●</span>
-                                </div>
+                                    <div
+                                      onClick={() => handleBookingClick(primaryBooking.id)}
+                                      className={cn(
+                                        "w-full h-full border-2 transition-all flex items-center justify-center relative cursor-pointer shadow-sm group",
+                                        // Use status color as primary background (this is what user wants)
+                                        statusColors?.bg,
+                                        // Use status border color
+                                        statusColors?.border,
+                                        statusColors?.hover,
+                                        "text-white",
+                                        "hover:shadow-lg hover:scale-[1.1] hover:z-10",
+                                        // Visual connection indicators - remove rounded corners for continuous bookings
+                                        isContinuousStart && "rounded-tl-md rounded-tr-md",
+                                        isContinuousEnd && "rounded-bl-md rounded-br-md",
+                                        isContinuousMiddle && "rounded-none border-t-0",
+                                        !isContinuousStart && !isContinuousEnd && !isContinuousMiddle && "rounded-md"
+                                      )}
+                                    >
+                                      {/* Subtle booking color indicator in corner to show grouping */}
+                                      {bookingColor && (
+                                        <div 
+                                          className={cn(
+                                            "absolute top-0 right-0 w-2 h-2 rounded-bl-md opacity-60",
+                                            bookingColor.bg
+                                          )}
+                                        />
+                                      )}
+                                      {/* Show event name abbreviation on hover */}
+                                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded z-10">
+                                        <span className="text-[8px] font-bold px-1 truncate max-w-full text-white drop-shadow">
+                                          {primaryBooking.eventName.split(' ').slice(0, 2).join(' ')}
+                                        </span>
+                                      </div>
+                                      {/* Default dot indicator with subtle pattern */}
+                                      <div className="relative">
+                                        <span className="opacity-90 text-xs group-hover:opacity-0 transition-opacity">●</span>
+                                        {/* Small indicator showing it's part of a series */}
+                                        {(isContinuousStart || isContinuousMiddle || isContinuousEnd) && (
+                                          <div className="absolute -top-0.5 -right-0.5 w-1 h-1 bg-white/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        )}
+                                      </div>
+                                    </div>
                                   </TooltipTrigger>
                                   <TooltipContent side="top" className="max-w-xs">
                                     <div className="space-y-1">
-                                      <div className="font-semibold">{primaryBooking.eventName}</div>
+                                      <div className="font-semibold text-sm">{primaryBooking.eventName}</div>
                                       <div className="text-xs text-muted-foreground">
                                         {primaryBooking.customerName}
                                       </div>
@@ -692,6 +788,11 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
                                       <div className="text-xs font-medium">
                                         {formatCurrency(primaryBooking.amount)}
                                       </div>
+                                      {bookingColor && (
+                                        <div className="text-[10px] text-muted-foreground mt-1 pt-1 border-t">
+                                          Slots with the same corner indicator belong to the same event
+                                        </div>
+                                      )}
                                     </div>
                                   </TooltipContent>
                                 </Tooltip>
