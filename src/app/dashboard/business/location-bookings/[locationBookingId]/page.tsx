@@ -144,12 +144,11 @@ const getStatusBadge = (status: string) => {
   }
 };
 
+import { formatCurrency as formatCurrencyUtil, CurrencyDisplay } from "@/components/ui/currency-display";
+
+// Keep local formatCurrency for backward compatibility
 const formatCurrency = (amount: string, currency: string = "VND") => {
-  const num = parseFloat(amount);
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: currency,
-  }).format(num);
+  return formatCurrencyUtil(amount, currency);
 };
 
 const formatDateTime = (iso: string) => {
@@ -325,7 +324,12 @@ export default function LocationBookingDetailPage({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Amount</p>
-                <p className="text-2xl font-bold text-primary">{formatCurrency(booking.amountToPay)}</p>
+                <CurrencyDisplay 
+                  amount={booking.amountToPay} 
+                  size="xl" 
+                  variant="primary"
+                  className="text-2xl"
+                />
               </div>
               <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
                 <DollarSign className="h-5 w-5 text-primary" />

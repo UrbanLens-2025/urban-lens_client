@@ -30,6 +30,7 @@ import {
 import { useAllBookingsAtLocation } from "@/hooks/locations/useAllBookingsAtLocation";
 import { Loader2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatCurrency as formatCurrencyUtil } from "@/components/ui/currency-display";
 
 interface BookingsCalendarProps {
   locationId: string;
@@ -264,14 +265,9 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
     router.push(`/dashboard/business/location-bookings/${bookingId}`);
   };
   
-  // Format currency
+  // Format currency using shared utility
   const formatCurrency = (amount: string) => {
-    const num = parseFloat(amount);
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-      minimumFractionDigits: 0,
-    }).format(num);
+    return formatCurrencyUtil(amount, "VND");
   };
   
   // Get status badge color and background (status is primary, booking color is secondary for grouping)

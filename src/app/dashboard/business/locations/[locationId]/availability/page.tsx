@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { CurrencyInfo } from "@/components/ui/currency-display";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Internal data structure for weekly availability slots
@@ -1565,27 +1566,13 @@ export default function AvailabilityPage({
                                   )}
                                 />
 
-                                <FormField
-                                  control={bookingForm.control}
-                                  name="currency"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Currency</FormLabel>
-                                      <FormControl>
-                                        <Input
-                                          value="VND"
-                                          readOnly
-                                          disabled
-                                          className="bg-muted cursor-not-allowed uppercase"
-                                        />
-                                      </FormControl>
-                                      <FormDescription>
-                                        Currency is fixed to VND
-                                      </FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
+                                <div className="space-y-2">
+                                  <FormLabel className="text-sm font-semibold flex items-center gap-2">
+                                    <DollarSign className="h-4 w-4 text-primary" />
+                                    Currency
+                                  </FormLabel>
+                                  <CurrencyInfo currency="VND" variant="compact" />
+                                </div>
                               </div>
                             </div>
 

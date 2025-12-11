@@ -1803,27 +1803,13 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="currency"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Currency</FormLabel>
-                            <FormControl>
-                              <Input 
-                                value="VND" 
-                                readOnly 
-                                disabled 
-                                className="h-8 bg-muted cursor-not-allowed uppercase" 
-                              />
-                            </FormControl>
-                            <FormDescription className="text-xs">
-                              Currency is fixed to VND
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <div className="space-y-2">
+                        <FormLabel className="text-xs font-semibold flex items-center gap-1.5">
+                          <DollarSign className="h-3.5 w-3.5 text-primary" />
+                          Currency
+                        </FormLabel>
+                        <CurrencyInfo currency="VND" variant="compact" />
+                      </div>
                     </div>
                   </div>
 

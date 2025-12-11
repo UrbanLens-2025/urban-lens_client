@@ -46,6 +46,8 @@ import { useMyLocations } from "@/hooks/locations/useMyLocations";
 import type { UpdateLocationBookingConfigPayload } from "@/types";
 import { PageHeader, PageContainer } from "@/components/shared";
 import { toast } from "sonner";
+import { CurrencyInfo } from "@/components/ui/currency-display";
+import { CurrencyInfo } from "@/components/ui/currency-display";
 
 const bookingConfigSchema = z
   .object({
@@ -391,32 +393,13 @@ export default function LocationBookingConfigPage({
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="currency"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <div className="p-1 rounded bg-primary/10">
-                              <DollarSign className="h-3.5 w-3.5 text-primary" />
-                            </div>
-                            Currency
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              value="VND"
-                              readOnly
-                              disabled
-                              className="h-12 border-2 border-primary/20 bg-muted cursor-not-allowed uppercase"
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Currency is fixed to VND
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-2">
+                      <FormLabel className="flex items-center gap-2 text-sm font-semibold">
+                        <DollarSign className="h-4 w-4 text-primary" />
+                        Currency
+                      </FormLabel>
+                      <CurrencyInfo currency="VND" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
