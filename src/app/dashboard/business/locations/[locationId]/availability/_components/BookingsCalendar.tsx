@@ -388,8 +388,8 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
   }
 
   return (
-    <Card className="border-2 border-primary/10 shadow-xl">
-      <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b border-primary/20">
+    <Card className="border-2 border-primary/10 shadow-xl pt-0">
+      <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b border-primary/20 px-6 py-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1">
             <CardTitle className="flex items-center gap-3 text-xl mb-2">

@@ -1165,19 +1165,10 @@ export default function AvailabilityPage({
         <BookingsCalendar locationId={locationId} />
       ) : activeTab === "settings" ? (
         <div className="space-y-6">
-          {/* Helpful Info Banner */}
-          <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <AlertDescription className="text-blue-800 dark:text-blue-200">
-              <strong>Quick Guide:</strong> Configure your location's availability schedule and booking settings. 
-              Set your weekly hours in the Availability section, then configure pricing and duration rules in Booking Settings.
-            </AlertDescription>
-          </Alert>
-
           {/* Availability Section */}
           <Collapsible open={isAvailabilityOpen} onOpenChange={setIsAvailabilityOpen}>
             <CollapsibleTrigger asChild>
-              <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <Card className={cn("cursor-pointer hover:bg-muted/50 transition-colors", isAvailabilityOpen && "rounded-b-none border-b-2")}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -1211,7 +1202,7 @@ export default function AvailabilityPage({
               </Card>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <Card className="border-2 border-primary/10 shadow-xl">
+              <Card className={cn("", isAvailabilityOpen && "rounded-t-none border-t-0")}>
                 <CardContent className="pt-4 space-y-4">
           {/* Statistics Cards */}
           <div className="grid gap-2 sm:grid-cols-3">
@@ -1241,15 +1232,22 @@ export default function AvailabilityPage({
             </div>
             <div className="rounded-lg border-2 border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 p-3 shadow-sm">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Availability Blocks</span>
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Max Revenue</span>
                 <div className="p-1 rounded-md bg-primary/10">
-                  <Layers className="h-3 w-3 text-primary" />
+                  <DollarSign className="h-3 w-3 text-primary" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2">
-                <p className="text-xl font-bold text-foreground">{weeklyStats.slotCount}</p>
+                <p className="text-xl font-bold text-foreground">
+                  {existingConfig && existingConfig.baseBookingPrice
+                    ? formatCurrency(
+                        parseFloat(existingConfig.baseBookingPrice) * weeklyStats.totalHours,
+                        existingConfig.currency || "VND"
+                      )
+                    : formatCurrency(0, "VND")}
+                </p>
                 <span className="text-[10px] text-muted-foreground">
-                  longest {weeklyStats.longestBlock || 0}hr{weeklyStats.longestBlock === 1 ? "" : "s"}
+                  if all booked
                 </span>
               </div>
             </div>
@@ -1454,7 +1452,7 @@ export default function AvailabilityPage({
           ) : (
             <Collapsible open={isBookingOpen} onOpenChange={setIsBookingOpen}>
               <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <Card className={cn("cursor-pointer hover:bg-muted/50 transition-colors", isBookingOpen && "rounded-b-none border-b-2")}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -1488,7 +1486,7 @@ export default function AvailabilityPage({
                 </Card>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <Card>
+                <Card className={cn("", isBookingOpen && "rounded-t-none border-t-0")}>
                   <CardContent className="pt-6">
                     <Form {...bookingForm}>
                       <form onSubmit={bookingForm.handleSubmit(onBookingSubmit)} className="space-y-6">
