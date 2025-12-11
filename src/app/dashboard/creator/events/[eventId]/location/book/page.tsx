@@ -716,35 +716,9 @@ function LocationDetailsOverlay({
               <Button
                 variant="outline"
                 onClick={() => {
-                  // Quick validation check - clear invalid slots on cancel
-                  if (eventDetail?.startDate && eventDetail?.endDate && selectedSlots.length > 0) {
-                    const eventStart = new Date(eventDetail.startDate);
-                    eventStart.setMilliseconds(0);
-                    const eventEnd = new Date(eventDetail.endDate);
-                    eventEnd.setMilliseconds(0);
-                    
-                    const allSlotStarts = selectedSlots.map(slot => {
-                      const d = new Date(slot.startDateTime);
-                      d.setMilliseconds(0);
-                      return d.getTime();
-                    });
-                    const allSlotEnds = selectedSlots.map(slot => {
-                      const d = new Date(slot.endDateTime);
-                      d.setMilliseconds(0);
-                      return d.getTime();
-                    });
-                    
-                    const earliestStart = new Date(Math.min(...allSlotStarts));
-                    const latestEnd = new Date(Math.max(...allSlotEnds));
-                    
-                    // Quick check - if slots don't cover event, clear them
-                    if (earliestStart.getTime() > eventStart.getTime() || 
-                        latestEnd.getTime() < eventEnd.getTime()) {
-                      setSelectedSlots([]);
-                    }
-                  }
-                  setShowCalendar(false);
+                  // Clear all selected slots when canceling
                   setSelectedSlots([]);
+                  setShowCalendar(false);
                 }}
                 size="sm"
               >

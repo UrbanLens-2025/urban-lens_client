@@ -14,32 +14,22 @@ export function useCreateEvent() {
       // Step 1: Create the event first
       const event = await createEvent(payload);
       
-      // If location is provided, create location booking (without slots - slots will be saved after payment)
+      // If location and date ranges are provided, create location booking and initiate payment
       let paymentError: any = null;
-      if (payload.locationId) {
-        // Step 2: Create location booking without slots (slots will be saved after payment confirmation)
+      if (payload.locationId && payload.dateRanges && payload.dateRanges.length > 0) {
+        // Step 2: Create location booking
         const booking = await addLocationBookingToEvent(event.id, {
           locationId: payload.locationId,
-          dates: [], // Don't include slots yet - they will be saved after payment
+          dates: payload.dateRanges.map(range => ({
+            startDateTime: range.startDateTime,
+            endDateTime: range.endDateTime,
+          })),
         });
         
-        // Step 3: Retrieve stored slots from sessionStorage and make payment
-        let dateRanges: Array<{ startDateTime: string; endDateTime: string }> | undefined;
-        const storedSlots = sessionStorage.getItem(`pendingSlots_${payload.locationId}`);
-        if (storedSlots) {
-          try {
-            dateRanges = JSON.parse(storedSlots);
-          } catch (e) {
-            console.error("Failed to parse stored slots:", e);
-          }
-        }
-        
+        // Step 3: Make payment
         try {
-          await initiateLocationBookingPayment(event.id, booking.id, dateRanges);
-          // Payment succeeded - booking is complete, clear stored slots
-          if (dateRanges) {
-            sessionStorage.removeItem(`pendingSlots_${payload.locationId}`);
-          }
+          await initiateLocationBookingPayment(event.id, booking.id);
+          // Payment succeeded - booking is complete
         } catch (paymentErr: any) {
           // Payment failed - store error but don't cancel booking
           // Extract error message handling all possible formats

@@ -85,23 +85,7 @@ export default function EventRequestDetailsPage({
 
   const handlePayNow = () => {
     if (request?.id) {
-      // Retrieve stored slots from sessionStorage if location booking exists
-      let dateRanges: Array<{ startDateTime: string; endDateTime: string }> | undefined;
-      
-      if (request.referencedLocationBooking?.locationId) {
-        const storedSlots = sessionStorage.getItem(
-          `pendingSlots_${request.referencedLocationBooking.locationId}`
-        );
-        if (storedSlots) {
-          try {
-            dateRanges = JSON.parse(storedSlots);
-          } catch (e) {
-            console.error("Failed to parse stored slots:", e);
-          }
-        }
-      }
-      
-      payForBooking({ eventRequestId: request.id, dateRanges });
+      payForBooking(request.id);
     }
   };
 

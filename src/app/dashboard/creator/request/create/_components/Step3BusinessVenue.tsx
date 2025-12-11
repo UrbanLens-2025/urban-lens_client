@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { CreateEventRequestForm } from "../page";
 import { VenueMapSelector } from "./VenueMapSelector";
 import { AvailabilityCalendar } from "./AvailabilityCalendar";
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map, Star, RotateCcw, Search, List, Grid3x3, X, Clock, AlertTriangle, XCircle, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
+import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map, Star, RotateCcw, Search, List, Grid3x3, X, Clock, AlertTriangle, XCircle, ChevronLeft, ChevronRight, HelpCircle, ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import {
   Select,
@@ -270,8 +270,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       }
     }
     
-    // Save slots to form, close calendar, and show payment dialog
-    form.setValue("dateRanges" as any, currentSlots, { shouldValidate: true });
+    // Don't save slots to form yet - just store in pendingSlots and show payment dialog
+    // Slots will be saved only when "Confirm Booking" is clicked
     setPendingSlots(currentSlots);
     setShowCalendar(false);
     setIsInitializingCalendar(false);
@@ -387,7 +387,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     setPendingSlots([]);
     
     toast.success("Booking confirmed", {
-      description: `${slotsToConfirm.length} slot${slotsToConfirm.length !== 1 ? 's' : ''} saved successfully. Payment will be processed when you submit the event request.`,
+      description: `Saved successfully. Payment will be processed when you submit the event request.`,
       duration: 5000,
     });
   };
@@ -561,7 +561,16 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                             variant="outline" 
                             className="text-xs font-mono bg-green-100 dark:bg-green-900/40 border-green-300 dark:border-green-700 text-green-900 dark:text-green-200"
                           >
-                            {format(range.start, "HH:mm")} - {format(range.end, "HH:mm")} ({durationText})
+                            {(() => {
+                              const isSameDate = isSameDay(range.start, range.end);
+                              if (isSameDate) {
+                                // Same day: show both times
+                                return `${format(range.start, "HH:mm")} - ${format(range.end, "HH:mm")} (${durationText})`;
+                              } else {
+                                // Cross-day: show both dates and times
+                                return `${format(range.start, "MMM dd, HH:mm")} - ${format(range.end, "MMM dd, HH:mm")} (${durationText})`;
+                              }
+                            })()}
                           </Badge>
                         );
                       })}
@@ -1327,6 +1336,18 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       <Dialog open={showCalendar} onOpenChange={(open) => {
         setShowCalendar(open);
         setIsInitializingCalendar(false);
+        // Only clear slots if they haven't been saved yet
+        // If slots are already saved (dateRanges has values), just close without clearing
+        if (!open) {
+          const savedSlots = form.watch("dateRanges") || [];
+          // Only clear if no slots are saved
+          if (savedSlots.length === 0) {
+            setTempSlots([]);
+          } else {
+            // If slots are saved, just clear tempSlots but keep saved slots
+            setTempSlots([]);
+          }
+        }
       }}>
         <DialogContent className="w-[95vw] !max-w-5xl max-h-[85vh] overflow-hidden flex flex-col mt-6 p-0 gap-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-primary/5 to-primary/10">
@@ -1404,37 +1425,17 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               <Button
                 variant="outline"
                 onClick={() => {
-                  // Clear slots if invalid before closing
-                  const currentSlots = form.watch("dateRanges") || [];
-                  if (currentSlots.length > 0 && startDate && endDate) {
-                    // Quick validation check - if booking doesn't cover event, clear and close
-                    const eventStart = new Date(startDate);
-                    eventStart.setMilliseconds(0);
-                    const eventEnd = new Date(endDate);
-                    eventEnd.setMilliseconds(0);
-                    
-                    const allSlotStarts = currentSlots.map(slot => {
-                      const d = new Date(slot.startDateTime);
-                      d.setMilliseconds(0);
-                      return d.getTime();
-                    });
-                    const allSlotEnds = currentSlots.map(slot => {
-                      const d = new Date(slot.endDateTime);
-                      d.setMilliseconds(0);
-                      return d.getTime();
-                    });
-                    
-                    const bookingStart = new Date(Math.min(...allSlotStarts));
-                    const bookingEnd = new Date(Math.max(...allSlotEnds));
-                    
-                    // Check if booking covers event period
-                    if (bookingStart.getTime() > eventStart.getTime() || bookingEnd.getTime() < eventEnd.getTime()) {
-                      // Clear invalid slots before closing
-                      form.setValue("dateRanges" as any, [], { shouldValidate: true });
-                    }
+                  // Only clear slots if they haven't been saved yet
+                  // If slots are already saved (dateRanges has values), just close without clearing
+                  const savedSlots = form.watch("dateRanges") || [];
+                  if (savedSlots.length === 0) {
+                    // No saved slots, clear everything
+                    setTempSlots([]);
+                    form.setValue("dateRanges" as any, [], { shouldValidate: false });
+                  } else {
+                    // Slots are saved, just clear tempSlots but keep saved slots
+                    setTempSlots([]);
                   }
-                  // Reset tempSlots when canceling
-                  setTempSlots([]);
                   setShowCalendar(false);
                 }}
                 size="sm"
@@ -1566,36 +1567,53 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="flex justify-between items-center pt-4 border-t">
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => {
                 setShowConfirmDialog(false);
-                setPendingSlots([]);
+                // Reopen calendar to edit slots
+                setTimeout(() => {
+                  setShowCalendar(true);
+                  setIsInitializingCalendar(true);
+                }, 200);
               }}
+              className="flex items-center gap-2"
             >
-              Cancel
+              <ArrowLeft className="h-4 w-4" />
+              Edit Slots
             </Button>
-            {hasInsufficientBalance ? (
+            <div className="flex gap-2">
               <Button
+                variant="outline"
                 onClick={() => {
-                  router.push('/dashboard/creator/wallet?action=deposit');
                   setShowConfirmDialog(false);
+                  setPendingSlots([]);
                 }}
-                className="bg-primary"
               >
-                <DollarSign className="h-4 w-4 mr-2" />
-                Deposit Funds
+                Cancel
               </Button>
-            ) : (
-              <Button
-                onClick={handleConfirmBooking}
-                className="bg-primary"
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Confirm Booking
-              </Button>
-            )}
+              {hasInsufficientBalance ? (
+                <Button
+                  onClick={() => {
+                    router.push('/dashboard/creator/wallet?action=deposit');
+                    setShowConfirmDialog(false);
+                  }}
+                  className="bg-primary"
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Deposit Funds
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleConfirmBooking}
+                  className="bg-primary"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Confirm Booking
+                </Button>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

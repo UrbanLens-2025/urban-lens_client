@@ -422,7 +422,7 @@ export function Step3PublicVenue({ form }: Step3PublicVenueProps) {
                       <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                         <FormControl>
                           <Checkbox
-                            checked={field.value}
+                            checked={field.value || false}
                             onCheckedChange={field.onChange}
                           />
                         </FormControl>
@@ -447,7 +447,18 @@ export function Step3PublicVenue({ form }: Step3PublicVenueProps) {
       )}
 
       {/* Availability Calendar Modal */}
-      <Dialog open={showCalendar} onOpenChange={setShowCalendar}>
+      <Dialog open={showCalendar} onOpenChange={(open) => {
+        setShowCalendar(open);
+        // Only clear slots if they haven't been saved yet
+        // If slots are already saved (dateRanges has values), just close without clearing
+        if (!open) {
+          const savedSlots = (form.watch as any)("dateRanges") || [];
+          // Only clear if no slots are saved
+          if (savedSlots.length === 0) {
+            form.setValue("dateRanges" as any, [], { shouldValidate: false });
+          }
+        }
+      }}>
         <DialogContent className="w-[90vw] !max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Select Your Event Times</DialogTitle>

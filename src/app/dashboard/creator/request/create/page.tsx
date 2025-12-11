@@ -103,6 +103,8 @@ const formSchema = z
         endDateTime: z.date(),
       })
     ).optional(),
+    // Public venue terms acceptance
+    publicVenueTermsAccepted: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     // If either date has a value, both must have values
@@ -252,6 +254,7 @@ export default function CreateEventRequestPage() {
       venueType: "business",
       locationId: undefined,
       dateRanges: [],
+      publicVenueTermsAccepted: false,
     },
   });
 
@@ -536,16 +539,12 @@ export default function CreateEventRequestPage() {
       payload.locationId = values.locationId;
     }
 
-    // Don't include date ranges in initial submission - they will be saved after payment confirmation
-    // Store dateRanges temporarily in sessionStorage for later use
+    // Include date ranges if provided (for location booking)
     if (values.dateRanges && values.dateRanges.length > 0) {
-      sessionStorage.setItem(
-        `pendingSlots_${values.locationId}`,
-        JSON.stringify(values.dateRanges.map((range) => ({
-          startDateTime: range.startDateTime.toISOString(),
-          endDateTime: range.endDateTime.toISOString(),
-        })))
-      );
+      payload.dateRanges = values.dateRanges.map((range) => ({
+        startDateTime: range.startDateTime.toISOString(),
+        endDateTime: range.endDateTime.toISOString(),
+      }));
     }
 
     createEvent.mutate(payload);

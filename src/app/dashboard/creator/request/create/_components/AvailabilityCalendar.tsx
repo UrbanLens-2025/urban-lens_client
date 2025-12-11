@@ -84,6 +84,12 @@ export function AvailabilityCalendar({
     weekEndDate ? weekEndDate.toISOString() : undefined
   );
 
+  // Track selected slots as Set of date+time string keys
+  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
+  const [hasValidatedInitialSlots, setHasValidatedInitialSlots] = useState(false);
+  // Ref to track if we're currently syncing from initialSlots to prevent infinite loops
+  const isSyncingFromInitialSlotsRef = useRef(false);
+
   // Transform weekly availability to actual date ranges for current week
   // Map dayOfWeek to date-fns day numbers (0 = Sunday, 1 = Monday, etc.)
 
@@ -160,10 +166,19 @@ export function AvailabilityCalendar({
   }, [bookedDatesData]);
 
   // Validate and set initial slots once availability data is loaded
+  // Also sync when initialSlots changes (e.g., when reopening calendar with saved slots)
   useEffect(() => {
-    if (hasValidatedInitialSlots || initialSlots.length === 0) return;
     if (locationId && !weeklyAvailability) return; // Wait for availability data if locationId is provided
     if (locationId && !bookedDatesData) return; // Wait for booked dates data if locationId is provided
+    
+    // If initialSlots is empty, don't do anything
+    if (initialSlots.length === 0) {
+      // If we haven't validated yet and there are no initial slots, mark as validated
+      if (!hasValidatedInitialSlots) {
+        setHasValidatedInitialSlots(true);
+      }
+      return;
+    }
 
     // Helper function to normalize a slot according to weekly availability
     const normalizeSlotByAvailability = (
@@ -281,10 +296,21 @@ export function AvailabilityCalendar({
             continue; // Skip booked slots
           }
           
-          // Check if within availability hours (if locationId is provided)
+          // When syncing from initialSlots, preserve all slots regardless of current week's availability
+          // because availabilitySlots only contains slots for the current week (dates dependency).
+          // Slots from other weeks were already validated when originally selected.
+          // Only validate availability if the slot is in the current week being displayed.
           if (locationId && !availabilitySlots.has(key)) {
-            current = addHours(current, 1);
-            continue; // Skip unavailable slots
+            const slotDate = parseISO(dateKey);
+            const isInCurrentWeek = dates.some(d => isSameDay(d, slotDate));
+            
+            // Only filter out if it's in the current week AND not available
+            // Preserve slots from other weeks - they were valid when selected
+            if (isInCurrentWeek) {
+              current = addHours(current, 1);
+              continue; // Skip unavailable slots in current week
+            }
+            // Keep slots from other weeks - they're from initialSlots and were valid when selected
           }
           
           // Slot is valid
@@ -294,14 +320,63 @@ export function AvailabilityCalendar({
       });
     });
     
-    // Only set slots if we have valid ones
+    // Merge initial slots with existing selected slots (don't replace)
+    // This ensures slots from all weeks are maintained when navigating
     const validSlotsSet = new Set(validSlots);
-    if (validSlots.length > 0) {
-      setSelectedSlots(validSlotsSet);
+    
+    // Set flag to prevent second useEffect from triggering during sync
+    isSyncingFromInitialSlotsRef.current = true;
+    
+    setSelectedSlots((prevSelectedSlots) => {
+      // If we have initial slots and haven't validated yet, use them as base
+      // Otherwise, merge with existing slots to preserve selections across weeks
+      if (!hasValidatedInitialSlots && validSlots.length > 0) {
+        return validSlotsSet;
+      }
+      // Merge: combine existing slots with new initial slots
+      const merged = new Set(prevSelectedSlots);
+      validSlots.forEach(key => merged.add(key));
+      return merged;
+    });
+    
+    // Only notify parent if this is the initial load (not when just syncing)
+    if (!hasValidatedInitialSlots && validSlots.length > 0) {
+      // Notify parent of the normalized result
+      const normalizedSlotsForParent = Array.from(validSlotsSet).map((slotKey) => {
+        const [dateStr, timeStr] = slotKey.split("_");
+        const [hours, minutes] = timeStr.split(":").map(Number);
+        const date = parseISO(dateStr);
+        date.setHours(hours, minutes, 0, 0);
+        const endDate = addHours(date, 1);
+        return {
+          startDateTime: date,
+          endDateTime: endDate,
+        };
+      });
+      
+      onSlotsChange(filterSlotsByEventTime(normalizedSlotsForParent));
     }
     
-    // Notify parent of the normalized result
-    const normalizedSlotsForParent = Array.from(validSlotsSet).map((slotKey) => {
+    setHasValidatedInitialSlots(true);
+    
+    // Reset flag in next tick to allow state updates to complete
+    // Use requestAnimationFrame to ensure it happens after React's state update
+    requestAnimationFrame(() => {
+      isSyncingFromInitialSlotsRef.current = false;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSlots, weeklyAvailability, bookedDatesData, availabilitySlots, bookedSlotsSet, locationId, today]);
+
+  // Ensure parent always has the complete list of selected slots
+  // This is important when navigating weeks - parent should always know about all slots
+  useEffect(() => {
+    // Skip if we're currently syncing from initialSlots to prevent infinite loops
+    if (isSyncingFromInitialSlotsRef.current) {
+      return;
+    }
+    
+    // Convert all selected slots to date ranges and notify parent
+    const slots = Array.from(selectedSlots).map((slotKey) => {
       const [dateStr, timeStr] = slotKey.split("_");
       const [hours, minutes] = timeStr.split(":").map(Number);
       const date = parseISO(dateStr);
@@ -313,11 +388,12 @@ export function AvailabilityCalendar({
       };
     });
     
-    onSlotsChange(filterSlotsByEventTime(normalizedSlotsForParent));
-    
-    setHasValidatedInitialSlots(true);
+    // Only notify if we have slots and have validated initial slots (to avoid duplicate calls during initialization)
+    if (hasValidatedInitialSlots && slots.length > 0) {
+      onSlotsChange(filterSlotsByEventTime(slots));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialSlots, weeklyAvailability, bookedDatesData, availabilitySlots, bookedSlotsSet, locationId, today]);
+  }, [selectedSlots, hasValidatedInitialSlots]);
 
   // Week navigation functions
   const goToPreviousWeek = () => {
@@ -332,10 +408,6 @@ export function AvailabilityCalendar({
     const today = startOfDay(new Date());
     setCurrentWeekStart(startOfWeek(today, { weekStartsOn: 1 }));
   };
-
-  // Track selected slots as Set of date+time string keys
-  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
-  const [hasValidatedInitialSlots, setHasValidatedInitialSlots] = useState(false);
 
   // Helper function - no filtering during selection, allow all slots
   // Validation for minimum duration and event coverage happens when saving
@@ -922,7 +994,16 @@ export function AvailabilityCalendar({
                   className="pl-3 pr-2 py-1.5 bg-green-600 hover:bg-green-700 text-white shrink-0 shadow-sm transition-all duration-200 group"
                 >
                   <span className="text-xs font-medium whitespace-nowrap">
-                    {format(slot.start, "MMM dd, HH:mm")} - {format(slot.end, "HH:mm")}
+                    {(() => {
+                      const isSameDate = isSameDay(slot.start, slot.end);
+                      if (isSameDate) {
+                        // Same day: show date once, then both times
+                        return `${format(slot.start, "MMM dd, HH:mm")} - ${format(slot.end, "HH:mm")}`;
+                      } else {
+                        // Cross-day: show both dates and times
+                        return `${format(slot.start, "MMM dd, HH:mm")} - ${format(slot.end, "MMM dd, HH:mm")}`;
+                      }
+                    })()}
                   </span>
                   <button
                     onClick={() => handleRemoveSlot(slot.keys)}
