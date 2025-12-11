@@ -8,13 +8,14 @@ import { CreateEventRequestForm } from "../page";
 import { VenueMapSelector } from "./VenueMapSelector";
 import { AvailabilityCalendar } from "./AvailabilityCalendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map, Star, RotateCcw, Search, List, Grid3x3, X, Clock, AlertTriangle, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map, Star, RotateCcw, Search, List, Grid3x3, X, Clock, AlertTriangle, XCircle, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
 import Image from "next/image";
 import {
   Select,
@@ -269,20 +270,23 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       }
     }
     
-    // Save slots to form and close calendar
+    // Save slots to form, close calendar, and show payment dialog
     form.setValue("dateRanges" as any, currentSlots, { shouldValidate: true });
+    setPendingSlots(currentSlots);
     setShowCalendar(false);
     setIsInitializingCalendar(false);
     
-    toast.success("Time slots saved successfully", {
-      description: `${currentSlots.length} slot${currentSlots.length !== 1 ? 's' : ''} selected`,
-      duration: 3000,
-    });
+    // Small delay to ensure calendar closes smoothly before payment dialog opens
+    setTimeout(() => {
+      setShowConfirmDialog(true);
+    }, 200);
   };
 
-  // Calculate estimated cost based on saved dateRanges
+  // Calculate estimated cost - use pendingSlots if available (for payment dialog), otherwise use dateRanges
   const estimatedCost = useMemo(() => {
-    if (!location?.bookingConfig?.baseBookingPrice || !dateRanges || dateRanges.length === 0) {
+    const slotsToCalculate = pendingSlots.length > 0 ? pendingSlots : (dateRanges || []);
+    
+    if (!location?.bookingConfig?.baseBookingPrice || slotsToCalculate.length === 0) {
       return null;
     }
 
@@ -291,7 +295,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     
     // Calculate total hours
     let totalMilliseconds = 0;
-    dateRanges.forEach(slot => {
+    slotsToCalculate.forEach(slot => {
       const start = new Date(slot.startDateTime);
       const end = new Date(slot.endDateTime);
       totalMilliseconds += (end.getTime() - start.getTime());
@@ -306,16 +310,18 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       currency,
       basePrice,
     };
-  }, [dateRanges, location?.bookingConfig]);
+  }, [pendingSlots, dateRanges, location?.bookingConfig]);
 
   // Get wallet balance
   const walletBalance = walletData ? parseFloat(walletData.balance) : 0;
   const walletCurrency = walletData?.currency || "VND";
   const hasInsufficientBalance = estimatedCost && walletBalance < estimatedCost.totalCost;
 
-  // Calculate refund information
+  // Calculate refund information - use pendingSlots if available, otherwise use dateRanges
   const refundInfo = useMemo(() => {
-    if (!estimatedCost || !location?.bookingConfig?.refundEnabled || !dateRanges || dateRanges.length === 0) {
+    const slotsToCalculate = pendingSlots.length > 0 ? pendingSlots : (dateRanges || []);
+    
+    if (!estimatedCost || !location?.bookingConfig?.refundEnabled || slotsToCalculate.length === 0) {
       return null;
     }
 
@@ -323,8 +329,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     const totalCost = estimatedCost.totalCost;
     
     // Find earliest booking slot start time for cutoff calculation
-    const earliestSlotStart = dateRanges.length > 0 
-      ? new Date(Math.min(...dateRanges.map(s => s.startDateTime.getTime())))
+    const earliestSlotStart = slotsToCalculate.length > 0 
+      ? new Date(Math.min(...slotsToCalculate.map(s => s.startDateTime.getTime())))
       : null;
 
     const refundBeforeCutoff = config.refundPercentageBeforeCutoff !== undefined
@@ -350,11 +356,24 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       cutoffTime,
       currency: estimatedCost.currency,
     };
-  }, [estimatedCost, location?.bookingConfig, dateRanges]);
+  }, [estimatedCost, location?.bookingConfig, pendingSlots, dateRanges]);
 
-  // Handle confirmation - just save the selected slots
+  // Handle confirmation - confirm the booking
   const handleConfirmBooking = () => {
-    if (!dateRanges || dateRanges.length === 0) {
+    if (hasInsufficientBalance) {
+      // Redirect to wallet deposit page
+      router.push('/dashboard/creator/wallet?action=deposit');
+      toast.info("Please deposit funds to continue with booking", {
+        description: `You need ${estimatedCost?.totalCost.toLocaleString("vi-VN")} ${estimatedCost?.currency} but have ${walletBalance.toLocaleString("vi-VN")} ${walletCurrency}`,
+        duration: 6000,
+      });
+      return;
+    }
+
+    // Use pendingSlots if available, otherwise use dateRanges
+    const slotsToConfirm = pendingSlots.length > 0 ? pendingSlots : (dateRanges || []);
+    
+    if (slotsToConfirm.length === 0) {
       toast.error("No slots selected", {
         description: "Please select time slots first.",
         duration: 3000,
@@ -362,12 +381,13 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       return;
     }
 
-    // Slots are already saved in the form from handleSaveSlots
-    // Just close the dialog
+    // Ensure slots are saved in the form
+    form.setValue("dateRanges" as any, slotsToConfirm, { shouldValidate: true });
     setShowConfirmDialog(false);
+    setPendingSlots([]);
     
     toast.success("Booking confirmed", {
-      description: `${dateRanges.length} slot${dateRanges.length !== 1 ? 's' : ''} saved successfully. Payment will be processed when you submit the event request.`,
+      description: `${slotsToConfirm.length} slot${slotsToConfirm.length !== 1 ? 's' : ''} saved successfully. Payment will be processed when you submit the event request.`,
       duration: 5000,
     });
   };
@@ -979,8 +999,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
           <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
             {/* Fixed Header */}
             <DialogHeader className="sticky top-0 z-10 bg-background border-b px-6 pt-6 pb-4 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0 pr-2">
                   <DialogTitle className="text-xl font-bold text-foreground mb-2">
                     {location.name}
                   </DialogTitle>
@@ -992,6 +1012,15 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                     </span>
                   </DialogDescription>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full flex-shrink-0 -mr-2"
+                  onClick={() => setShowLocationModal(false)}
+                >
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Close</span>
+                </Button>
               </div>
             </DialogHeader>
             
@@ -1173,6 +1202,20 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                       <RotateCcw className="h-4 w-4 text-primary" />
                     </div>
                     <h4 className="text-sm font-semibold text-foreground">Refund Policy</h4>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                          <HelpCircle className="h-4 w-4" />
+                          <span className="sr-only">What is refund policy?</span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="text-xs">
+                          Refund policy determines how much money you'll get back if you cancel your booking. 
+                          The percentage varies based on when you cancel - before or after the cutoff time.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                   {location.bookingConfig.refundEnabled ? (
                     <div className="space-y-3">
@@ -1423,10 +1466,12 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
           <div className="space-y-3">
             {/* Booking Summary */}
             <div className="bg-muted p-3 rounded-lg space-y-1.5">
-              {estimatedCost && dateRanges && (
+              {estimatedCost && (pendingSlots.length > 0 || (dateRanges && dateRanges.length > 0)) && (
                 <>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{dateRanges.length} slot{dateRanges.length !== 1 ? 's' : ''} • {estimatedCost.totalHours.toFixed(2)}h</span>
+                    <span className="text-muted-foreground">
+                      {pendingSlots.length > 0 ? pendingSlots.length : (dateRanges?.length || 0)} slot{(pendingSlots.length > 0 ? pendingSlots.length : (dateRanges?.length || 0)) !== 1 ? 's' : ''} • {estimatedCost.totalHours.toFixed(2)}h
+                    </span>
                     <span className="font-bold text-primary text-base">
                       {estimatedCost.totalCost.toLocaleString("vi-VN")} {estimatedCost.currency}
                     </span>
@@ -1463,6 +1508,20 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs font-medium">Refund Policy</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                        <HelpCircle className="h-3.5 w-3.5" />
+                        <span className="sr-only">What is refund policy?</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-xs">
+                        Refund policy determines how much money you'll get back if you cancel your booking. 
+                        The percentage varies based on when you cancel - before or after the cutoff time.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
                 <div className="space-y-1 text-xs">
                   {refundInfo.cutoffTime && (
@@ -1512,6 +1571,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               variant="outline"
               onClick={() => {
                 setShowConfirmDialog(false);
+                setPendingSlots([]);
               }}
             >
               Cancel
