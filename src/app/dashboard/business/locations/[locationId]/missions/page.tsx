@@ -26,12 +26,10 @@ import { Button } from "@/components/ui/button";
 import {
   Loader2,
   PlusCircle,
-  MoreHorizontal,
   Edit,
   Trash2,
   ArrowUp,
   ArrowDown,
-  Eye,
   Target,
   Trophy,
   CalendarDays,
@@ -42,12 +40,6 @@ import {
   Rocket,
 } from "lucide-react";
 import Image from "next/image";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,46 +75,39 @@ function MissionActions({
   isGeneratingQR: boolean;
 }) {
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem asChild>
-          <Link
-            href={`/dashboard/business/locations/${mission.locationId}/missions/${mission.id}`}
-          >
-            <Eye className="mr-2 h-4 w-4" /> View Details
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link
-            href={`/dashboard/business/locations/${mission.locationId}/missions/${mission.id}/edit`}
-          >
-            <Edit className="mr-2 h-4 w-4" /> Edit
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={onGenerateQRCode}
-          disabled={isGeneratingQR}
+    <div className="flex items-center justify-end gap-2">
+      <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+        <Link
+          href={`/dashboard/business/locations/${mission.locationId}/missions/${mission.id}/edit`}
+          title="Edit"
         >
-          {isGeneratingQR ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...
-            </>
-          ) : (
-            <>
-              <QrCode className="mr-2 h-4 w-4" /> Generate QR Code
-            </>
-          )}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onDeleteClick} className="text-red-500">
-          <Trash2 className="mr-2 h-4 w-4" /> Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <Edit className="h-4 w-4" />
+        </Link>
+      </Button>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="h-8 w-8"
+        onClick={onGenerateQRCode}
+        disabled={isGeneratingQR}
+        title="Generate QR Code"
+      >
+        {isGeneratingQR ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <QrCode className="h-4 w-4" />
+        )}
+      </Button>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+        onClick={onDeleteClick}
+        title="Delete"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
   );
 }
 
@@ -423,6 +408,7 @@ export default function ManageMissionsPage({
               <Table>
                 <TableHeader className="bg-muted/40">
                   <TableRow>
+                    <TableHead className="w-16">#</TableHead>
                     <TableHead className="min-w-[220px]">
                       <Button variant="ghost" className="px-0" onClick={() => handleSort("title")}>
                         Title <SortIcon column="title" />
@@ -445,8 +431,13 @@ export default function ManageMissionsPage({
                 </TableHeader>
                 <TableBody>
                   {missions.length > 0 ? (
-                    missions.map((mission) => (
+                    missions.map((mission, index) => {
+                      const orderNumber = (meta?.currentPage ? meta.currentPage - 1 : 0) * (meta?.itemsPerPage || 10) + index + 1;
+                      return (
                       <TableRow key={mission.id} className="hover:bg-muted/20">
+                        <TableCell className="text-muted-foreground font-medium">
+                          {orderNumber}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-start gap-3 min-w-[300px] max-w-[500px]">
                             {mission.imageUrls && mission.imageUrls.length > 0 ? (
@@ -466,7 +457,12 @@ export default function ManageMissionsPage({
                             )}
                             <div className="space-y-2 flex-1 min-w-0">
                               <div className="flex items-start gap-2">
-                                <span className="font-semibold text-sm leading-tight">{mission.title}</span>
+                                <Link
+                                  href={`/dashboard/business/locations/${mission.locationId}/missions/${mission.id}`}
+                                  className="font-semibold text-sm leading-tight hover:text-primary transition-colors cursor-pointer"
+                                >
+                                  {mission.title}
+                                </Link>
                                 <Badge variant="outline" className="text-[10px] shrink-0">
                                   {mission.metric}
                                 </Badge>
@@ -495,10 +491,11 @@ export default function ManageMissionsPage({
                           />
                         </TableCell>
                       </TableRow>
-                    ))
+                      );
+                    })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-32">
+                      <TableCell colSpan={7} className="h-32">
                         <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
                           <div className="text-base font-semibold">No missions yet</div>
                           <p className="text-sm text-muted-foreground max-w-sm">
