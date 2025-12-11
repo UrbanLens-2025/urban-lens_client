@@ -144,6 +144,11 @@ function EventDetailLayoutContent({
         setIsPublishDialogOpen(false);
         return;
       }
+      if (!hasTickets) {
+        toast.error("Please create at least one ticket before publishing the event.");
+        setIsPublishDialogOpen(false);
+        return;
+      }
       publishEvent.mutate(eventId);
       setIsPublishDialogOpen(false);
     }
@@ -167,29 +172,32 @@ function EventDetailLayoutContent({
   // Checklist items for publishing
   const hasNameAndDescription = !!(event?.displayName && event?.description);
   const hasDates = !!(event?.startDate && event?.endDate);
-  // Check if event has locationId OR if there's an active (non-cancelled) location booking
-  const hasLocationFromEvent = !!event?.locationId;
-  const hasLocationFromBooking = useMemo(() => {
+  // Location is complete ONLY if:
+  // 1. Event has a locationId
+  // 2. There exists an APPROVED location booking with matching location ID
+  const hasLocation = useMemo(() => {
+    if (!event?.locationId) return false;
+    
+    // Check locationBookings from the dedicated API first
     if (locationBookings && locationBookings.length > 0) {
       return locationBookings.some(booking => {
         const status = booking.status?.toUpperCase();
-        // Exclude cancelled bookings
-        if (status === "CANCELLED") return false;
-        return !!booking.location?.id;
+        return status === "APPROVED" && booking.location?.id === event.locationId;
       });
     }
+    
+    // Fallback to event.locationBookings
     if (event?.locationBookings && event.locationBookings.length > 0) {
       return event.locationBookings.some(booking => {
         const status = booking.status?.toUpperCase();
-        // Exclude cancelled bookings
-        if (status === "CANCELLED") return false;
-        return !!booking.location?.id;
+        return status === "APPROVED" && booking.location?.id === event.locationId;
       });
     }
+    
     return false;
-  }, [locationBookings, event?.locationBookings]);
-  const hasLocation = hasLocationFromEvent || hasLocationFromBooking;
+  }, [event?.locationId, event?.locationBookings, locationBookings]);
   const hasDocuments = !!(event?.eventValidationDocuments && event.eventValidationDocuments.length > 0);
+  const hasTickets = !!(tickets && tickets.length > 0);
   
   // Check if payment has been made for location booking
   // Payment is confirmed if at least one active (non-cancelled) locationBooking has a referencedTransactionId OR status is PAYMENT_RECEIVED
@@ -267,8 +275,8 @@ function EventDetailLayoutContent({
   // Business approval is only required if location bookings exist
   // If no location bookings, approval requirement is skipped
   const approvalRequired = hasLocationBookings ? hasBusinessApproval : true;
-  // Location is required for publishing
-  const canPublish = hasNameAndDescription && hasDates && hasLocation && hasDocuments && paymentRequired && approvalRequired;
+  // Location and tickets are required for publishing
+  const canPublish = hasNameAndDescription && hasDates && hasLocation && hasDocuments && hasTickets && paymentRequired && approvalRequired;
 
   const formatCompactDateTime = (iso: string) => {
     const date = new Date(iso);
@@ -566,7 +574,7 @@ function EventDetailLayoutContent({
       <EventWelcomeModal eventId={eventId} eventName={event.displayName} />
       
       {/* Cover Banner */}
-      <div className="relative w-full h-64 md:h-80 lg:h-96 bg-gradient-to-br from-primary/20 via-primary/10 to-muted overflow-hidden rounded-b-3xl">
+      <div className="relative w-full h-64 md:h-80 lg:h-96 bg-gradient-to-br from-primary/20 via-primary/10 to-muted overflow-hidden rounded-b-3xl shadow-md">
         {event.coverUrl ? (
           <img
             src={event.coverUrl}
@@ -763,6 +771,8 @@ function EventDetailLayoutContent({
                                 ? "Complete payment for location booking before publishing"
                                 : !hasDocuments
                                 ? "Submit event validation documents"
+                                : !hasTickets
+                                ? "Create at least one ticket"
                                 : "Complete all checklist items to publish your event"}
                             </p>
                           </TooltipContent>
@@ -795,401 +805,119 @@ function EventDetailLayoutContent({
         {/* Publishing Checklist - Show when event is DRAFT */}
         {isDraft && (() => {
           // Calculate total steps - location is now required
-          // Base steps: Name/Description, Dates, Location, Documents (always required)
-          const baseSteps = 4;
-          // Business approval step: only show if location bookings exist
-          const hasBusinessApprovalStep = hasLocationBookings;
+          // Base steps: Name/Description, Dates, Location (includes BO approval), Documents, Tickets (always required)
+          const baseSteps = 5;
           // Payment step: only show if location bookings exist AND payment failed
           const hasPaymentStep = hasLocationBookings && !hasPaymentMade;
           
-          const totalSteps = baseSteps + (hasBusinessApprovalStep ? 1 : 0) + (hasPaymentStep ? 1 : 0);
+          const totalSteps = baseSteps + (hasPaymentStep ? 1 : 0);
           
           // Only count steps that are actually displayed
           const completedSteps = [
             hasNameAndDescription,
             hasDates,
-            // Location is required - check if location is selected
+            // Location is required - includes BO approval check
             hasLocation,
             hasDocuments,
-            // Only count business approval if the step is shown
-            hasBusinessApprovalStep ? hasBusinessApproval : undefined,
+            // Tickets are required
+            hasTickets,
             // Only count payment if the step is shown
             hasPaymentStep ? hasPaymentMade : undefined,
           ].filter(step => step !== undefined).filter(Boolean).length;
-          
-          const progressPercentage = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
+
+          // Build task list dynamically
+          const tasks = [
+            {
+              label: "Event name & description",
+              completed: hasNameAndDescription,
+              action: () => {
+                openEditEventTab(event.displayName);
+                router.push(`/dashboard/creator/events/${eventId}/edit`);
+              },
+            },
+            {
+              label: "Event dates & times",
+              completed: hasDates,
+              action: () => {
+                openEditEventTab(event.displayName);
+                router.push(`/dashboard/creator/events/${eventId}/edit`);
+              },
+            },
+            {
+              label: "Select location",
+              completed: hasLocation,
+              action: () => router.push(`/dashboard/creator/events/${eventId}/location`),
+            },
+            {
+              label: "Submit event documents",
+              completed: hasDocuments,
+              action: () => {
+                openEditEventTab(event.displayName);
+                router.push(`/dashboard/creator/events/${eventId}/edit`);
+              },
+            },
+            {
+              label: "Create a ticket",
+              completed: hasTickets,
+              action: () => router.push(`/dashboard/creator/events/${eventId}/tickets`),
+            },
+          ];
+
+          // Add conditional tasks
+          if (hasLocationBookings && !hasPaymentMade) {
+            tasks.push({
+              label: "Complete payment",
+              completed: false,
+              action: () => router.push(`/dashboard/creator/events/${eventId}/location`),
+            });
+          }
 
           return (
-            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-primary/5 to-primary/10 shadow-lg overflow-hidden">
-              <CardHeader className="pb-3 px-4 pt-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-primary/20">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div className="relative flex-shrink-0">
-                      <div className="p-1.5 rounded-md bg-gradient-to-br from-primary to-primary/80 shadow-sm">
-                        <Sparkles className="h-3.5 w-3.5 text-white" />
-                      </div>
-                      {progressPercentage === 100 && (
-                        <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-background flex items-center justify-center">
-                          <CheckCircle2 className="h-1.5 w-1.5 text-white" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base font-semibold leading-tight">
-                        Ready to Publish?
-                      </CardTitle>
-                      <CardDescription className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-                        Complete all steps below
-                      </CardDescription>
-                    </div>
+            <Card className="bg-primary/5 border-primary/20 p-0">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Sparkles className="h-4 w-4 text-primary" />
                   </div>
-                  <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-background/80 backdrop-blur-sm border border-primary/20 shadow-sm flex-shrink-0">
-                    <div className="flex items-baseline gap-0.5">
-                      <span className="text-xl font-bold text-primary">
-                        {completedSteps}
-                      </span>
-                      <span className="text-xs text-muted-foreground">/</span>
-                      <span className="text-sm font-semibold text-muted-foreground">
-                        {totalSteps}
-                      </span>
-                    </div>
-                    <div className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
-                      Steps
-                    </div>
+                  <div>
+                    <h3 className="font-semibold text-sm">Ready to Publish?</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Complete these tasks to publish your event
+                    </p>
                   </div>
                 </div>
-                {/* Compact Progress Bar */}
-                <div className="mt-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-medium text-muted-foreground">Progress</span>
-                    <span className="text-[10px] font-bold text-primary">
-                      {Math.round(progressPercentage)}%
-                    </span>
-                  </div>
-                  <div className="relative h-2 w-full bg-muted/50 rounded-full overflow-hidden border border-border/50">
-                    <div 
+
+                <div className="grid grid-cols-2 gap-2">
+                  {tasks.map((task, index) => (
+                    <div
+                      key={index}
                       className={cn(
-                        "h-full rounded-full transition-all duration-700 ease-out",
-                        progressPercentage === 100 
-                          ? "bg-gradient-to-r from-green-500 to-green-600" 
-                          : "bg-gradient-to-r from-primary via-primary/90 to-primary/80"
+                        "flex items-center gap-2 py-2 px-3 rounded-md transition-colors bg-background/50",
+                        !task.completed && task.action && "hover:bg-background cursor-pointer"
                       )}
-                      style={{ width: `${progressPercentage}%` }}
-                    />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-3 px-4 pb-4">
-                <div className="space-y-2.5">
-                  {/* Event Details Section */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <div className="flex items-center gap-1">
-                        <div className="p-0.5 rounded bg-primary/10">
-                          <FileText className="h-2.5 w-2.5 text-primary" />
-                        </div>
-                        <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide">Event Details</span>
-                      </div>
-                      <div className="h-px flex-1 bg-gradient-to-r from-border via-border/50 to-transparent" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className={cn(
-                        "group flex items-center gap-2 p-2 rounded-md border transition-all duration-200",
-                        hasNameAndDescription 
-                          ? "bg-gradient-to-br from-green-50/70 to-green-50/30 dark:from-green-950/15 dark:to-green-950/8 border-green-300/60 dark:border-green-800/60" 
-                          : "bg-background border-border/50 hover:border-primary/30 hover:bg-accent/20"
-                      )}>
-                        <div className={cn(
-                          "flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 text-[10px]",
-                          hasNameAndDescription 
-                            ? "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-sm" 
-                            : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary font-semibold"
-                        )}>
-                          {hasNameAndDescription ? (
-                            <CheckCircle2 className="h-3 w-3" />
-                          ) : (
-                            <span>1</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <FileText className={cn(
-                              "h-3 w-3 transition-colors flex-shrink-0",
-                              hasNameAndDescription ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
-                            )} />
-                            <p className={cn(
-                              "text-[11px] font-medium leading-tight",
-                              hasNameAndDescription ? "text-foreground" : "text-muted-foreground"
-                            )}>
-                              Event Name & Description
-                            </p>
-                          </div>
-                        </div>
-                        {!hasNameAndDescription && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              openEditEventTab(event.displayName);
-                              router.push(`/dashboard/creator/events/${eventId}/edit`);
-                            }}
-                            className="shrink-0 border-primary/30 hover:bg-primary hover:text-primary-foreground h-6 text-[10px] px-2 py-0"
-                          >
-                            Add
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className={cn(
-                        "group flex items-center gap-2 p-2 rounded-md border transition-all duration-200",
-                        hasDates 
-                          ? "bg-gradient-to-br from-green-50/70 to-green-50/30 dark:from-green-950/15 dark:to-green-950/8 border-green-300/60 dark:border-green-800/60" 
-                          : "bg-background border-border/50 hover:border-primary/30 hover:bg-accent/20"
-                      )}>
-                        <div className={cn(
-                          "flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 text-[10px]",
-                          hasDates 
-                            ? "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-sm" 
-                            : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary font-semibold"
-                        )}>
-                          {hasDates ? (
-                            <CheckCircle2 className="h-3 w-3" />
-                          ) : (
-                            <span>2</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className={cn(
-                              "h-3 w-3 transition-colors flex-shrink-0",
-                              hasDates ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
-                            )} />
-                            <p className={cn(
-                              "text-[11px] font-medium leading-tight",
-                              hasDates ? "text-foreground" : "text-muted-foreground"
-                            )}>
-                              Event Dates & Times
-                            </p>
-                          </div>
-                        </div>
-                        {!hasDates && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              openEditEventTab(event.displayName);
-                              router.push(`/dashboard/creator/events/${eventId}/edit`);
-                            }}
-                            className="shrink-0 border-primary/30 hover:bg-primary hover:text-primary-foreground h-6 text-[10px] px-2 py-0"
-                          >
-                            Add
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Location & Booking Section - Location is required */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <div className="flex items-center gap-1">
-                        <div className="p-0.5 rounded bg-primary/10">
-                          <MapPin className="h-2.5 w-2.5 text-primary" />
-                        </div>
-                        <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide">Location & Booking</span>
-                      </div>
-                      <div className="h-px flex-1 bg-gradient-to-r from-border via-border/50 to-transparent" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {/* Select Location step - required */}
-                      <div className={cn(
-                        "group flex items-center gap-2 p-2 rounded-md border transition-all duration-200",
-                        hasLocation
-                          ? "bg-gradient-to-br from-green-50/70 to-green-50/30 dark:from-green-950/15 dark:to-green-950/8 border-green-300/60 dark:border-green-800/60" 
-                          : "bg-background border-border/50 hover:border-primary/30 hover:bg-accent/20"
-                      )}>
-                        <div className={cn(
-                          "flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 text-[10px]",
-                          hasLocation
-                            ? "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-sm" 
-                            : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary font-semibold"
-                        )}>
-                          {hasLocation ? (
-                            <CheckCircle2 className="h-3 w-3" />
-                          ) : (
-                            <span>3</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className={cn(
-                              "h-3 w-3 transition-colors flex-shrink-0",
-                              hasLocation ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
-                            )} />
-                            <p className={cn(
-                              "text-[11px] font-medium leading-tight",
-                              hasLocation ? "text-foreground" : "text-muted-foreground"
-                            )}>
-                              Select Location
-                            </p>
-                          </div>
-                        </div>
-                        {!hasLocation && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              router.push(`/dashboard/creator/events/${eventId}/location`);
-                            }}
-                            className="shrink-0 border-primary/30 hover:bg-primary hover:text-primary-foreground h-6 text-[10px] px-2 py-0"
-                          >
-                            Select
-                          </Button>
-                        )}
-                      </div>
-
-                      {/* Business Owner Approval - Only show if bookings exist */}
-                      {hasLocationBookings && (
-                        <div className={cn(
-                          "group flex items-center gap-2 p-2 rounded-md border transition-all duration-200",
-                          hasBusinessApproval 
-                            ? "bg-gradient-to-br from-green-50/70 to-green-50/30 dark:from-green-950/15 dark:to-green-950/8 border-green-300/60 dark:border-green-800/60" 
-                            : "bg-gradient-to-br from-amber-50/70 to-amber-50/30 dark:from-amber-950/15 dark:to-amber-950/8 border-amber-300/60 dark:border-amber-800/60"
-                        )}>
-                          <div className={cn(
-                            "flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 text-[10px]",
-                            hasBusinessApproval 
-                              ? "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-sm" 
-                              : "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-sm"
-                          )}>
-                            {hasBusinessApproval ? (
-                              <CheckCircle2 className="h-3 w-3" />
-                            ) : (
-                              <Clock className="h-2.5 w-2.5 animate-pulse" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <UserCheck className={cn(
-                                "h-3 w-3 transition-colors flex-shrink-0",
-                                hasBusinessApproval ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
-                              )} />
-                              <p className={cn(
-                                "text-[11px] font-medium leading-tight",
-                                hasBusinessApproval ? "text-foreground" : "text-amber-700 dark:text-amber-300"
-                              )}>
-                                Business Owner Approval
-                              </p>
-                            </div>
-                            {!hasBusinessApproval && (
-                              <p className="text-[9px] text-amber-600 dark:text-amber-400 font-medium ml-4.5 mt-0.5">
-                                Awaiting approval
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                      onClick={() => !task.completed && task.action?.()}
+                    >
+                      {task.completed ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      ) : (task as any).pending ? (
+                        <Clock className="h-4 w-4 text-amber-500 flex-shrink-0 animate-pulse" />
+                      ) : (
+                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
                       )}
-
-                      {/* Payment step - Only show if bookings exist and payment failed */}
-                      {hasLocationBookings && !hasPaymentMade && (
-                        <div className={cn(
-                          "group flex items-center gap-2 p-2 rounded-md border transition-all duration-200",
-                          "bg-gradient-to-br from-amber-50/70 to-amber-50/30 dark:from-amber-950/15 dark:to-amber-950/8 border-amber-300/60 dark:border-amber-800/60"
-                        )}>
-                          <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-sm text-[10px]">
-                            <AlertCircle className="h-2.5 w-2.5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <CreditCard className="h-3 w-3 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-                              <p className="text-[11px] font-medium leading-tight text-amber-700 dark:text-amber-300">
-                                Complete Payment
-                              </p>
-                            </div>
-                            <p className="text-[9px] text-amber-600 dark:text-amber-400 ml-4.5 mt-0.5">
-                              Payment failed
-                            </p>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              router.push(`/dashboard/creator/events/${eventId}/location`);
-                            }}
-                            className="shrink-0 border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-300 h-6 text-[10px] px-2 py-0"
-                          >
-                            Pay Now
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Documents Section */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <div className="flex items-center gap-1">
-                        <div className="p-0.5 rounded bg-primary/10">
-                          <FileCheck className="h-2.5 w-2.5 text-primary" />
-                        </div>
-                        <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide">Documents</span>
-                      </div>
-                      <div className="h-px flex-1 bg-gradient-to-r from-border via-border/50 to-transparent" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                    <div className={cn(
-                      "group flex items-center gap-2 p-2 rounded-md border transition-all duration-200",
-                      hasDocuments 
-                        ? "bg-gradient-to-br from-green-50/70 to-green-50/30 dark:from-green-950/15 dark:to-green-950/8 border-green-300/60 dark:border-green-800/60" 
-                        : "bg-background border-border/50 hover:border-primary/30 hover:bg-accent/20"
-                    )}>
-                      <div className={cn(
-                        "flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 text-[10px]",
-                        hasDocuments 
-                          ? "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-sm" 
-                          : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary font-semibold"
-                      )}>
-                        {hasDocuments ? (
-                          <CheckCircle2 className="h-3 w-3" />
-                        ) : (
-                          <span>4</span>
+                      <span
+                        className={cn(
+                          "text-xs flex-1",
+                          task.completed
+                            ? "text-muted-foreground line-through"
+                            : (task as any).pending
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-foreground"
                         )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <FileCheck className={cn(
-                            "h-3 w-3 transition-colors flex-shrink-0",
-                            hasDocuments ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
-                          )} />
-                          <p className={cn(
-                            "text-[11px] font-medium leading-tight",
-                            hasDocuments ? "text-foreground" : "text-muted-foreground"
-                          )}>
-                            Submit Event Documents
-                          </p>
-                        </div>
-                      </div>
-                      {!hasDocuments && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            openEditEventTab(event.displayName);
-                            router.push(`/dashboard/creator/events/${eventId}/edit`);
-                          }}
-                          className="shrink-0 border-primary/30 hover:bg-primary hover:text-primary-foreground h-6 text-[10px] px-2 py-0"
-                        >
-                          Add
-                        </Button>
-                      )}
+                      >
+                        {task.label}
+                      </span>
                     </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
