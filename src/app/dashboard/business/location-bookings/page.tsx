@@ -45,41 +45,41 @@ import {
 const getStatusBadge = (status: string) => {
   const statusUpper = status?.toUpperCase();
   switch (statusUpper) {
-    case "PAYMENT_RECEIVED":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700"
-        >
-          <CheckCircle className="h-3 w-3 mr-1" />
-          Payment Received
-        </Badge>
-      );
     case "AWAITING_BUSINESS_PROCESSING":
       return (
         <Badge
           variant="outline"
-          className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700"
+          className="bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-700 font-medium"
         >
           <Clock className="h-3 w-3 mr-1" />
           Awaiting Processing
         </Badge>
       );
-    case "SOFT_LOCKED":
+    case "APPROVED":
       return (
         <Badge
           variant="outline"
-          className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-700"
+          className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-700 font-medium"
         >
-          <Clock className="h-3 w-3 mr-1" />
-          Soft Locked
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Approved
+        </Badge>
+      );
+    case "REJECTED":
+      return (
+        <Badge
+          variant="outline"
+          className="bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-700 font-medium"
+        >
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          Rejected
         </Badge>
       );
     case "CANCELLED":
       return (
         <Badge
           variant="outline"
-          className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700"
+          className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700 font-medium"
         >
           <AlertCircle className="h-3 w-3 mr-1" />
           Cancelled
@@ -87,7 +87,10 @@ const getStatusBadge = (status: string) => {
       );
     default:
       return (
-        <Badge variant="outline">
+        <Badge 
+          variant="outline"
+          className="bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-950 dark:text-gray-300 dark:border-gray-700 font-medium"
+        >
           {status?.charAt(0).toUpperCase() + status?.slice(1).toLowerCase() || status}
         </Badge>
       );
@@ -167,7 +170,7 @@ function BookingRow({
       </TableCell>
       <TableCell className="py-4">
         <span className="text-sm font-semibold leading-tight truncate">
-          {booking.referencedEventRequest?.eventName || "N/A"}
+          {booking.event?.displayName || "N/A"}
         </span>
       </TableCell>
       <TableCell className="py-4">
@@ -176,23 +179,11 @@ function BookingRow({
         </span>
       </TableCell>
       <TableCell className="py-4">
-        {(() => {
-          const dateRange = formatBookingDateRange(booking.dates);
-          return (
-            <div className="flex flex-col gap-0.5">
-              <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-muted-foreground">From:</span>
-                <span className="font-medium text-foreground">{dateRange.from}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-muted-foreground">To:</span>
-                <span className="font-medium text-foreground">{dateRange.to}</span>
-              </div>
-            </div>
-          );
-        })()}
+        <span className="text-sm text-muted-foreground">
+          {format(new Date(booking.createdAt), "MMM dd, yyyy")}
+        </span>
       </TableCell>
-      <TableCell className="py-4">
+      <TableCell className="py-4 w-[90px]">
         <div className="text-sm font-medium">
           {calculateTotalHours(booking.dates)} hrs
         </div>
@@ -212,7 +203,7 @@ function BookingRow({
 export default function LocationBookingsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<string>("AWAITING_BUSINESS_PROCESSING");
   const [sort, setSort] = useState<{ column: string; direction: SortDirection }>({
     column: "createdAt",
     direction: "DESC",
@@ -236,14 +227,14 @@ export default function LocationBookingsPage() {
 
   const stats = {
     totalBookings: meta?.totalItems ?? 0,
-    paymentReceived: bookings.filter(
-      (b) => b.status?.toUpperCase() === "PAYMENT_RECEIVED"
+    approved: bookings.filter(
+      (b) => b.status?.toUpperCase() === "APPROVED"
     ).length,
     awaitingProcessing: bookings.filter(
       (b) => b.status?.toUpperCase() === "AWAITING_BUSINESS_PROCESSING"
     ).length,
     totalRevenue: bookings
-      .filter((b) => b.status?.toUpperCase() === "PAYMENT_RECEIVED")
+      .filter((b) => b.status?.toUpperCase() === "APPROVED")
       .reduce((sum, b) => sum + parseFloat(b.amountToPay || "0"), 0),
   };
 
@@ -254,14 +245,14 @@ export default function LocationBookingsPage() {
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
-    if (statusFilter !== "ALL") count++;
+    if (statusFilter !== "AWAITING_BUSINESS_PROCESSING") count++;
     if (debouncedSearchTerm) count++;
     return count;
   }, [statusFilter, debouncedSearchTerm]);
 
   const handleClearFilters = () => {
     setSearch("");
-    setStatusFilter("ALL");
+    setStatusFilter("AWAITING_BUSINESS_PROCESSING");
     setSort({ column: "createdAt", direction: "DESC" });
     setPage(1);
   };
@@ -293,15 +284,15 @@ export default function LocationBookingsPage() {
 
         <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Confirmed</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
             <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
               <CheckCircle className="h-4 w-4 text-emerald-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-emerald-600">{stats.paymentReceived.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-emerald-600">{stats.approved.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Payment received
+              Approved bookings
             </p>
           </CardContent>
         </Card>
@@ -333,7 +324,7 @@ export default function LocationBookingsPage() {
               {formatCurrency(stats.totalRevenue.toString())}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              From confirmed bookings
+              From approved bookings
             </p>
           </CardContent>
         </Card>
@@ -358,8 +349,8 @@ export default function LocationBookingsPage() {
                 options: [
                   { value: "ALL", label: "All statuses" },
                   { value: "AWAITING_BUSINESS_PROCESSING", label: "Awaiting Processing" },
-                  { value: "PAYMENT_RECEIVED", label: "Payment Received" },
-                  { value: "SOFT_LOCKED", label: "Soft Locked" },
+                  { value: "APPROVED", label: "Approved" },
+                  { value: "REJECTED", label: "Rejected" },
                   { value: "CANCELLED", label: "Cancelled" },
                 ],
                 onValueChange: (value: string) => {
@@ -368,8 +359,6 @@ export default function LocationBookingsPage() {
                 },
               },
             ]}
-            activeFiltersCount={activeFiltersCount}
-            onClearFilters={handleClearFilters}
           />
 
           {isLoading ? (
@@ -391,7 +380,7 @@ export default function LocationBookingsPage() {
                     <TableRow className="border-b border-border/60 hover:bg-muted/50">
                       <TableHead className="w-12 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 pl-6">#</TableHead>
                       <SortableTableHeader
-                        column="referencedEventRequest.eventName"
+                        column="createdBy.firstName"
                         currentSort={sort}
                         onSort={handleSort}
                         className="min-w-[180px] max-w-[220px] text-left text-xs uppercase tracking-wide text-muted-foreground py-3"
@@ -399,7 +388,7 @@ export default function LocationBookingsPage() {
                         Requested By
                       </SortableTableHeader>
                       <SortableTableHeader
-                        column="referencedEventRequest.eventName"
+                        column="event.displayName"
                         currentSort={sort}
                         onSort={handleSort}
                         className="min-w-[180px] max-w-[220px] text-left text-xs uppercase tracking-wide text-muted-foreground py-3"
@@ -418,17 +407,17 @@ export default function LocationBookingsPage() {
                         column="createdAt"
                         currentSort={sort}
                         onSort={handleSort}
-                        className="min-w-[180px] max-w-[250px] text-left text-xs uppercase tracking-wide text-muted-foreground py-3"
+                        className="min-w-[120px] max-w-[150px] text-left text-xs uppercase tracking-wide text-muted-foreground py-3"
                       >
-                        Booking Date
+                        Created At
                       </SortableTableHeader>
                       <SortableTableHeader
                         column="totalHours"
                         currentSort={sort}
                         onSort={handleSort}
-                        className="text-left text-xs uppercase tracking-wide text-muted-foreground py-3 w-[120px]"
+                        className="text-left text-xs uppercase tracking-wide text-muted-foreground py-3 w-[90px]"
                       >
-                        Total Hours Booked
+                        Total Hours
                       </SortableTableHeader>
                       <SortableTableHeader
                         column="amountToPay"
@@ -436,7 +425,7 @@ export default function LocationBookingsPage() {
                         onSort={handleSort}
                         className="text-left text-xs uppercase tracking-wide text-muted-foreground py-3 w-[140px]"
                       >
-                        Amount to Pay
+                        Payment
                       </SortableTableHeader>
                       <SortableTableHeader
                         column="status"
