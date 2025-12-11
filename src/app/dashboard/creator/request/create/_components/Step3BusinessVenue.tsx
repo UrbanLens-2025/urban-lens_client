@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map, Star, RotateCcw, Search, List, Grid3x3, X, Clock, AlertTriangle, XCircle, ChevronLeft, ChevronRight, HelpCircle, ArrowLeft } from "lucide-react";
+import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map, Star, RotateCcw, Search, List, Grid3x3, X, Clock, AlertTriangle, XCircle, ChevronLeft, ChevronRight, HelpCircle, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
 import {
   Select,
@@ -34,6 +34,7 @@ import { useDebounce } from "use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { DollarSign, Wallet, CreditCard } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Step3BusinessVenueProps {
   form: UseFormReturn<CreateEventRequestForm>;
@@ -56,6 +57,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   const [tempSlots, setTempSlots] = useState<Array<{ startDateTime: Date; endDateTime: Date }>>([]);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isRefundPolicyOpen, setIsRefundPolicyOpen] = useState(false);
+  const [isRefundPolicyOpenInDialog, setIsRefundPolicyOpenInDialog] = useState(false);
   
   // Get event dates from form
   const startDate = form.watch("startDate");
@@ -661,7 +664,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
           </div>
           
           {/* Search Bar */}
-          {!isLoadingLocations && locations.length > 0 && (
+          {!isLoadingLocations && (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -1204,64 +1207,121 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 </div>
               </div>
               
+              {/* Booking Price */}
+              {location.bookingConfig?.baseBookingPrice && (
+                <div className="flex items-center gap-2 p-4 bg-gradient-to-r from-primary/5 to-transparent rounded-lg border border-primary/10">
+                  <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                    <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">
+                      {parseFloat(location.bookingConfig.baseBookingPrice).toLocaleString("vi-VN")} {location.bookingConfig.currency || "VND"}
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-1">/hour</span>
+                  </div>
+                </div>
+              )}
+              
               {/* Refund Policy */}
               {location.bookingConfig && (
-                <div className="border-2 border-primary/10 rounded-lg p-4 bg-card space-y-3">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <RotateCcw className="h-4 w-4 text-primary" />
+                <Collapsible open={isRefundPolicyOpen} onOpenChange={setIsRefundPolicyOpen}>
+                  <CollapsibleTrigger asChild>
+                    <div className="border-2 border-primary/10 rounded-lg p-4 bg-card cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <RotateCcw className="h-4 w-4 text-primary" />
+                          </div>
+                          <h4 className="text-sm font-semibold text-foreground">Refund Policy</h4>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button 
+                                type="button" 
+                                className="text-muted-foreground hover:text-foreground transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <HelpCircle className="h-4 w-4" />
+                                <span className="sr-only">What is refund policy?</span>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="text-xs">
+                                The cutoff time is calculated from the location booking start date (when you receive access to the location). 
+                                Refund percentage depends on when you cancel relative to this cutoff time.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                        {isRefundPolicyOpen ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
                     </div>
-                    <h4 className="text-sm font-semibold text-foreground">Refund Policy</h4>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                          <HelpCircle className="h-4 w-4" />
-                          <span className="sr-only">What is refund policy?</span>
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        <p className="text-xs">
-                          Refund policy determines how much money you'll get back if you cancel your booking. 
-                          The percentage varies based on when you cancel - before or after the cutoff time.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  {location.bookingConfig.refundEnabled ? (
-                    <div className="space-y-3">
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="border-2 border-primary/10 border-t-0 rounded-b-lg p-4 bg-card space-y-3">
+                      {location.bookingConfig.refundEnabled ? (
+                        <div className="space-y-3">
                       {location.bookingConfig.refundCutoffHours !== undefined && (
-                        <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border border-border/50">
-                          <span className="text-sm text-muted-foreground font-medium">
-                            Before {location.bookingConfig.refundCutoffHours}h:
-                          </span>
-                          <Badge variant="outline" className="font-bold text-primary border-primary/30 bg-primary/5">
-                            {location.bookingConfig.refundPercentageBeforeCutoff !== undefined
-                              ? `${(location.bookingConfig.refundPercentageBeforeCutoff * 100).toFixed(0)}%`
-                              : "100%"}
-                          </Badge>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border border-border/50">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-foreground">
+                                Cancel {location.bookingConfig.refundCutoffHours}h+ before booking start
+                              </span>
+                              <span className="text-xs text-muted-foreground mt-0.5">
+                                Before cutoff time
+                              </span>
+                            </div>
+                            <Badge variant="outline" className="font-bold text-primary border-primary/30 bg-primary/5">
+                              {location.bookingConfig.refundPercentageBeforeCutoff !== undefined
+                                ? `${(location.bookingConfig.refundPercentageBeforeCutoff * 100).toFixed(0)}%`
+                                : "100%"} refund
+                            </Badge>
+                          </div>
+                          <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border border-border/50">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-foreground">
+                                Cancel less than {location.bookingConfig.refundCutoffHours}h before booking start
+                              </span>
+                              <span className="text-xs text-muted-foreground mt-0.5">
+                                After cutoff time
+                              </span>
+                            </div>
+                            <Badge variant="outline" className="font-bold text-primary border-primary/30 bg-primary/5">
+                              {location.bookingConfig.refundPercentageAfterCutoff !== undefined
+                                ? `${(location.bookingConfig.refundPercentageAfterCutoff * 100).toFixed(0)}%`
+                                : "0%"} refund
+                            </Badge>
+                          </div>
+                          <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-foreground">
+                                Cancel after booking has started
+                              </span>
+                              <span className="text-xs text-muted-foreground mt-0.5">
+                                Once you receive access to the location
+                              </span>
+                            </div>
+                            <Badge variant="outline" className="font-bold text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 bg-red-100 dark:bg-red-900/30">
+                              No refund
+                            </Badge>
+                          </div>
                         </div>
                       )}
-                      {location.bookingConfig.refundCutoffHours !== undefined && (
-                        <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border border-border/50">
-                          <span className="text-sm text-muted-foreground font-medium">
-                            After {location.bookingConfig.refundCutoffHours}h:
-                          </span>
-                          <Badge variant="outline" className="font-bold text-primary border-primary/30 bg-primary/5">
-                            {location.bookingConfig.refundPercentageAfterCutoff !== undefined
-                              ? `${(location.bookingConfig.refundPercentageAfterCutoff * 100).toFixed(0)}%`
-                              : "0%"}
-                          </Badge>
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-muted/50 rounded-lg border border-border/50">
+                          <p className="text-sm text-muted-foreground">
+                            Refunds are not available for this venue
+                          </p>
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="p-3 bg-muted/50 rounded-lg border border-border/50">
-                      <p className="text-sm text-muted-foreground">
-                        Refunds are not available for this venue
-                      </p>
-                    </div>
-                  )}
-                </div>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
             </div>
               
@@ -1373,19 +1433,16 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
             <div className="px-6 pt-4">
               <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
                 <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-                <AlertDescription className="text-amber-800 dark:text-amber-200">
-                  <p className="font-medium mb-1">Event Time Period</p>
-                  <p className="text-sm">
-                    Your event runs from{" "}
-                    <span className="font-semibold">
-                      {format(startDate, "MMM dd, yyyy 'at' h:mm a")}
-                    </span>{" "}
-                    to{" "}
-                    <span className="font-semibold">
-                      {format(endDate, "MMM dd, yyyy 'at' h:mm a")}
-                    </span>
-                    . Please select time slots that cover this entire period.
-                  </p>
+                <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm !grid-cols-1 !gap-0 !block">
+                  Your event is from{" "}
+                  <span className="font-semibold">
+                    {format(startDate, "MMM dd, yyyy 'at' h:mm a")}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-semibold">
+                    {format(endDate, "MMM dd, yyyy 'at' h:mm a")}
+                  </span>
+                  . Please select time slots that cover this entire period.
                 </AlertDescription>
               </Alert>
             </div>
@@ -1409,12 +1466,27 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
           </div>
           <div className="flex items-center justify-between px-6 py-3 border-t bg-muted/30">
             <div className="flex flex-col gap-0.5">
-              <p className="text-[10px] text-muted-foreground">
-                Click or drag to select time slots • Unavailable times are disabled
-              </p>
+              <div className="flex items-center gap-4 text-[10px] mb-0.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded border border-green-600 bg-green-500 shadow-sm"></div>
+                  <span className="font-medium text-foreground">Selected</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded border border-gray-300 bg-white shadow-sm"></div>
+                  <span className="font-medium text-foreground">Available</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded border border-red-600 bg-red-500 shadow-sm"></div>
+                  <span className="font-medium text-foreground">Booked</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded border border-gray-300 bg-gray-200"></div>
+                  <span className="font-medium text-muted-foreground">Unavailable</span>
+                </div>
+              </div>
               {startDate && endDate ? (
                 <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                  ⚠ Selected slots must cover event period: {startDate?.toLocaleDateString() || ''} {startDate?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ''} - {endDate?.toLocaleDateString() || ''} {endDate?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ''}
+                  ⚠ Selected slots must cover event period: {startDate?.toLocaleDateString('vi-VN') || ''} {startDate?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ''} - {endDate?.toLocaleDateString('vi-VN') || ''} {endDate?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ''}
                 </p>
               ) : (
                 <p className="text-[10px] text-muted-foreground">
@@ -1506,45 +1578,78 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
 
             {/* Refund Policy */}
             {refundInfo && (
-              <div className="bg-muted p-2.5 rounded-lg">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium">Refund Policy</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                        <HelpCircle className="h-3.5 w-3.5" />
-                        <span className="sr-only">What is refund policy?</span>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p className="text-xs">
-                        Refund policy determines how much money you'll get back if you cancel your booking. 
-                        The percentage varies based on when you cancel - before or after the cutoff time.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <div className="space-y-1 text-xs">
+              <Collapsible open={isRefundPolicyOpenInDialog} onOpenChange={setIsRefundPolicyOpenInDialog}>
+                <CollapsibleTrigger asChild>
+                  <div className="bg-muted p-2.5 rounded-lg cursor-pointer hover:bg-muted/80 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-medium">Refund Policy</span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button 
+                              type="button" 
+                              className="text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <HelpCircle className="h-3.5 w-3.5" />
+                              <span className="sr-only">What is refund policy?</span>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="text-xs">
+                              The cutoff time is calculated from the location booking start date (when you receive access to the location). 
+                              Refund percentage depends on when you cancel relative to this cutoff time.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      {isRefundPolicyOpenInDialog ? (
+                        <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="bg-muted p-2.5 pt-0 rounded-b-lg space-y-2 text-xs">
                   {refundInfo.cutoffTime && (
-                    <div className="text-muted-foreground mb-1.5">
-                      Cutoff: {format(refundInfo.cutoffTime, "MMM dd, h:mm a")} ({refundInfo.cutoffHours}h before)
+                    <div className="text-muted-foreground mb-2 p-2 bg-background/50 rounded border border-border/50">
+                      <span className="font-medium">Cutoff time: </span>
+                      {format(refundInfo.cutoffTime, "MMM dd, h:mm a")} ({refundInfo.cutoffHours}h before booking start)
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Before cutoff ({Math.round(refundInfo.percentageBeforeCutoff * 100)}%):</span>
-                    <span className="font-medium text-green-600 dark:text-green-400">
-                      {refundInfo.refundBeforeCutoff.toLocaleString("vi-VN")} {refundInfo.currency}
+                  <div className="flex justify-between items-center p-2 bg-background/50 rounded border border-border/50">
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground font-medium">Cancel {refundInfo.cutoffHours}h+ before booking start</span>
+                      <span className="text-[10px] text-muted-foreground mt-0.5">Before cutoff time</span>
+                    </div>
+                    <span className="font-semibold text-green-600 dark:text-green-400">
+                      {Math.round(refundInfo.percentageBeforeCutoff * 100)}% ({refundInfo.refundBeforeCutoff.toLocaleString("vi-VN")} {refundInfo.currency})
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">After cutoff ({Math.round(refundInfo.percentageAfterCutoff * 100)}%):</span>
-                    <span className="font-medium text-amber-600 dark:text-amber-400">
-                      {refundInfo.refundAfterCutoff.toLocaleString("vi-VN")} {refundInfo.currency}
+                  <div className="flex justify-between items-center p-2 bg-background/50 rounded border border-border/50">
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground font-medium">Cancel less than {refundInfo.cutoffHours}h before booking start</span>
+                      <span className="text-[10px] text-muted-foreground mt-0.5">After cutoff time</span>
+                    </div>
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">
+                      {Math.round(refundInfo.percentageAfterCutoff * 100)}% ({refundInfo.refundAfterCutoff.toLocaleString("vi-VN")} {refundInfo.currency})
                     </span>
                   </div>
-                </div>
-              </div>
+                  <div className="flex justify-between items-center p-2 bg-red-50 dark:bg-red-950/20 rounded border border-red-200 dark:border-red-800">
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground font-medium">Cancel after booking has started</span>
+                      <span className="text-[10px] text-muted-foreground mt-0.5">Once you receive access to the location</span>
+                    </div>
+                    <span className="font-semibold text-red-600 dark:text-red-400">
+                      No refund
+                    </span>
+                  </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             )}
 
             {/* Insufficient Balance Warning */}
@@ -1557,15 +1662,6 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               </Alert>
             )}
 
-            {/* Info Alert */}
-            {!hasInsufficientBalance && (
-              <Alert className="py-2">
-                <Info className="h-4 w-4" />
-                <AlertDescription className="text-sm">
-                  Balance will be reduced by {estimatedCost?.totalCost.toLocaleString("vi-VN")} {estimatedCost?.currency} on confirmation.
-                </AlertDescription>
-              </Alert>
-            )}
           </div>
 
           <div className="flex justify-between items-center pt-4 border-t">

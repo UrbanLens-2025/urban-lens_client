@@ -1002,33 +1002,6 @@ export function AvailabilityCalendar({
         </div>
       )}
 
-      {/* Legend and Info */}
-      <div className="flex items-center justify-between gap-4 pb-2 border-b">
-        <div className="flex items-center gap-4 text-[10px]">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded border border-green-600 bg-green-500 shadow-sm"></div>
-            <span className="font-medium text-foreground">Selected</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded border border-gray-300 bg-white shadow-sm"></div>
-            <span className="font-medium text-foreground">Available</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded border border-red-600 bg-red-500 shadow-sm"></div>
-            <span className="font-medium text-foreground">Booked</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded border border-gray-300 bg-gray-200"></div>
-            <span className="font-medium text-muted-foreground">Unavailable</span>
-          </div>
-        </div>
-        {locationId && (
-          <div className="text-[10px] text-muted-foreground max-w-xs text-right leading-tight">
-            <span className="font-medium">Tip:</span> Unavailable times are disabled - venue owner hasn't opened them for booking
-          </div>
-        )}
-      </div>
-
         {/* Week Navigation */}
         <div className="flex items-center justify-between py-2 bg-muted/30 rounded-lg px-3">
           <Button
@@ -1074,15 +1047,12 @@ export function AvailabilityCalendar({
         </div>
 
         {/* Calendar Grid */}
-        <div className="overflow-x-auto rounded-lg border bg-white shadow-sm" ref={calendarRef}>
+        <div className="overflow-x-auto rounded-lg border bg-white shadow-sm overflow-y-hidden" ref={calendarRef}>
           <div className="inline-block min-w-full">
             <div 
               className="select-none"
               onMouseLeave={handleCalendarMouseLeave}
               style={{ 
-                maxHeight: 'calc(85vh - 280px)', 
-                overflowY: 'auto', 
-                minHeight: '672px',
                 height: '672px' // Fixed height to show all 24 hours (24 hours × 28px = 672px)
               }}
             >
