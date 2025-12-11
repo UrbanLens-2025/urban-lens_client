@@ -47,7 +47,6 @@ import type { UpdateLocationBookingConfigPayload } from "@/types";
 import { PageHeader, PageContainer } from "@/components/shared";
 import { toast } from "sonner";
 import { CurrencyInfo } from "@/components/ui/currency-display";
-import { CurrencyInfo } from "@/components/ui/currency-display";
 
 const bookingConfigSchema = z
   .object({
