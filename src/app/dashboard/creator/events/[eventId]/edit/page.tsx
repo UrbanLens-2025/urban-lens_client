@@ -305,17 +305,21 @@ export default function EditEventPage({
   const onSubmit = async (data: UpdateEventForm) => {
     setIsSubmitting(true);
     try {
+      const isPublished = event?.status?.toUpperCase() === "PUBLISHED";
       const payload: UpdateEventPayload = {};
       
-      if (data.displayName !== undefined) payload.displayName = data.displayName;
+      // Don't allow editing displayName, startDate, or endDate if event is published
+      if (!isPublished && data.displayName !== undefined) {
+        payload.displayName = data.displayName;
+      }
       if (data.description !== undefined) payload.description = data.description;
       if (data.expectedNumberOfParticipants !== undefined) payload.expectedNumberOfParticipants = data.expectedNumberOfParticipants;
       if (data.avatarUrl !== undefined) payload.avatarUrl = data.avatarUrl || null;
       if (data.coverUrl !== undefined) payload.coverUrl = data.coverUrl || null;
-      if (data.startDate !== undefined) {
+      if (!isPublished && data.startDate !== undefined) {
         payload.startDate = data.startDate ? data.startDate.toISOString() : null;
       }
-      if (data.endDate !== undefined) {
+      if (!isPublished && data.endDate !== undefined) {
         payload.endDate = data.endDate ? data.endDate.toISOString() : null;
       }
       // social and eventValidationDocuments are full replacements (not partial updates)
@@ -470,24 +474,41 @@ export default function EditEventPage({
                       <FormField
                         control={form.control}
                         name="displayName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              <FieldLabel
-                                label="Event Name"
-                                tooltip="A clear, memorable name for your event. This is what attendees will see first."
-                              />
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="e.g., Summer Music Festival 2025"
-                                {...field}
-                                className="h-11"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                        render={({ field }) => {
+                          const isPublished = event?.status?.toUpperCase() === "PUBLISHED";
+                          return (
+                            <FormItem>
+                              <FormLabel>
+                                <FieldLabel
+                                  label="Event Name"
+                                  tooltip={isPublished ? "Event name cannot be changed after publishing" : "A clear, memorable name for your event. This is what attendees will see first."}
+                                />
+                              </FormLabel>
+                              <FormControl>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div>
+                                        <Input
+                                          placeholder="e.g., Summer Music Festival 2025"
+                                          {...field}
+                                          className="h-11"
+                                          disabled={isPublished}
+                                        />
+                                      </div>
+                                    </TooltipTrigger>
+                                    {isPublished && (
+                                      <TooltipContent>
+                                        <p>Event name cannot be edited after publishing</p>
+                                      </TooltipContent>
+                                    )}
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
                       />
 
                       <FormField
@@ -575,49 +596,83 @@ export default function EditEventPage({
                         <FormField
                           control={form.control}
                           name="startDate"
-                          render={({ field }) => (
-                            <FormItem className="w-full">
-                              <div className="mb-2">
-                                <FieldLabel
-                                  label="Start Date & Time"
-                                  tooltip="When your event begins. Attendees will use this to plan their arrival."
-                                />
-                              </div>
-                              <FormControl>
-                                <DateTimePicker
-                                  label=""
-                                  value={field.value || undefined}
-                                  onChange={(date) => field.onChange(date || null)}
-                                  error={form.formState.errors.startDate?.message}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
+                          render={({ field }) => {
+                            const isPublished = event?.status?.toUpperCase() === "PUBLISHED";
+                            return (
+                              <FormItem className="w-full">
+                                <div className="mb-2">
+                                  <FieldLabel
+                                    label="Start Date & Time"
+                                    tooltip={isPublished ? "Start date cannot be changed after publishing" : "When your event begins. Attendees will use this to plan their arrival."}
+                                  />
+                                </div>
+                                <FormControl>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div>
+                                          <DateTimePicker
+                                            label=""
+                                            value={field.value || undefined}
+                                            onChange={(date) => field.onChange(date || null)}
+                                            error={form.formState.errors.startDate?.message}
+                                            disabled={isPublished}
+                                          />
+                                        </div>
+                                      </TooltipTrigger>
+                                      {isPublished && (
+                                        <TooltipContent>
+                                          <p>Start date cannot be edited after publishing</p>
+                                        </TooltipContent>
+                                      )}
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            );
+                          }}
                         />
 
                         <FormField
                           control={form.control}
                           name="endDate"
-                          render={({ field }) => (
-                            <FormItem className="w-full">
-                              <div className="mb-2">
-                                <FieldLabel
-                                  label="End Date & Time"
-                                  tooltip="When your event concludes. Must be after the start date."
-                                />
-                              </div>
-                              <FormControl>
-                                <DateTimePicker
-                                  label=""
-                                  value={field.value || undefined}
-                                  onChange={(date) => field.onChange(date || null)}
-                                  error={form.formState.errors.endDate?.message}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
+                          render={({ field }) => {
+                            const isPublished = event?.status?.toUpperCase() === "PUBLISHED";
+                            return (
+                              <FormItem className="w-full">
+                                <div className="mb-2">
+                                  <FieldLabel
+                                    label="End Date & Time"
+                                    tooltip={isPublished ? "End date cannot be changed after publishing" : "When your event concludes. Must be after the start date."}
+                                  />
+                                </div>
+                                <FormControl>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div>
+                                          <DateTimePicker
+                                            label=""
+                                            value={field.value || undefined}
+                                            onChange={(date) => field.onChange(date || null)}
+                                            error={form.formState.errors.endDate?.message}
+                                            disabled={isPublished}
+                                          />
+                                        </div>
+                                      </TooltipTrigger>
+                                      {isPublished && (
+                                        <TooltipContent>
+                                          <p>End date cannot be edited after publishing</p>
+                                        </TooltipContent>
+                                      )}
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            );
+                          }}
                         />
                       </div>
                     </CardContent>

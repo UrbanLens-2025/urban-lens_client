@@ -24,6 +24,7 @@ interface DateTimePickerProps {
   eventStartDate?: Date;
   eventEndDate?: Date;
   allowFlexibleDates?: boolean;
+  disabled?: boolean;
 }
 
 export function DateTimePicker({
@@ -36,6 +37,7 @@ export function DateTimePicker({
   eventStartDate,
   eventEndDate,
   allowFlexibleDates = false,
+  disabled = false,
 }: DateTimePickerProps) {
   const normalizedDefault =
     /^\d{2}:\d{2}$/.test(defaultTime) ? defaultTime : "00:00";
@@ -102,18 +104,21 @@ export function DateTimePicker({
           <PopoverTrigger asChild>
             <Button
               variant="outline"
+              disabled={disabled}
               className={cn(
                 "flex-1 justify-start text-left font-normal min-w-[160px] h-12 border-2 transition-all",
                 !value && "text-muted-foreground border-primary/20 hover:border-primary/40",
                 error && "border-destructive",
-                value && "border-primary/30"
+                value && "border-primary/30",
+                disabled && "opacity-50 cursor-not-allowed"
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
               {displayValue || "Pick a date"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          {!disabled && (
+            <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"
               selected={selectedDate}
@@ -149,7 +154,8 @@ export function DateTimePicker({
               }}
               initialFocus
             />
-          </PopoverContent>
+            </PopoverContent>
+          )}
         </Popover>
 
         <TimePicker
@@ -157,6 +163,7 @@ export function DateTimePicker({
           onChange={handleTimeChange}
           error={error}
           className="w-36"
+          disabled={disabled}
         />
       </div>
     </div>

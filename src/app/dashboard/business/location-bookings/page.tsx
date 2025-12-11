@@ -167,6 +167,11 @@ function BookingRow({
       </TableCell>
       <TableCell className="py-4">
         <span className="text-sm font-semibold leading-tight truncate">
+          {booking.referencedEventRequest?.eventName || "N/A"}
+        </span>
+      </TableCell>
+      <TableCell className="py-4">
+        <span className="text-sm font-semibold leading-tight truncate">
           {booking.location.name}
         </span>
       </TableCell>
@@ -270,7 +275,7 @@ export default function LocationBookingsPage() {
       />
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-4">
         <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Bookings</CardTitle>
@@ -392,6 +397,14 @@ export default function LocationBookingsPage() {
                         className="min-w-[180px] max-w-[220px] text-left text-xs uppercase tracking-wide text-muted-foreground py-3"
                       >
                         Requested By
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="referencedEventRequest.eventName"
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className="min-w-[180px] max-w-[220px] text-left text-xs uppercase tracking-wide text-muted-foreground py-3"
+                      >
+                        Event Name
                       </SortableTableHeader>
                       <SortableTableHeader
                         column="location.name"
