@@ -509,6 +509,12 @@ export default function LocationBookingDetailPage({
                           // Last day: from start of day to end time
                           dayStart = startOfDay(day);
                           dayEnd = end;
+                          
+                          // Skip if end time is exactly at start of day (00:00:00)
+                          // This means the booking ended at midnight, so no slot for this day
+                          if (dayEnd.getTime() === dayStart.getTime()) {
+                            return;
+                          }
                         } else {
                           // Middle days: full day
                           dayStart = startOfDay(day);
@@ -539,38 +545,99 @@ export default function LocationBookingDetailPage({
                     return a.startTime.getTime() - b.startTime.getTime();
                   });
                   
-                  // Merge consecutive time slots on the same day
-                  const mergedSlots: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
+                  // Filter out invalid slots first
+                  const validSortedDates = sortedDates.filter(slot => 
+                    slot.startTime.getTime() < slot.endTime.getTime()
+                  );
                   
-                  sortedDates.forEach((currentSlot) => {
-                    if (mergedSlots.length === 0) {
-                      // First slot, just add it
-                      mergedSlots.push({ ...currentSlot });
-                    } else {
-                      const lastSlot = mergedSlots[mergedSlots.length - 1];
-                      const isSameDate = format(lastSlot.date, "yyyy-MM-dd") === format(currentSlot.date, "yyyy-MM-dd");
-                      const isConsecutive = isSameDate && 
-                                           lastSlot.endTime.getTime() === currentSlot.startTime.getTime();
-                      
-                      if (isConsecutive) {
-                        // Merge with previous slot
-                        lastSlot.endTime = currentSlot.endTime;
-                      } else {
-                        // Add as new slot
-                        mergedSlots.push({ ...currentSlot });
-                      }
-                    }
-                  });
-                  
-                  // Group merged slots by date for better display
-                  const groupedByDate = mergedSlots.reduce((acc, slot) => {
+                  // Group slots by date for easier merging
+                  const slotsByDate = validSortedDates.reduce((acc, slot) => {
                     const dateKey = format(slot.date, "yyyy-MM-dd");
                     if (!acc[dateKey]) {
                       acc[dateKey] = [];
                     }
                     acc[dateKey].push(slot);
                     return acc;
-                  }, {} as Record<string, typeof mergedSlots>);
+                  }, {} as Record<string, typeof validSortedDates>);
+                  
+                  // Merge slots for each date
+                  const mergedSlots: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
+                  
+                  Object.entries(slotsByDate).forEach(([dateKey, slots]) => {
+                    // Sort slots by start time for this date
+                    let slotsToMerge = [...slots].sort((a, b) => 
+                      a.startTime.getTime() - b.startTime.getTime()
+                    );
+                    
+                    // Keep merging until no more merges are possible
+                    let changed = true;
+                    while (changed && slotsToMerge.length > 1) {
+                      changed = false;
+                      const newSlots: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
+                      const used = new Set<number>();
+                      
+                      for (let i = 0; i < slotsToMerge.length; i++) {
+                        if (used.has(i)) continue;
+                        
+                        let currentSlot = { ...slotsToMerge[i] };
+                        let merged = false;
+                        
+                        // Try to merge with remaining slots
+                        for (let j = i + 1; j < slotsToMerge.length; j++) {
+                          if (used.has(j)) continue;
+                          
+                          const otherSlot = slotsToMerge[j];
+                          const currentStart = currentSlot.startTime.getTime();
+                          const currentEnd = currentSlot.endTime.getTime();
+                          const otherStart = otherSlot.startTime.getTime();
+                          const otherEnd = otherSlot.endTime.getTime();
+                          
+                          // Check if overlapping, adjacent, or contained
+                          const isOverlapping = (currentStart <= otherEnd && currentEnd >= otherStart);
+                          const isAdjacent = (currentEnd === otherStart || otherEnd === currentStart);
+                          const isContained = (currentStart >= otherStart && currentEnd <= otherEnd) || 
+                                             (otherStart >= currentStart && otherEnd <= currentEnd);
+                          
+                          if (isOverlapping || isAdjacent || isContained) {
+                            // Merge: take earliest start and latest end
+                            currentSlot.startTime = new Date(Math.min(currentStart, otherStart));
+                            currentSlot.endTime = new Date(Math.max(currentEnd, otherEnd));
+                            const mergedStart = currentSlot.startTime;
+                            const mergedEnd = currentSlot.endTime;
+                            currentSlot.isAllDay = mergedStart.getHours() === 0 && 
+                                                  mergedStart.getMinutes() === 0 &&
+                                                  mergedEnd.getHours() === 23 && 
+                                                  mergedEnd.getMinutes() === 59;
+                            used.add(j);
+                            merged = true;
+                            changed = true;
+                          }
+                        }
+                        
+                        newSlots.push(currentSlot);
+                      }
+                      
+                      slotsToMerge = newSlots;
+                    }
+                    
+                    // Add all merged slots for this date to the final array
+                    mergedSlots.push(...slotsToMerge);
+                  });
+                  
+                  // Filter out any merged slots that ended up with zero or negative duration
+                  const validSlots = mergedSlots.filter(slot => 
+                    slot.startTime.getTime() < slot.endTime.getTime()
+                  );
+                  
+                  // Group merged slots by date for better display
+                  const groupedByDate = validSlots.reduce((acc, slot) => {
+                    const dateKey = format(slot.date, "yyyy-MM-dd");
+                    if (!acc[dateKey]) {
+                      acc[dateKey] = [];
+                    }
+                    acc[dateKey].push(slot);
+                    return acc;
+                  }, {} as Record<string, typeof validSlots>);
                   
                   return (
                     <div className="bg-gradient-to-r from-primary/5 via-primary/5 to-transparent rounded-lg border border-primary/10 p-4">

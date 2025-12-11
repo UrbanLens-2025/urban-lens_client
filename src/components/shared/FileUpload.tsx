@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { uploadImage } from "@/api/upload";
 import { Loader2, UploadCloud, X } from "lucide-react";
 import { Button } from "../ui/button";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,7 @@ export function FileUpload({ value, onChange, disabled = false }: FileUploadProp
   const [isUploading, setIsUploading] = useState(false);
   const [previews, setPreviews] = useState<string[]>(value || []);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [uploadingUrls, setUploadingUrls] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setPreviews(value || []);
@@ -34,10 +36,11 @@ export function FileUpload({ value, onChange, disabled = false }: FileUploadProp
       if (acceptedFiles.length === 0) return;
 
       setIsUploading(true);
-      toast.info(`Uploading ${acceptedFiles.length} image(s)...`);
-
       const tempUrls = acceptedFiles.map((file) => URL.createObjectURL(file));
       const currentUrls = value || [];
+      
+      // Add temp URLs to previews and mark as uploading
+      setUploadingUrls(new Set(tempUrls));
       onChange([...currentUrls, ...tempUrls]);
 
       try {
@@ -46,12 +49,14 @@ export function FileUpload({ value, onChange, disabled = false }: FileUploadProp
 
         const nonTempPreviews = (value || []).filter((p) => !tempUrls.includes(p));
         onChange([...nonTempPreviews, ...finalUrls]);
+        setUploadingUrls(new Set());
 
-        toast.success("All uploads successful!");
+        toast.success(`${finalUrls.length} image(s) uploaded successfully!`);
       } catch (error) {
         toast.error("An error occurred during upload. Please try again.");
         const nonTempPreviews = (value || []).filter((p) => !tempUrls.includes(p));
         onChange(nonTempPreviews);
+        setUploadingUrls(new Set());
       } finally {
         setIsUploading(false);
         tempUrls.forEach((url) => URL.revokeObjectURL(url));
@@ -76,84 +81,129 @@ export function FileUpload({ value, onChange, disabled = false }: FileUploadProp
     <div>
       {previews && previews.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 mb-6">
-          {previews.map((url, index) => (
-            <Dialog key={url || index} onOpenChange={(open) => !open && setZoomedImage(null)}>
-              <DialogTrigger asChild>
-                <div className="relative w-full aspect-video bg-muted/50 rounded-lg overflow-hidden group cursor-pointer border-2 border-border hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md">
-                  <img
-                    src={url}
-                    alt={`Preview ${index + 1}`}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                    onClick={() => setZoomedImage(url)}
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2 h-8 w-8 rounded-full z-10 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:scale-110"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemove(url);
-                    }}
-                    disabled={disabled || isUploading}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </DialogTrigger>
+          {previews.map((url, index) => {
+            const isUploadingThis = uploadingUrls.has(url);
+            return (
+              <div key={url || index} className="relative w-full aspect-square min-h-[200px] sm:min-h-[220px] bg-muted/50 rounded-lg overflow-hidden border-2 border-border transition-all duration-300 shadow-sm">
+                {/* Image Preview - Always visible */}
+                <Dialog onOpenChange={(open) => !open && setZoomedImage(null)}>
+                  <DialogTrigger asChild>
+                    <div className={cn(
+                      "relative w-full h-full group transition-all duration-300",
+                      !isUploadingThis && "cursor-pointer hover:border-primary/50"
+                    )}>
+                      <img
+                        src={url}
+                        alt={`Preview ${index + 1}`}
+                        className={cn(
+                          "w-full h-full object-cover transition-all duration-300",
+                          !isUploadingThis && "group-hover:scale-105",
+                          isUploadingThis && "opacity-60"
+                        )}
+                        onClick={() => !isUploadingThis && setZoomedImage(url)}
+                      />
+                      {!isUploadingThis && (
+                        <>
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2 h-7 w-7 rounded-full z-10 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:scale-110"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemove(url);
+                            }}
+                            disabled={disabled || isUploading}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </DialogTrigger>
 
-              <DialogContent className="max-w-4xl p-0 bg-transparent border-none shadow-none">
-                <VisuallyHidden>
-                  <DialogTitle>Image preview</DialogTitle>
-                </VisuallyHidden>
-                <img
-                  src={zoomedImage || url}
-                  alt="Zoomed preview"
-                  className="w-full h-auto max-h-[90vh] rounded-lg object-contain"
-                />
-              </DialogContent>
-            </Dialog>
-          ))}
+                  <DialogContent className="max-w-4xl p-0 bg-transparent border-none shadow-none">
+                    <VisuallyHidden>
+                      <DialogTitle>Image preview</DialogTitle>
+                    </VisuallyHidden>
+                    <img
+                      src={zoomedImage || url}
+                      alt="Zoomed preview"
+                      className="w-full h-auto max-h-[90vh] rounded-lg object-contain"
+                    />
+                  </DialogContent>
+                </Dialog>
 
-          {isUploading && (
-            <div className="w-full aspect-video bg-muted/50 rounded-lg overflow-hidden relative flex items-center justify-center border-2 border-dashed border-primary/30">
-              <div className="flex flex-col items-center gap-2">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="text-xs text-muted-foreground">Uploading...</p>
+                {/* Uploading Overlay - Only when uploading */}
+                {isUploadingThis && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm z-10 rounded-lg pointer-events-none">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="relative">
+                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="h-6 w-6 rounded-full bg-primary/20 animate-pulse" />
+                        </div>
+                      </div>
+                      <div className="text-center space-y-1">
+                        <p className="text-sm font-semibold text-foreground">Uploading...</p>
+                        <p className="text-xs text-muted-foreground">Please wait</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })}
         </div>
       )}
 
       {!disabled && (
         <div
           {...getRootProps()}
-          className={`relative border-2 border-dashed rounded-lg p-10 sm:p-12 text-center cursor-pointer transition-all duration-300 ${
+          className={cn(
+            "relative border-2 border-dashed rounded-lg p-6 sm:p-8 text-center cursor-pointer transition-all duration-300 min-h-[200px] sm:min-h-[220px] flex items-center justify-center",
             isDragActive
-              ? "border-primary bg-primary/5 scale-[1.02] shadow-lg"
-              : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-md"
-          }`}
+              ? "border-primary bg-primary/5 scale-[1.01] shadow-md"
+              : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm",
+            isUploading && "opacity-50 cursor-not-allowed"
+          )}
         >
-          <input {...getInputProps()} />
-          <div className="flex flex-col items-center justify-center gap-3">
-            <div className={`p-4 rounded-full bg-muted transition-colors duration-300 ${
-              isDragActive ? "bg-primary/10" : ""
-            }`}>
-              <UploadCloud className={`h-12 w-12 transition-colors duration-300 ${
-                isDragActive ? "text-primary" : "text-muted-foreground"
-              }`} />
+          <input {...getInputProps()} disabled={isUploading} />
+          {isUploading ? (
+            <div className="flex flex-col items-center justify-center gap-3 w-full">
+              <div className="relative">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="h-6 w-6 rounded-full bg-primary/20 animate-pulse" />
+                </div>
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-sm font-semibold text-foreground">Uploading images...</p>
+                <p className="text-xs text-muted-foreground">Please wait</p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <p className="text-base font-semibold text-foreground">
-                <span className="text-primary">Click to upload more</span> or drag and drop
-              </p>
-              <p className="text-sm text-muted-foreground">
-                PNG, JPG, GIF up to 10MB
-              </p>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-3 w-full">
+              <div className={cn(
+                "p-3 rounded-full bg-muted transition-all duration-300",
+                isDragActive && "bg-primary/10 scale-110"
+              )}>
+                <UploadCloud className={cn(
+                  "h-8 w-8 sm:h-10 sm:w-10 transition-colors duration-300",
+                  isDragActive ? "text-primary" : "text-muted-foreground"
+                )} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">
+                  <span className="text-primary">Click to upload more</span> or drag and drop
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  PNG, JPG, GIF up to 10MB
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

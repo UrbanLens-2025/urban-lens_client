@@ -257,73 +257,105 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
         />
       </div>
 
-      <Separator className="my-6" />
+      <Separator className="my-8" />
 
       {/* Cover Image and Avatar Image */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          control={form.control}
-          name="coverUrl"
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center gap-2 mb-2">
-                <FormLabel className="flex items-center gap-2 text-base font-semibold">
-                  <div className="p-1 rounded-md bg-primary/10">
-                    <ImageIcon className="h-4 w-4 text-primary" />
-                  </div>
-                  Cover Image
-                </FormLabel>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Upload a cover image for your event</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <FormControl>
-                <SingleFileUpload
-                  value={field.value || undefined}
-                  onChange={(url) => field.onChange(url || "")}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <div className="space-y-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20">
+            <ImageIcon className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-foreground">Event Images</h3>
+            <p className="text-sm text-muted-foreground">Upload cover and avatar images to represent your event</p>
+          </div>
+        </div>
 
-        <FormField
-          control={form.control}
-          name="avatarUrl"
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center gap-2 mb-2">
-                <FormLabel className="flex items-center gap-2 text-base font-semibold">
-                  <div className="p-1 rounded-md bg-primary/10">
-                    <ImageIcon className="h-4 w-4 text-primary" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+          <FormField
+            control={form.control}
+            name="coverUrl"
+            render={({ field }) => (
+              <FormItem>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <ImageIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <FormLabel className="text-base font-semibold text-foreground flex items-center gap-2">
+                          Cover Image
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-medium mb-1">Cover Image</p>
+                              <p className="text-sm">This is the main banner image displayed at the top of your event page. Recommended size: 1920x1080px or 16:9 aspect ratio.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </FormLabel>
+                        <p className="text-xs text-muted-foreground mt-0.5">Main banner for your event</p>
+                      </div>
+                    </div>
                   </div>
-                  Avatar Image
-                </FormLabel>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Upload an avatar image for your event</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <FormControl>
-                <SingleFileUpload
-                  value={field.value || undefined}
-                  onChange={(url) => field.onChange(url || "")}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                  <div className="rounded-xl border-2 border-dashed border-border bg-card/50 p-1 hover:border-primary/50 transition-colors">
+                    <FormControl>
+                      <SingleFileUpload
+                        value={field.value || undefined}
+                        onChange={(url) => field.onChange(url || "")}
+                      />
+                    </FormControl>
+                  </div>
+                </div>
+                <FormMessage className="mt-2" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="avatarUrl"
+            render={({ field }) => (
+              <FormItem>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                        <ImageIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <FormLabel className="text-base font-semibold text-foreground flex items-center gap-2">
+                          Avatar Image
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-medium mb-1">Avatar Image</p>
+                              <p className="text-sm">This is the thumbnail image used in event listings and cards. Recommended size: 512x512px or 1:1 aspect ratio (square).</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </FormLabel>
+                        <p className="text-xs text-muted-foreground mt-0.5">Thumbnail for event listings</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border-2 border-dashed border-border bg-card/50 p-1 hover:border-primary/50 transition-colors">
+                    <FormControl>
+                      <SingleFileUpload
+                        value={field.value || undefined}
+                        onChange={(url) => field.onChange(url || "")}
+                      />
+                    </FormControl>
+                  </div>
+                </div>
+                <FormMessage className="mt-2" />
+              </FormItem>
+            )}
+          />
+        </div>
       </div>
 
       <Separator className="my-6" />
