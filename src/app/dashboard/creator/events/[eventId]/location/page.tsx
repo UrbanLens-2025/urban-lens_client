@@ -8,11 +8,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { MapPin, Calendar, Plus, Building2, Loader2, CheckCircle, CheckCircle2, Clock, AlertCircle, List, Info, Star, Mail, Phone, Globe, CreditCard, XCircle } from "lucide-react";
+import { MapPin, Calendar, Plus, Building2, Loader2, CheckCircle, Clock, AlertCircle, List, Info, Star, Mail, Phone, Globe, CreditCard, XCircle, ChevronLeft, ChevronRight, RotateCcw, Copy, Check } from "lucide-react";
 import { useEventTabs } from "@/contexts/EventTabContext";
 import { useEventById } from "@/hooks/events/useEventById";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
-import { format, isSameDay, startOfDay, endOfDay, eachDayOfInterval, differenceInHours } from "date-fns";
+import { format, startOfDay, endOfDay, eachDayOfInterval, differenceInHours, addDays, subDays, startOfWeek, getHours, getMinutes, setHours, setMinutes } from "date-fns";
 import Image from "next/image";
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
 import { toast } from "sonner";
@@ -22,6 +22,62 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { initiateLocationBookingPayment } from "@/api/events";
 import { useEventLocationBookings } from "@/hooks/events/useEventLocationBookings";
 import { CancelBookingDialog } from "./_components/CancelBookingDialog";
+
+// Error boundary that catches all errors in the map component to prevent page crash
+class GoogleMapsErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; isGoogleMapsError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, isGoogleMapsError: false };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    const errorMessage = error?.message || String(error) || "";
+    const errorName = error?.name || "";
+    
+    // Check if it's a Google Maps error
+    const isGoogleMapsError = 
+      errorName === "ExpiredKeyMapError" ||
+      errorName === "InvalidKeyMapError" ||
+      errorMessage.includes("ExpiredKeyMapError") ||
+      errorMessage.includes("InvalidKeyMapError") ||
+      errorMessage.includes("Google Maps API") ||
+      errorMessage.includes("Google Maps JavaScript API") ||
+      errorMessage.includes("maps.googleapis.com");
+    
+    // Always catch errors in the map component to prevent page crash
+    return { hasError: true, isGoogleMapsError };
+  }
+
+  componentDidCatch(error: any) {
+    const errorMessage = error?.message || String(error) || "";
+    if (this.state.isGoogleMapsError) {
+      console.warn("Google Maps API error (non-blocking):", errorMessage);
+    } else {
+      console.error("Map component error (non-blocking):", errorMessage);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center h-full bg-muted text-muted-foreground">
+          <div className="text-center">
+            <MapPin className="h-12 w-12 mx-auto mb-2 opacity-20" />
+            <p className="text-sm">Map unavailable</p>
+            <p className="text-xs mt-2 opacity-60">
+              {this.state.isGoogleMapsError ? "Google Maps API error" : "Map error"}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 const getStatusBadge = (status: string) => {
   const statusUpper = status?.toUpperCase();
@@ -93,6 +149,452 @@ const formatDateRange = (dates: { startDateTime: string; endDateTime: string }[]
   }
   return `${dates.length} time slots`;
 };
+
+function TransactionIdDisplay({ transactionId }: { transactionId: string }) {
+  const [copied, setCopied] = useState(false);
+  
+  const truncatedId = transactionId.length > 16 
+    ? `${transactionId.slice(0, 8)}...${transactionId.slice(-8)}`
+    : transactionId;
+  
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(transactionId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-sm text-muted-foreground">Transaction ID</p>
+      <div className="flex items-center gap-2">
+        <p className="text-xs font-mono text-muted-foreground">{truncatedId}</p>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleCopy}
+          className="h-6 w-6"
+          title="Copy transaction ID"
+        >
+          {copied ? (
+            <Check className="h-3 w-3 text-green-600" />
+          ) : (
+            <Copy className="h-3 w-3" />
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function BookingCalendar({ 
+  dates 
+}: { 
+  dates: { startDateTime: string; endDateTime: string }[] 
+}) {
+  const [currentStartDate, setCurrentStartDate] = useState<Date>(() => {
+    if (dates.length === 0) return new Date();
+    // Find the earliest date in the bookings
+    const earliestDate = dates.reduce((earliest, dateRange) => {
+      const start = new Date(dateRange.startDateTime);
+      return start < earliest ? start : earliest;
+    }, new Date(dates[0].startDateTime));
+    // Start from the beginning of the week containing the earliest date
+    return startOfWeek(earliestDate, { weekStartsOn: 1 });
+  });
+
+  const DAYS_TO_SHOW = 5;
+  const TIME_SLOT_HOURS = 2; // 2-hour increments
+
+  // Generate time slots: 00:00, 02:00, 04:00, ..., 22:00
+  const timeSlots = Array.from({ length: 12 }, (_, i) => i * TIME_SLOT_HOURS);
+
+  // Generate days to display
+  const displayedDays = Array.from({ length: DAYS_TO_SHOW }, (_, i) => 
+    addDays(currentStartDate, i)
+  );
+
+  // Process booking dates into a map for quick lookup
+  const bookingMap: Record<string, Array<{ start: Date; end: Date }>> = {};
+
+  dates.forEach((dateRange) => {
+    const start = new Date(dateRange.startDateTime);
+    const end = new Date(dateRange.endDateTime);
+    
+    // Split multi-day bookings into individual days
+    const days = eachDayOfInterval({ start, end });
+    
+    days.forEach((day, dayIndex) => {
+      const isFirstDay = dayIndex === 0;
+      const isLastDay = dayIndex === days.length - 1;
+      
+      let dayStart: Date;
+      let dayEnd: Date;
+      
+      if (isFirstDay && isLastDay) {
+        dayStart = start;
+        dayEnd = end;
+      } else if (isFirstDay) {
+        dayStart = start;
+        // If end is exactly 00:00 of the next day, preserve it (it's 24:00 of current day)
+        // Otherwise use endOfDay
+        if (format(end, "yyyy-MM-dd") === format(addDays(day, 1), "yyyy-MM-dd") &&
+            getHours(end) === 0 && getMinutes(end) === 0) {
+          dayEnd = end; // Keep as 00:00 next day (represents 24:00)
+        } else {
+          dayEnd = endOfDay(day);
+        }
+      } else if (isLastDay) {
+        dayStart = startOfDay(day);
+        dayEnd = end;
+      } else {
+        dayStart = startOfDay(day);
+        dayEnd = endOfDay(day);
+      }
+      
+      const dateKey = format(day, "yyyy-MM-dd");
+      if (!bookingMap[dateKey]) {
+        bookingMap[dateKey] = [];
+      }
+      bookingMap[dateKey].push({ start: dayStart, end: dayEnd });
+    });
+  });
+
+  // Merge consecutive bookings on each day to detect full cells
+  Object.keys(bookingMap).forEach((dateKey) => {
+    const bookings = bookingMap[dateKey];
+    // Sort by start time
+    bookings.sort((a, b) => a.start.getTime() - b.start.getTime());
+    
+    // Merge consecutive bookings
+    const merged: Array<{ start: Date; end: Date }> = [];
+    for (const booking of bookings) {
+      if (merged.length === 0) {
+        merged.push({ start: booking.start, end: booking.end });
+      } else {
+        const last = merged[merged.length - 1];
+        // If this booking starts exactly when the last one ends, merge them
+        if (last.end.getTime() === booking.start.getTime()) {
+          last.end = booking.end;
+        } else {
+          merged.push({ start: booking.start, end: booking.end });
+        }
+      }
+    }
+    bookingMap[dateKey] = merged;
+  });
+
+  // Check if a time slot cell should be colored
+  const getCellBooking = (day: Date, timeSlotHour: number) => {
+    const dateKey = format(day, "yyyy-MM-dd");
+    const bookings = bookingMap[dateKey] || [];
+    
+    // Handle 22:00 slot specially (spans to next day: 22:00-00:00)
+    let slotStart: Date;
+    let slotEnd: Date;
+    if (timeSlotHour === 22) {
+      slotStart = setMinutes(setHours(startOfDay(day), 22), 0);
+      slotEnd = setMinutes(setHours(startOfDay(addDays(day, 1)), 0), 0); // Next day 00:00
+    } else {
+      slotStart = setMinutes(setHours(startOfDay(day), timeSlotHour), 0);
+      slotEnd = setMinutes(setHours(startOfDay(day), timeSlotHour + TIME_SLOT_HOURS), 0);
+    }
+    const slotMid = setMinutes(setHours(startOfDay(day), timeSlotHour + 1), 0); // Middle of 2-hour slot
+    
+    // Collect all bookings that overlap with this slot
+    const allBookings = [...bookings];
+    
+    // For 22:00 slot, we'll check next day bookings separately below
+    
+    const slotStartTime = slotStart.getTime();
+    const slotMidTime = slotMid.getTime();
+    const slotEndTime = slotEnd.getTime();
+    
+    // Track coverage of top and bottom halves
+    let topHalfCovered = false;
+    let bottomHalfCovered = false;
+    let fullCellCovered = false;
+    
+    for (const booking of allBookings) {
+      const bookingStartTime = booking.start.getTime();
+      const bookingEndTime = booking.end.getTime();
+      
+      // Check if booking overlaps with this time slot
+      if (bookingStartTime < slotEndTime && bookingEndTime > slotStartTime) {
+        // Check if booking covers the entire cell (completely spans the slot)
+        if (bookingStartTime <= slotStartTime && bookingEndTime >= slotEndTime) {
+          fullCellCovered = true;
+          continue;
+        }
+        
+        // Check if booking spans both halves (starts before slotMid and ends after slotMid)
+        // This should be treated as full cell coverage
+        if (bookingStartTime < slotMidTime && bookingEndTime > slotMidTime) {
+          fullCellCovered = true;
+          continue;
+        }
+        
+        // Check if booking covers top half [slotStart, slotMid)
+        // A booking covers top half if it overlaps with [slotStart, slotMid)
+        // Top half: 22:00-23:00 in 22:00-00:00 slot, or 00:00-01:00 in 00:00-02:00 slot
+        if (bookingStartTime < slotMidTime && bookingEndTime > slotStartTime) {
+          topHalfCovered = true;
+        }
+        
+        // Check if booking covers bottom half [slotMid, slotEnd)
+        // A booking covers bottom half if it overlaps with [slotMid, slotEnd)
+        // Bottom half: 23:00-00:00 in 22:00-00:00 slot, or 01:00-02:00 in 00:00-02:00 slot
+        if (bookingStartTime < slotEndTime && bookingEndTime > slotMidTime) {
+          bottomHalfCovered = true;
+        }
+      }
+    }
+    
+    // For 22:00 slot, check if 23:00-00:00 (or 23:00-24:00) is covered
+    // Check original dates for bookings that span midnight (23:00-00:00 or 23:00-24:00)
+    if (timeSlotHour === 22 && !bottomHalfCovered) {
+      const dayStartTime = startOfDay(day).getTime();
+      const dayEndTime = endOfDay(day).getTime();
+      const nextDayStartTime = startOfDay(addDays(day, 1)).getTime();
+      
+      // Check original dates for bookings that span from 23:00 to 00:00 next day (or 24:00)
+      for (const dateRange of dates) {
+        const bookingStart = new Date(dateRange.startDateTime);
+        const bookingEnd = new Date(dateRange.endDateTime);
+        const bookingStartTime = bookingStart.getTime();
+        const bookingEndTime = bookingEnd.getTime();
+        
+        // Check if this booking is part of 23:00-00:00 (or 23:00-24:00) on the current day
+        const startsAt23 = getHours(bookingStart) === 23 && getMinutes(bookingStart) === 0;
+        const endsAt00 = getHours(bookingEnd) === 0 && getMinutes(bookingEnd) === 0;
+        const isOnCurrentDay = bookingStartTime >= dayStartTime && bookingStartTime < dayEndTime;
+        const endsOnNextDay = bookingEndTime >= nextDayStartTime && bookingEndTime < nextDayStartTime + 60 * 60 * 1000; // Within first hour of next day
+        
+        // Also check if the original string indicates 24:00
+        const originalEndTime = dateRange.endDateTime;
+        const is24Hour = originalEndTime.includes("T24:00") || 
+                        (endsAt00 && endsOnNextDay && 
+                         Math.abs(bookingEndTime - bookingStartTime - 60 * 60 * 1000) < 1000); // Exactly 1 hour
+        
+        if (startsAt23 && (endsAt00 || is24Hour) && isOnCurrentDay && endsOnNextDay) {
+          bottomHalfCovered = true;
+          break;
+        }
+      }
+      
+      // Also check the processed bookings - look for bookings that end at 00:00 next day
+      // (which represents 24:00 of current day)
+      if (!bottomHalfCovered) {
+        // Check if there's a booking on current day that ends at 00:00 next day
+        const endsAtMidnight = bookings.some(b => {
+          const endHour = getHours(b.end);
+          const endMin = getMinutes(b.end);
+          const endDate = format(b.end, "yyyy-MM-dd");
+          const nextDate = format(addDays(day, 1), "yyyy-MM-dd");
+          // Check if it ends at 00:00 of the next day
+          return endHour === 0 && endMin === 0 && endDate === nextDate;
+        });
+        
+        // Also check if there's a booking starting at 23:00 on current day
+        const startsAt23 = bookings.some(b => {
+          const startHour = getHours(b.start);
+          const startMin = getMinutes(b.start);
+          return startHour === 23 && startMin === 0;
+        });
+        
+        // If we have a booking that starts at 23:00 and ends at 00:00 next day, it's the bottom half
+        if (startsAt23 && endsAtMidnight) {
+          bottomHalfCovered = true;
+        }
+      }
+    }
+    
+    // Determine result
+    if (fullCellCovered || (topHalfCovered && bottomHalfCovered)) {
+      return {
+        isBooked: true,
+        isFullCell: true,
+        isTopHalf: false,
+        isBottomHalf: false,
+        isMiddle: fullCellCovered,
+      };
+    }
+    
+    if (topHalfCovered) {
+      return {
+        isBooked: true,
+        isFullCell: false,
+        isTopHalf: true,
+        isBottomHalf: false,
+        isMiddle: false,
+      };
+    }
+    
+    if (bottomHalfCovered) {
+      return {
+        isBooked: true,
+        isFullCell: false,
+        isTopHalf: false,
+        isBottomHalf: true,
+        isMiddle: false,
+      };
+    }
+    
+    return { isBooked: false, isFullCell: false, isTopHalf: false, isBottomHalf: false, isMiddle: false };
+  };
+
+  const goToPrevious = () => {
+    setCurrentStartDate(prev => subDays(prev, DAYS_TO_SHOW));
+  };
+
+  const goToNext = () => {
+    setCurrentStartDate(prev => addDays(prev, DAYS_TO_SHOW));
+  };
+
+  const goToBookings = () => {
+    if (dates.length === 0) return;
+    // Find the earliest date in the bookings
+    const earliestDate = dates.reduce((earliest, dateRange) => {
+      const start = new Date(dateRange.startDateTime);
+      return start < earliest ? start : earliest;
+    }, new Date(dates[0].startDateTime));
+    // Start from the beginning of the week containing the earliest date
+    setCurrentStartDate(startOfWeek(earliestDate, { weekStartsOn: 1 }));
+  };
+
+  // Check if current view overlaps with any booking dates
+  const isViewingBookings = dates.length > 0 && (() => {
+    const viewStart = startOfDay(displayedDays[0]);
+    const viewEnd = endOfDay(displayedDays[DAYS_TO_SHOW - 1]);
+    
+    return dates.some(dateRange => {
+      const bookingStart = startOfDay(new Date(dateRange.startDateTime));
+      const bookingEnd = endOfDay(new Date(dateRange.endDateTime));
+      // Check if booking overlaps with current view
+      return bookingStart <= viewEnd && bookingEnd >= viewStart;
+    });
+  })();
+
+  return (
+    <div className="space-y-4">
+      {/* Calendar Navigation */}
+      <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-primary/10 bg-gradient-to-r from-primary/5 to-primary/10">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={goToPrevious}
+          className="h-8 w-8 border border-primary/20 hover:bg-primary/10"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex-1 text-center">
+          <span className="text-sm font-semibold text-foreground">
+            {format(displayedDays[0], "MMM dd")} - {format(displayedDays[DAYS_TO_SHOW - 1], "MMM dd, yyyy")}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {dates.length > 0 && !isViewingBookings && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToBookings}
+              className="h-8 w-8 border border-primary/20 hover:bg-primary/10"
+              title="Return to bookings"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={goToNext}
+            className="h-8 w-8 border border-primary/20 hover:bg-primary/10"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Calendar Grid */}
+      <div className="border rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-muted/50 border-b">
+                <th className="w-20 p-1 text-right text-xs font-semibold text-muted-foreground border-r">
+                  Time
+                </th>
+                {displayedDays.map((day) => (
+                  <th
+                    key={format(day, "yyyy-MM-dd")}
+                    className="min-w-[120px] p-1 text-center text-xs font-semibold text-foreground border-r last:border-r-0"
+                  >
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-muted-foreground">
+                        {format(day, "EEE")}
+                      </span>
+                      <span className="text-sm font-bold">
+                        {format(day, "dd MMM")}
+                      </span>
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {timeSlots.map((hour) => (
+                <tr key={hour} className="border-b last:border-b-0">
+                  <td className="w-20 p-1 text-xs font-mono text-muted-foreground border-r bg-muted/30">
+                    <div className="text-right pr-1">
+                      {String(hour).padStart(2, "0")}:00
+                    </div>
+                  </td>
+                  {displayedDays.map((day) => {
+                    const cellBooking = getCellBooking(day, hour);
+                    return (
+                      <td
+                        key={`${format(day, "yyyy-MM-dd")}-${hour}`}
+                        className="min-w-[120px] h-8 p-0.5 border-r last:border-r-0 relative"
+                      >
+                        {cellBooking.isBooked && (
+                          <div
+                            className={`absolute rounded-sm ${
+                              cellBooking.isFullCell || cellBooking.isMiddle
+                                ? "inset-0 bg-primary/20 border border-primary/40"
+                                : cellBooking.isTopHalf
+                                ? "bg-primary/20 border border-primary/40 border-b-0 rounded-b-none"
+                                : cellBooking.isBottomHalf
+                                ? "bg-primary/20 border border-primary/40 border-t-0 rounded-t-none"
+                                : "inset-0 bg-primary/20 border border-primary/40"
+                            }`}
+                            style={{
+                              ...(cellBooking.isTopHalf && {
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: "50%",
+                              }),
+                              ...(cellBooking.isBottomHalf && {
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                height: "50%",
+                                top: "auto",
+                              }),
+                            }}
+                          />
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function LocationCard({
   location,
@@ -249,35 +751,37 @@ function LocationCard({
       {/* Right Column: Map */}
       <div className="relative h-[600px] w-full rounded-lg overflow-hidden border">
         {apiKey && hasValidCoords ? (
-          <APIProvider apiKey={apiKey}>
-            <Map
-              defaultCenter={mapCenter}
-              defaultZoom={15}
-              mapId="location-details-map"
-              gestureHandling="none"
-              disableDefaultUI={true}
-              zoomControl={false}
-              mapTypeControl={false}
-              streetViewControl={false}
-              fullscreenControl={false}
-              draggable={false}
-              keyboardShortcuts={false}
-            >
-              <AdvancedMarker
-                position={mapCenter}
-                title={location.name || "Location"}
+          <GoogleMapsErrorBoundary>
+            <APIProvider apiKey={apiKey}>
+              <Map
+                defaultCenter={mapCenter}
+                defaultZoom={15}
+                mapId="location-details-map"
+                gestureHandling="none"
+                disableDefaultUI={true}
+                zoomControl={false}
+                mapTypeControl={false}
+                streetViewControl={false}
+                fullscreenControl={false}
+                draggable={false}
+                keyboardShortcuts={false}
               >
-                <div title={location.name || "Location"}>
-                  <Pin
-                    background="#ef4444"
-                    borderColor="#991b1b"
-                    glyphColor="#fff"
-                    scale={1.2}
-                  />
-                </div>
-              </AdvancedMarker>
-            </Map>
-          </APIProvider>
+                <AdvancedMarker
+                  position={mapCenter}
+                  title={location.name || "Location"}
+                >
+                  <div title={location.name || "Location"}>
+                    <Pin
+                      background="#ef4444"
+                      borderColor="#991b1b"
+                      glyphColor="#fff"
+                      scale={1.2}
+                    />
+                  </div>
+                </AdvancedMarker>
+              </Map>
+            </APIProvider>
+          </GoogleMapsErrorBoundary>
         ) : (
           <div className="flex items-center justify-center h-full bg-muted text-muted-foreground">
             <div className="text-center">
@@ -309,6 +813,59 @@ export default function EventLocationPage({
   const { openBookLocationTab } = useEventTabs();
 
   const isEventCancelled = event?.status?.toUpperCase() === "CANCELLED";
+
+  // Handle Google Maps errors globally to prevent blocking
+  useEffect(() => {
+    const isGoogleMapsError = (error: any): boolean => {
+      if (!error) return false;
+      const errorName = error?.name || "";
+      const errorMessage = error?.message || String(error) || "";
+      
+      return (
+        errorName === "ExpiredKeyMapError" ||
+        errorName === "InvalidKeyMapError" ||
+        errorMessage.includes("ExpiredKeyMapError") ||
+        errorMessage.includes("InvalidKeyMapError") ||
+        errorMessage.includes("Google Maps API") ||
+        errorMessage.includes("Google Maps JavaScript API") ||
+        errorMessage.includes("maps.googleapis.com")
+      );
+    };
+
+    const handleError = (event: ErrorEvent) => {
+      const error = event.error || event.message;
+      
+      // Only suppress Google Maps errors, let others through
+      if (isGoogleMapsError(error)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const errorMessage = error?.message || String(error) || "";
+        console.warn("Google Maps API error (suppressed):", errorMessage);
+        return false;
+      }
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const error = event.reason;
+      
+      // Only suppress Google Maps promise rejections
+      if (isGoogleMapsError(error)) {
+        event.preventDefault();
+        const errorMessage = error?.message || String(error) || "";
+        console.warn("Google Maps API promise rejection (suppressed):", errorMessage);
+        return false;
+      }
+    };
+
+    // Use capture phase to catch errors early, but don't override console.error
+    window.addEventListener('error', handleError, true);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection, true);
+
+    return () => {
+      window.removeEventListener('error', handleError, true);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection, true);
+    };
+  }, []);
 
   // Refetch data when page regains focus (e.g., after returning from payment gateway)
   useEffect(() => {
@@ -463,7 +1020,7 @@ export default function EventLocationPage({
                   })()}
 
                   {/* Booking Information */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
                     <Card className="col-span-2">
                       <CardHeader>
                         <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -481,235 +1038,98 @@ export default function EventLocationPage({
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-6">
-                        {currentBooking.dates && currentBooking.dates.length > 0 && (() => {
-                          // Process dates: split multi-day ranges into individual days
-                          const processedDates: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
+                        {currentBooking.dates && currentBooking.dates.length > 0 ? (
+                          <BookingCalendar dates={currentBooking.dates} />
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            No booking dates available
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                    
+                    {/* Payment Details & Destructive Actions Card */}
+                    <Card className="h-full flex flex-col">
+                      <div className="flex flex-col flex-1">
+                        {isPaymentReceived && currentBooking && (() => {
+                          // Calculate total hours
+                          let totalHours = 0;
+                          if (currentBooking.dates && currentBooking.dates.length > 0) {
+                            currentBooking.dates.forEach((dateRange) => {
+                              const start = new Date(dateRange.startDateTime);
+                              const end = new Date(dateRange.endDateTime);
+                              totalHours += differenceInHours(end, start);
+                            });
+                          }
                           
-                          currentBooking.dates.forEach((dateRange) => {
-                            const start = new Date(dateRange.startDateTime);
-                            const end = new Date(dateRange.endDateTime);
-                            
-                            if (isSameDay(start, end)) {
-                              // Single day - add as is
-                              const isAllDay = start.getHours() === 0 && 
-                                              start.getMinutes() === 0 &&
-                                              end.getHours() === 23 && 
-                                              end.getMinutes() === 59;
-                              processedDates.push({
-                                date: start,
-                                startTime: start,
-                                endTime: end,
-                                isAllDay
-                              });
-                            } else {
-                              // Multiple days - split into individual days
-                              const days = eachDayOfInterval({ start, end });
-                              
-                              days.forEach((day, dayIndex) => {
-                                const isFirstDay = dayIndex === 0;
-                                const isLastDay = dayIndex === days.length - 1;
-                                
-                                let dayStart: Date;
-                                let dayEnd: Date;
-                                
-                                if (isFirstDay && isLastDay) {
-                                  // Shouldn't happen, but handle it
-                                  dayStart = start;
-                                  dayEnd = end;
-                                } else if (isFirstDay) {
-                                  // First day: from start time to end of day
-                                  dayStart = start;
-                                  dayEnd = endOfDay(day);
-                                } else if (isLastDay) {
-                                  // Last day: from start of day to end time
-                                  dayStart = startOfDay(day);
-                                  dayEnd = end;
-                                } else {
-                                  // Middle days: full day
-                                  dayStart = startOfDay(day);
-                                  dayEnd = endOfDay(day);
-                                }
-                                
-                                const isAllDay = dayStart.getHours() === 0 && 
-                                                dayStart.getMinutes() === 0 &&
-                                                dayEnd.getHours() === 23 && 
-                                                dayEnd.getMinutes() === 59;
-                                
-                                processedDates.push({
-                                  date: day,
-                                  startTime: dayStart,
-                                  endTime: dayEnd,
-                                  isAllDay
-                                });
-                              });
-                            }
-                          });
+                          // Calculate price per hour
+                          const totalAmount = parseFloat(currentBooking.amountToPay);
+                          const pricePerHour = totalHours > 0 ? totalAmount / totalHours : 0;
                           
-                          // Sort processed dates chronologically
-                          const sortedDates = [...processedDates].sort((a, b) => {
-                            // First sort by date
-                            const dateCompare = a.date.getTime() - b.date.getTime();
-                            if (dateCompare !== 0) return dateCompare;
-                            // If same date, sort by start time
-                            return a.startTime.getTime() - b.startTime.getTime();
-                          });
-                          
-                          // Merge consecutive time slots on the same day
-                          const mergedSlots: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
-                          
-                          sortedDates.forEach((currentSlot) => {
-                            if (mergedSlots.length === 0) {
-                              // First slot, just add it
-                              mergedSlots.push({ ...currentSlot });
-                            } else {
-                              const lastSlot = mergedSlots[mergedSlots.length - 1];
-                              const isSameDate = format(lastSlot.date, "yyyy-MM-dd") === format(currentSlot.date, "yyyy-MM-dd");
-                              const isConsecutive = isSameDate && 
-                                                   lastSlot.endTime.getTime() === currentSlot.startTime.getTime();
-                              
-                              if (isConsecutive) {
-                                // Merge with previous slot
-                                lastSlot.endTime = currentSlot.endTime;
-                              } else {
-                                // Add as new slot
-                                mergedSlots.push({ ...currentSlot });
-                              }
-                            }
-                          });
-                          
-                          // Group merged slots by date for better display
-                          const groupedByDate = mergedSlots.reduce((acc, slot) => {
-                            const dateKey = format(slot.date, "yyyy-MM-dd");
-                            if (!acc[dateKey]) {
-                              acc[dateKey] = [];
-                            }
-                            acc[dateKey].push(slot);
-                            return acc;
-                          }, {} as Record<string, typeof mergedSlots>);
+                          // Use updatedAt as paid date when payment is received
+                          const paidAt = currentBooking.updatedAt;
                           
                           return (
-                            <div className="space-y-4">
-                              {/* Summary Card */}
-                              <div className="bg-gradient-to-r from-primary/5 via-primary/5 to-transparent rounded-lg border border-primary/10 p-4">
-                                <div className="flex items-center justify-between flex-wrap gap-4">
-                                  <div>
-                                    <p className="text-sm font-medium text-muted-foreground mb-1">Total Sessions</p>
-                                    <p className="text-2xl font-bold text-foreground">{mergedSlots.length}</p>
+                            <>
+                              <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                  <CreditCard className="h-5 w-5 text-primary" />
+                                  Payment Details
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="space-y-6">
+                                {/* Pricing Breakdown */}
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-sm text-muted-foreground">Total Hours</p>
+                                    <p className="text-sm font-medium">{totalHours} {totalHours === 1 ? 'hour' : 'hours'}</p>
                                   </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-muted-foreground mb-1">Total Duration</p>
-                                    <p className="text-2xl font-bold text-foreground">
-                                      {(() => {
-                                        const totalMinutes = mergedSlots.reduce((sum, slot) => {
-                                          return sum + Math.round((slot.endTime.getTime() - slot.startTime.getTime()) / (1000 * 60));
-                                        }, 0);
-                                        const hours = Math.floor(totalMinutes / 60);
-                                        const minutes = totalMinutes % 60;
-                                        return hours > 0 
-                                          ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`.trim()
-                                          : `${minutes}m`;
-                                      })()}
-                                    </p>
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-sm text-muted-foreground">Price per Hour</p>
+                                    <p className="text-sm font-medium">{formatCurrency(pricePerHour.toString())}/hour</p>
+                                  </div>
+                                  <div className="flex items-center justify-between pt-3 border-t">
+                                    <p className="text-sm font-semibold text-foreground">Total Amount</p>
+                                    <p className="text-lg font-bold">{formatCurrency(currentBooking.amountToPay)}</p>
                                   </div>
                                 </div>
-                              </div>
-                              
-                              {/* Booking Schedule */}
-                              <div className="space-y-3">
-                                {Object.entries(groupedByDate).map(([dateKey, slots], dateIndex) => {
-                                  const date = new Date(dateKey);
-                                  const isFirstDate = dateIndex === 0;
-                                  
-                                  return (
-                                    <div 
-                                      key={dateKey} 
-                                      className={`rounded-lg border bg-card ${isFirstDate ? 'border-primary/20 shadow-sm' : 'border-border'} overflow-hidden`}
-                                    >
-                                      {/* Date Header */}
-                                      <div className="bg-muted/50 px-4 py-3 border-b">
-                                        <div className="flex items-center gap-3">
-                                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                            <Calendar className="h-5 w-5 text-primary" />
-                                          </div>
-                                          <div>
-                                            <p className="font-semibold text-foreground">
-                                              {format(date, "EEEE, MMMM dd, yyyy")}
-                                            </p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      
-                                      {/* Time Slots */}
-                                      <div className="divide-y divide-border">
-                                        {slots.map((slot, slotIndex) => {
-                                          const duration = Math.round((slot.endTime.getTime() - slot.startTime.getTime()) / (1000 * 60));
-                                          const hours = Math.floor(duration / 60);
-                                          const minutes = duration % 60;
-                                          const durationText = hours > 0 
-                                            ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`.trim()
-                                            : `${minutes}m`;
-                                          
-                                          return (
-                                            <div 
-                                              key={slotIndex}
-                                              className="px-4 py-3 hover:bg-muted/30 transition-colors"
-                                            >
-                                              <div className="flex items-center justify-between gap-4 flex-wrap">
-                                                <div className="flex items-center gap-4 flex-1 min-w-0">
-                                                  {/* Time Range */}
-                                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                                    <div className="h-2 w-2 rounded-full bg-primary"></div>
-                                                    <div className="flex items-center gap-2">
-                                                      <span className="font-mono font-semibold text-foreground text-base">
-                                                        {format(slot.startTime, "HH:mm")}
-                                                      </span>
-                                                      <span className="text-muted-foreground">→</span>
-                                                      <span className="font-mono font-semibold text-foreground text-base">
-                                                        {format(slot.endTime, "HH:mm")}
-                                                      </span>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                                
-                                                {/* Duration Badge */}
-                                                <Badge 
-                                                  variant="secondary" 
-                                                  className="font-medium px-3 py-1 bg-primary/10 text-primary border-primary/20"
-                                                >
-                                                  {durationText}
-                                                </Badge>
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
+                                
+                                {/* Payment Information */}
+                                <div className="space-y-3 pt-2 border-t">
+                                  {paidAt && (
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-sm text-muted-foreground">Paid At</p>
+                                      <p className="text-sm font-medium">{format(new Date(paidAt), "MMM dd, yyyy 'at' HH:mm")}</p>
                                     </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
+                                  )}
+                                  {currentBooking.referencedTransactionId && (
+                                    <TransactionIdDisplay transactionId={currentBooking.referencedTransactionId} />
+                                  )}
+                                </div>
+                              </CardContent>
+                            </>
                           );
                         })()}
-                        
-                        {/* Destructive Actions */}
-                        <div className="pt-6 mt-6 border-t">
-                          <div className="space-y-3">
-                            <h4 className="text-sm font-semibold text-destructive">Destructive Actions</h4>
-                            <p className="text-xs text-muted-foreground">
-                              This action cannot be undone. Cancelling will refund 100% of the booking fee if already paid.
-                            </p>
-                            <Button
-                              variant="destructive"
-                              size="default"
-                              onClick={() => setIsCancelDialogOpen(true)}
-                              className="w-full sm:w-auto"
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Cancel Booking
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
+                      </div>
+                      <div className={`${isPaymentReceived ? "pt-6 mt-6 border-t" : ""} mt-auto`}>
+                        <CardHeader className={isPaymentReceived ? "pb-4" : ""}>
+                          <CardTitle className="text-lg text-destructive">Destructive Actions</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <p className="text-xs text-muted-foreground">
+                            This action cannot be undone. Cancelling will refund 100% of the booking fee if already paid.
+                          </p>
+                          <Button
+                            variant="destructive"
+                            size="default"
+                            onClick={() => setIsCancelDialogOpen(true)}
+                            className="w-full"
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Cancel Booking
+                          </Button>
+                        </CardContent>
+                      </div>
                     </Card>
                     
                     {/* Cancel Booking Confirmation Dialog */}
