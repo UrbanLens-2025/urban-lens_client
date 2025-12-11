@@ -1813,6 +1813,8 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
                     </div>
                   </div>
 
+                  {/* Duration Settings - Hidden */}
+                  {false && (
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold flex items-center gap-2">
                       <Clock className="h-4 w-4" />
@@ -1893,6 +1895,7 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
                       )}
                     />
                   </div>
+                  )}
 
                   <div className="space-y-3 pt-3 border-t">
                     <h3 className="text-sm font-semibold flex items-center gap-2">

@@ -1576,7 +1576,8 @@ export default function AvailabilityPage({
                               </div>
                             </div>
 
-                            {/* Duration Settings */}
+                            {/* Duration Settings - Hidden */}
+                            {false && (
                             <div className="space-y-4">
                               <h3 className="text-lg font-semibold flex items-center gap-2">
                                 <Clock className="h-5 w-5" />
@@ -1668,6 +1669,7 @@ export default function AvailabilityPage({
                                 )}
                               />
                             </div>
+                            )}
 
                             {/* Refund Settings */}
                             <div className="space-y-4">

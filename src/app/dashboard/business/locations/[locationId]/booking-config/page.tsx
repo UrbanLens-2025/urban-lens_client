@@ -404,7 +404,8 @@ export default function LocationBookingConfigPage({
                 </CardContent>
               </Card>
 
-              {/* Duration Settings */}
+              {/* Duration Settings - Hidden */}
+              {false && (
               <Card className="border-2 border-primary/10 shadow-xl">
                 <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b border-primary/20">
                   <CardTitle className="flex items-center gap-3 text-xl">
@@ -514,6 +515,7 @@ export default function LocationBookingConfigPage({
                   />
                 </CardContent>
               </Card>
+              )}
 
               {/* Capacity */}
               <Card className="border-2 border-primary/10 shadow-xl">
