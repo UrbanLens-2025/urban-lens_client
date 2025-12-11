@@ -17,9 +17,10 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 interface FileUploadProps {
   value: string[];
   onChange: (urls: string[]) => void;
+  disabled?: boolean;
 }
 
-export function FileUpload({ value, onChange }: FileUploadProps) {
+export function FileUpload({ value, onChange, disabled = false }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [previews, setPreviews] = useState<string[]>(value || []);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
@@ -63,6 +64,7 @@ export function FileUpload({ value, onChange }: FileUploadProps) {
     onDrop,
     multiple: true,
     accept: { "image/*": [".png", ".gif", ".jpeg", ".jpg"] },
+    disabled: disabled || isUploading,
   });
 
   const handleRemove = (urlToRemove: string) => {
@@ -93,7 +95,7 @@ export function FileUpload({ value, onChange }: FileUploadProps) {
                       e.stopPropagation();
                       handleRemove(url);
                     }}
-                    disabled={isUploading}
+                    disabled={disabled || isUploading}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -121,23 +123,25 @@ export function FileUpload({ value, onChange }: FileUploadProps) {
         </div>
       )}
 
-      <div
-        {...getRootProps()}
-        className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-          isDragActive
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 hover:border-gray-400"
-        }`}
-      >
-        <input {...getInputProps()} />
-        <div className="flex flex-col items-center justify-center">
-          <UploadCloud className="h-10 w-10 text-gray-400" />
-          <p className="mt-2 text-sm text-muted-foreground">
-            <span className="font-semibold text-blue-500">Click to upload more</span>{" "}
-            or drag and drop
-          </p>
+      {!disabled && (
+        <div
+          {...getRootProps()}
+          className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            isDragActive
+              ? "border-blue-500 bg-blue-50"
+              : "border-gray-300 hover:border-gray-400"
+          }`}
+        >
+          <input {...getInputProps()} />
+          <div className="flex flex-col items-center justify-center">
+            <UploadCloud className="h-10 w-10 text-gray-400" />
+            <p className="mt-2 text-sm text-muted-foreground">
+              <span className="font-semibold text-blue-500">Click to upload more</span>{" "}
+              or drag and drop
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

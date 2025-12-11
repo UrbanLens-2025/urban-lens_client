@@ -308,12 +308,14 @@ export default function EditEventPage({
       const isPublished = event?.status?.toUpperCase() === "PUBLISHED";
       const payload: UpdateEventPayload = {};
       
-      // Don't allow editing displayName, startDate, or endDate if event is published
+      // Don't allow editing displayName, startDate, endDate, expectedNumberOfParticipants, or eventValidationDocuments if event is published
       if (!isPublished && data.displayName !== undefined) {
         payload.displayName = data.displayName;
       }
       if (data.description !== undefined) payload.description = data.description;
-      if (data.expectedNumberOfParticipants !== undefined) payload.expectedNumberOfParticipants = data.expectedNumberOfParticipants;
+      if (!isPublished && data.expectedNumberOfParticipants !== undefined) {
+        payload.expectedNumberOfParticipants = data.expectedNumberOfParticipants;
+      }
       if (data.avatarUrl !== undefined) payload.avatarUrl = data.avatarUrl || null;
       if (data.coverUrl !== undefined) payload.coverUrl = data.coverUrl || null;
       if (!isPublished && data.startDate !== undefined) {
@@ -324,7 +326,9 @@ export default function EditEventPage({
       }
       // social and eventValidationDocuments are full replacements (not partial updates)
       if (data.social !== undefined) payload.social = data.social || [];
-      if (data.eventValidationDocuments !== undefined) payload.eventValidationDocuments = data.eventValidationDocuments || [];
+      if (!isPublished && data.eventValidationDocuments !== undefined) {
+        payload.eventValidationDocuments = data.eventValidationDocuments || [];
+      }
 
       const updatedEvent = await updateEvent(eventId, payload);
       
@@ -546,30 +550,47 @@ export default function EditEventPage({
                       <FormField
                         control={form.control}
                         name="expectedNumberOfParticipants"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              <FieldLabel
-                                label="Expected Number of Participants"
-                                tooltip="The estimated number of attendees for your event"
-                              />
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="e.g., 100"
-                                {...field}
-                                value={field.value || ""}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  field.onChange(value === "" ? undefined : parseInt(value, 10));
-                                }}
-                                className="h-11"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                        render={({ field }) => {
+                          const isPublished = event?.status?.toUpperCase() === "PUBLISHED";
+                          return (
+                            <FormItem>
+                              <FormLabel>
+                                <FieldLabel
+                                  label="Expected Number of Participants"
+                                  tooltip={isPublished ? "Number of participants cannot be changed after publishing" : "The estimated number of attendees for your event"}
+                                />
+                              </FormLabel>
+                              <FormControl>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div>
+                                        <Input
+                                          type="number"
+                                          placeholder="e.g., 100"
+                                          {...field}
+                                          value={field.value || ""}
+                                          onChange={(e) => {
+                                            const value = e.target.value;
+                                            field.onChange(value === "" ? undefined : parseInt(value, 10));
+                                          }}
+                                          className="h-11"
+                                          disabled={isPublished}
+                                        />
+                                      </div>
+                                    </TooltipTrigger>
+                                    {isPublished && (
+                                      <TooltipContent>
+                                        <p>Number of participants cannot be edited after publishing</p>
+                                      </TooltipContent>
+                                    )}
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
                       />
                     </CardContent>
                   </Card>
@@ -1174,102 +1195,140 @@ export default function EditEventPage({
                         <div>
                           <CardTitle>Event Validation Documents</CardTitle>
                           <CardDescription>
-                            Upload required documents for event validation
+                            {event?.status?.toUpperCase() === "PUBLISHED" 
+                              ? "Documents cannot be changed after publishing"
+                              : "Upload required documents for event validation"}
                           </CardDescription>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {documentFields.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <FileCheck className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                          <p className="text-sm">No documents uploaded yet</p>
-                          <p className="text-xs mt-1">Add documents to validate your event</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {documentFields.map((field, index) => (
-                            <div key={field.id} className="border-2 border-primary/10 rounded-lg p-4 space-y-4 bg-primary/5">
-                              <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-semibold flex items-center gap-2">
-                                  <FileCheck className="h-4 w-4 text-primary" />
-                                  Document {index + 1}
-                                </h3>
-                                {documentFields.length > 0 && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeDocument(index)}
-                                    className="text-destructive hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
+                      {(() => {
+                        const isPublished = event?.status?.toUpperCase() === "PUBLISHED";
+                        return (
+                          <>
+                            {documentFields.length === 0 ? (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <FileCheck className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                                <p className="text-sm">No documents uploaded yet</p>
+                                <p className="text-xs mt-1">Add documents to validate your event</p>
                               </div>
+                            ) : (
+                              <div className="space-y-4">
+                                {documentFields.map((field, index) => (
+                                  <div key={field.id} className="border-2 border-primary/10 rounded-lg p-4 space-y-4 bg-primary/5">
+                                    <div className="flex items-center justify-between">
+                                      <h3 className="text-sm font-semibold flex items-center gap-2">
+                                        <FileCheck className="h-4 w-4 text-primary" />
+                                        Document {index + 1}
+                                      </h3>
+                                      {documentFields.length > 0 && !isPublished && (
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => removeDocument(index)}
+                                          className="text-destructive hover:text-destructive"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </div>
 
-                              <FormField
-                                control={form.control}
-                                name={`eventValidationDocuments.${index}.documentType`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Document Type</FormLabel>
-                                    <Select value={field.value} onValueChange={field.onChange}>
-                                      <FormControl>
-                                        <SelectTrigger className="border-primary/20 focus:border-primary/50">
-                                          <SelectValue placeholder="Select document type" />
-                                        </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                        <SelectItem value="EVENT_PERMIT">Event Permit</SelectItem>
-                                        <SelectItem value="TAX_REGISTRATION">Tax Registration</SelectItem>
-                                        <SelectItem value="HEALTH_PERMIT">Health Permit</SelectItem>
-                                        <SelectItem value="LIABILITY_INSURANCE">Liability Insurance</SelectItem>
-                                        <SelectItem value="ORGANIZER_ID">Organizer ID</SelectItem>
-                                        <SelectItem value="BUSINESS_LICENSE">Business License</SelectItem>
-                                        <SelectItem value="OTHER">Other</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
+                                    <FormField
+                                      control={form.control}
+                                      name={`eventValidationDocuments.${index}.documentType`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Document Type</FormLabel>
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <div>
+                                                  <Select value={field.value} onValueChange={field.onChange} disabled={isPublished}>
+                                                    <FormControl>
+                                                      <SelectTrigger className="border-primary/20 focus:border-primary/50">
+                                                        <SelectValue placeholder="Select document type" />
+                                                      </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                      <SelectItem value="EVENT_PERMIT">Event Permit</SelectItem>
+                                                      <SelectItem value="TAX_REGISTRATION">Tax Registration</SelectItem>
+                                                      <SelectItem value="HEALTH_PERMIT">Health Permit</SelectItem>
+                                                      <SelectItem value="LIABILITY_INSURANCE">Liability Insurance</SelectItem>
+                                                      <SelectItem value="ORGANIZER_ID">Organizer ID</SelectItem>
+                                                      <SelectItem value="BUSINESS_LICENSE">Business License</SelectItem>
+                                                      <SelectItem value="OTHER">Other</SelectItem>
+                                                    </SelectContent>
+                                                  </Select>
+                                                </div>
+                                              </TooltipTrigger>
+                                              {isPublished && (
+                                                <TooltipContent>
+                                                  <p>Document type cannot be edited after publishing</p>
+                                                </TooltipContent>
+                                              )}
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
 
-                              <FormField
-                                control={form.control}
-                                name={`eventValidationDocuments.${index}.documentImageUrls`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Document Images</FormLabel>
-                                    <FormControl>
-                                      <FileUpload
-                                        value={field.value || []}
-                                        onChange={(urls) => field.onChange(urls)}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
+                                    <FormField
+                                      control={form.control}
+                                      name={`eventValidationDocuments.${index}.documentImageUrls`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Document Images</FormLabel>
+                                          <FormControl>
+                                            <TooltipProvider>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <div>
+                                                    <FileUpload
+                                                      value={field.value || []}
+                                                      onChange={(urls) => field.onChange(urls)}
+                                                      disabled={isPublished}
+                                                    />
+                                                  </div>
+                                                </TooltipTrigger>
+                                                {isPublished && (
+                                                  <TooltipContent>
+                                                    <p>Document images cannot be edited after publishing</p>
+                                                  </TooltipContent>
+                                                )}
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
 
-                              {index < documentFields.length - 1 && <Separator />}
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                                    {index < documentFields.length - 1 && <Separator />}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
 
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => appendDocument({
-                          documentType: "EVENT_PERMIT",
-                          documentImageUrls: [],
-                        })}
-                        className="w-full border-primary/20 hover:border-primary/50"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Document
-                      </Button>
+                            {!isPublished && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => appendDocument({
+                                  documentType: "EVENT_PERMIT",
+                                  documentImageUrls: [],
+                                })}
+                                className="w-full border-primary/20 hover:border-primary/50"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Document
+                              </Button>
+                            )}
+                          </>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 </div>
