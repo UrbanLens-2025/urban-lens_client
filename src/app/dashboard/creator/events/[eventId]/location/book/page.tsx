@@ -954,7 +954,7 @@ function LocationDetailsOverlay({
                       <div className="flex items-baseline justify-between">
                         <span className="text-sm text-muted-foreground">Duration</span>
                         <span className="text-sm font-semibold text-foreground">
-                          {estimatedCost.totalHours.toFixed(2)}h
+                          {Math.round(estimatedCost.totalHours)}h
                         </span>
                       </div>
                       <div className="pt-3 border-t border-border/50">

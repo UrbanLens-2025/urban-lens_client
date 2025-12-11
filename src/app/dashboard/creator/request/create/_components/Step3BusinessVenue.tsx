@@ -1470,7 +1470,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 <>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">
-                      {pendingSlots.length > 0 ? pendingSlots.length : (dateRanges?.length || 0)} slot{(pendingSlots.length > 0 ? pendingSlots.length : (dateRanges?.length || 0)) !== 1 ? 's' : ''} • {estimatedCost.totalHours.toFixed(2)}h
+                      {Math.round(estimatedCost.totalHours)}h
                     </span>
                     <span className="font-bold text-primary text-base">
                       {estimatedCost.totalCost.toLocaleString("vi-VN")} {estimatedCost.currency}

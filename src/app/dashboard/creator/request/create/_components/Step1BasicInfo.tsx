@@ -261,16 +261,6 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
 
       {/* Cover Image and Avatar Image */}
       <div className="space-y-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20">
-            <ImageIcon className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-foreground">Event Images</h3>
-            <p className="text-sm text-muted-foreground">Upload cover and avatar images to represent your event</p>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           <FormField
             control={form.control}
