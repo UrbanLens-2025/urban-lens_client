@@ -112,6 +112,12 @@ function EventDetailLayoutContent({
         setIsPublishDialogOpen(false);
         return;
       }
+      // Check if business owner has approved the booking
+      if (!hasBusinessApproval) {
+        toast.error("Business owner must approve the location booking before publishing the event. Please wait for approval.");
+        setIsPublishDialogOpen(false);
+        return;
+      }
       publishEvent.mutate(eventId);
       setIsPublishDialogOpen(false);
     }
@@ -161,9 +167,30 @@ function EventDetailLayoutContent({
     
     return false;
   }, [locationBookings, event?.locationBookings]);
+
+  // Check if business owner has approved the location booking
+  // Approval is confirmed if at least one locationBooking has status APPROVED
+  const hasBusinessApproval = useMemo(() => {
+    // First check locationBookings from the dedicated API (most up-to-date)
+    if (locationBookings && locationBookings.length > 0) {
+      const hasApprovedBooking = locationBookings.some(booking => 
+        booking.status?.toUpperCase() === "APPROVED"
+      );
+      if (hasApprovedBooking) return true;
+    }
+    
+    // Fallback to event.locationBookings if available
+    if (event?.locationBookings && event.locationBookings.length > 0) {
+      return event.locationBookings.some(booking => 
+        booking.status?.toUpperCase() === "APPROVED"
+      );
+    }
+    
+    return false;
+  }, [locationBookings, event?.locationBookings]);
   
   const isDraft = event?.status?.toUpperCase() === "DRAFT";
-  const canPublish = hasNameAndDescription && hasDates && hasLocation && hasDocuments && hasPaymentMade;
+  const canPublish = hasNameAndDescription && hasDates && hasLocation && hasDocuments && hasPaymentMade && hasBusinessApproval;
 
   const formatCompactDateTime = (iso: string) => {
     const date = new Date(iso);
@@ -646,7 +673,9 @@ function EventDetailLayoutContent({
                         {!canPublish && (
                           <TooltipContent>
                             <p>
-                              {!hasPaymentMade 
+                              {!hasBusinessApproval
+                                ? "Business owner must approve the location booking before publishing"
+                                : !hasPaymentMade 
                                 ? "Complete payment for location booking before publishing"
                                 : "Complete all checklist items to publish your event"}
                             </p>
@@ -822,6 +851,37 @@ function EventDetailLayoutContent({
                       }}
                     >
                       Add
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-3">
+                  {hasBusinessApproval ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <p className={cn(
+                      "text-sm font-medium",
+                      hasBusinessApproval ? "text-foreground" : "text-muted-foreground"
+                    )}>
+                      Business owner approval for location booking
+                    </p>
+                    {!hasBusinessApproval && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Business owner must approve the location booking before publishing
+                      </p>
+                    )}
+                  </div>
+                  {!hasBusinessApproval && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="cursor-not-allowed"
+                    >
+                      Pending
                     </Button>
                   )}
                 </div>

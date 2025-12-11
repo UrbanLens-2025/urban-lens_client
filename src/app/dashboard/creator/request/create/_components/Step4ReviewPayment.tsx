@@ -302,30 +302,94 @@ export function Step4ReviewPayment({
             <>
               <LocationReviewSection locationId={formValues.locationId} />
               {formValues.dateRanges && formValues.dateRanges.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    Booked Time Slots ({formValues.dateRanges.length})
+                    Booked Times
                   </p>
-                  <div className="space-y-2">
-                    {formValues.dateRanges.map((range, index) => (
-                      <div
-                        key={index}
-                        className="p-3 border rounded-lg bg-background"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium">
-                              {format(range.startDateTime, "PPP 'at' h:mm a")}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              to {format(range.endDateTime, "PPP 'at' h:mm a")}
-                            </p>
-                          </div>
-                        </div>
+                  {(() => {
+                    // Group slots by date
+                    const groupedByDate = formValues.dateRanges.reduce((acc, range) => {
+                      const dateKey = format(range.startDateTime, "yyyy-MM-dd");
+                      if (!acc[dateKey]) {
+                        acc[dateKey] = [];
+                      }
+                      acc[dateKey].push(range);
+                      return acc;
+                    }, {} as Record<string, Array<{ startDateTime: Date; endDateTime: Date }>>);
+
+                    // Sort dates
+                    const sortedDates = Object.keys(groupedByDate).sort();
+
+                    return (
+                      <div className="space-y-2.5">
+                        {sortedDates.map((dateKey) => {
+                          const slots = groupedByDate[dateKey];
+                          const date = new Date(dateKey + "T00:00:00");
+                          
+                          // Sort slots by start time
+                          const sortedSlots = [...slots].sort((a, b) => 
+                            a.startDateTime.getTime() - b.startDateTime.getTime()
+                          );
+                          
+                          // Merge consecutive time slots
+                          const mergedSlots: Array<{ startDateTime: Date; endDateTime: Date }> = [];
+                          let currentRange: { startDateTime: Date; endDateTime: Date } | null = null;
+                          
+                          sortedSlots.forEach((slot) => {
+                            if (!currentRange) {
+                              currentRange = { ...slot };
+                            } else {
+                              // Check if this slot starts exactly when the current range ends
+                              if (currentRange.endDateTime.getTime() === slot.startDateTime.getTime()) {
+                                // Merge: extend the end time
+                                currentRange.endDateTime = slot.endDateTime;
+                              } else {
+                                // Not consecutive, save current range and start a new one
+                                mergedSlots.push(currentRange);
+                                currentRange = { ...slot };
+                              }
+                            }
+                          });
+                          
+                          // Don't forget to add the last range
+                          if (currentRange) {
+                            mergedSlots.push(currentRange);
+                          }
+                          
+                          return (
+                            <div key={dateKey} className="p-2.5 border rounded-lg bg-muted/30">
+                              <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 pt-0.5">
+                                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                    {format(date, "MMM dd")}
+                                  </div>
+                                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                                    {format(date, "yyyy")}
+                                  </div>
+                                </div>
+                                <div className="flex-1 flex flex-wrap gap-1.5">
+                                  {mergedSlots.map((range, idx) => {
+                                    const startTime = format(range.startDateTime, "h:mm a");
+                                    const endTime = format(range.endDateTime, "h:mm a");
+                                    return (
+                                      <Badge
+                                        key={idx}
+                                        variant="secondary"
+                                        className="text-xs font-medium px-2 py-0.5 bg-primary/10 text-primary border-primary/20"
+                                      >
+                                        {startTime} - {endTime}
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 <Alert variant="default" className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
@@ -368,39 +432,42 @@ export function Step4ReviewPayment({
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {formValues.eventValidationDocuments.map((doc, index) => (
-              <div key={index} className="border rounded-lg p-4 space-y-3 bg-muted/20">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Document Type</p>
-                  <Badge variant="secondary">
-                    {DOCUMENT_TYPE_LABELS[doc.documentType] || doc.documentType}
-                  </Badge>
-                </div>
-                {doc.documentImageUrls && doc.documentImageUrls.length > 0 && (
+            {formValues.eventValidationDocuments.map((doc, index) => {
+              const documentsLength = formValues.eventValidationDocuments?.length || 0;
+              return (
+                <div key={index} className="border rounded-lg p-4 space-y-3 bg-muted/20">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">
-                      Images ({doc.documentImageUrls.length})
-                    </p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {doc.documentImageUrls.map((url, imgIndex) => (
-                        <div
-                          key={imgIndex}
-                          className="relative aspect-video rounded-lg overflow-hidden border bg-muted"
-                        >
-                          <Image
-                            src={url}
-                            alt={`Document ${index + 1} - Image ${imgIndex + 1}`}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Document Type</p>
+                    <Badge variant="secondary">
+                      {DOCUMENT_TYPE_LABELS[doc.documentType] || doc.documentType}
+                    </Badge>
                   </div>
-                )}
-                {index < formValues.eventValidationDocuments.length - 1 && <Separator />}
-              </div>
-            ))}
+                  {doc.documentImageUrls && doc.documentImageUrls.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">
+                        Images ({doc.documentImageUrls.length})
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        {doc.documentImageUrls.map((url, imgIndex) => (
+                          <div
+                            key={imgIndex}
+                            className="relative aspect-video rounded-lg overflow-hidden border bg-muted"
+                          >
+                            <Image
+                              src={url}
+                              alt={`Document ${index + 1} - Image ${imgIndex + 1}`}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {index < documentsLength - 1 && <Separator />}
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       )}

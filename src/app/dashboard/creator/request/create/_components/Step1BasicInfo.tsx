@@ -456,39 +456,6 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
                 )}
               </div>
 
-              {selectedTagIds.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-primary/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Selected ({selectedTagIds.length})
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedTagIds.map((id: number) => {
-                      const tag = tagCategories?.find((t: TagCategory) => t.id === id);
-                      if (!tag) return null;
-                      return (
-                        <Badge
-                          key={id}
-                          style={{ backgroundColor: tag.color, color: "#fff" }}
-                          className="pl-3 pr-2 py-1.5 flex items-center gap-1.5 shadow-sm"
-                        >
-                          <span className="text-sm">{tag.icon}</span>
-                          <span className="text-sm font-medium">{tag.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => toggleTag(id)}
-                            className="ml-1 rounded-full hover:bg-white/30 p-0.5 transition-colors"
-                            aria-label={`Remove ${tag.name}`}
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
 
               <FormMessage />
             </FormItem>
