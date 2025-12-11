@@ -10,10 +10,21 @@ export function usePayForEventBooking() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: (eventRequestId: string) => payForEventBooking(eventRequestId),
+    mutationFn: ({ 
+      eventRequestId, 
+      dateRanges 
+    }: { 
+      eventRequestId: string; 
+      dateRanges?: Array<{ startDateTime: string; endDateTime: string }> 
+    }) => payForEventBooking(eventRequestId, dateRanges),
     
     onSuccess: (data) => {
       toast.success("Payment successful! Your event is confirmed.");
+      
+      // Clear stored slots after successful payment
+      if (data.referencedLocationBooking?.locationId) {
+        sessionStorage.removeItem(`pendingSlots_${data.referencedLocationBooking.locationId}`);
+      }
       
       queryClient.invalidateQueries({ queryKey: ['eventRequests'] });
       

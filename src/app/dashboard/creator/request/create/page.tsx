@@ -536,12 +536,16 @@ export default function CreateEventRequestPage() {
       payload.locationId = values.locationId;
     }
 
-    // Include date ranges if provided (for location booking)
+    // Don't include date ranges in initial submission - they will be saved after payment confirmation
+    // Store dateRanges temporarily in sessionStorage for later use
     if (values.dateRanges && values.dateRanges.length > 0) {
-      payload.dateRanges = values.dateRanges.map((range) => ({
-        startDateTime: range.startDateTime.toISOString(),
-        endDateTime: range.endDateTime.toISOString(),
-      }));
+      sessionStorage.setItem(
+        `pendingSlots_${values.locationId}`,
+        JSON.stringify(values.dateRanges.map((range) => ({
+          startDateTime: range.startDateTime.toISOString(),
+          endDateTime: range.endDateTime.toISOString(),
+        })))
+      );
     }
 
     createEvent.mutate(payload);

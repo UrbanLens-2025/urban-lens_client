@@ -195,7 +195,7 @@ export default function LocationBookingDetailPage({
       const end = new Date(date.endDateTime);
       totalMs += (end.getTime() - start.getTime());
     });
-    return Math.round((totalMs / (1000 * 60 * 60)) * 10) / 10;
+    return Math.round(totalMs / (1000 * 60 * 60));
   }, [booking?.dates]);
 
   const canProcess = booking?.status === "AWAITING_BUSINESS_PROCESSING";
@@ -305,7 +305,11 @@ export default function LocationBookingDetailPage({
       {/* Header */}
       <PageHeader
         title="Booking Details"
-        description={`Booking ID: ${booking.id.substring(0, 8)}...`}
+        description={
+          booking.dates && booking.dates.length > 0
+            ? `${totalHours}h`
+            : `Booking ID: ${booking.id.substring(0, 8)}...`
+        }
         icon={Calendar}
         actions={
           <div className="flex items-center gap-3">
@@ -1244,7 +1248,7 @@ export default function LocationBookingDetailPage({
                         sortedSlots.forEach(slot => {
                           totalMinutes += (slot.end.getTime() - slot.start.getTime()) / (1000 * 60);
                         });
-                        const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
+                        const totalHours = Math.round(totalMinutes / 60);
                         
                         return {
                           date: new Date(dateKey + "T00:00:00"),
@@ -1290,7 +1294,7 @@ export default function LocationBookingDetailPage({
                                   {dateGroups.length} {dateGroups.length === 1 ? 'day' : 'days'}
                                 </TableCell>
                                 <TableCell className="text-right font-bold text-sm text-primary">
-                                  {Math.round(totalBookingHours * 10) / 10}h
+                                  {Math.round(totalBookingHours)}h
                                 </TableCell>
                               </TableRow>
                             </TableBody>

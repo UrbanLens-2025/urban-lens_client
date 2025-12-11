@@ -138,10 +138,13 @@ export const getBookableLocationById = async (locationId: string): Promise<Booka
   return data.data;
 };
 
-export const payForEventBooking = async (eventRequestId: string): Promise<EventRequest> => {
+export const payForEventBooking = async (
+  eventRequestId: string,
+  dateRanges?: Array<{ startDateTime: string; endDateTime: string }>
+): Promise<EventRequest> => {
   const { data } = await axiosInstance.post<ApiResponse<EventRequest>>(
     `/v1/creator/event-request/pay-for-booking/${eventRequestId}`,
-    {}
+    dateRanges ? { dateRanges } : {}
   );
   return data.data;
 };
@@ -337,11 +340,12 @@ export const addLocationBookingToEvent = async (
 
 export const initiateLocationBookingPayment = async (
   eventId: string,
-  locationBookingId: string
+  locationBookingId: string,
+  dateRanges?: Array<{ startDateTime: string; endDateTime: string }>
 ): Promise<void> => {
   await axiosInstance.post<ApiResponse<void>>(
     `/v1/creator/events/${eventId}/location-bookings/${locationBookingId}/payment`,
-    {}
+    dateRanges ? { dateRanges } : {}
   );
 };
 

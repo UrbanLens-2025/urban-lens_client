@@ -130,7 +130,7 @@ const calculateTotalHours = (dates: { startDateTime: string; endDateTime: string
   
   // Convert milliseconds to hours
   const totalHours = totalMilliseconds / (1000 * 60 * 60);
-  return Math.round(totalHours * 10) / 10; // Round to 1 decimal place
+  return Math.round(totalHours); // Round to integer
 };
 
 // Component for booking row
