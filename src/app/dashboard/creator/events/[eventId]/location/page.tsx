@@ -554,57 +554,139 @@ export default function EventLocationPage({
                             return a.startTime.getTime() - b.startTime.getTime();
                           });
                           
+                          // Merge consecutive time slots on the same day
+                          const mergedSlots: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
+                          
+                          sortedDates.forEach((currentSlot) => {
+                            if (mergedSlots.length === 0) {
+                              // First slot, just add it
+                              mergedSlots.push({ ...currentSlot });
+                            } else {
+                              const lastSlot = mergedSlots[mergedSlots.length - 1];
+                              const isSameDate = format(lastSlot.date, "yyyy-MM-dd") === format(currentSlot.date, "yyyy-MM-dd");
+                              const isConsecutive = isSameDate && 
+                                                   lastSlot.endTime.getTime() === currentSlot.startTime.getTime();
+                              
+                              if (isConsecutive) {
+                                // Merge with previous slot
+                                lastSlot.endTime = currentSlot.endTime;
+                              } else {
+                                // Add as new slot
+                                mergedSlots.push({ ...currentSlot });
+                              }
+                            }
+                          });
+                          
+                          // Group merged slots by date for better display
+                          const groupedByDate = mergedSlots.reduce((acc, slot) => {
+                            const dateKey = format(slot.date, "yyyy-MM-dd");
+                            if (!acc[dateKey]) {
+                              acc[dateKey] = [];
+                            }
+                            acc[dateKey].push(slot);
+                            return acc;
+                          }, {} as Record<string, typeof mergedSlots>);
+                          
                           return (
-                            <div className="border rounded-lg overflow-hidden">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="w-[200px]">Date</TableHead>
-                                    <TableHead className="w-[100px]">Day</TableHead>
-                                    <TableHead className="w-[140px]">Start Time</TableHead>
-                                    <TableHead className="w-[140px]">End Time</TableHead>
-                                    <TableHead className="w-[120px]">Duration</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {sortedDates.map((item, index) => {
-                                    const duration = Math.round((item.endTime.getTime() - item.startTime.getTime()) / (1000 * 60));
-                                    const hours = Math.floor(duration / 60);
-                                    const minutes = duration % 60;
-                                    const durationText = hours > 0 
-                                      ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`.trim()
-                                      : `${minutes}m`;
-                                    
-                                    const prevItem = index > 0 ? sortedDates[index - 1] : null;
-                                    const isNewDate = !prevItem || format(prevItem.date, "yyyy-MM-dd") !== format(item.date, "yyyy-MM-dd");
-                                    
-                                    return (
-                                      <TableRow 
-                                        key={index}
-                                        className={isNewDate ? "border-t-2 border-t-muted" : ""}
-                                      >
-                                        <TableCell className="font-medium">
-                                          {format(item.date, "MMM dd, yyyy")}
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground">
-                                          {format(item.date, "EEEE")}
-                                        </TableCell>
-                                        <TableCell className="font-mono">
-                                          {format(item.startTime, "HH:mm")}
-                                        </TableCell>
-                                        <TableCell className="font-mono">
-                                          {format(item.endTime, "HH:mm")}
-                                        </TableCell>
-                                        <TableCell>
-                                          <Badge variant="outline" className="font-normal">
-                                            {durationText}
-                                          </Badge>
-                                        </TableCell>
-                                      </TableRow>
-                                    );
-                                  })}
-                                </TableBody>
-                              </Table>
+                            <div className="space-y-4">
+                              {/* Summary Card */}
+                              <div className="bg-gradient-to-r from-primary/5 via-primary/5 to-transparent rounded-lg border border-primary/10 p-4">
+                                <div className="flex items-center justify-between flex-wrap gap-4">
+                                  <div>
+                                    <p className="text-sm font-medium text-muted-foreground mb-1">Total Sessions</p>
+                                    <p className="text-2xl font-bold text-foreground">{mergedSlots.length}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-muted-foreground mb-1">Total Duration</p>
+                                    <p className="text-2xl font-bold text-foreground">
+                                      {(() => {
+                                        const totalMinutes = mergedSlots.reduce((sum, slot) => {
+                                          return sum + Math.round((slot.endTime.getTime() - slot.startTime.getTime()) / (1000 * 60));
+                                        }, 0);
+                                        const hours = Math.floor(totalMinutes / 60);
+                                        const minutes = totalMinutes % 60;
+                                        return hours > 0 
+                                          ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`.trim()
+                                          : `${minutes}m`;
+                                      })()}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Booking Schedule */}
+                              <div className="space-y-3">
+                                {Object.entries(groupedByDate).map(([dateKey, slots], dateIndex) => {
+                                  const date = new Date(dateKey);
+                                  const isFirstDate = dateIndex === 0;
+                                  
+                                  return (
+                                    <div 
+                                      key={dateKey} 
+                                      className={`rounded-lg border bg-card ${isFirstDate ? 'border-primary/20 shadow-sm' : 'border-border'} overflow-hidden`}
+                                    >
+                                      {/* Date Header */}
+                                      <div className="bg-muted/50 px-4 py-3 border-b">
+                                        <div className="flex items-center gap-3">
+                                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                            <Calendar className="h-5 w-5 text-primary" />
+                                          </div>
+                                          <div>
+                                            <p className="font-semibold text-foreground">
+                                              {format(date, "EEEE, MMMM dd, yyyy")}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Time Slots */}
+                                      <div className="divide-y divide-border">
+                                        {slots.map((slot, slotIndex) => {
+                                          const duration = Math.round((slot.endTime.getTime() - slot.startTime.getTime()) / (1000 * 60));
+                                          const hours = Math.floor(duration / 60);
+                                          const minutes = duration % 60;
+                                          const durationText = hours > 0 
+                                            ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`.trim()
+                                            : `${minutes}m`;
+                                          
+                                          return (
+                                            <div 
+                                              key={slotIndex}
+                                              className="px-4 py-3 hover:bg-muted/30 transition-colors"
+                                            >
+                                              <div className="flex items-center justify-between gap-4 flex-wrap">
+                                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                  {/* Time Range */}
+                                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <div className="h-2 w-2 rounded-full bg-primary"></div>
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="font-mono font-semibold text-foreground text-base">
+                                                        {format(slot.startTime, "HH:mm")}
+                                                      </span>
+                                                      <span className="text-muted-foreground">→</span>
+                                                      <span className="font-mono font-semibold text-foreground text-base">
+                                                        {format(slot.endTime, "HH:mm")}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                                
+                                                {/* Duration Badge */}
+                                                <Badge 
+                                                  variant="secondary" 
+                                                  className="font-medium px-3 py-1 bg-primary/10 text-primary border-primary/20"
+                                                >
+                                                  {durationText}
+                                                </Badge>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
                           );
                         })()}
