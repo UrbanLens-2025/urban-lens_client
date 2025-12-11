@@ -992,87 +992,233 @@ export default function LocationBookingDetailPage({
 
       {/* Process Booking Dialog */}
       <AlertDialog open={processDialogOpen} onOpenChange={setProcessDialogOpen}>
-        <AlertDialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              {pendingStatus === "APPROVED" ? (
-                <>
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  Approve Booking
-                </>
-              ) : (
-                <>
-                  <X className="h-5 w-5 text-red-600" />
-                  Reject Booking
-                </>
-              )}
-            </AlertDialogTitle>
-            <div className="text-muted-foreground text-sm space-y-3">
-                <p>
-                  Are you sure you want to{" "}
-                  <span className="font-semibold">
-                    {pendingStatus === "APPROVED" ? "approve" : "reject"}
-                  </span>{" "}
-                  this location booking? This action cannot be undone.
+        <AlertDialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0">
+          {/* Header with Close Button */}
+          <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b">
+            <AlertDialogHeader className="flex-1 p-0">
+              <AlertDialogTitle className="text-xl font-bold text-foreground">
+                {pendingStatus === "APPROVED" ? "Approve Booking" : "Reject Booking"}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-sm text-muted-foreground mt-1">
+                {pendingStatus === "APPROVED" 
+                  ? "Confirm approval of this location booking request"
+                  : "Confirm rejection of this location booking request"}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => setProcessDialogOpen(false)}
+              disabled={approveBooking.isPending || rejectBookings.isPending}
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </Button>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="overflow-y-auto flex-1 px-6 pt-6">
+            <div className="space-y-4 pb-4">
+              <div className={`flex items-center gap-3 p-4 rounded-xl ${
+                pendingStatus === "APPROVED" 
+                  ? "bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800" 
+                  : "bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800"
+              }`}>
+                <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                  pendingStatus === "APPROVED"
+                    ? "bg-emerald-100 dark:bg-emerald-900/40"
+                    : "bg-red-100 dark:bg-red-900/40"
+                }`}>
+                  {pendingStatus === "APPROVED" ? (
+                    <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                  ) : (
+                    <X className="h-6 w-6 text-red-600 dark:text-red-400" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    {pendingStatus === "APPROVED" ? "Ready to approve this booking?" : "Ready to reject this booking?"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Review the details below before confirming your decision.
+                  </p>
+                </div>
+              </div>
+
+              {/* Warning Message */}
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-900 dark:text-amber-200">
+                  <span className="font-semibold">Important:</span> This action cannot be undone. Please review the booking details below before confirming.
                 </p>
+              </div>
 
               {/* Booking Summary */}
-                <div className="border-t pt-3 space-y-1.5">
-                  <div className="text-sm font-semibold">Booking Summary:</div>
-                  <div className="text-xs space-y-1 text-muted-foreground">
-                    <div>
-                      <span className="font-medium">Event:</span>{" "}
-                      {booking?.referencedEventRequest?.eventName || formatBookingObject(booking?.bookingObject) || "N/A"}
-                    </div>
-                    <div>
-                      <span className="font-medium">Time Slots:</span>
-                      <div className="ml-4 mt-1.5 space-y-1.5">
-                        {(() => {
-                          const sortedDates = [...(booking?.dates || [])].sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
-                          return sortedDates.map((dateSlot, idx) => {
-                            const startDate = new Date(dateSlot.startDateTime);
-                            const endDate = new Date(dateSlot.endDateTime);
-                            const isSameDay = idx > 0 && 
-                              format(new Date(sortedDates[idx - 1].startDateTime), "yyyy-MM-dd") === 
-                              format(startDate, "yyyy-MM-dd");
-                            
-                            return (
-                              <div key={idx} className="flex items-center gap-2 text-xs">
-                                {!isSameDay && (
-                                  <span className="font-medium text-muted-foreground min-w-[90px]">
-                                    {format(startDate, "MMM dd")}:
-                                  </span>
-                                )}
-                                {isSameDay && <span className="min-w-[90px]"></span>}
-                                <span className="font-mono text-foreground">
-                                  {format(startDate, "HH:mm")} - {format(endDate, "HH:mm")}
-                                </span>
-                              </div>
-                            );
-                          });
-                        })()}
+              <div className="space-y-4 pt-2 pb-6">
+                <div className="flex items-center gap-2 pb-2 border-b">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <h3 className="text-base font-semibold text-foreground">Booking Summary</h3>
+                </div>
+
+                {/* Event Name Card */}
+                <Card className="border-2 border-primary/10 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Event</p>
+                        <p className="text-sm font-semibold text-foreground break-words">
+                          {booking?.referencedEventRequest?.eventName || formatBookingObject(booking?.bookingObject) || "N/A"}
+                        </p>
                       </div>
                     </div>
-                    <div>
-                      <span className="font-medium">Amount:</span>{" "}
-                      {formatCurrency(booking?.amountToPay || "0")}
+                  </CardContent>
+                </Card>
+
+                {/* Time Slots Card - Compact Table Format */}
+                <Card className="border-2 border-primary/10 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Clock className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-muted-foreground mb-3">Time Slots</p>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                    {(() => {
+                      if (!booking?.dates || booking.dates.length === 0) {
+                        return (
+                          <div className="text-sm text-muted-foreground text-center py-4">
+                            No time slots available
+                          </div>
+                        );
+                      }
+
+                      const sortedDates = [...(booking.dates || [])].sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
+                      
+                      // Group slots by date
+                      const groupedByDate: Record<string, Array<{ start: Date; end: Date }>> = {};
+                      sortedDates.forEach((dateSlot) => {
+                        const startDate = new Date(dateSlot.startDateTime);
+                        const endDate = new Date(dateSlot.endDateTime);
+                        const dateKey = format(startDate, "yyyy-MM-dd");
+                        
+                        if (!groupedByDate[dateKey]) {
+                          groupedByDate[dateKey] = [];
+                        }
+                        groupedByDate[dateKey].push({ start: startDate, end: endDate });
+                      });
+
+                      // Calculate ranges and durations for each date
+                      const dateGroups = Object.entries(groupedByDate).map(([dateKey, slots]) => {
+                        const sortedSlots = slots.sort((a, b) => a.start.getTime() - b.start.getTime());
+                        const earliestStart = sortedSlots[0].start;
+                        const latestEnd = sortedSlots[sortedSlots.length - 1].end;
+                        
+                        // Calculate total duration for the day
+                        let totalMinutes = 0;
+                        sortedSlots.forEach(slot => {
+                          totalMinutes += (slot.end.getTime() - slot.start.getTime()) / (1000 * 60);
+                        });
+                        const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
+                        
+                        return {
+                          date: new Date(dateKey + "T00:00:00"),
+                          startTime: earliestStart,
+                          endTime: latestEnd,
+                          duration: totalHours,
+                        };
+                      }).sort((a, b) => a.date.getTime() - b.date.getTime());
+
+                      // Calculate total booking time
+                      const totalBookingHours = dateGroups.reduce((sum, group) => sum + group.duration, 0);
+
+                      return (
+                        <div className="border-2 border-border/40 rounded-lg overflow-hidden shadow-sm">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-muted/50">
+                                <TableHead className="font-semibold text-xs">Date</TableHead>
+                                <TableHead className="font-semibold text-xs">Time Range</TableHead>
+                                <TableHead className="font-semibold text-xs text-right">Duration</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {dateGroups.map((group, idx) => (
+                                <TableRow key={idx} className="hover:bg-muted/30">
+                                  <TableCell className="font-medium text-sm">
+                                    {format(group.date, "MMM dd, yyyy")}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-sm">
+                                    {format(group.startTime, "HH:mm")} → {format(group.endTime, "HH:mm")}
+                                  </TableCell>
+                                  <TableCell className="text-right font-semibold text-sm">
+                                    {group.duration}h
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                              {/* Total Row */}
+                              <TableRow className="bg-muted/30 border-t-2 border-border font-semibold">
+                                <TableCell className="font-semibold text-sm">
+                                  Total Booking Time
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm italic">
+                                  {dateGroups.length} {dateGroups.length === 1 ? 'day' : 'days'}
+                                </TableCell>
+                                <TableCell className="text-right font-bold text-sm text-primary">
+                                  {Math.round(totalBookingHours * 10) / 10}h
+                                </TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+
+                {/* Amount Card */}
+                <Card className="border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/10 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                          <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Total Amount</p>
+                          <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
+                            {formatCurrency(booking?.amountToPay || "0")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={approveBooking.isPending || rejectBookings.isPending}>
+          </div>
+          
+          {/* Footer at Bottom */}
+          <AlertDialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 px-6 pb-6 border-t bg-background mt-auto">
+            <AlertDialogCancel 
+              disabled={approveBooking.isPending || rejectBookings.isPending}
+              className="min-w-[100px]"
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleProcessConfirm}
               disabled={approveBooking.isPending || rejectBookings.isPending}
-              className={
+              className={`min-w-[140px] font-semibold shadow-md ${
                 pendingStatus === "REJECTED"
-                  ? "bg-red-600 hover:bg-red-700"
-                  : ""
-              }
+                  ? "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                  : "bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800"
+              }`}
             >
               {approveBooking.isPending || rejectBookings.isPending ? (
                 <>
@@ -1081,7 +1227,17 @@ export default function LocationBookingDetailPage({
                 </>
               ) : (
                 <>
-                  Confirm {pendingStatus === "APPROVED" ? "Approval" : "Rejection"}
+                  {pendingStatus === "APPROVED" ? (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Confirm Approval
+                    </>
+                  ) : (
+                    <>
+                      <X className="h-4 w-4 mr-2" />
+                      Confirm Rejection
+                    </>
+                  )}
                 </>
               )}
             </AlertDialogAction>
