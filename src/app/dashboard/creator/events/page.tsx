@@ -26,7 +26,9 @@ import {
   XCircle,
   Clock,
   RefreshCw,
+  ImageIcon,
 } from "lucide-react";
+import Image from "next/image";
 import { useState, useMemo } from "react";
 import { useDebounce } from "use-debounce";
 import { useMyEvents } from "@/hooks/events/useMyEvents";
@@ -276,6 +278,7 @@ export default function CreatorEventsPage() {
               <TableHeader>
                 <TableRow className="bg-muted/50 border-b">
                   <TableHead className="w-12 font-semibold pl-6">#</TableHead>
+                  <TableHead className="w-16 font-semibold">Image</TableHead>
                   <SortableTableHeader
                     column="displayName"
                     currentSort={sort}
@@ -291,6 +294,20 @@ export default function CreatorEventsPage() {
                     Location
                   </SortableTableHeader>
                   <TableHead className="font-semibold">Tags</TableHead>
+                  <SortableTableHeader
+                    column="startDate"
+                    currentSort={sort}
+                    onSort={handleSort}
+                  >
+                    Start Date
+                  </SortableTableHeader>
+                  <SortableTableHeader
+                    column="endDate"
+                    currentSort={sort}
+                    onSort={handleSort}
+                  >
+                    End Date
+                  </SortableTableHeader>
                   <SortableTableHeader
                     column="createdAt"
                     currentSort={sort}
@@ -311,7 +328,7 @@ export default function CreatorEventsPage() {
               <TableBody>
                 {events.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 pl-6 pr-6">
+                    <TableCell colSpan={9} className="text-center py-12 pl-6 pr-6">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <CalendarDays className="h-12 w-12 mb-4" />
                         <p className="font-medium">No events found</p>
@@ -335,6 +352,21 @@ export default function CreatorEventsPage() {
                           <span className="text-sm font-medium text-muted-foreground">
                             {rowNumber}
                           </span>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                            {event.avatarUrl ? (
+                              <Image
+                                src={event.avatarUrl}
+                                alt={event.displayName}
+                                width={48}
+                                height={48}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="py-4">
                           <Link href={`/dashboard/creator/events/${event.id}`} className="hover:underline">
@@ -390,6 +422,34 @@ export default function CreatorEventsPage() {
                               <span className="text-xs text-muted-foreground">No tags</span>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          {event.startDate ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-sm font-medium">
+                                {formatDate(event.startDate)}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDateTime(event.startDate).split(',')[1]?.trim()}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">N/A</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-4">
+                          {event.endDate ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-sm font-medium">
+                                {formatDate(event.endDate)}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDateTime(event.endDate).split(',')[1]?.trim()}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">N/A</span>
+                          )}
                         </TableCell>
                         <TableCell className="py-4">
                           <div className="flex flex-col gap-0.5">
