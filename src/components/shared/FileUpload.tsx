@@ -75,22 +75,23 @@ export function FileUpload({ value, onChange, disabled = false }: FileUploadProp
   return (
     <div>
       {previews && previews.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 mb-6">
           {previews.map((url, index) => (
             <Dialog key={url || index} onOpenChange={(open) => !open && setZoomedImage(null)}>
               <DialogTrigger asChild>
-                <div className="relative w-full aspect-video bg-gray-100 rounded-md overflow-hidden group cursor-pointer">
+                <div className="relative w-full aspect-video bg-muted/50 rounded-lg overflow-hidden group cursor-pointer border-2 border-border hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md">
                   <img
                     src={url}
                     alt={`Preview ${index + 1}`}
-                    className="w-full h-full object-cover rounded-md transition-transform group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                     onClick={() => setZoomedImage(url)}
                   />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
                   <Button
                     type="button"
                     variant="destructive"
                     size="icon"
-                    className="absolute top-1 right-1 h-6 w-6 rounded-full z-10"
+                    className="absolute top-2 right-2 h-8 w-8 rounded-full z-10 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:scale-110"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleRemove(url);
@@ -116,8 +117,11 @@ export function FileUpload({ value, onChange, disabled = false }: FileUploadProp
           ))}
 
           {isUploading && (
-            <div className="w-full aspect-video bg-gray-100 rounded-md overflow-hidden relative flex items-center justify-center border-2 border-dashed">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            <div className="w-full aspect-video bg-muted/50 rounded-lg overflow-hidden relative flex items-center justify-center border-2 border-dashed border-primary/30">
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-xs text-muted-foreground">Uploading...</p>
+              </div>
             </div>
           )}
         </div>
@@ -126,19 +130,29 @@ export function FileUpload({ value, onChange, disabled = false }: FileUploadProp
       {!disabled && (
         <div
           {...getRootProps()}
-          className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+          className={`relative border-2 border-dashed rounded-lg p-10 sm:p-12 text-center cursor-pointer transition-all duration-300 ${
             isDragActive
-              ? "border-blue-500 bg-blue-50"
-              : "border-gray-300 hover:border-gray-400"
+              ? "border-primary bg-primary/5 scale-[1.02] shadow-lg"
+              : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-md"
           }`}
         >
           <input {...getInputProps()} />
-          <div className="flex flex-col items-center justify-center">
-            <UploadCloud className="h-10 w-10 text-gray-400" />
-            <p className="mt-2 text-sm text-muted-foreground">
-              <span className="font-semibold text-blue-500">Click to upload more</span>{" "}
-              or drag and drop
-            </p>
+          <div className="flex flex-col items-center justify-center gap-3">
+            <div className={`p-4 rounded-full bg-muted transition-colors duration-300 ${
+              isDragActive ? "bg-primary/10" : ""
+            }`}>
+              <UploadCloud className={`h-12 w-12 transition-colors duration-300 ${
+                isDragActive ? "text-primary" : "text-muted-foreground"
+              }`} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-base font-semibold text-foreground">
+                <span className="text-primary">Click to upload more</span> or drag and drop
+              </p>
+              <p className="text-sm text-muted-foreground">
+                PNG, JPG, GIF up to 10MB
+              </p>
+            </div>
           </div>
         </div>
       )}
