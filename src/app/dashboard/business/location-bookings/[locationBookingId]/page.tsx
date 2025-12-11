@@ -420,44 +420,84 @@ export default function LocationBookingDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 pb-4">
-              <div className="space-y-3">
-                <InfoRow
-                  label="Booking Type"
-                  value={formatBookingObject(booking.bookingObject)}
-                />
-                <InfoRow
-                  label="Created At"
-                  value={formatDateTime(booking.createdAt)}
-                  icon={Calendar}
-                />
-                <InfoRow
-                  label="Last Updated"
-                  value={formatDateTime(booking.updatedAt)}
-                  icon={Clock}
-                />
-                {booking.softLockedUntil && (
-                  <InfoRow
-                    label="Soft Locked Until"
-                    value={formatDateTime(booking.softLockedUntil)}
-                    icon={Clock}
-                  />
-                )}
+              {/* Location Details - 2 Column Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column - Location Info */}
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <InfoRow
+                      label="Full Address"
+                      value={`${booking.location.addressLine}, ${booking.location.addressLevel1}, ${booking.location.addressLevel2}`}
+                      icon={MapPin}
+                    />
+                    <InfoRow
+                      label="Radius"
+                      value={<span className="font-semibold">{booking.location.radiusMeters} meters</span>}
+                    />
+                  </div>
+
+                  {/* Location Images */}
+                  {booking.location.imageUrl && booking.location.imageUrl.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <ImageIcon className="h-4 w-4 text-primary" />
+                        <p className="text-sm font-semibold text-foreground">
+                          Location Images
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {booking.location.imageUrl.map((url, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={url}
+                              alt={`Location ${index + 1}`}
+                              onClick={() => handleImageClick(url)}
+                              className="w-full h-32 object-cover rounded-lg border-2 border-border/40 cursor-pointer hover:border-primary/50 transition-all hover:shadow-md"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 rounded-lg transition-colors flex items-center justify-center">
+                              <ImageIcon className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column - Location Map */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <p className="text-sm font-semibold text-foreground">
+                      Location on Map
+                    </p>
+                  </div>
+                  <div className="h-64 w-full rounded-lg overflow-hidden border-2 border-border/40 shadow-sm">
+                    <GoogleMapsPicker
+                      position={{
+                        lat: parseFloat(booking.location.latitude),
+                        lng: parseFloat(booking.location.longitude),
+                      }}
+                      onPositionChange={() => {}}
+                      radiusMeters={booking.location.radiusMeters}
+                      center={{
+                        lat: parseFloat(booking.location.latitude),
+                        lng: parseFloat(booking.location.longitude),
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
 
               <Separator className="my-4" />
               
               {/* Booking Time Slots Table */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <p className="text-sm font-semibold text-foreground">
-                      Booking Time Slots
-                    </p>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {booking.dates.length} slot{booking.dates.length !== 1 ? 's' : ''}
-                  </Badge>
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <p className="text-sm font-semibold text-foreground">
+                    Booking Time Slots
+                  </p>
                 </div>
                 <div className="border-2 border-border/40 rounded-lg overflow-hidden shadow-sm">
                   <Table>
@@ -678,86 +718,6 @@ export default function LocationBookingDetailPage({
               </CardContent>
             </Card>
           )}
-
-          {/* Location Details */}
-          <Card className="border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm">
-            <CardHeader className="bg-white border-b border-primary/20 py-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <MapPin className="h-4 w-4 text-primary" />
-                </div>
-                Location Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4 pb-4">
-              <div className="space-y-3">
-                <InfoRow
-                  label="Full Address"
-                  value={`${booking.location.addressLine}, ${booking.location.addressLevel1}, ${booking.location.addressLevel2}`}
-                  icon={MapPin}
-                />
-                <InfoRow
-                  label="Radius"
-                  value={<span className="font-semibold">{booking.location.radiusMeters} meters</span>}
-                />
-              </div>
-
-              <Separator className="my-4" />
-              
-              {/* Location Map */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  <p className="text-sm font-semibold text-foreground">
-                    Location on Map
-                  </p>
-                </div>
-                <div className="h-64 w-full rounded-lg overflow-hidden border-2 border-border/40 shadow-sm">
-                  <GoogleMapsPicker
-                    position={{
-                      lat: parseFloat(booking.location.latitude),
-                      lng: parseFloat(booking.location.longitude),
-                    }}
-                    onPositionChange={() => {}}
-                    radiusMeters={booking.location.radiusMeters}
-                    center={{
-                      lat: parseFloat(booking.location.latitude),
-                      lng: parseFloat(booking.location.longitude),
-                    }}
-                  />
-                </div>
-              </div>
-
-              <Separator className="my-4" />
-              
-              {/* Location Images */}
-              {booking.location.imageUrl && booking.location.imageUrl.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <ImageIcon className="h-4 w-4 text-primary" />
-                    <p className="text-sm font-semibold text-foreground">
-                      Location Images
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {booking.location.imageUrl.map((url, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={url}
-                          alt={`Location ${index + 1}`}
-                          onClick={() => handleImageClick(url)}
-                          className="w-full h-32 object-cover rounded-lg border-2 border-border/40 cursor-pointer hover:border-primary/50 transition-all hover:shadow-md"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 rounded-lg transition-colors flex items-center justify-center">
-                          <ImageIcon className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
         {/* Right Column */}
@@ -769,7 +729,7 @@ export default function LocationBookingDetailPage({
                 <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
                   <User className="h-4 w-4 text-primary" />
                 </div>
-                Creator
+                Organizing Committee
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 pb-4">
@@ -862,14 +822,6 @@ export default function LocationBookingDetailPage({
               <CardContent className="pt-4 pb-4">
                 <div className="space-y-3">
                   <InfoRow
-                    label="Transaction ID"
-                    value={
-                      <span className="font-mono text-sm bg-muted px-2 py-1 rounded">
-                        {booking.referencedTransaction.id.substring(0, 8)}...
-                      </span>
-                    }
-                  />
-                  <InfoRow
                     label="Amount"
                     value={
                       <span className="text-lg font-bold text-emerald-600">
@@ -880,10 +832,6 @@ export default function LocationBookingDetailPage({
                       </span>
                     }
                     icon={DollarSign}
-                  />
-                  <InfoRow
-                    label="Type"
-                    value={<span className="font-semibold">{booking.referencedTransaction.type}</span>}
                   />
                   <InfoRow
                     label="Status"
