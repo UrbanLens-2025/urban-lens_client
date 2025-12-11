@@ -427,95 +427,97 @@ export default function EventOverviewPage({
             </Card>
           )}
 
-          {/* Location Details */}
-          <Card className="overflow-hidden">
-            {/* Featured Location Image */}
-            {event.location?.imageUrl && event.location.imageUrl.length > 0 && (
-              <div className="relative w-full h-48 bg-gradient-to-br from-primary/10 to-muted">
-                <img
-                  src={event.location.imageUrl[0] || "/placeholder.svg"}
-                  alt={event.location?.name}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <div className="flex items-center gap-2 text-white">
+          {/* Location Details - Only show if location booking exists */}
+          {event.locationBookings && event.locationBookings.length > 0 && event.location && (
+            <Card className="overflow-hidden">
+              {/* Featured Location Image */}
+              {event.location?.imageUrl && event.location.imageUrl.length > 0 && (
+                <div className="relative w-full h-48 bg-gradient-to-br from-primary/10 to-muted">
+                  <img
+                    src={event.location.imageUrl[0] || "/placeholder.svg"}
+                    alt={event.location?.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <div className="flex items-center gap-2 text-white">
+                      <MapPin className="h-5 w-5" />
+                      <h3 className="text-xl font-bold">{event.location?.name}</h3>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <CardHeader className={event.location?.imageUrl && event.location.imageUrl.length > 0 ? "pb-3" : ""}>
+                {(!event.location?.imageUrl || event.location.imageUrl.length === 0) && (
+                  <CardTitle className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
-                    <h3 className="text-xl font-bold">{event.location?.name}</h3>
-                  </div>
-                </div>
-              </div>
-            )}
+                    {event.location?.name || "Event Location"}
+                  </CardTitle>
+                )}
+                <CardDescription>
+                  {event.location?.description || "Where this event will take place"}
+                </CardDescription>
+              </CardHeader>
 
-            <CardHeader className={event.location?.imageUrl && event.location.imageUrl.length > 0 ? "pb-3" : ""}>
-              {(!event.location?.imageUrl || event.location.imageUrl.length === 0) && (
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  {event.location?.name || "Event Location"}
-                </CardTitle>
-              )}
-              <CardDescription>
-                {event.location?.description || "Where this event will take place"}
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              {/* Description (if no images at top) */}
-              {(!event.location?.imageUrl || event.location.imageUrl.length === 0) && event.location?.description && (
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {event.location.description}
-                </p>
-              )}
-
-              {/* Address */}
-              <div className="flex items-start gap-3 p-4 bg-muted/30 rounded-lg border">
-                <MapPin className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">{event.location?.addressLine}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {event.location?.addressLevel1}, {event.location?.addressLevel2}
+              <CardContent className="space-y-4">
+                {/* Description (if no images at top) */}
+                {(!event.location?.imageUrl || event.location.imageUrl.length === 0) && event.location?.description && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {event.location.description}
                   </p>
-                </div>
-              </div>
-              
-              {/* Additional Location Images Gallery */}
-              {event.location?.imageUrl && event.location.imageUrl.length > 1 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-muted-foreground">Location Gallery</p>
-                    <Badge variant="secondary" className="text-xs">
-                      {event.location.imageUrl.length} photo{event.location.imageUrl.length !== 1 ? 's' : ''}
-                    </Badge>
-                  </div>
-                  <div className={`grid gap-2 ${
-                    event.location.imageUrl.length === 2 ? 'grid-cols-2' :
-                    event.location.imageUrl.length === 3 ? 'grid-cols-3' :
-                    'grid-cols-4'
-                  }`}>
-                    {event.location.imageUrl.slice(1, 5).map((url, index) => (
-                      <div 
-                        key={index} 
-                        className="relative aspect-square overflow-hidden rounded-md border group cursor-pointer"
-                      >
-                        <img
-                          src={url || "/placeholder.svg"}
-                          alt={`${event.location?.name} - View ${index + 2}`}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
-                        {index === 3 && event.location.imageUrl.length > 5 && (
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                            <span className="text-white font-semibold text-lg">
-                              +{event.location.imageUrl.length - 5}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                )}
+
+                {/* Address */}
+                <div className="flex items-start gap-3 p-4 bg-muted/30 rounded-lg border">
+                  <MapPin className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">{event.location?.addressLine}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {event.location?.addressLevel1}, {event.location?.addressLevel2}
+                    </p>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                
+                {/* Additional Location Images Gallery */}
+                {event.location?.imageUrl && event.location.imageUrl.length > 1 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-muted-foreground">Location Gallery</p>
+                      <Badge variant="secondary" className="text-xs">
+                        {event.location.imageUrl.length} photo{event.location.imageUrl.length !== 1 ? 's' : ''}
+                      </Badge>
+                    </div>
+                    <div className={`grid gap-2 ${
+                      event.location.imageUrl.length === 2 ? 'grid-cols-2' :
+                      event.location.imageUrl.length === 3 ? 'grid-cols-3' :
+                      'grid-cols-4'
+                    }`}>
+                      {event.location.imageUrl.slice(1, 5).map((url, index) => (
+                        <div 
+                          key={index} 
+                          className="relative aspect-square overflow-hidden rounded-md border group cursor-pointer"
+                        >
+                          <img
+                            src={url || "/placeholder.svg"}
+                            alt={`${event.location?.name} - View ${index + 2}`}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                          {index === 3 && event.location.imageUrl.length > 5 && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                              <span className="text-white font-semibold text-lg">
+                                +{event.location.imageUrl.length - 5}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

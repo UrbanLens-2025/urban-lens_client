@@ -34,6 +34,11 @@ import {
   XCircle,
   FileText,
   Clock,
+  Sparkles,
+  Calendar,
+  FileCheck,
+  CreditCard,
+  AlertCircle,
 } from "lucide-react";
 import {
   Tooltip,
@@ -106,15 +111,36 @@ function EventDetailLayoutContent({
 
   const handlePublishConfirm = () => {
     if (event && event.status === "DRAFT") {
-      // Double-check payment status before publishing
-      if (!hasPaymentMade) {
+      // Double-check all requirements before publishing
+      if (!hasNameAndDescription) {
+        toast.error("Please add event name and description before publishing.");
+        setIsPublishDialogOpen(false);
+        return;
+      }
+      if (!hasDates) {
+        toast.error("Please set event dates and times before publishing.");
+        setIsPublishDialogOpen(false);
+        return;
+      }
+      // Location is required for publishing
+      if (!hasLocation) {
+        toast.error("Please select a location before publishing the event.");
+        setIsPublishDialogOpen(false);
+        return;
+      }
+      // If location bookings exist, they must be approved and paid
+      if (hasLocationBookings && !hasBusinessApproval) {
+        toast.error("Business owner must approve the location booking before publishing the event. Please wait for approval.");
+        setIsPublishDialogOpen(false);
+        return;
+      }
+      if (hasLocationBookings && !hasPaymentMade) {
         toast.error("Payment must be completed before publishing the event. Please complete the payment for your location booking first.");
         setIsPublishDialogOpen(false);
         return;
       }
-      // Check if business owner has approved the booking
-      if (!hasBusinessApproval) {
-        toast.error("Business owner must approve the location booking before publishing the event. Please wait for approval.");
+      if (!hasDocuments) {
+        toast.error("Please submit event validation documents before publishing.");
         setIsPublishDialogOpen(false);
         return;
       }
@@ -141,56 +167,108 @@ function EventDetailLayoutContent({
   // Checklist items for publishing
   const hasNameAndDescription = !!(event?.displayName && event?.description);
   const hasDates = !!(event?.startDate && event?.endDate);
-  const hasLocation = !!event?.locationId;
+  // Check if event has locationId OR if there's an active (non-cancelled) location booking
+  const hasLocationFromEvent = !!event?.locationId;
+  const hasLocationFromBooking = useMemo(() => {
+    if (locationBookings && locationBookings.length > 0) {
+      return locationBookings.some(booking => {
+        const status = booking.status?.toUpperCase();
+        // Exclude cancelled bookings
+        if (status === "CANCELLED") return false;
+        return !!booking.location?.id;
+      });
+    }
+    if (event?.locationBookings && event.locationBookings.length > 0) {
+      return event.locationBookings.some(booking => {
+        const status = booking.status?.toUpperCase();
+        // Exclude cancelled bookings
+        if (status === "CANCELLED") return false;
+        return !!booking.location?.id;
+      });
+    }
+    return false;
+  }, [locationBookings, event?.locationBookings]);
+  const hasLocation = hasLocationFromEvent || hasLocationFromBooking;
   const hasDocuments = !!(event?.eventValidationDocuments && event.eventValidationDocuments.length > 0);
   
   // Check if payment has been made for location booking
-  // Payment is confirmed if at least one locationBooking has a referencedTransactionId OR status is PAYMENT_RECEIVED
+  // Payment is confirmed if at least one active (non-cancelled) locationBooking has a referencedTransactionId OR status is PAYMENT_RECEIVED
   // Check both event.locationBookings (from event API) and locationBookings (from location bookings API)
   const hasPaymentMade = useMemo(() => {
     // First check locationBookings from the dedicated API (most up-to-date)
     if (locationBookings && locationBookings.length > 0) {
-      const hasPaidInLocationBookings = locationBookings.some(booking => 
-        booking.referencedTransactionId !== null || 
-        booking.status?.toUpperCase() === "PAYMENT_RECEIVED"
-      );
+      const hasPaidInLocationBookings = locationBookings.some(booking => {
+        const status = booking.status?.toUpperCase();
+        if (status === "CANCELLED") return false;
+        return booking.referencedTransactionId !== null || 
+               status === "PAYMENT_RECEIVED";
+      });
       if (hasPaidInLocationBookings) return true;
     }
     
     // Fallback to event.locationBookings if available
     if (event?.locationBookings && event.locationBookings.length > 0) {
-      return event.locationBookings.some(booking => 
-        booking.referencedTransactionId !== null || 
-        booking.status?.toUpperCase() === "PAYMENT_RECEIVED"
-      );
+      return event.locationBookings.some(booking => {
+        const status = booking.status?.toUpperCase();
+        if (status === "CANCELLED") return false;
+        return booking.referencedTransactionId !== null || 
+               status === "PAYMENT_RECEIVED";
+      });
     }
     
     return false;
   }, [locationBookings, event?.locationBookings]);
 
+  // Check if there are any active location bookings (exclude cancelled)
+  const hasLocationBookings = useMemo(() => {
+    if (locationBookings && locationBookings.length > 0) {
+      return locationBookings.some(booking => {
+        const status = booking.status?.toUpperCase();
+        return status !== "CANCELLED";
+      });
+    }
+    if (event?.locationBookings && event.locationBookings.length > 0) {
+      return event.locationBookings.some(booking => {
+        const status = booking.status?.toUpperCase();
+        return status !== "CANCELLED";
+      });
+    }
+    return false;
+  }, [locationBookings, event?.locationBookings]);
+
   // Check if business owner has approved the location booking
-  // Approval is confirmed if at least one locationBooking has status APPROVED
+  // Approval is confirmed if at least one active (non-cancelled) locationBooking has status APPROVED
   const hasBusinessApproval = useMemo(() => {
     // First check locationBookings from the dedicated API (most up-to-date)
     if (locationBookings && locationBookings.length > 0) {
-      const hasApprovedBooking = locationBookings.some(booking => 
-        booking.status?.toUpperCase() === "APPROVED"
-      );
+      const hasApprovedBooking = locationBookings.some(booking => {
+        const status = booking.status?.toUpperCase();
+        return status !== "CANCELLED" && status === "APPROVED";
+      });
       if (hasApprovedBooking) return true;
     }
     
     // Fallback to event.locationBookings if available
     if (event?.locationBookings && event.locationBookings.length > 0) {
-      return event.locationBookings.some(booking => 
-        booking.status?.toUpperCase() === "APPROVED"
-      );
+      return event.locationBookings.some(booking => {
+        const status = booking.status?.toUpperCase();
+        return status !== "CANCELLED" && status === "APPROVED";
+      });
     }
     
     return false;
   }, [locationBookings, event?.locationBookings]);
   
   const isDraft = event?.status?.toUpperCase() === "DRAFT";
-  const canPublish = hasNameAndDescription && hasDates && hasLocation && hasDocuments && hasPaymentMade && hasBusinessApproval;
+  // Location is required for publishing - must have locationId or location booking
+  // Payment is only required if location booking exists and payment hasn't been made
+  // If no location booking, payment requirement is skipped
+  const paymentRequired = hasLocationBookings ? hasPaymentMade : true;
+  // Business approval is only required if location bookings exist
+  // If no location bookings, approval requirement is skipped
+  const approvalRequired = hasLocationBookings ? hasBusinessApproval : true;
+  // Location is required for publishing
+  const canPublish = hasNameAndDescription && hasDates && hasLocation && hasDocuments && paymentRequired && approvalRequired;
 
   const formatCompactDateTime = (iso: string) => {
     const date = new Date(iso);
@@ -673,10 +751,18 @@ function EventDetailLayoutContent({
                         {!canPublish && (
                           <TooltipContent>
                             <p>
-                              {!hasBusinessApproval
+                              {!hasNameAndDescription
+                                ? "Add event name and description"
+                                : !hasDates
+                                ? "Set event dates and times"
+                                : !hasLocation
+                                ? "Select a location before publishing"
+                                : hasLocationBookings && !hasBusinessApproval
                                 ? "Business owner must approve the location booking before publishing"
-                                : !hasPaymentMade 
+                                : hasLocationBookings && !hasPaymentMade
                                 ? "Complete payment for location booking before publishing"
+                                : !hasDocuments
+                                ? "Submit event validation documents"
                                 : "Complete all checklist items to publish your event"}
                             </p>
                           </TooltipContent>
@@ -707,221 +793,408 @@ function EventDetailLayoutContent({
         </div>
 
         {/* Publishing Checklist - Show when event is DRAFT */}
-        {isDraft && (
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <FileText className="h-5 w-5 text-primary" />
-                Complete these steps to publish your event
-              </CardTitle>
-              <CardDescription>
-                Make sure all required information is provided before publishing
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  {hasNameAndDescription ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <p className={cn(
-                      "text-sm font-medium",
-                      hasNameAndDescription ? "text-foreground" : "text-muted-foreground"
-                    )}>
-                      Provide event name and description
-                    </p>
-                    {!hasNameAndDescription && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Add a name and description for your event
-                      </p>
-                    )}
-                  </div>
-                  {!hasNameAndDescription && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        openEditEventTab(event.displayName);
-                        router.push(`/dashboard/creator/events/${eventId}/edit`);
-                      }}
-                    >
-                      Add
-                    </Button>
-                  )}
-                </div>
+        {isDraft && (() => {
+          // Calculate total steps - location is now required
+          // Base steps: Name/Description, Dates, Location, Documents (always required)
+          const baseSteps = 4;
+          // Business approval step: only show if location bookings exist
+          const hasBusinessApprovalStep = hasLocationBookings;
+          // Payment step: only show if location bookings exist AND payment failed
+          const hasPaymentStep = hasLocationBookings && !hasPaymentMade;
+          
+          const totalSteps = baseSteps + (hasBusinessApprovalStep ? 1 : 0) + (hasPaymentStep ? 1 : 0);
+          
+          // Only count steps that are actually displayed
+          const completedSteps = [
+            hasNameAndDescription,
+            hasDates,
+            // Location is required - check if location is selected
+            hasLocation,
+            hasDocuments,
+            // Only count business approval if the step is shown
+            hasBusinessApprovalStep ? hasBusinessApproval : undefined,
+            // Only count payment if the step is shown
+            hasPaymentStep ? hasPaymentMade : undefined,
+          ].filter(step => step !== undefined).filter(Boolean).length;
+          
+          const progressPercentage = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
 
-                <div className="flex items-start gap-3">
-                  {hasDates ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <p className={cn(
-                      "text-sm font-medium",
-                      hasDates ? "text-foreground" : "text-muted-foreground"
-                    )}>
-                      Provide event start date time and end date time
-                    </p>
-                    {!hasDates && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Set when your event starts and ends
-                      </p>
-                    )}
+          return (
+            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-primary/5 to-primary/10 shadow-lg overflow-hidden">
+              <CardHeader className="pb-3 px-4 pt-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-primary/20">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="relative flex-shrink-0">
+                      <div className="p-1.5 rounded-md bg-gradient-to-br from-primary to-primary/80 shadow-sm">
+                        <Sparkles className="h-3.5 w-3.5 text-white" />
+                      </div>
+                      {progressPercentage === 100 && (
+                        <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-background flex items-center justify-center">
+                          <CheckCircle2 className="h-1.5 w-1.5 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base font-semibold leading-tight">
+                        Ready to Publish?
+                      </CardTitle>
+                      <CardDescription className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                        Complete all steps below
+                      </CardDescription>
+                    </div>
                   </div>
-                  {!hasDates && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        openEditEventTab(event.displayName);
-                        router.push(`/dashboard/creator/events/${eventId}/edit`);
-                      }}
-                    >
-                      Add
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-background/80 backdrop-blur-sm border border-primary/20 shadow-sm flex-shrink-0">
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="text-xl font-bold text-primary">
+                        {completedSteps}
+                      </span>
+                      <span className="text-xs text-muted-foreground">/</span>
+                      <span className="text-sm font-semibold text-muted-foreground">
+                        {totalSteps}
+                      </span>
+                    </div>
+                    <div className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
+                      Steps
+                    </div>
+                  </div>
                 </div>
+                {/* Compact Progress Bar */}
+                <div className="mt-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-medium text-muted-foreground">Progress</span>
+                    <span className="text-[10px] font-bold text-primary">
+                      {Math.round(progressPercentage)}%
+                    </span>
+                  </div>
+                  <div className="relative h-2 w-full bg-muted/50 rounded-full overflow-hidden border border-border/50">
+                    <div 
+                      className={cn(
+                        "h-full rounded-full transition-all duration-700 ease-out",
+                        progressPercentage === 100 
+                          ? "bg-gradient-to-r from-green-500 to-green-600" 
+                          : "bg-gradient-to-r from-primary via-primary/90 to-primary/80"
+                      )}
+                      style={{ width: `${progressPercentage}%` }}
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-3 px-4 pb-4">
+                <div className="space-y-2.5">
+                  {/* Event Details Section */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <div className="flex items-center gap-1">
+                        <div className="p-0.5 rounded bg-primary/10">
+                          <FileText className="h-2.5 w-2.5 text-primary" />
+                        </div>
+                        <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide">Event Details</span>
+                      </div>
+                      <div className="h-px flex-1 bg-gradient-to-r from-border via-border/50 to-transparent" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className={cn(
+                        "group flex items-center gap-2 p-2 rounded-md border transition-all duration-200",
+                        hasNameAndDescription 
+                          ? "bg-gradient-to-br from-green-50/70 to-green-50/30 dark:from-green-950/15 dark:to-green-950/8 border-green-300/60 dark:border-green-800/60" 
+                          : "bg-background border-border/50 hover:border-primary/30 hover:bg-accent/20"
+                      )}>
+                        <div className={cn(
+                          "flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 text-[10px]",
+                          hasNameAndDescription 
+                            ? "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-sm" 
+                            : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary font-semibold"
+                        )}>
+                          {hasNameAndDescription ? (
+                            <CheckCircle2 className="h-3 w-3" />
+                          ) : (
+                            <span>1</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <FileText className={cn(
+                              "h-3 w-3 transition-colors flex-shrink-0",
+                              hasNameAndDescription ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
+                            )} />
+                            <p className={cn(
+                              "text-[11px] font-medium leading-tight",
+                              hasNameAndDescription ? "text-foreground" : "text-muted-foreground"
+                            )}>
+                              Event Name & Description
+                            </p>
+                          </div>
+                        </div>
+                        {!hasNameAndDescription && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openEditEventTab(event.displayName);
+                              router.push(`/dashboard/creator/events/${eventId}/edit`);
+                            }}
+                            className="shrink-0 border-primary/30 hover:bg-primary hover:text-primary-foreground h-6 text-[10px] px-2 py-0"
+                          >
+                            Add
+                          </Button>
+                        )}
+                      </div>
 
-                <div className="flex items-start gap-3">
-                  {hasLocation ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <p className={cn(
-                      "text-sm font-medium",
-                      hasLocation ? "text-foreground" : "text-muted-foreground"
-                    )}>
-                      Book location for event
-                    </p>
-                    {!hasLocation && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Select and book a venue for your event
-                      </p>
-                    )}
+                      <div className={cn(
+                        "group flex items-center gap-2 p-2 rounded-md border transition-all duration-200",
+                        hasDates 
+                          ? "bg-gradient-to-br from-green-50/70 to-green-50/30 dark:from-green-950/15 dark:to-green-950/8 border-green-300/60 dark:border-green-800/60" 
+                          : "bg-background border-border/50 hover:border-primary/30 hover:bg-accent/20"
+                      )}>
+                        <div className={cn(
+                          "flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 text-[10px]",
+                          hasDates 
+                            ? "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-sm" 
+                            : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary font-semibold"
+                        )}>
+                          {hasDates ? (
+                            <CheckCircle2 className="h-3 w-3" />
+                          ) : (
+                            <span>2</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className={cn(
+                              "h-3 w-3 transition-colors flex-shrink-0",
+                              hasDates ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
+                            )} />
+                            <p className={cn(
+                              "text-[11px] font-medium leading-tight",
+                              hasDates ? "text-foreground" : "text-muted-foreground"
+                            )}>
+                              Event Dates & Times
+                            </p>
+                          </div>
+                        </div>
+                        {!hasDates && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openEditEventTab(event.displayName);
+                              router.push(`/dashboard/creator/events/${eventId}/edit`);
+                            }}
+                            className="shrink-0 border-primary/30 hover:bg-primary hover:text-primary-foreground h-6 text-[10px] px-2 py-0"
+                          >
+                            Add
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  {!hasLocation && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        router.push(`/dashboard/creator/events/${eventId}/location`);
-                      }}
-                    >
-                      Book
-                    </Button>
-                  )}
-                </div>
 
-                <div className="flex items-start gap-3">
-                  {hasDocuments ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <p className={cn(
-                      "text-sm font-medium",
-                      hasDocuments ? "text-foreground" : "text-muted-foreground"
-                    )}>
-                      Submit event documents
-                    </p>
-                    {!hasDocuments && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Upload required validation documents
-                      </p>
-                    )}
-                  </div>
-                  {!hasDocuments && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        openEditEventTab(event.displayName);
-                        router.push(`/dashboard/creator/events/${eventId}/edit`);
-                      }}
-                    >
-                      Add
-                    </Button>
-                  )}
-                </div>
+                  {/* Location & Booking Section - Location is required */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <div className="flex items-center gap-1">
+                        <div className="p-0.5 rounded bg-primary/10">
+                          <MapPin className="h-2.5 w-2.5 text-primary" />
+                        </div>
+                        <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide">Location & Booking</span>
+                      </div>
+                      <div className="h-px flex-1 bg-gradient-to-r from-border via-border/50 to-transparent" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Select Location step - required */}
+                      <div className={cn(
+                        "group flex items-center gap-2 p-2 rounded-md border transition-all duration-200",
+                        hasLocation
+                          ? "bg-gradient-to-br from-green-50/70 to-green-50/30 dark:from-green-950/15 dark:to-green-950/8 border-green-300/60 dark:border-green-800/60" 
+                          : "bg-background border-border/50 hover:border-primary/30 hover:bg-accent/20"
+                      )}>
+                        <div className={cn(
+                          "flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 text-[10px]",
+                          hasLocation
+                            ? "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-sm" 
+                            : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary font-semibold"
+                        )}>
+                          {hasLocation ? (
+                            <CheckCircle2 className="h-3 w-3" />
+                          ) : (
+                            <span>3</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className={cn(
+                              "h-3 w-3 transition-colors flex-shrink-0",
+                              hasLocation ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
+                            )} />
+                            <p className={cn(
+                              "text-[11px] font-medium leading-tight",
+                              hasLocation ? "text-foreground" : "text-muted-foreground"
+                            )}>
+                              Select Location
+                            </p>
+                          </div>
+                        </div>
+                        {!hasLocation && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              router.push(`/dashboard/creator/events/${eventId}/location`);
+                            }}
+                            className="shrink-0 border-primary/30 hover:bg-primary hover:text-primary-foreground h-6 text-[10px] px-2 py-0"
+                          >
+                            Select
+                          </Button>
+                        )}
+                      </div>
 
-                <div className="flex items-start gap-3">
-                  {hasBusinessApproval ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <p className={cn(
-                      "text-sm font-medium",
-                      hasBusinessApproval ? "text-foreground" : "text-muted-foreground"
-                    )}>
-                      Business owner approval for location booking
-                    </p>
-                    {!hasBusinessApproval && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Business owner must approve the location booking before publishing
-                      </p>
-                    )}
-                  </div>
-                  {!hasBusinessApproval && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled
-                      className="cursor-not-allowed"
-                    >
-                      Pending
-                    </Button>
-                  )}
-                </div>
+                      {/* Business Owner Approval - Only show if bookings exist */}
+                      {hasLocationBookings && (
+                        <div className={cn(
+                          "group flex items-center gap-2 p-2 rounded-md border transition-all duration-200",
+                          hasBusinessApproval 
+                            ? "bg-gradient-to-br from-green-50/70 to-green-50/30 dark:from-green-950/15 dark:to-green-950/8 border-green-300/60 dark:border-green-800/60" 
+                            : "bg-gradient-to-br from-amber-50/70 to-amber-50/30 dark:from-amber-950/15 dark:to-amber-950/8 border-amber-300/60 dark:border-amber-800/60"
+                        )}>
+                          <div className={cn(
+                            "flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 text-[10px]",
+                            hasBusinessApproval 
+                              ? "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-sm" 
+                              : "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-sm"
+                          )}>
+                            {hasBusinessApproval ? (
+                              <CheckCircle2 className="h-3 w-3" />
+                            ) : (
+                              <Clock className="h-2.5 w-2.5 animate-pulse" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <UserCheck className={cn(
+                                "h-3 w-3 transition-colors flex-shrink-0",
+                                hasBusinessApproval ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
+                              )} />
+                              <p className={cn(
+                                "text-[11px] font-medium leading-tight",
+                                hasBusinessApproval ? "text-foreground" : "text-amber-700 dark:text-amber-300"
+                              )}>
+                                Business Owner Approval
+                              </p>
+                            </div>
+                            {!hasBusinessApproval && (
+                              <p className="text-[9px] text-amber-600 dark:text-amber-400 font-medium ml-4.5 mt-0.5">
+                                Awaiting approval
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
-                <div className="flex items-start gap-3">
-                  {hasPaymentMade ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <p className={cn(
-                      "text-sm font-medium",
-                      hasPaymentMade ? "text-foreground" : "text-muted-foreground"
-                    )}>
-                      Complete payment for location booking
-                    </p>
-                    {!hasPaymentMade && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Payment must be completed before publishing the event
-                      </p>
-                    )}
+                      {/* Payment step - Only show if bookings exist and payment failed */}
+                      {hasLocationBookings && !hasPaymentMade && (
+                        <div className={cn(
+                          "group flex items-center gap-2 p-2 rounded-md border transition-all duration-200",
+                          "bg-gradient-to-br from-amber-50/70 to-amber-50/30 dark:from-amber-950/15 dark:to-amber-950/8 border-amber-300/60 dark:border-amber-800/60"
+                        )}>
+                          <div className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-sm text-[10px]">
+                            <AlertCircle className="h-2.5 w-2.5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <CreditCard className="h-3 w-3 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                              <p className="text-[11px] font-medium leading-tight text-amber-700 dark:text-amber-300">
+                                Complete Payment
+                              </p>
+                            </div>
+                            <p className="text-[9px] text-amber-600 dark:text-amber-400 ml-4.5 mt-0.5">
+                              Payment failed
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              router.push(`/dashboard/creator/events/${eventId}/location`);
+                            }}
+                            className="shrink-0 border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-300 h-6 text-[10px] px-2 py-0"
+                          >
+                            Pay Now
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  {!hasPaymentMade && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        router.push(`/dashboard/creator/events/${eventId}/location`);
-                      }}
-                    >
-                      Pay
-                    </Button>
-                  )}
+
+                  {/* Documents Section */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <div className="flex items-center gap-1">
+                        <div className="p-0.5 rounded bg-primary/10">
+                          <FileCheck className="h-2.5 w-2.5 text-primary" />
+                        </div>
+                        <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide">Documents</span>
+                      </div>
+                      <div className="h-px flex-1 bg-gradient-to-r from-border via-border/50 to-transparent" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                    <div className={cn(
+                      "group flex items-center gap-2 p-2 rounded-md border transition-all duration-200",
+                      hasDocuments 
+                        ? "bg-gradient-to-br from-green-50/70 to-green-50/30 dark:from-green-950/15 dark:to-green-950/8 border-green-300/60 dark:border-green-800/60" 
+                        : "bg-background border-border/50 hover:border-primary/30 hover:bg-accent/20"
+                    )}>
+                      <div className={cn(
+                        "flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 text-[10px]",
+                        hasDocuments 
+                          ? "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-sm" 
+                          : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary font-semibold"
+                      )}>
+                        {hasDocuments ? (
+                          <CheckCircle2 className="h-3 w-3" />
+                        ) : (
+                          <span>4</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <FileCheck className={cn(
+                            "h-3 w-3 transition-colors flex-shrink-0",
+                            hasDocuments ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
+                          )} />
+                          <p className={cn(
+                            "text-[11px] font-medium leading-tight",
+                            hasDocuments ? "text-foreground" : "text-muted-foreground"
+                          )}>
+                            Submit Event Documents
+                          </p>
+                        </div>
+                      </div>
+                      {!hasDocuments && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            openEditEventTab(event.displayName);
+                            router.push(`/dashboard/creator/events/${eventId}/edit`);
+                          }}
+                          className="shrink-0 border-primary/30 hover:bg-primary hover:text-primary-foreground h-6 text-[10px] px-2 py-0"
+                        >
+                          Add
+                        </Button>
+                      )}
+                    </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Tabs Navigation */}
         <div className="border-b">

@@ -639,58 +639,118 @@ function LocationDetailsOverlay({
           setSelectedSlots([]);
         }
       }}>
-        <DialogContent className="w-[90vw] !max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Select Booking Time Slots</DialogTitle>
+        <DialogContent className="w-[95vw] !max-w-5xl max-h-[85vh] overflow-hidden flex flex-col mt-6 p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-primary/5 to-primary/10">
+            <div className="flex items-start justify-between">
+              <div>
+                <DialogTitle className="text-xl font-semibold mb-1.5 flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <Calendar className="h-5 w-5 text-primary" />
+                  </div>
+                  Select Booking Time Slots
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  {displayLocation?.name}
+                </DialogDescription>
+              </div>
+              {selectedSlots.length > 0 && (
+                <Badge variant="secondary" className="text-xs font-medium px-3 py-1">
+                  {selectedSlots.length} slot{selectedSlots.length !== 1 ? 's' : ''} selected
+                </Badge>
+              )}
+            </div>
           </DialogHeader>
-          {displayLocation && (
-            <AvailabilityCalendar
-              locationId={displayLocation.id}
-              initialSlots={selectedSlots}
-              onSlotsChange={setSelectedSlots}
-              eventStartDate={eventDetail?.startDate ? new Date(eventDetail.startDate) : undefined}
-              eventEndDate={eventDetail?.endDate ? new Date(eventDetail.endDate) : undefined}
-              minBookingDurationMinutes={displayLocation.bookingConfig?.minBookingDurationMinutes}
-            />
+          
+          {/* Event Time Alert */}
+          {eventDetail?.startDate && eventDetail?.endDate && (
+            <div className="px-6 pt-4">
+              <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  <p className="font-medium mb-1">Event Time Period</p>
+                  <p className="text-sm">
+                    Your event runs from{" "}
+                    <span className="font-semibold">
+                      {format(new Date(eventDetail.startDate), "MMM dd, yyyy 'at' h:mm a")}
+                    </span>{" "}
+                    to{" "}
+                    <span className="font-semibold">
+                      {format(new Date(eventDetail.endDate), "MMM dd, yyyy 'at' h:mm a")}
+                    </span>
+                    . Please select time slots that cover this entire period.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            </div>
           )}
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => {
-                // Quick validation check - clear invalid slots on cancel
-                if (eventDetail?.startDate && eventDetail?.endDate && selectedSlots.length > 0) {
-                  const eventStart = new Date(eventDetail.startDate);
-                  eventStart.setMilliseconds(0);
-                  const eventEnd = new Date(eventDetail.endDate);
-                  eventEnd.setMilliseconds(0);
-                  
-                  const allSlotStarts = selectedSlots.map(slot => {
-                    const d = new Date(slot.startDateTime);
-                    d.setMilliseconds(0);
-                    return d.getTime();
-                  });
-                  const allSlotEnds = selectedSlots.map(slot => {
-                    const d = new Date(slot.endDateTime);
-                    d.setMilliseconds(0);
-                    return d.getTime();
-                  });
-                  
-                  const earliestStart = new Date(Math.min(...allSlotStarts));
-                  const latestEnd = new Date(Math.max(...allSlotEnds));
-                  
-                  // Quick check - if slots don't cover event, clear them
-                  if (earliestStart.getTime() > eventStart.getTime() || 
-                      latestEnd.getTime() < eventEnd.getTime()) {
-                    setSelectedSlots([]);
+          
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {displayLocation && (
+              <AvailabilityCalendar
+                locationId={displayLocation.id}
+                initialSlots={selectedSlots}
+                onSlotsChange={setSelectedSlots}
+                eventStartDate={eventDetail?.startDate ? new Date(eventDetail.startDate) : undefined}
+                eventEndDate={eventDetail?.endDate ? new Date(eventDetail.endDate) : undefined}
+                minBookingDurationMinutes={displayLocation.bookingConfig?.minBookingDurationMinutes}
+              />
+            )}
+          </div>
+          <div className="flex items-center justify-between px-6 py-3 border-t bg-muted/30">
+            <div className="flex flex-col gap-0.5">
+              <p className="text-[10px] text-muted-foreground">
+                Click or drag to select time slots • Unavailable times are disabled
+              </p>
+              {eventDetail?.startDate && eventDetail?.endDate ? (
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                  ⚠ Selected slots must cover event period: {format(new Date(eventDetail.startDate), "MMM dd, h:mm a")} - {format(new Date(eventDetail.endDate), "MMM dd, h:mm a")}
+                </p>
+              ) : (
+                <p className="text-[10px] text-muted-foreground">
+                  Tip: Unavailable times are disabled - venue owner hasn't opened them for booking
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Quick validation check - clear invalid slots on cancel
+                  if (eventDetail?.startDate && eventDetail?.endDate && selectedSlots.length > 0) {
+                    const eventStart = new Date(eventDetail.startDate);
+                    eventStart.setMilliseconds(0);
+                    const eventEnd = new Date(eventDetail.endDate);
+                    eventEnd.setMilliseconds(0);
+                    
+                    const allSlotStarts = selectedSlots.map(slot => {
+                      const d = new Date(slot.startDateTime);
+                      d.setMilliseconds(0);
+                      return d.getTime();
+                    });
+                    const allSlotEnds = selectedSlots.map(slot => {
+                      const d = new Date(slot.endDateTime);
+                      d.setMilliseconds(0);
+                      return d.getTime();
+                    });
+                    
+                    const earliestStart = new Date(Math.min(...allSlotStarts));
+                    const latestEnd = new Date(Math.max(...allSlotEnds));
+                    
+                    // Quick check - if slots don't cover event, clear them
+                    if (earliestStart.getTime() > eventStart.getTime() || 
+                        latestEnd.getTime() < eventEnd.getTime()) {
+                      setSelectedSlots([]);
+                    }
                   }
-                }
-                setShowCalendar(false);
-                setSelectedSlots([]);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
+                  setShowCalendar(false);
+                  setSelectedSlots([]);
+                }}
+                size="sm"
+              >
+                Cancel
+              </Button>
+              <Button
               onClick={async () => {
                 // Dismiss any existing toasts first
                 toast.dismiss();
@@ -833,20 +893,23 @@ function LocationDetailsOverlay({
                 setShowCalendar(false);
                 setShowConfirmDialog(true);
               }}
-              disabled={selectedSlots.length === 0 || addLocationBookingMutation.isPending}
-            >
-              {addLocationBookingMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Continue to Payment
-                </>
-              )}
-            </Button>
+                disabled={selectedSlots.length === 0 || addLocationBookingMutation.isPending}
+                size="sm"
+                className="min-w-[140px]"
+              >
+                {addLocationBookingMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Continue to Payment
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

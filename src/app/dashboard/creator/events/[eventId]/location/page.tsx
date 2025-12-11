@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { MapPin, Calendar, Plus, Building2, Loader2, CheckCircle, Clock, AlertCircle, List, Info, Star, Mail, Phone, Globe, CreditCard, XCircle } from "lucide-react";
+import { MapPin, Calendar, Plus, Building2, Loader2, CheckCircle, CheckCircle2, Clock, AlertCircle, List, Info, Star, Mail, Phone, Globe, CreditCard, XCircle } from "lucide-react";
 import { useEventTabs } from "@/contexts/EventTabContext";
 import { useEventById } from "@/hooks/events/useEventById";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
@@ -334,6 +334,11 @@ export default function EventLocationPage({
     ?.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
   const hasCurrentBooking = !!currentBooking;
   
+  // Check if payment has been received (either status is PAYMENT_RECEIVED or referencedTransactionId exists)
+  const isPaymentReceived = currentBooking 
+    ? (currentBooking.status?.toUpperCase() === "PAYMENT_RECEIVED" || currentBooking.referencedTransactionId !== null)
+    : false;
+  
   // Fetch detailed location data for rating, reviews, and check-ins
   const { data: detailedLocation } = useBookableLocationById(currentBooking?.location?.id || null);
 
@@ -410,8 +415,8 @@ export default function EventLocationPage({
                     </Alert>
                   ) : null}
                   
-                  {/* Callout - show for approved status */}
-                  {currentBooking.status?.toUpperCase() === "APPROVED" && (
+                  {/* Callout - show for approved status (but not if payment already received) */}
+                  {currentBooking.status?.toUpperCase() === "APPROVED" && !isPaymentReceived && (
                     <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800">
                       <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-500" />
                       <div className="flex-1 flex items-center justify-between gap-4">
@@ -637,8 +642,9 @@ export default function EventLocationPage({
                       }}
                     />
                     
-                    {/* Payment Card */}
-                    {currentBooking.dates && currentBooking.dates.length > 0 && (() => {
+                    {/* Payment Card - Only show if payment not received */}
+                    {currentBooking.dates && currentBooking.dates.length > 0 && 
+                     !isPaymentReceived && (() => {
                       // Calculate total hours
                       let totalHours = 0;
                       currentBooking.dates.forEach((dateRange) => {
@@ -675,24 +681,31 @@ export default function EventLocationPage({
                               </div>
                             </div>
                             <div className="mt-auto pt-4">
-                              {currentBooking.status?.toUpperCase() === "PAYMENT_RECEIVED" ? (
-                                <div className="w-full rounded-md border border-muted bg-muted/50 py-2 text-center font-semibold text-muted-foreground">
-                                  Paid
+                              {currentBooking.status?.toUpperCase() === "AWAITING_BUSINESS_PROCESSING" ||
+                                currentBooking.status?.toUpperCase() === "SOFT_LOCKED" ? (
+                                <div className="w-full rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 py-2.5 px-4">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 animate-pulse" />
+                                    <div className="flex flex-col items-center">
+                                      <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">Awaiting Confirmation</span>
+                                      <span className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Business owner is reviewing your booking</span>
+                                    </div>
+                                  </div>
                                 </div>
                               ) : (
                                 <Button 
                                   className="w-full"
                                   onClick={() => setIsPaymentModalOpen(true)}
-                                  disabled={
-                                    paymentMutation.isPending ||
-                                    currentBooking.status?.toUpperCase() === "AWAITING_BUSINESS_PROCESSING" ||
-                                    currentBooking.status?.toUpperCase() === "SOFT_LOCKED"
-                                  }
+                                  disabled={paymentMutation.isPending}
                                 >
-                                  {currentBooking.status?.toUpperCase() === "AWAITING_BUSINESS_PROCESSING" ||
-                                   currentBooking.status?.toUpperCase() === "SOFT_LOCKED"
-                                    ? "Awaiting Confirmation"
-                                    : "Proceed to Payment"}
+                                  {paymentMutation.isPending ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Processing...
+                                    </>
+                                  ) : (
+                                    "Proceed to Payment"
+                                  )}
                                 </Button>
                               )}
                             </div>
