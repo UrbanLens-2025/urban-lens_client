@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map, Star, RotateCcw, Search, List, Grid3x3, X, Clock, AlertTriangle, XCircle } from "lucide-react";
+import { Info, Building2, MapPin, Calendar, CheckCircle2, Loader2, AlertCircle, Map, Star, RotateCcw, Search, List, Grid3x3, X, Clock, AlertTriangle, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import {
   Select,
@@ -53,6 +53,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingSlots, setPendingSlots] = useState<Array<{ startDateTime: Date; endDateTime: Date }>>([]);
   const [tempSlots, setTempSlots] = useState<Array<{ startDateTime: Date; endDateTime: Date }>>([]);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   // Get event dates from form
   const startDate = form.watch("startDate");
@@ -96,7 +98,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   const locationDetails = bookableLocationDetails || regularLocationDetails;
 
   // Handle location selection - clear dateRanges when location changes
-  const handleLocationSelect = (locationId: string) => {
+  const handleLocationSelect = (locationId: string, openModal: boolean = false) => {
     const previousLocationId = selectedLocationId;
     
     // If location changed (not just initial set), clear dateRanges
@@ -106,6 +108,11 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     
     setSelectedLocationId(locationId);
     form.setValue("locationId", locationId, { shouldValidate: true });
+    
+    // Open modal if requested (e.g., when clicking marker)
+    if (openModal) {
+      setShowLocationModal(true);
+    }
   };
 
   useEffect(() => {
@@ -113,6 +120,11 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       form.setValue("locationId", selectedLocationId, { shouldValidate: true });
     }
   }, [selectedLocationId, form]);
+
+  // Reset image index when location changes
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [selectedLocationId]);
 
 
 
@@ -257,15 +269,20 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       }
     }
     
-    // Save slots to form and show confirmation dialog
+    // Save slots to form and close calendar
     form.setValue("dateRanges" as any, currentSlots, { shouldValidate: true });
-    setPendingSlots(currentSlots);
-    setShowConfirmDialog(true);
+    setShowCalendar(false);
+    setIsInitializingCalendar(false);
+    
+    toast.success("Time slots saved successfully", {
+      description: `${currentSlots.length} slot${currentSlots.length !== 1 ? 's' : ''} selected`,
+      duration: 3000,
+    });
   };
 
-  // Calculate estimated cost
+  // Calculate estimated cost based on saved dateRanges
   const estimatedCost = useMemo(() => {
-    if (!location?.bookingConfig?.baseBookingPrice || pendingSlots.length === 0) {
+    if (!location?.bookingConfig?.baseBookingPrice || !dateRanges || dateRanges.length === 0) {
       return null;
     }
 
@@ -274,7 +291,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     
     // Calculate total hours
     let totalMilliseconds = 0;
-    pendingSlots.forEach(slot => {
+    dateRanges.forEach(slot => {
       const start = new Date(slot.startDateTime);
       const end = new Date(slot.endDateTime);
       totalMilliseconds += (end.getTime() - start.getTime());
@@ -289,7 +306,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       currency,
       basePrice,
     };
-  }, [pendingSlots, location?.bookingConfig]);
+  }, [dateRanges, location?.bookingConfig]);
 
   // Get wallet balance
   const walletBalance = walletData ? parseFloat(walletData.balance) : 0;
@@ -298,7 +315,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
 
   // Calculate refund information
   const refundInfo = useMemo(() => {
-    if (!estimatedCost || !location?.bookingConfig?.refundEnabled) {
+    if (!estimatedCost || !location?.bookingConfig?.refundEnabled || !dateRanges || dateRanges.length === 0) {
       return null;
     }
 
@@ -306,8 +323,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     const totalCost = estimatedCost.totalCost;
     
     // Find earliest booking slot start time for cutoff calculation
-    const earliestSlotStart = pendingSlots.length > 0 
-      ? new Date(Math.min(...pendingSlots.map(s => s.startDateTime.getTime())))
+    const earliestSlotStart = dateRanges.length > 0 
+      ? new Date(Math.min(...dateRanges.map(s => s.startDateTime.getTime())))
       : null;
 
     const refundBeforeCutoff = config.refundPercentageBeforeCutoff !== undefined
@@ -333,28 +350,24 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       cutoffTime,
       currency: estimatedCost.currency,
     };
-  }, [estimatedCost, location?.bookingConfig, pendingSlots]);
+  }, [estimatedCost, location?.bookingConfig, dateRanges]);
 
-  // Handle confirmation
+  // Handle confirmation - just save the selected slots
   const handleConfirmBooking = () => {
-    if (hasInsufficientBalance) {
-      // Redirect to wallet deposit page
-      router.push('/dashboard/creator/wallet?action=deposit');
-      toast.info("Please deposit funds to continue with booking", {
-        description: `You need ${estimatedCost?.totalCost.toLocaleString("vi-VN")} ${estimatedCost?.currency} but have ${walletBalance.toLocaleString("vi-VN")} ${walletCurrency}`,
-        duration: 6000,
+    if (!dateRanges || dateRanges.length === 0) {
+      toast.error("No slots selected", {
+        description: "Please select time slots first.",
+        duration: 3000,
       });
       return;
     }
 
-    // Save slots to form
-    form.setValue("dateRanges" as any, pendingSlots, { shouldValidate: true });
+    // Slots are already saved in the form from handleSaveSlots
+    // Just close the dialog
     setShowConfirmDialog(false);
-    setShowCalendar(false);
-    setPendingSlots([]);
     
-    toast.success("Time slots saved successfully", {
-      description: `Payment of ${estimatedCost?.totalCost.toLocaleString("vi-VN")} ${estimatedCost?.currency} will be processed when you submit the event request.`,
+    toast.success("Booking confirmed", {
+      description: `${dateRanges.length} slot${dateRanges.length !== 1 ? 's' : ''} saved successfully. Payment will be processed when you submit the event request.`,
       duration: 5000,
     });
   };
@@ -431,6 +444,115 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
           )}
         </div>
       </div>
+
+      {/* Selected Slots Display */}
+      {hasBookedSlots && dateRanges.length > 0 && (
+        <div className="border-2 border-green-200 dark:border-green-800 rounded-lg p-4 bg-green-50 dark:bg-green-950/30 space-y-3">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
+              <h4 className="text-sm font-semibold text-green-900 dark:text-green-200">
+                Selected Time Slots ({dateRanges.length})
+              </h4>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                // Initialize tempSlots with existing dateRanges when opening calendar
+                setTempSlots(dateRanges || []);
+                setIsInitializingCalendar(true);
+                setShowCalendar(true);
+                // Reset initialization flag after a short delay to allow calendar to initialize
+                setTimeout(() => {
+                  setIsInitializingCalendar(false);
+                }, 500);
+              }}
+              className="h-8 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/40"
+            >
+              <Calendar className="h-3.5 w-3.5 mr-1.5" />
+              Edit
+            </Button>
+          </div>
+          <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-green-300 scrollbar-track-transparent">
+            {(() => {
+              // Group slots by date
+              const groupedByDate = dateRanges.reduce((acc, slot) => {
+                const dateKey = format(new Date(slot.startDateTime), "yyyy-MM-dd");
+                if (!acc[dateKey]) {
+                  acc[dateKey] = [];
+                }
+                acc[dateKey].push(slot);
+                return acc;
+              }, {} as Record<string, typeof dateRanges>);
+              
+              // Sort dates
+              const sortedDates = Object.keys(groupedByDate).sort();
+              
+              return sortedDates.map((dateKey) => {
+                const slots = groupedByDate[dateKey];
+                const date = new Date(dateKey + "T00:00:00");
+                const dayName = format(date, "EEEE");
+                
+                // Sort slots by start time and merge consecutive ones
+                const sortedSlots = [...slots].sort((a, b) => 
+                  new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
+                );
+                
+                const ranges: Array<{ start: Date; end: Date }> = [];
+                for (let i = 0; i < sortedSlots.length; i++) {
+                  const currentStart = new Date(sortedSlots[i].startDateTime);
+                  const currentEnd = new Date(sortedSlots[i].endDateTime);
+                  
+                  if (ranges.length === 0) {
+                    ranges.push({ start: currentStart, end: currentEnd });
+                  } else {
+                    const lastRange = ranges[ranges.length - 1];
+                    if (lastRange.end.getTime() === currentStart.getTime()) {
+                      lastRange.end = currentEnd;
+                    } else {
+                      ranges.push({ start: currentStart, end: currentEnd });
+                    }
+                  }
+                }
+                
+                return (
+                  <div key={dateKey} className="p-2.5 bg-white dark:bg-gray-900/50 rounded-md border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                      <span className="text-xs font-semibold text-green-900 dark:text-green-200">
+                        {format(date, "MMM dd, yyyy")} ({dayName})
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {ranges.map((range, idx) => {
+                        const durationMs = range.end.getTime() - range.start.getTime();
+                        const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
+                        const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+                        const durationText = durationHours > 0 
+                          ? `${durationHours}h${durationMinutes > 0 ? ` ${durationMinutes}m` : ''}`
+                          : `${durationMinutes}m`;
+                        
+                        return (
+                          <Badge 
+                            key={idx}
+                            variant="outline" 
+                            className="text-xs font-mono bg-green-100 dark:bg-green-900/40 border-green-300 dark:border-green-700 text-green-900 dark:text-green-200"
+                          >
+                            {format(range.start, "HH:mm")} - {format(range.end, "HH:mm")} ({durationText})
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* Info Alert */}
       {!startDate || !endDate ? (
@@ -590,7 +712,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                     }),
                   };
                 })}
-                onLocationSelect={handleLocationSelect}
+                onLocationSelect={(locationId) => handleLocationSelect(locationId, true)}
                 selectedLocationId={selectedLocationId}
               />
             </CardContent>
@@ -613,7 +735,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                       ? "border-primary bg-primary/5 shadow-sm"
                       : "border-border hover:border-primary/30"
                   )}
-                  onClick={() => handleLocationSelect(loc.id)}
+                  onClick={() => handleLocationSelect(loc.id, true)}
                 >
                   <CardContent className="p-4">
                     <div className="flex gap-4">
@@ -714,7 +836,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                       ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
                       : "border-border hover:border-primary/50"
                   )}
-                  onClick={() => handleLocationSelect(loc.id)}
+                  onClick={() => handleLocationSelect(loc.id, true)}
                 >
                   {/* Image */}
                   {loc.imageUrl && loc.imageUrl.length > 0 ? (
@@ -843,157 +965,307 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
         </Alert>
       )}
 
-      {/* Location Details */}
+      {/* Location Details Modal */}
       {location && (
-          <div 
-            data-location-details-panel
-            className="border-2 rounded-xl p-5 space-y-4 transition-all border-primary/10 bg-primary/5"
-          >
-            {/* Images */}
-            {location.imageUrl && location.imageUrl.length > 0 && (
-              <div className="grid grid-cols-2 gap-2">
-                {location.imageUrl.slice(0, 4).map((url, index) => (
-                  <div
-                    key={index}
-                    className="relative aspect-video rounded-lg overflow-hidden bg-muted"
-                  >
+        <Dialog 
+          open={showLocationModal} 
+          onOpenChange={(open) => {
+            setShowLocationModal(open);
+            if (open) {
+              setCurrentImageIndex(0);
+            }
+          }}
+        >
+          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+            {/* Fixed Header */}
+            <DialogHeader className="sticky top-0 z-10 bg-background border-b px-6 pt-6 pb-4 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <DialogTitle className="text-xl font-bold text-foreground mb-2">
+                    {location.name}
+                  </DialogTitle>
+                  <DialogDescription className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">
+                      {location.addressLine}
+                      {location.addressLevel1 && `, ${location.addressLevel1}`}
+                    </span>
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+            
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+              {/* Image Carousel */}
+              {location.imageUrl && location.imageUrl.length > 0 && (
+                <div className="relative w-full">
+                  <div className="relative aspect-video rounded-lg overflow-hidden bg-muted group">
                     <Image
-                      src={url}
-                      alt={`${location.name} - Image ${index + 1}`}
+                      src={location.imageUrl[currentImageIndex]}
+                      alt={`${location.name} - Image ${currentImageIndex + 1}`}
                       fill
-                      className="object-cover"
+                      className="object-cover transition-opacity duration-300"
+                      priority={currentImageIndex === 0}
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    
+                    {/* Navigation Buttons */}
+                    {location.imageUrl.length > 1 && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm border-2 shadow-lg hover:bg-background z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCurrentImageIndex((prev) => 
+                              prev === 0 ? location.imageUrl.length - 1 : prev - 1
+                            );
+                          }}
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm border-2 shadow-lg hover:bg-background z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCurrentImageIndex((prev) => 
+                              prev === location.imageUrl.length - 1 ? 0 : prev + 1
+                            );
+                          }}
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </Button>
+                      </>
+                    )}
+                    
+                    {/* Image Counter */}
+                    {location.imageUrl.length > 1 && (
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full border shadow-lg">
+                        <span className="text-xs font-medium text-foreground">
+                          {currentImageIndex + 1} / {location.imageUrl.length}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Dots Indicator */}
+                    {location.imageUrl.length > 1 && (
+                      <div className="absolute bottom-3 right-3 flex gap-1.5">
+                        {location.imageUrl.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCurrentImageIndex(index);
+                            }}
+                            className={`h-2 rounded-full transition-all ${
+                              index === currentImageIndex
+                                ? 'w-6 bg-primary'
+                                : 'w-2 bg-background/60 hover:bg-background/80'
+                            }`}
+                            aria-label={`Go to image ${index + 1}`}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-1">{location.name}</h3>
-              <p className="text-sm text-muted-foreground">
-                {location.addressLine}
-                {location.addressLevel1 && `, ${location.addressLevel1}`}
-              </p>
-            </div>
-            
-            {location.description && (
-              <p className="text-sm text-foreground">{location.description}</p>
-            )}
-            
-            {/* Analytics */}
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              {(locationDetails as any)?.averageRating !== undefined ? (
-                (locationDetails as any).averageRating > 0 ? (
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="font-medium text-foreground">
-                      {typeof (locationDetails as any).averageRating === 'string' 
-                        ? parseFloat((locationDetails as any).averageRating).toFixed(1)
-                        : (locationDetails as any).averageRating.toFixed(1)}
-                    </span>
-                  </div>
-                ) : (
-                  <span>No rating yet</span>
-                )
-              ) : (
-                <span>No rating yet</span>
+                  
+                  {/* Thumbnail Strip */}
+                  {location.imageUrl.length > 1 && (
+                    <div className="flex gap-2 mt-3 overflow-x-auto pb-2 scrollbar-hide">
+                      {location.imageUrl.map((url, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setCurrentImageIndex(index)}
+                          className={`relative flex-shrink-0 w-20 h-14 rounded-md overflow-hidden border-2 transition-all ${
+                            index === currentImageIndex
+                              ? 'border-primary ring-2 ring-primary/20'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <Image
+                            src={url}
+                            alt={`Thumbnail ${index + 1}`}
+                            fill
+                            className="object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
-              <span>
-                {(locationDetails as any)?.totalCheckIns 
-                  ? (typeof (locationDetails as any).totalCheckIns === 'string' 
-                      ? parseInt((locationDetails as any).totalCheckIns) 
-                      : (locationDetails as any).totalCheckIns)
-                  : 0} check-ins
-              </span>
-              <span>
-                {(locationDetails as any)?.totalReviews || 0} reviews
-              </span>
-            </div>
-            
-            {/* Refund Policy */}
-            {location.bookingConfig && (
-              <div className="border-t pt-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <RotateCcw className="h-4 w-4 text-primary" />
-                  <h4 className="text-sm font-semibold">Refund Policy</h4>
+              
+              {/* Description */}
+              {location.description && (
+                <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                  <p className="text-sm text-foreground leading-relaxed">{location.description}</p>
                 </div>
-                {location.bookingConfig.refundEnabled ? (
-                  <div className="space-y-2 text-sm">
-                    {location.bookingConfig.refundCutoffHours !== undefined && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">
-                          Before {location.bookingConfig.refundCutoffHours}h:
-                        </span>
-                        <span className="font-medium">
-                          {location.bookingConfig.refundPercentageBeforeCutoff !== undefined
-                            ? `${(location.bookingConfig.refundPercentageBeforeCutoff * 100).toFixed(0)}%`
-                            : "100%"}
-                        </span>
+              )}
+              
+              {/* Analytics */}
+              <div className="flex items-center gap-4 flex-wrap p-4 bg-gradient-to-r from-primary/5 to-transparent rounded-lg border border-primary/10">
+                {(locationDetails as any)?.averageRating !== undefined ? (
+                  (locationDetails as any).averageRating > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                        <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
                       </div>
-                    )}
-                    {location.bookingConfig.refundCutoffHours !== undefined && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">
-                          After {location.bookingConfig.refundCutoffHours}h:
+                      <div>
+                        <span className="font-bold text-foreground text-base">
+                          {typeof (locationDetails as any).averageRating === 'string' 
+                            ? parseFloat((locationDetails as any).averageRating).toFixed(1)
+                            : (locationDetails as any).averageRating.toFixed(1)}
                         </span>
-                        <span className="font-medium">
-                          {location.bookingConfig.refundPercentageAfterCutoff !== undefined
-                            ? `${(location.bookingConfig.refundPercentageAfterCutoff * 100).toFixed(0)}%`
-                            : "0%"}
-                        </span>
+                        <span className="text-xs text-muted-foreground ml-1">rating</span>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Star className="h-4 w-4" />
+                      <span className="text-sm">No rating yet</span>
+                    </div>
+                  )
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Refunds are not available for this venue
-                  </p>
-                )}
-              </div>
-            )}
-            
-            {/* Book Time Slots Button */}
-            {!hasBookedSlots ? (
-              <Button
-                onClick={handleBookNow}
-                className="w-full"
-                size="lg"
-              >
-                <Calendar className="mr-2 h-4 w-4" />
-                Book Time Slots
-              </Button>
-            ) : (
-              <div className="p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-900 dark:text-green-200">
-                      {dateRanges.length} time slot{dateRanges.length !== 1 ? "s" : ""} booked
-                    </span>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Star className="h-4 w-4" />
+                    <span className="text-sm">No rating yet</span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      // Initialize tempSlots with existing dateRanges when opening calendar
-                      setTempSlots(dateRanges || []);
-                      setIsInitializingCalendar(true);
-                      setShowCalendar(true);
-                      // Reset initialization flag after a short delay to allow calendar to initialize
-                      setTimeout(() => {
-                        setIsInitializingCalendar(false);
-                      }, 500);
-                    }}
-                    className="text-xs h-7"
-                  >
-                    <Calendar className="h-3 w-3 mr-1" />
-                    Edit Slots
-                  </Button>
+                )}
+                <div className="h-6 w-px bg-border" />
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">
+                      {(locationDetails as any)?.totalCheckIns 
+                        ? (typeof (locationDetails as any).totalCheckIns === 'string' 
+                            ? parseInt((locationDetails as any).totalCheckIns) 
+                            : (locationDetails as any).totalCheckIns)
+                        : 0}
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-1">check-ins</span>
+                  </div>
+                </div>
+                <div className="h-6 w-px bg-border" />
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <Star className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">
+                      {(locationDetails as any)?.totalReviews || 0}
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-1">reviews</span>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-        )}
+              
+              {/* Refund Policy */}
+              {location.bookingConfig && (
+                <div className="border-2 border-primary/10 rounded-lg p-4 bg-card space-y-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <RotateCcw className="h-4 w-4 text-primary" />
+                    </div>
+                    <h4 className="text-sm font-semibold text-foreground">Refund Policy</h4>
+                  </div>
+                  {location.bookingConfig.refundEnabled ? (
+                    <div className="space-y-3">
+                      {location.bookingConfig.refundCutoffHours !== undefined && (
+                        <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border border-border/50">
+                          <span className="text-sm text-muted-foreground font-medium">
+                            Before {location.bookingConfig.refundCutoffHours}h:
+                          </span>
+                          <Badge variant="outline" className="font-bold text-primary border-primary/30 bg-primary/5">
+                            {location.bookingConfig.refundPercentageBeforeCutoff !== undefined
+                              ? `${(location.bookingConfig.refundPercentageBeforeCutoff * 100).toFixed(0)}%`
+                              : "100%"}
+                          </Badge>
+                        </div>
+                      )}
+                      {location.bookingConfig.refundCutoffHours !== undefined && (
+                        <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border border-border/50">
+                          <span className="text-sm text-muted-foreground font-medium">
+                            After {location.bookingConfig.refundCutoffHours}h:
+                          </span>
+                          <Badge variant="outline" className="font-bold text-primary border-primary/30 bg-primary/5">
+                            {location.bookingConfig.refundPercentageAfterCutoff !== undefined
+                              ? `${(location.bookingConfig.refundPercentageAfterCutoff * 100).toFixed(0)}%`
+                              : "0%"}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-muted/50 rounded-lg border border-border/50">
+                      <p className="text-sm text-muted-foreground">
+                        Refunds are not available for this venue
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+              
+            {/* Fixed Footer Button */}
+            <div className="sticky bottom-0 z-10 bg-background border-t px-6 py-4 shadow-lg">
+              {!hasBookedSlots ? (
+                <Button
+                  onClick={() => {
+                    setShowLocationModal(false);
+                    handleBookNow();
+                  }}
+                  className="w-full h-12 text-base font-semibold shadow-md"
+                  size="lg"
+                >
+                  <Calendar className="mr-2 h-5 w-5" />
+                  Book Time Slots
+                </Button>
+              ) : (
+                <div className="p-4 bg-green-50 dark:bg-green-950/30 border-2 border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                        <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-green-900 dark:text-green-200">
+                          {dateRanges.length} time slot{dateRanges.length !== 1 ? "s" : ""} booked
+                        </p>
+                        <p className="text-xs text-green-700 dark:text-green-300">Click to edit your selection</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => {
+                        setShowLocationModal(false);
+                        // Initialize tempSlots with existing dateRanges when opening calendar
+                        setTempSlots(dateRanges || []);
+                        setIsInitializingCalendar(true);
+                        setShowCalendar(true);
+                        // Reset initialization flag after a short delay to allow calendar to initialize
+                        setTimeout(() => {
+                          setIsInitializingCalendar(false);
+                        }, 500);
+                      }}
+                      className="h-10 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/40"
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Edit Slots
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* No Location Selected State */}
       {!selectedLocationId && !isLoadingLocations && (
@@ -1151,10 +1423,10 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
           <div className="space-y-3">
             {/* Booking Summary */}
             <div className="bg-muted p-3 rounded-lg space-y-1.5">
-              {estimatedCost && (
+              {estimatedCost && dateRanges && (
                 <>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{pendingSlots.length} slot{pendingSlots.length !== 1 ? 's' : ''} • {estimatedCost.totalHours.toFixed(2)}h</span>
+                    <span className="text-muted-foreground">{dateRanges.length} slot{dateRanges.length !== 1 ? 's' : ''} • {estimatedCost.totalHours.toFixed(2)}h</span>
                     <span className="font-bold text-primary text-base">
                       {estimatedCost.totalCost.toLocaleString("vi-VN")} {estimatedCost.currency}
                     </span>
@@ -1240,7 +1512,6 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               variant="outline"
               onClick={() => {
                 setShowConfirmDialog(false);
-                setPendingSlots([]);
               }}
             >
               Cancel

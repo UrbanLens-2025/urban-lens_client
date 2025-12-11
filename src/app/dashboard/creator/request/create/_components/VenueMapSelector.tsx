@@ -118,13 +118,6 @@ export function VenueMapSelector({
 
   const handleMarkerClick = (locationId: string) => {
     onLocationSelect(locationId);
-    // Scroll to location details panel after a short delay
-    setTimeout(() => {
-      const panel = document.querySelector('[data-location-details-panel]');
-      if (panel) {
-        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    }, 100);
   };
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";

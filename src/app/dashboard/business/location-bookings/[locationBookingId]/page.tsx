@@ -40,7 +40,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { format } from "date-fns";
+import { format, isSameDay, eachDayOfInterval, startOfDay, endOfDay } from "date-fns";
 import { formatDocumentType } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -465,6 +465,175 @@ export default function LocationBookingDetailPage({
                   </div>
                 </div>
 
+                {/* Booking Time Slots */}
+                {booking.dates && booking.dates.length > 0 && (() => {
+                  // Process dates: split multi-day ranges into individual days
+                  const processedDates: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
+                  
+                  booking.dates.forEach((dateRange) => {
+                    const start = new Date(dateRange.startDateTime);
+                    const end = new Date(dateRange.endDateTime);
+                    
+                    if (isSameDay(start, end)) {
+                      // Single day - add as is
+                      const isAllDay = start.getHours() === 0 && 
+                                      start.getMinutes() === 0 &&
+                                      end.getHours() === 23 && 
+                                      end.getMinutes() === 59;
+                      processedDates.push({
+                        date: start,
+                        startTime: start,
+                        endTime: end,
+                        isAllDay
+                      });
+                    } else {
+                      // Multiple days - split into individual days
+                      const days = eachDayOfInterval({ start, end });
+                      
+                      days.forEach((day, dayIndex) => {
+                        const isFirstDay = dayIndex === 0;
+                        const isLastDay = dayIndex === days.length - 1;
+                        
+                        let dayStart: Date;
+                        let dayEnd: Date;
+                        
+                        if (isFirstDay && isLastDay) {
+                          // Shouldn't happen, but handle it
+                          dayStart = start;
+                          dayEnd = end;
+                        } else if (isFirstDay) {
+                          // First day: from start time to end of day
+                          dayStart = start;
+                          dayEnd = endOfDay(day);
+                        } else if (isLastDay) {
+                          // Last day: from start of day to end time
+                          dayStart = startOfDay(day);
+                          dayEnd = end;
+                        } else {
+                          // Middle days: full day
+                          dayStart = startOfDay(day);
+                          dayEnd = endOfDay(day);
+                        }
+                        
+                        const isAllDay = dayStart.getHours() === 0 && 
+                                        dayStart.getMinutes() === 0 &&
+                                        dayEnd.getHours() === 23 && 
+                                        dayEnd.getMinutes() === 59;
+                        
+                        processedDates.push({
+                          date: day,
+                          startTime: dayStart,
+                          endTime: dayEnd,
+                          isAllDay
+                        });
+                      });
+                    }
+                  });
+                  
+                  // Sort processed dates chronologically
+                  const sortedDates = [...processedDates].sort((a, b) => {
+                    // First sort by date
+                    const dateCompare = a.date.getTime() - b.date.getTime();
+                    if (dateCompare !== 0) return dateCompare;
+                    // If same date, sort by start time
+                    return a.startTime.getTime() - b.startTime.getTime();
+                  });
+                  
+                  // Merge consecutive time slots on the same day
+                  const mergedSlots: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
+                  
+                  sortedDates.forEach((currentSlot) => {
+                    if (mergedSlots.length === 0) {
+                      // First slot, just add it
+                      mergedSlots.push({ ...currentSlot });
+                    } else {
+                      const lastSlot = mergedSlots[mergedSlots.length - 1];
+                      const isSameDate = format(lastSlot.date, "yyyy-MM-dd") === format(currentSlot.date, "yyyy-MM-dd");
+                      const isConsecutive = isSameDate && 
+                                           lastSlot.endTime.getTime() === currentSlot.startTime.getTime();
+                      
+                      if (isConsecutive) {
+                        // Merge with previous slot
+                        lastSlot.endTime = currentSlot.endTime;
+                      } else {
+                        // Add as new slot
+                        mergedSlots.push({ ...currentSlot });
+                      }
+                    }
+                  });
+                  
+                  // Group merged slots by date for better display
+                  const groupedByDate = mergedSlots.reduce((acc, slot) => {
+                    const dateKey = format(slot.date, "yyyy-MM-dd");
+                    if (!acc[dateKey]) {
+                      acc[dateKey] = [];
+                    }
+                    acc[dateKey].push(slot);
+                    return acc;
+                  }, {} as Record<string, typeof mergedSlots>);
+                  
+                  return (
+                    <div className="bg-gradient-to-r from-primary/5 via-primary/5 to-transparent rounded-lg border border-primary/10 p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Clock className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="text-sm font-semibold text-foreground">Booking Time Slots</div>
+                        </div>
+                        <div className="border rounded-lg overflow-hidden bg-background">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Time Range</TableHead>
+                                <TableHead className="text-right">Duration</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {Object.entries(groupedByDate).map(([dateKey, slots]) => {
+                                const date = new Date(dateKey);
+                                return slots.map((slot, slotIndex) => {
+                                  const duration = Math.round((slot.endTime.getTime() - slot.startTime.getTime()) / (1000 * 60));
+                                  const hours = Math.floor(duration / 60);
+                                  const minutes = duration % 60;
+                                  const durationText = hours > 0 
+                                    ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`.trim()
+                                    : `${minutes}m`;
+                                  
+                                  return (
+                                    <TableRow key={`${dateKey}-${slotIndex}`}>
+                                      <TableCell className="font-medium text-foreground">
+                                        {format(date, "MMM dd, yyyy")}
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-mono font-semibold text-foreground">
+                                            {format(slot.startTime, "HH:mm")}
+                                          </span>
+                                          <span className="text-foreground">→</span>
+                                          <span className="font-mono font-semibold text-foreground">
+                                            {format(slot.endTime, "HH:mm")}
+                                          </span>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        <Badge variant="secondary" className="font-medium text-foreground">
+                                          {durationText}
+                                        </Badge>
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                });
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Location Images & Map Grid */}
                 <div className={`grid grid-cols-1 ${booking.location.imageUrl && booking.location.imageUrl.length > 0 ? 'lg:grid-cols-2' : ''} gap-6`}>
                   {/* Left Column - Location Images */}
@@ -533,117 +702,6 @@ export default function LocationBookingDetailPage({
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              <Separator className="my-4" />
-              
-              {/* Booking Time Slots Table */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock className="h-4 w-4 text-primary" />
-                  <p className="text-sm font-semibold text-foreground">
-                    Booking Time Slots
-                  </p>
-                </div>
-                <div className="border-2 border-border/40 rounded-lg overflow-hidden shadow-sm">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow className="h-9 hover:bg-muted/50">
-                        <TableHead className="w-[120px] text-xs font-semibold">Date</TableHead>
-                        <TableHead className="text-xs font-semibold">Time Range</TableHead>
-                        <TableHead className="w-[80px] text-xs text-right font-semibold">Duration</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const sortedDates = [...booking.dates].sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
-                        
-                        // Group by date and merge consecutive slots
-                        const groupedByDate = sortedDates.reduce((acc, slot) => {
-                          const dateKey = format(new Date(slot.startDateTime), "yyyy-MM-dd");
-                          if (!acc[dateKey]) {
-                            acc[dateKey] = [];
-                          }
-                          acc[dateKey].push(slot);
-                          return acc;
-                        }, {} as Record<string, typeof sortedDates>);
-                        
-                        const rows: Array<{ date: string; dateFormatted: string; ranges: Array<{ start: Date; end: Date }> }> = [];
-                        
-                        Object.entries(groupedByDate).forEach(([dateKey, slots]) => {
-                          const firstSlot = slots[0];
-                          const date = new Date(firstSlot.startDateTime);
-                          const dateFormatted = format(date, "MMM dd, yyyy");
-                          
-                          // Sort slots by start time
-                          const sortedSlots = [...slots].sort((a, b) => 
-                            new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
-                          );
-                          
-                          // Merge consecutive slots into ranges
-                          const ranges: Array<{ start: Date; end: Date }> = [];
-                          
-                          for (let i = 0; i < sortedSlots.length; i++) {
-                            const currentSlot = sortedSlots[i];
-                            const currentStart = new Date(currentSlot.startDateTime);
-                            const currentEnd = new Date(currentSlot.endDateTime);
-                            
-                            if (ranges.length === 0) {
-                              ranges.push({ start: currentStart, end: currentEnd });
-                            } else {
-                              const lastRange = ranges[ranges.length - 1];
-                              const lastEndTime = lastRange.end.getTime();
-                              const currentStartTime = currentStart.getTime();
-                              
-                              // Check if consecutive (end time equals start time)
-                              if (lastEndTime === currentStartTime) {
-                                lastRange.end = currentEnd;
-                              } else {
-                                ranges.push({ start: currentStart, end: currentEnd });
-                              }
-                            }
-                          }
-                          
-                          rows.push({ date: dateKey, dateFormatted, ranges });
-                        });
-                        
-                        return rows.flatMap((row, rowIndex) => 
-                          row.ranges.map((range, rangeIndex) => {
-                            const durationMs = range.end.getTime() - range.start.getTime();
-                            const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
-                            const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-                            const durationText = durationHours > 0 
-                              ? `${durationHours}h${durationMinutes > 0 ? ` ${durationMinutes}m` : ''}`
-                              : `${durationMinutes}m`;
-                            
-                            const isFirstRange = rangeIndex === 0;
-                            
-                            return (
-                              <TableRow key={`${row.date}-${rangeIndex}`} className="h-8 transition-colors hover:bg-muted/30">
-                                {isFirstRange && (
-                                  <TableCell 
-                                    rowSpan={row.ranges.length} 
-                                    className="font-semibold text-sm align-top pt-2"
-                                  >
-                                    {row.dateFormatted}
-                                  </TableCell>
-                                )}
-                                <TableCell className="font-mono text-sm font-semibold text-primary">
-                                  {format(range.start, "HH:mm")} → {format(range.end, "HH:mm")}
-                                </TableCell>
-                                <TableCell className="text-right text-sm">
-                                  <Badge variant="outline" className="font-medium text-xs bg-primary/5 border-primary/20 text-primary">
-                                    {durationText}
-                                  </Badge>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })
-                        );
-                      })()}
-                    </TableBody>
-                  </Table>
                 </div>
               </div>
             </CardContent>
