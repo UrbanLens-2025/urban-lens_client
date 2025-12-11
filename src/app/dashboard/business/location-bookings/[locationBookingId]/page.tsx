@@ -420,71 +420,118 @@ export default function LocationBookingDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 pb-4">
-              {/* Location Details - 2 Column Layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left Column - Location Info */}
-                <div className="space-y-4">
-                  <div className="space-y-3">
-                    <InfoRow
-                      label="Full Address"
-                      value={`${booking.location.addressLine}, ${booking.location.addressLevel1}, ${booking.location.addressLevel2}`}
-                      icon={MapPin}
-                    />
-                    <InfoRow
-                      label="Radius"
-                      value={<span className="font-semibold">{booking.location.radiusMeters} meters</span>}
-                    />
-                  </div>
-
-                  {/* Location Images */}
-                  {booking.location.imageUrl && booking.location.imageUrl.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <ImageIcon className="h-4 w-4 text-primary" />
-                        <p className="text-sm font-semibold text-foreground">
-                          Location Images
+              {/* Location Details - Enhanced Layout */}
+              <div className="space-y-6">
+                {/* Location Header Card */}
+                <div className="bg-gradient-to-r from-primary/5 via-primary/5 to-transparent rounded-lg border border-primary/10 p-4">
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <MapPin className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {booking.location.name && (
+                        <h3 className="text-lg font-bold text-foreground mb-2">
+                          {booking.location.name}
+                        </h3>
+                      )}
+                      {booking.location.description && (
+                        <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+                          {booking.location.description}
                         </p>
+                      )}
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+                          <span className="leading-relaxed">
+                            {booking.location.addressLine}, {booking.location.addressLevel1}, {booking.location.addressLevel2}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                              <span className="text-xs font-bold text-blue-600 dark:text-blue-400">R</span>
+                            </div>
+                            <span className="font-semibold text-foreground">{booking.location.radiusMeters}m</span>
+                            <span className="text-muted-foreground">radius</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span className="font-mono text-xs">
+                              {parseFloat(booking.location.latitude).toFixed(6)}, {parseFloat(booking.location.longitude).toFixed(6)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Location Images & Map Grid */}
+                <div className={`grid grid-cols-1 ${booking.location.imageUrl && booking.location.imageUrl.length > 0 ? 'lg:grid-cols-2' : ''} gap-6`}>
+                  {/* Left Column - Location Images */}
+                  {booking.location.imageUrl && booking.location.imageUrl.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <ImageIcon className="h-4 w-4 text-primary" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">
+                          Location Gallery
+                        </p>
+                        <Badge variant="secondary" className="ml-auto text-xs">
+                          {booking.location.imageUrl.length} {booking.location.imageUrl.length === 1 ? 'image' : 'images'}
+                        </Badge>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         {booking.location.imageUrl.map((url, index) => (
                           <div key={index} className="relative group">
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-end p-2">
+                              <span className="text-white text-xs font-medium">View Image {index + 1}</span>
+                            </div>
                             <img
                               src={url}
                               alt={`Location ${index + 1}`}
                               onClick={() => handleImageClick(url)}
-                              className="w-full h-32 object-cover rounded-lg border-2 border-border/40 cursor-pointer hover:border-primary/50 transition-all hover:shadow-md"
+                              className="w-full h-36 object-cover rounded-lg border-2 border-border/40 cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg hover:scale-[1.02]"
                             />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 rounded-lg transition-colors flex items-center justify-center">
-                              <ImageIcon className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <ImageIcon className="h-3.5 w-3.5 text-white" />
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-                </div>
 
-                {/* Right Column - Location Map */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    <p className="text-sm font-semibold text-foreground">
-                      Location on Map
-                    </p>
-                  </div>
-                  <div className="h-64 w-full rounded-lg overflow-hidden border-2 border-border/40 shadow-sm">
-                    <GoogleMapsPicker
-                      position={{
-                        lat: parseFloat(booking.location.latitude),
-                        lng: parseFloat(booking.location.longitude),
-                      }}
-                      onPositionChange={() => {}}
-                      radiusMeters={booking.location.radiusMeters}
-                      center={{
-                        lat: parseFloat(booking.location.latitude),
-                        lng: parseFloat(booking.location.longitude),
-                      }}
-                    />
+                  {/* Right Column - Location Map */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <MapPin className="h-4 w-4 text-primary" />
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">
+                        Location on Map
+                      </p>
+                    </div>
+                    <div className="relative h-80 w-full rounded-lg overflow-hidden border-2 border-border/40 shadow-md group">
+                      <GoogleMapsPicker
+                        position={{
+                          lat: parseFloat(booking.location.latitude),
+                          lng: parseFloat(booking.location.longitude),
+                        }}
+                        onPositionChange={() => {}}
+                        radiusMeters={booking.location.radiusMeters}
+                        center={{
+                          lat: parseFloat(booking.location.latitude),
+                          lng: parseFloat(booking.location.longitude),
+                        }}
+                      />
+                      <div className="absolute top-3 right-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-sm border border-border/40">
+                        <div className="flex items-center gap-2 text-xs">
+                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
+                          <span className="font-medium text-foreground">Event Location</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
