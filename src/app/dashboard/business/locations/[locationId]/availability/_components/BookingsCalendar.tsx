@@ -444,6 +444,39 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
           </div>
         </div>
 
+        {/* Enhanced Legend */}
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary/10 bg-gradient-to-r from-muted/50 to-muted/30 px-4 py-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+            <Info className="h-3.5 w-3.5" />
+            <span>Status:</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+            <div className="h-3 w-3 rounded-full bg-green-500 border border-green-600" />
+            <span className="text-xs font-medium text-green-700 dark:text-green-300">Approved</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800">
+            <div className="h-3 w-3 rounded-full bg-yellow-500 border border-yellow-600" />
+            <span className="text-xs font-medium text-yellow-700 dark:text-yellow-300">Pending</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+            <div className="h-3 w-3 rounded-full bg-blue-500 border border-blue-600" />
+            <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Locked</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 border border-border ml-auto">
+            <div className="h-3 w-3 rounded-full bg-background border-2 border-border" />
+            <span className="text-xs font-medium text-muted-foreground">Available</span>
+          </div>
+          <div className="w-full border-t border-primary/20 mt-2 pt-2">
+            <div className="flex items-center gap-2 text-xs">
+              <Info className="h-3.5 w-3.5 text-primary" />
+              <span className="font-semibold text-foreground">Tip:</span>
+              <span className="text-muted-foreground">
+                Color shows status. Slots with the same corner indicator belong to the same event. Hover to see event name.
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Week Navigation */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg border border-primary/10 bg-gradient-to-r from-primary/5 to-primary/10">
           <div className="flex items-center gap-2">
@@ -474,39 +507,6 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
               <Clock className="h-3.5 w-3.5 text-primary" />
               <span className="text-xs font-semibold text-foreground">
                 {weekRange}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Enhanced Legend */}
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary/10 bg-gradient-to-r from-muted/50 to-muted/30 px-4 py-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-            <Info className="h-3.5 w-3.5" />
-            <span>Status:</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
-            <div className="h-3 w-3 rounded-full bg-green-500 border border-green-600" />
-            <span className="text-xs font-medium text-green-700 dark:text-green-300">Approved</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800">
-            <div className="h-3 w-3 rounded-full bg-yellow-500 border border-yellow-600" />
-            <span className="text-xs font-medium text-yellow-700 dark:text-yellow-300">Pending</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-            <div className="h-3 w-3 rounded-full bg-blue-500 border border-blue-600" />
-            <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Locked</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 border border-border ml-auto">
-            <div className="h-3 w-3 rounded-full bg-background border-2 border-border" />
-            <span className="text-xs font-medium text-muted-foreground">Available</span>
-          </div>
-          <div className="w-full border-t border-primary/20 mt-2 pt-2">
-            <div className="flex items-center gap-2 text-xs">
-              <Info className="h-3.5 w-3.5 text-primary" />
-              <span className="font-semibold text-foreground">Tip:</span>
-              <span className="text-muted-foreground">
-                Color shows status. Slots with the same corner indicator belong to the same event. Hover to see event name.
               </span>
             </div>
           </div>

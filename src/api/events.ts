@@ -199,6 +199,13 @@ export const getEventById = async (eventId: string): Promise<Event> => {
   return data.data;
 };
 
+export const getOwnerEventById = async (eventId: string): Promise<Event> => {
+  const { data } = await axiosInstance.get<ApiResponse<Event>>(
+    `/v1/owner/events/get-by-id/${eventId}`
+  );
+  return data.data;
+};
+
 export const updateEvent = async (
   eventId: string,
   payload: UpdateEventPayload

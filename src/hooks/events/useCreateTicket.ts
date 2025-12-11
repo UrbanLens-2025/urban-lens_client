@@ -17,7 +17,7 @@ export function useCreateTicket() {
       toast.success("Ticket created successfully!");
       queryClient.invalidateQueries({ queryKey: ['eventDetail', variables.eventId] });
       queryClient.invalidateQueries({ queryKey: ['myEvents'] });
-      router.push(`/dashboard/creator/events/${variables.eventId}`);
+      router.push(`/dashboard/creator/events/${variables.eventId}/tickets`);
       router.refresh();
     },
     onError: (error: Error) => {

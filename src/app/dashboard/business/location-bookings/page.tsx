@@ -32,6 +32,7 @@ import {
 import { useState, useMemo } from "react";
 import { useDebounce } from "use-debounce";
 import { useOwnerLocationBookings } from "@/hooks/locations/useOwnerLocationBookings";
+import { useOwnerEventById } from "@/hooks/events/useOwnerEventById";
 import Link from "next/link";
 import { format } from "date-fns";
 import {
@@ -148,6 +149,13 @@ function BookingRow({
   page: number;
   meta?: any;
 }) {
+  // Get targetId from booking (could be targetId field or event.id)
+  const targetId = (booking as any).targetId || booking.event?.id;
+  const { data: eventData } = useOwnerEventById(targetId);
+  
+  // Use fetched event data if available, otherwise fall back to booking.event
+  const eventDisplayName = eventData?.displayName || booking.event?.displayName || "N/A";
+  
   return (
     <TableRow className="border-b transition-colors hover:bg-muted/30 border-border/40">
       <TableCell className="text-xs text-muted-foreground font-medium py-4 pl-6">
@@ -170,7 +178,7 @@ function BookingRow({
       </TableCell>
       <TableCell className="py-4">
         <span className="text-sm font-semibold leading-tight truncate">
-          {booking.event?.displayName || "N/A"}
+          {eventDisplayName}
         </span>
       </TableCell>
       <TableCell className="py-4">

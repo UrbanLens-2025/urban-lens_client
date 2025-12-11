@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useLocationBookingById } from "@/hooks/locations/useLocationBookingById";
 import { useApproveLocationBooking } from "@/hooks/locations/useApproveLocationBooking";
 import { useRejectLocationBookings } from "@/hooks/locations/useRejectLocationBookings";
+import { useOwnerEventById } from "@/hooks/events/useOwnerEventById";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,15 +39,20 @@ import {
   CreditCard,
   X,
   Sparkles,
+  Mail,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Star,
 } from "lucide-react";
 import Link from "next/link";
-import { format, isSameDay, eachDayOfInterval, startOfDay, endOfDay } from "date-fns";
-import { formatDocumentType } from "@/lib/utils";
+import { format, isSameDay, eachDayOfInterval, startOfDay, endOfDay, startOfMonth, endOfMonth, addMonths, subMonths, getDay, isSameMonth } from "date-fns";
+import { formatDocumentType, cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
 import { PageContainer, PageHeader } from "@/components/shared";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 function InfoRow({
   label,
@@ -180,6 +186,7 @@ export default function LocationBookingDetailPage({
   const [currentImageSrc, setCurrentImageSrc] = useState("");
   const [processDialogOpen, setProcessDialogOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<"APPROVED" | "REJECTED" | null>(null);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   const { data: booking, isLoading, isError } =
     useLocationBookingById(locationBookingId);
@@ -200,25 +207,76 @@ export default function LocationBookingDetailPage({
 
   const canProcess = booking?.status === "AWAITING_BUSINESS_PROCESSING";
 
-  // Mock event data (to be replaced when API returns event information)
-  const mockEventData = {
-    eventName: booking?.referencedEventRequest?.eventName || "Bún Đậu Mẹt Tre - Food Festival 2025",
-    eventDescription: booking?.referencedEventRequest?.eventDescription || "Join us for an amazing food festival featuring traditional Vietnamese cuisine. Experience the authentic flavors of bún đậu mẹt tre and other local delicacies. This event brings together food lovers and culinary enthusiasts for a day of delicious discoveries.",
-    expectedNumberOfParticipants: booking?.referencedEventRequest?.expectedNumberOfParticipants || 150,
-    allowTickets: booking?.referencedEventRequest?.allowTickets ?? true,
-    status: booking?.referencedEventRequest?.status || "APPROVED",
-    specialRequirements: booking?.referencedEventRequest?.specialRequirements || "Need outdoor space for food stalls, access to electricity for cooking equipment, and parking for vendors.",
-  };
+  // Get targetId from booking (could be targetId field or event.id)
+  const targetId = (booking as any)?.targetId || booking?.event?.id;
+  const { data: fetchedEventData, isLoading: isLoadingEvent } = useOwnerEventById(targetId);
 
-  // Use mock data if referencedEventRequest doesn't exist or is missing data
-  const eventData = booking?.referencedEventRequest ? {
-    eventName: booking.referencedEventRequest.eventName || mockEventData.eventName,
-    eventDescription: booking.referencedEventRequest.eventDescription || mockEventData.eventDescription,
-    expectedNumberOfParticipants: booking.referencedEventRequest.expectedNumberOfParticipants || mockEventData.expectedNumberOfParticipants,
-    allowTickets: booking.referencedEventRequest.allowTickets ?? mockEventData.allowTickets,
-    status: booking.referencedEventRequest.status || mockEventData.status,
-    specialRequirements: booking.referencedEventRequest.specialRequirements || mockEventData.specialRequirements,
-  } : mockEventData;
+  // Use fetched event data if available, otherwise fall back to referencedEventRequest or mock data
+  const eventData = useMemo(() => {
+    if (fetchedEventData) {
+      return {
+        eventName: fetchedEventData.displayName || "N/A",
+        eventDescription: fetchedEventData.description || "",
+        expectedNumberOfParticipants: fetchedEventData.expectedNumberOfParticipants || 0,
+        allowTickets: fetchedEventData.allowTickets ?? false,
+        status: fetchedEventData.status || "DRAFT",
+        specialRequirements: booking?.referencedEventRequest?.specialRequirements || "",
+        startDate: fetchedEventData.startDate,
+        endDate: fetchedEventData.endDate,
+        tags: fetchedEventData.tags || [],
+        avatarUrl: fetchedEventData.avatarUrl,
+        coverUrl: fetchedEventData.coverUrl,
+        organizer: fetchedEventData.createdBy ? {
+          name: `${fetchedEventData.createdBy.firstName} ${fetchedEventData.createdBy.lastName}`,
+          email: fetchedEventData.createdBy.email,
+          phoneNumber: fetchedEventData.createdBy.phoneNumber,
+          avatarUrl: fetchedEventData.createdBy.avatarUrl,
+        } : null,
+        socialLinks: fetchedEventData.social || [],
+        eventSocialLinks: fetchedEventData.social || [],
+        createdAt: fetchedEventData.createdAt,
+        updatedAt: fetchedEventData.updatedAt,
+        totalReviews: fetchedEventData.totalReviews || 0,
+        avgRating: fetchedEventData.avgRating || 0,
+      };
+    }
+    
+    // Fallback to referencedEventRequest if available
+    if (booking?.referencedEventRequest) {
+      return {
+        eventName: booking.referencedEventRequest.eventName || "N/A",
+        eventDescription: booking.referencedEventRequest.eventDescription || "",
+        expectedNumberOfParticipants: booking.referencedEventRequest.expectedNumberOfParticipants || 0,
+        allowTickets: booking.referencedEventRequest.allowTickets ?? false,
+        status: booking.referencedEventRequest.status || "PENDING",
+        specialRequirements: booking.referencedEventRequest.specialRequirements || "",
+        organizer: booking?.createdBy ? {
+          name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
+          email: booking.createdBy.email,
+          phoneNumber: booking.createdBy.phoneNumber,
+        } : null,
+        socialLinks: [],
+        eventSocialLinks: [],
+      };
+    }
+    
+    // Final fallback to mock data
+    return {
+      eventName: "Bún Đậu Mẹt Tre - Food Festival 2025",
+      eventDescription: "Join us for an amazing food festival featuring traditional Vietnamese cuisine. Experience the authentic flavors of bún đậu mẹt tre and other local delicacies. This event brings together food lovers and culinary enthusiasts for a day of delicious discoveries.",
+      expectedNumberOfParticipants: 150,
+      allowTickets: true,
+      status: "APPROVED",
+      specialRequirements: "Need outdoor space for food stalls, access to electricity for cooking equipment, and parking for vendors.",
+      organizer: booking?.createdBy ? {
+        name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
+        email: booking.createdBy.email,
+        phoneNumber: booking.createdBy.phoneNumber,
+      } : null,
+      socialLinks: [],
+      eventSocialLinks: [],
+    };
+  }, [fetchedEventData, booking?.referencedEventRequest]);
 
   const handleProcessClick = (status: "APPROVED" | "REJECTED") => {
     setPendingStatus(status);
@@ -306,7 +364,9 @@ export default function LocationBookingDetailPage({
       <PageHeader
         title="Booking Details"
         description={
-          booking.dates && booking.dates.length > 0
+          eventData.eventName && eventData.eventName !== "N/A"
+            ? `For event: ${eventData.eventName}`
+            : booking.dates && booking.dates.length > 0
             ? `${totalHours}h`
             : `Booking ID: ${booking.id.substring(0, 8)}...`
         }
@@ -361,36 +421,85 @@ export default function LocationBookingDetailPage({
         {/* Left Column */}
         <div className="lg:col-span-2 space-y-6">
           {/* Event Information */}
-          <Card className="border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm">
-            <CardHeader className="bg-white border-b border-primary/20 py-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                </div>
-                Event Information
-                {!booking?.referencedEventRequest && (
-                  <Badge variant="secondary" className="ml-2 text-xs">Mock Data</Badge>
+          <Card className="border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden">
+            {/* Cover Image */}
+            {eventData.coverUrl && (
+              <div className="relative h-48 w-full overflow-hidden">
+                <img
+                  src={eventData.coverUrl}
+                  alt="Event cover"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/40 to-transparent" />
+              </div>
+            )}
+            
+            <CardHeader className={cn("bg-white border-b border-primary/20 py-3", !eventData.coverUrl && "border-b")}>
+              <div className="flex items-start gap-4">
+                {/* Event Avatar */}
+                {eventData.avatarUrl ? (
+                  <div className="relative flex-shrink-0">
+                    <img
+                      src={eventData.avatarUrl}
+                      alt="Event avatar"
+                      className={cn(
+                        "rounded-lg object-cover border-2 border-background shadow-md",
+                        eventData.coverUrl ? "h-20 w-20 -mt-10" : "h-16 w-16"
+                      )}
+                    />
+                  </div>
+                ) : (
+                  <div className={cn(
+                    "rounded-lg bg-primary/20 flex items-center justify-center border-2 border-background shadow-md flex-shrink-0",
+                    eventData.coverUrl ? "h-20 w-20 -mt-10" : "h-16 w-16"
+                  )}>
+                    <Sparkles className={cn("text-primary", eventData.coverUrl ? "h-8 w-8" : "h-6 w-6")} />
+                  </div>
                 )}
-              </CardTitle>
+                
+                <div className="flex-1 min-w-0 pt-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <CardTitle className="text-xl font-bold text-foreground">
+                      {eventData.eventName}
+                    </CardTitle>
+                    {!fetchedEventData && !booking?.referencedEventRequest && (
+                      <Badge variant="secondary" className="text-xs">Mock Data</Badge>
+                    )}
+                    {isLoadingEvent && (
+                      <Badge variant="outline" className="text-xs">
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        Loading...
+                      </Badge>
+                    )}
+                  </div>
+                  {eventData.status && (
+                    <Badge variant="outline" className="mt-1.5 text-xs">
+                      {eventData.status}
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="pt-4 pb-4">
+            
+            <CardContent className="pt-0 pb-4">
               <div className="space-y-4">
-                <div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">
-                    {eventData.eventName}
-                  </h3>
-                  {eventData.eventDescription && (
+                {/* Description */}
+                {eventData.eventDescription && (
+                  <div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       {eventData.eventDescription}
                     </p>
-                  )}
-                </div>
+                  </div>
+                )}
+
                 <Separator />
+
+                {/* Event Details Grid */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-primary" />
+                    <Users className="h-4 w-4 text-primary flex-shrink-0" />
                     <div>
-                      <p className="text-xs text-muted-foreground">Participants</p>
+                      <p className="text-xs text-muted-foreground">Expected participants</p>
                       <p className="text-sm font-semibold">{eventData.expectedNumberOfParticipants}</p>
                     </div>
                   </div>
@@ -400,6 +509,46 @@ export default function LocationBookingDetailPage({
                     </Badge>
                   </div>
                 </div>
+
+                {/* Ratings */}
+                {(eventData.avgRating > 0 || eventData.totalReviews > 0) && (
+                  <div className="flex items-center gap-4">
+                    {eventData.avgRating > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                        <span className="text-sm font-semibold">{eventData.avgRating.toFixed(1)}</span>
+                      </div>
+                    )}
+                    {eventData.totalReviews > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        {eventData.totalReviews} {eventData.totalReviews === 1 ? 'review' : 'reviews'}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Dates */}
+                {eventData.startDate && eventData.endDate && (
+                  <>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-1">Start Date</p>
+                        <p className="text-sm text-foreground">
+                          {format(new Date(eventData.startDate), "MMM dd, yyyy 'at' h:mm a")}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-1">End Date</p>
+                        <p className="text-sm text-foreground">
+                          {format(new Date(eventData.endDate), "MMM dd, yyyy 'at' h:mm a")}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Special Requirements */}
                 {eventData.specialRequirements && (
                   <>
                     <Separator />
@@ -409,358 +558,76 @@ export default function LocationBookingDetailPage({
                     </div>
                   </>
                 )}
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Booking Information */}
-          <Card className="border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm">
-            <CardHeader className="bg-white border-b border-primary/20 py-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <Calendar className="h-4 w-4 text-primary" />
-                </div>
-                Booking Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4 pb-4">
-              {/* Location Details - Enhanced Layout */}
-              <div className="space-y-6">
-                {/* Location Header Card */}
-                <div className="bg-gradient-to-r from-primary/5 via-primary/5 to-transparent rounded-lg border border-primary/10 p-4">
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <MapPin className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      {booking.location.name && (
-                        <h3 className="text-lg font-bold text-foreground mb-2">
-                          {booking.location.name}
-                        </h3>
-                      )}
-                      {booking.location.description && (
-                        <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                          {booking.location.description}
-                        </p>
-                      )}
-                      <div className="space-y-2">
-                        <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
-                          <span className="leading-relaxed">
-                            {booking.location.addressLine}, {booking.location.addressLevel1}, {booking.location.addressLevel2}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 flex-wrap">
-                          <div className="flex items-center gap-2 text-sm">
-                            <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                              <span className="text-xs font-bold text-blue-600 dark:text-blue-400">R</span>
-                            </div>
-                            <span className="font-semibold text-foreground">{booking.location.radiusMeters}m</span>
-                            <span className="text-muted-foreground">radius</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span className="font-mono text-xs">
-                              {parseFloat(booking.location.latitude).toFixed(6)}, {parseFloat(booking.location.longitude).toFixed(6)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Booking Time Slots */}
-                {booking.dates && booking.dates.length > 0 && (() => {
-                  // Process dates: split multi-day ranges into individual days
-                  const processedDates: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
-                  
-                  booking.dates.forEach((dateRange) => {
-                    const start = new Date(dateRange.startDateTime);
-                    const end = new Date(dateRange.endDateTime);
-                    
-                    if (isSameDay(start, end)) {
-                      // Single day - add as is
-                      const isAllDay = start.getHours() === 0 && 
-                                      start.getMinutes() === 0 &&
-                                      end.getHours() === 23 && 
-                                      end.getMinutes() === 59;
-                      processedDates.push({
-                        date: start,
-                        startTime: start,
-                        endTime: end,
-                        isAllDay
-                      });
-                    } else {
-                      // Multiple days - split into individual days
-                      const days = eachDayOfInterval({ start, end });
-                      
-                      days.forEach((day, dayIndex) => {
-                        const isFirstDay = dayIndex === 0;
-                        const isLastDay = dayIndex === days.length - 1;
-                        
-                        let dayStart: Date;
-                        let dayEnd: Date;
-                        
-                        if (isFirstDay && isLastDay) {
-                          // Shouldn't happen, but handle it
-                          dayStart = start;
-                          dayEnd = end;
-                        } else if (isFirstDay) {
-                          // First day: from start time to end of day
-                          dayStart = start;
-                          dayEnd = endOfDay(day);
-                        } else if (isLastDay) {
-                          // Last day: from start of day to end time
-                          dayStart = startOfDay(day);
-                          dayEnd = end;
-                          
-                          // Skip if end time is exactly at start of day (00:00:00)
-                          // This means the booking ended at midnight, so no slot for this day
-                          if (dayEnd.getTime() === dayStart.getTime()) {
-                            return;
-                          }
-                        } else {
-                          // Middle days: full day
-                          dayStart = startOfDay(day);
-                          dayEnd = endOfDay(day);
-                        }
-                        
-                        const isAllDay = dayStart.getHours() === 0 && 
-                                        dayStart.getMinutes() === 0 &&
-                                        dayEnd.getHours() === 23 && 
-                                        dayEnd.getMinutes() === 59;
-                        
-                        processedDates.push({
-                          date: day,
-                          startTime: dayStart,
-                          endTime: dayEnd,
-                          isAllDay
-                        });
-                      });
-                    }
-                  });
-                  
-                  // Sort processed dates chronologically
-                  const sortedDates = [...processedDates].sort((a, b) => {
-                    // First sort by date
-                    const dateCompare = a.date.getTime() - b.date.getTime();
-                    if (dateCompare !== 0) return dateCompare;
-                    // If same date, sort by start time
-                    return a.startTime.getTime() - b.startTime.getTime();
-                  });
-                  
-                  // Filter out invalid slots first
-                  const validSortedDates = sortedDates.filter(slot => 
-                    slot.startTime.getTime() < slot.endTime.getTime()
-                  );
-                  
-                  // Merge slots across all dates (not just within each date)
-                  // Sort all slots by start time first
-                  let slotsToMerge = [...validSortedDates].sort((a, b) => 
-                    a.startTime.getTime() - b.startTime.getTime()
-                  );
-                  
-                  // Keep merging until no more merges are possible
-                  let changed = true;
-                  while (changed && slotsToMerge.length > 1) {
-                    changed = false;
-                    const newSlots: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
-                    const used = new Set<number>();
-                    
-                    for (let i = 0; i < slotsToMerge.length; i++) {
-                      if (used.has(i)) continue;
-                      
-                      let currentSlot = { ...slotsToMerge[i] };
-                      let merged = false;
-                      
-                      // Try to merge with remaining slots
-                      for (let j = i + 1; j < slotsToMerge.length; j++) {
-                        if (used.has(j)) continue;
-                        
-                        const otherSlot = slotsToMerge[j];
-                        const currentStart = currentSlot.startTime.getTime();
-                        const currentEnd = currentSlot.endTime.getTime();
-                        const otherStart = otherSlot.startTime.getTime();
-                        const otherEnd = otherSlot.endTime.getTime();
-                        
-                        // Check if overlapping, adjacent (including across days), or contained
-                        const isOverlapping = (currentStart <= otherEnd && currentEnd >= otherStart);
-                        const isAdjacent = (currentEnd === otherStart || otherEnd === currentStart);
-                        const isContained = (currentStart >= otherStart && currentEnd <= otherEnd) || 
-                                           (otherStart >= currentStart && otherEnd <= currentEnd);
-                        
-                        if (isOverlapping || isAdjacent || isContained) {
-                          // Merge: take earliest start and latest end
-                          currentSlot.startTime = new Date(Math.min(currentStart, otherStart));
-                          currentSlot.endTime = new Date(Math.max(currentEnd, otherEnd));
-                          // Update date to the start date of the merged range
-                          currentSlot.date = startOfDay(currentSlot.startTime);
-                          const mergedStart = currentSlot.startTime;
-                          const mergedEnd = currentSlot.endTime;
-                          currentSlot.isAllDay = mergedStart.getHours() === 0 && 
-                                                mergedStart.getMinutes() === 0 &&
-                                                mergedEnd.getHours() === 23 && 
-                                                mergedEnd.getMinutes() === 59;
-                          used.add(j);
-                          merged = true;
-                          changed = true;
-                        }
-                      }
-                      
-                      newSlots.push(currentSlot);
-                    }
-                    
-                    slotsToMerge = newSlots;
-                  }
-                  
-                  const mergedSlots = slotsToMerge;
-                  
-                  // Filter out any merged slots that ended up with zero or negative duration
-                  const validSlots = mergedSlots.filter(slot => 
-                    slot.startTime.getTime() < slot.endTime.getTime()
-                  );
-                  
-                  // Group merged slots by date for better display
-                  const groupedByDate = validSlots.reduce((acc, slot) => {
-                    const dateKey = format(slot.date, "yyyy-MM-dd");
-                    if (!acc[dateKey]) {
-                      acc[dateKey] = [];
-                    }
-                    acc[dateKey].push(slot);
-                    return acc;
-                  }, {} as Record<string, typeof validSlots>);
-                  
-                  return (
-                    <div className="bg-gradient-to-r from-primary/5 via-primary/5 to-transparent rounded-lg border border-primary/10 p-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <Clock className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="text-sm font-semibold text-foreground">Booking Time Slots</div>
-                        </div>
-                        <div className="border rounded-lg overflow-hidden bg-background">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Time Range</TableHead>
-                                <TableHead className="text-right">Duration</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {Object.entries(groupedByDate).map(([dateKey, slots]) => {
-                                const date = new Date(dateKey);
-                                return slots.map((slot, slotIndex) => {
-                                  const duration = Math.round((slot.endTime.getTime() - slot.startTime.getTime()) / (1000 * 60));
-                                  const hours = Math.floor(duration / 60);
-                                  const minutes = duration % 60;
-                                  const durationText = hours > 0 
-                                    ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`.trim()
-                                    : `${minutes}m`;
-                                  
-                                  return (
-                                    <TableRow key={`${dateKey}-${slotIndex}`}>
-                                      <TableCell className="font-medium text-foreground">
-                                        {format(date, "MMM dd, yyyy")}
-                                      </TableCell>
-                                      <TableCell>
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-mono font-semibold text-foreground">
-                                            {format(slot.startTime, "HH:mm")}
-                                          </span>
-                                          <span className="text-foreground">→</span>
-                                          <span className="font-mono font-semibold text-foreground">
-                                            {format(slot.endTime, "HH:mm")}
-                                          </span>
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        <Badge variant="secondary" className="font-medium text-foreground">
-                                          {durationText}
-                                        </Badge>
-                                      </TableCell>
-                                    </TableRow>
-                                  );
-                                });
-                              })}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Location Images & Map Grid */}
-                <div className={`grid grid-cols-1 ${booking.location.imageUrl && booking.location.imageUrl.length > 0 ? 'lg:grid-cols-2' : ''} gap-6`}>
-                  {/* Left Column - Location Images */}
-                  {booking.location.imageUrl && booking.location.imageUrl.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <ImageIcon className="h-4 w-4 text-primary" />
-                        </div>
-                        <p className="text-sm font-semibold text-foreground">
-                          Location Gallery
-                        </p>
-                        <Badge variant="secondary" className="ml-auto text-xs">
-                          {booking.location.imageUrl.length} {booking.location.imageUrl.length === 1 ? 'image' : 'images'}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        {booking.location.imageUrl.map((url, index) => (
-                          <div key={index} className="relative group">
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-end p-2">
-                              <span className="text-white text-xs font-medium">View Image {index + 1}</span>
-                            </div>
-                            <img
-                              src={url}
-                              alt={`Location ${index + 1}`}
-                              onClick={() => handleImageClick(url)}
-                              className="w-full h-36 object-cover rounded-lg border-2 border-border/40 cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg hover:scale-[1.02]"
-                            />
-                            <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <ImageIcon className="h-3.5 w-3.5 text-white" />
-                            </div>
-                          </div>
+                {/* Event Social Media */}
+                {eventData.eventSocialLinks && eventData.eventSocialLinks.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">Social Media</p>
+                      <div className="flex flex-wrap gap-2">
+                        {eventData.eventSocialLinks.map((link: any, index: number) => (
+                          <a
+                            key={index}
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline flex items-center gap-1"
+                          >
+                            <Globe className="h-3 w-3" />
+                            {link.platform}
+                          </a>
                         ))}
                       </div>
                     </div>
-                  )}
+                  </>
+                )}
 
-                  {/* Right Column - Location Map */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <MapPin className="h-4 w-4 text-primary" />
-                      </div>
-                      <p className="text-sm font-semibold text-foreground">
-                        Location on Map
-                      </p>
-                    </div>
-                    <div className="relative h-80 w-full rounded-lg overflow-hidden border-2 border-border/40 shadow-md group">
-                      <GoogleMapsPicker
-                        position={{
-                          lat: parseFloat(booking.location.latitude),
-                          lng: parseFloat(booking.location.longitude),
-                        }}
-                        onPositionChange={() => {}}
-                        radiusMeters={booking.location.radiusMeters}
-                        center={{
-                          lat: parseFloat(booking.location.latitude),
-                          lng: parseFloat(booking.location.longitude),
-                        }}
-                      />
-                      <div className="absolute top-3 right-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-sm border border-border/40">
-                        <div className="flex items-center gap-2 text-xs">
-                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
-                          <span className="font-medium text-foreground">Event Location</span>
+                {/* Organizer */}
+                {eventData.organizer && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-3">Organizer</p>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          {eventData.organizer.avatarUrl ? (
+                            <img
+                              src={eventData.organizer.avatarUrl}
+                              alt="Organizer avatar"
+                              className="h-10 w-10 rounded-full object-cover border-2 border-border"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border-2 border-border">
+                              <User className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            {eventData.organizer.name && (
+                              <p className="text-sm font-semibold text-foreground">{eventData.organizer.name}</p>
+                            )}
+                            {eventData.organizer.email && (
+                              <a 
+                                href={`mailto:${eventData.organizer.email}`}
+                                className="text-xs text-primary hover:underline block truncate"
+                              >
+                                {eventData.organizer.email}
+                              </a>
+                            )}
+                            {eventData.organizer.phoneNumber && (
+                              <a 
+                                href={`tel:${eventData.organizer.phoneNumber}`}
+                                className="text-xs text-primary hover:underline block"
+                              >
+                                {eventData.organizer.phoneNumber}
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -885,150 +752,213 @@ export default function LocationBookingDetailPage({
 
         {/* Right Column */}
         <div className="lg:col-span-1 space-y-6">
-          {/* Creator Information */}
+          {/* Location Card */}
           <Card className="border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm">
-            <CardHeader className="bg-white border-b border-primary/20 py-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <User className="h-4 w-4 text-primary" />
-                </div>
-                Organizing Committee
-              </CardTitle>
-            </CardHeader>
             <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border/40">
-                <img
-                  src={
-                    booking.createdBy.avatarUrl ||
-                    booking.createdBy.creatorProfile?.avatarUrl ||
-                    "/default-avatar.svg"
-                  }
-                  alt="avatar"
-                  className="h-14 w-14 rounded-full object-cover border-2 border-primary/20 shadow-md"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-base truncate">
-                    {booking.createdBy.firstName} {booking.createdBy.lastName}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {booking.createdBy.email}
-                  </div>
-                </div>
-              </div>
               <div className="space-y-3">
-
-              {booking.createdBy.phoneNumber && (
-                <InfoRow
-                  label="Phone"
-                  value={booking.createdBy.phoneNumber}
-                  icon={Phone}
-                />
-              )}
-
-                {booking.createdBy.creatorProfile && (
-                  <>
-                    <InfoRow
-                      label="Display Name"
-                      value={booking.createdBy.creatorProfile.displayName}
-                    />
-                    {booking.createdBy.creatorProfile.description && (
-                      <InfoRow
-                        label="Description"
-                        value={<span className="text-sm leading-relaxed">{booking.createdBy.creatorProfile.description}</span>}
-                      />
-                    )}
-                    {booking.createdBy.creatorProfile.social &&
-                      booking.createdBy.creatorProfile.social.length > 0 && (
-                        <div className="pt-3 border-t border-border/40">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-                            <Globe className="h-3.5 w-3.5" />
-                            Social Links
-                          </p>
-                          <div className="space-y-2">
-                            {booking.createdBy.creatorProfile.social.map(
-                              (social, index) => (
-                                <Link
-                                  key={index}
-                                  href={social.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 hover:underline transition-colors"
-                                >
-                                  <Globe className="h-3.5 w-3.5" />
-                                  <span className="truncate">
-                                    {social.platform}
-                                    {social.isMain && <Badge variant="outline" className="ml-2 text-xs">Main</Badge>}
-                                  </span>
-                                </Link>
-                              )
-                            )}
-                          </div>
-                        </div>
-                      )}
-                  </>
-                )}
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <h3 className="text-base font-semibold text-foreground">
+                    {booking.location.name}
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground pl-8">
+                  {booking.location.addressLine}, {booking.location.addressLevel1}
+                </p>
+                <Link href={`/dashboard/business/locations/${booking.locationId}`}>
+                  <Button variant="outline" className="w-full" size="sm">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Go to Location Details
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
 
-          {/* Transaction Information */}
-          {booking.referencedTransaction && (
-            <Card className="border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm">
-              <CardHeader className="bg-white border-b border-primary/20 py-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <CreditCard className="h-4 w-4 text-primary" />
-                  </div>
-                  Transaction
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4 pb-4">
-                <div className="space-y-3">
-                  <InfoRow
-                    label="Amount"
-                    value={
-                      <span className="text-lg font-bold text-emerald-600">
-                        {formatCurrency(
-                          booking.referencedTransaction.amount,
-                          booking.referencedTransaction.currency
-                        )}
-                      </span>
-                    }
-                    icon={DollarSign}
-                  />
-                  <InfoRow
-                    label="Status"
-                    value={
-                      <Badge
-                        variant={
-                          booking.referencedTransaction.status === "COMPLETED"
-                            ? "default"
-                            : "outline"
-                        }
-                        className="font-medium"
+          {/* Booking Calendar */}
+          {booking.dates && booking.dates.length > 0 && (() => {
+            // Get all unique booking dates and map them to time ranges
+            const bookingDates = new Set<string>();
+            const dateTimeRanges = new Map<string, Array<{ start: Date; end: Date }>>();
+            
+            booking.dates.forEach(dateRange => {
+              const start = new Date(dateRange.startDateTime);
+              const end = new Date(dateRange.endDateTime);
+              const days = eachDayOfInterval({ start, end });
+              
+              days.forEach(day => {
+                const dayKey = format(day, "yyyy-MM-dd");
+                bookingDates.add(dayKey);
+                
+                // Calculate the time range for this specific day
+                const dayStart = startOfDay(day);
+                const dayEnd = endOfDay(day);
+                
+                // Get the actual start and end times for this day
+                const actualStart = start > dayStart ? start : dayStart;
+                const actualEnd = end < dayEnd ? end : dayEnd;
+                
+                if (!dateTimeRanges.has(dayKey)) {
+                  dateTimeRanges.set(dayKey, []);
+                }
+                dateTimeRanges.get(dayKey)!.push({ start: actualStart, end: actualEnd });
+              });
+            });
+
+            // Merge continuous time ranges for each date
+            dateTimeRanges.forEach((ranges, dayKey) => {
+              if (ranges.length <= 1) return;
+              
+              // Sort ranges by start time
+              const sorted = [...ranges].sort((a, b) => a.start.getTime() - b.start.getTime());
+              const merged: Array<{ start: Date; end: Date }> = [];
+              
+              let current = sorted[0];
+              
+              for (let i = 1; i < sorted.length; i++) {
+                const next = sorted[i];
+                // Check if current range is adjacent or overlapping with next
+                // Adjacent: current.end === next.start, Overlapping: current.end >= next.start
+                if (current.end.getTime() >= next.start.getTime()) {
+                  // Merge: extend current range to include next
+                  current = {
+                    start: current.start,
+                    end: current.end.getTime() > next.end.getTime() ? current.end : next.end
+                  };
+                } else {
+                  // Not continuous, save current and start new
+                  merged.push(current);
+                  current = next;
+                }
+              }
+              
+              // Add the last range
+              merged.push(current);
+              
+              // Update the map with merged ranges
+              dateTimeRanges.set(dayKey, merged);
+            });
+
+            // Get calendar days for current month
+            const monthStart = startOfMonth(calendarMonth);
+            const monthEnd = endOfMonth(calendarMonth);
+            const calendarStart = startOfDay(monthStart);
+            const calendarEnd = endOfDay(monthEnd);
+            
+            // Get first day of week (0 = Sunday, 1 = Monday, etc.)
+            const firstDayOfWeek = getDay(monthStart);
+            const daysInMonth = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+            
+            // Add padding days at the start
+            const paddingStart = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Monday = 0
+            const allDays: (Date | null)[] = [];
+            for (let i = 0; i < paddingStart; i++) {
+              allDays.push(null);
+            }
+            daysInMonth.forEach(day => allDays.push(day));
+
+            const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+            return (
+              <TooltipProvider>
+                <Card className="border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardHeader className="bg-white border-b border-primary/20 py-2 px-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-1.5 text-base">
+                      <div className="h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center">
+                        <Calendar className="h-3 w-3 text-primary" />
+                      </div>
+                      Booking Dates
+                    </CardTitle>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))}
                       >
-                        {booking.referencedTransaction.status}
-                      </Badge>
-                    }
-                  />
-                  <InfoRow
-                    label="Created At"
-                    value={formatDateTime(booking.referencedTransaction.createdAt)}
-                    icon={Calendar}
-                  />
-                </div>
-                <Separator className="my-4" />
-                <Link
-                  href={`/dashboard/business/wallet/${booking.referencedTransaction.id}`}
-                >
-                  <Button variant="outline" className="w-full font-medium">
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    View Transaction Details
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
+                        <ChevronLeft className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-3 pb-3 px-4">
+                  <div className="space-y-2">
+                    <div className="text-center text-xs font-semibold text-foreground">
+                      {format(calendarMonth, "MMMM yyyy")}
+                    </div>
+                    <div className="grid grid-cols-7 gap-0.5">
+                      {weekDays.map(day => (
+                        <div key={day} className="text-center text-xs font-semibold text-muted-foreground py-0.5">
+                          {day}
+                        </div>
+                      ))}
+                      {allDays.map((day, index) => {
+                        if (!day) {
+                          return <div key={`empty-${index}`} className="aspect-square" />;
+                        }
+                        const dayKey = format(day, "yyyy-MM-dd");
+                        const isBookingDate = bookingDates.has(dayKey);
+                        const isCurrentMonth = isSameMonth(day, calendarMonth);
+                        const isToday = isSameDay(day, new Date());
+                        const timeRanges = isBookingDate ? dateTimeRanges.get(dayKey) || [] : [];
+
+                        const dateCell = (
+                          <div
+                            key={dayKey}
+                            className={cn(
+                              "aspect-square flex items-center justify-center text-xs font-medium rounded transition-colors",
+                              !isCurrentMonth && "text-muted-foreground/40",
+                              isCurrentMonth && !isBookingDate && !isToday && "text-foreground hover:bg-muted/50",
+                              isToday && !isBookingDate && "bg-primary/10 text-primary font-semibold",
+                              isBookingDate && "bg-primary text-primary-foreground font-semibold"
+                            )}
+                          >
+                            {format(day, "d")}
+                          </div>
+                        );
+
+                        if (isBookingDate && timeRanges.length > 0) {
+                          return (
+                            <Tooltip key={dayKey}>
+                              <TooltipTrigger asChild>
+                                {dateCell}
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div className="space-y-1">
+                                  <div className="font-semibold text-xs mb-1">
+                                    {format(day, "MMM dd, yyyy")}
+                                  </div>
+                                  {timeRanges.map((range, idx) => (
+                                    <div key={idx} className="text-xs">
+                                      {format(range.start, "HH:mm")} - {format(range.end, "HH:mm")}
+                                    </div>
+                                  ))}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        }
+
+                        return dateCell;
+                      })}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              </TooltipProvider>
+            );
+          })()}
 
           {/* Quick Actions */}
           <Card className="border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm">

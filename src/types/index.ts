@@ -972,6 +972,9 @@ export interface CreateTicketPayload {
   saleEndDate: string;
   minQuantityPerOrder: number;
   maxQuantityPerOrder: number;
+  allowRefunds?: boolean;
+  refundPercentageBeforeCutoff?: number;
+  refundCutoffHoursAfterPayment?: number;
 }
 
 export interface UpdateTicketPayload {
@@ -987,6 +990,9 @@ export interface UpdateTicketPayload {
   saleEndDate?: Date;
   minQuantityPerOrder?: number;
   maxQuantityPerOrder?: number;
+  allowRefunds?: boolean;
+  refundPercentageBeforeCutoff?: number;
+  refundCutoffHoursAfterPayment?: number;
 }
 
 export interface Ticket {

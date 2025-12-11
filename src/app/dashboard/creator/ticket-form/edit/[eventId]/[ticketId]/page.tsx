@@ -39,6 +39,8 @@ import {
   Hash,
   Info,
   AlertCircle,
+  RotateCcw,
+  HelpCircle,
 } from "lucide-react";
 import type { UpdateTicketPayload } from "@/types";
 
@@ -115,6 +117,26 @@ const updateTicketSchema = z.object({
 }, {
   message: "Maximum quantity must be greater than or equal to minimum quantity",
   path: ["maxQuantityPerOrder"],
+}).refine((data) => {
+  if (data.allowRefunds) {
+    if (data.refundPercentageBeforeCutoff === undefined || data.refundPercentageBeforeCutoff === null) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: "Refund percentage is required when refunds are enabled",
+  path: ["refundPercentageBeforeCutoff"],
+}).refine((data) => {
+  if (data.allowRefunds) {
+    if (data.refundCutoffHoursAfterPayment === undefined || data.refundCutoffHoursAfterPayment === null) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: "Refund cutoff hours is required when refunds are enabled",
+  path: ["refundCutoffHoursAfterPayment"],
 });
 
 type UpdateTicketForm = z.infer<typeof updateTicketSchema>;
@@ -155,6 +177,9 @@ export default function EditTicketFormPage({
         saleEndDate: ticket.saleEndDate ? new Date(ticket.saleEndDate).toISOString().slice(0, 16) : "",
         minQuantityPerOrder: ticket.minQuantityPerOrder,
         maxQuantityPerOrder: ticket.maxQuantityPerOrder,
+        allowRefunds: (ticket as any).allowRefunds ?? false,
+        refundPercentageBeforeCutoff: (ticket as any).refundPercentageBeforeCutoff ?? undefined,
+        refundCutoffHoursAfterPayment: (ticket as any).refundCutoffHoursAfterPayment ?? undefined,
       });
     }
   }, [ticket, form]);
@@ -175,6 +200,13 @@ export default function EditTicketFormPage({
     if (data.saleEndDate) payload.saleEndDate = new Date(data.saleEndDate);
     if (data.minQuantityPerOrder) payload.minQuantityPerOrder = data.minQuantityPerOrder;
     if (data.maxQuantityPerOrder) payload.maxQuantityPerOrder = data.maxQuantityPerOrder;
+    if (data.allowRefunds !== undefined) payload.allowRefunds = data.allowRefunds;
+    if (data.allowRefunds && data.refundPercentageBeforeCutoff !== undefined) {
+      payload.refundPercentageBeforeCutoff = data.refundPercentageBeforeCutoff;
+    }
+    if (data.allowRefunds && data.refundCutoffHoursAfterPayment !== undefined) {
+      payload.refundCutoffHoursAfterPayment = data.refundCutoffHoursAfterPayment;
+    }
 
     updateTicket.mutate({ eventId, ticketId, payload });
   };
@@ -640,8 +672,20 @@ export default function EditTicketFormPage({
                           </FormLabel>
                           <FormControl>
                             <Input
-                              type="datetime-local"
+                              type="date"
                               {...field}
+                              value={field.value ? field.value.split('T')[0] : ''}
+                              onChange={(e) => {
+                                const dateValue = e.target.value;
+                                // Convert to ISO string format for the form (set time to start of day)
+                                if (dateValue) {
+                                  const date = new Date(dateValue);
+                                  date.setHours(0, 0, 0, 0);
+                                  field.onChange(date.toISOString().slice(0, 16));
+                                } else {
+                                  field.onChange('');
+                                }
+                              }}
                               className="h-11"
                             />
                           </FormControl>
@@ -668,8 +712,20 @@ export default function EditTicketFormPage({
                           </FormLabel>
                           <FormControl>
                             <Input
-                              type="datetime-local"
+                              type="date"
                               {...field}
+                              value={field.value ? field.value.split('T')[0] : ''}
+                              onChange={(e) => {
+                                const dateValue = e.target.value;
+                                // Convert to ISO string format for the form (set time to end of day)
+                                if (dateValue) {
+                                  const date = new Date(dateValue);
+                                  date.setHours(23, 59, 59, 999);
+                                  field.onChange(date.toISOString().slice(0, 16));
+                                } else {
+                                  field.onChange('');
+                                }
+                              }}
                               className="h-11"
                             />
                           </FormControl>
@@ -678,6 +734,171 @@ export default function EditTicketFormPage({
                       )}
                     />
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Refund Settings */}
+              <Card className="border-t-4 border-t-amber-500">
+                <CardHeader className="bg-amber-500/10 dark:bg-amber-500/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                        <RotateCcw className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        Refund Settings
+                      </CardTitle>
+                      <CardDescription className="mt-1 text-amber-600 dark:text-amber-300">
+                        Configure refund policies for this ticket
+                      </CardDescription>
+                    </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Info className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Set refund rules to protect both customers and your event</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="allowRefunds"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/50">
+                        <div className="space-y-0.5 flex-1">
+                          <FormLabel className="text-base flex items-center gap-2">
+                            Allow Refunds
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Enable refunds for this ticket type</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </FormLabel>
+                          <FormDescription>
+                            {field.value 
+                              ? "Refunds are enabled for this ticket" 
+                              : "Refunds are disabled for this ticket"}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value ?? false}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked);
+                              if (!checked) {
+                                form.setValue("refundPercentageBeforeCutoff", undefined);
+                                form.setValue("refundCutoffHoursAfterPayment", undefined);
+                              } else {
+                                form.setValue("refundPercentageBeforeCutoff", form.getValues("refundPercentageBeforeCutoff") ?? 1);
+                                form.setValue("refundCutoffHoursAfterPayment", form.getValues("refundCutoffHoursAfterPayment") ?? 4);
+                              }
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch("allowRefunds") && (
+                    <div className="space-y-4 pl-4 border-l-2 border-amber-500/20">
+                      <FormField
+                        control={form.control}
+                        name="refundPercentageBeforeCutoff"
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="flex items-center gap-2">
+                              <FormLabel>Refund Percentage</FormLabel>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Percentage of ticket price refunded (0.0 to 1.0, e.g., 0.8 = 80%)</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            <FormDescription>
+                              Percentage of ticket price to refund (0.0 to 1.0)
+                            </FormDescription>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="1"
+                                placeholder="1.0"
+                                value={field.value ?? ""}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === "" || value === "-") {
+                                    field.onChange(undefined);
+                                    return;
+                                  }
+                                  const numValue = parseFloat(value);
+                                  if (!isNaN(numValue) && numValue >= 0 && numValue <= 1) {
+                                    field.onChange(numValue);
+                                  }
+                                }}
+                                className="h-11"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="refundCutoffHoursAfterPayment"
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="flex items-center gap-2">
+                              <FormLabel>Refund Cutoff Hours</FormLabel>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Number of hours after payment when refunds are no longer allowed</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            <FormDescription>
+                              Hours after payment when refunds are no longer allowed
+                            </FormDescription>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="1"
+                                placeholder="4"
+                                value={field.value ?? ""}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === "" || value === "-") {
+                                    field.onChange(undefined);
+                                    return;
+                                  }
+                                  const numValue = parseInt(value);
+                                  if (!isNaN(numValue) && numValue >= 0) {
+                                    field.onChange(numValue);
+                                  }
+                                }}
+                                className="h-11"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

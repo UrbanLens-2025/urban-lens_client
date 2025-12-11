@@ -18,7 +18,7 @@ export function useUpdateTicket() {
       queryClient.invalidateQueries({ queryKey: ['eventTickets', variables.eventId] });
       queryClient.invalidateQueries({ queryKey: ['ticketDetail', variables.eventId, variables.ticketId] });
       queryClient.invalidateQueries({ queryKey: ['eventDetail', variables.eventId] });
-      router.push(`/dashboard/creator/events/${variables.eventId}`);
+      router.push(`/dashboard/creator/events/${variables.eventId}/tickets`);
       router.refresh();
     },
     onError: (error: Error) => {

@@ -14,6 +14,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Form,
   FormControl,
   FormField,
@@ -32,6 +43,8 @@ import {
   Calendar,
   Hash,
   ImageIcon,
+  RotateCcw,
+  HelpCircle,
 } from "lucide-react";
 import type { CreateTicketPayload } from "@/types";
 
@@ -93,6 +106,17 @@ const createTicketSchema = z.object({
     .number()
     .int("Must be a whole number")
     .min(1, "Maximum quantity must be at least 1"),
+  allowRefunds: z.boolean().optional().default(false),
+  refundPercentageBeforeCutoff: z
+    .number()
+    .min(0, "Refund percentage must be 0 or greater")
+    .max(1, "Refund percentage must be 1 or less")
+    .optional(),
+  refundCutoffHoursAfterPayment: z
+    .number()
+    .int("Must be a whole number")
+    .min(0, "Cutoff hours must be 0 or greater")
+    .optional(),
 }).refine((data) => {
   return data.saleEndDate > data.saleStartDate;
 }, {
@@ -103,11 +127,31 @@ const createTicketSchema = z.object({
 }, {
   message: "Maximum quantity must be greater than or equal to minimum quantity",
   path: ["maxQuantityPerOrder"],
+}).refine((data) => {
+  if (data.allowRefunds) {
+    if (data.refundPercentageBeforeCutoff === undefined || data.refundPercentageBeforeCutoff === null) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: "Refund percentage is required when refunds are enabled",
+  path: ["refundPercentageBeforeCutoff"],
+}).refine((data) => {
+  if (data.allowRefunds) {
+    if (data.refundCutoffHoursAfterPayment === undefined || data.refundCutoffHoursAfterPayment === null) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: "Refund cutoff hours is required when refunds are enabled",
+  path: ["refundCutoffHoursAfterPayment"],
 });
 
 type CreateTicketForm = z.infer<typeof createTicketSchema>;
 
-const currencies = ["VND", "USD", "EUR"];
+const currencies = ["VND"];
 
 export default function CreateTicketPage({
   params,
@@ -154,6 +198,9 @@ export default function CreateTicketPage({
       saleEndDate: new Date(data.saleEndDate).toISOString(),
       minQuantityPerOrder: data.minQuantityPerOrder,
       maxQuantityPerOrder: data.maxQuantityPerOrder,
+      allowRefunds: data.allowRefunds,
+      refundPercentageBeforeCutoff: data.allowRefunds ? data.refundPercentageBeforeCutoff : undefined,
+      refundCutoffHoursAfterPayment: data.allowRefunds ? data.refundCutoffHoursAfterPayment : undefined,
     };
 
     createTicket.mutate({ eventId, payload });
@@ -165,8 +212,10 @@ export default function CreateTicketPage({
       // You might want to get event dates from the event request
       // For now, we'll set default dates to today and 30 days from now
       const today = new Date();
+      today.setHours(0, 0, 0, 0);
       const endDate = new Date();
       endDate.setDate(today.getDate() + 30);
+      endDate.setHours(23, 59, 59, 999);
       
       form.setValue("saleStartDate", today.toISOString().slice(0, 16));
       form.setValue("saleEndDate", endDate.toISOString().slice(0, 16));
@@ -365,7 +414,8 @@ export default function CreateTicketPage({
                       <FormControl>
                         <select
                           {...field}
-                          className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled
+                          className="flex h-11 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {currencies.map((currency) => (
                             <option key={currency} value={currency}>
@@ -491,8 +541,20 @@ export default function CreateTicketPage({
                       </FormDescription>
                       <FormControl>
                         <Input
-                          type="datetime-local"
+                          type="date"
                           {...field}
+                          value={field.value ? field.value.split('T')[0] : ''}
+                          onChange={(e) => {
+                            const dateValue = e.target.value;
+                            // Convert to ISO string format for the form (set time to start of day)
+                            if (dateValue) {
+                              const date = new Date(dateValue);
+                              date.setHours(0, 0, 0, 0);
+                              field.onChange(date.toISOString().slice(0, 16));
+                            } else {
+                              field.onChange('');
+                            }
+                          }}
                           className="h-11"
                         />
                       </FormControl>
@@ -512,8 +574,20 @@ export default function CreateTicketPage({
                       </FormDescription>
                       <FormControl>
                         <Input
-                          type="datetime-local"
+                          type="date"
                           {...field}
+                          value={field.value ? field.value.split('T')[0] : ''}
+                          onChange={(e) => {
+                            const dateValue = e.target.value;
+                            // Convert to ISO string format for the form (set time to end of day)
+                            if (dateValue) {
+                              const date = new Date(dateValue);
+                              date.setHours(23, 59, 59, 999);
+                              field.onChange(date.toISOString().slice(0, 16));
+                            } else {
+                              field.onChange('');
+                            }
+                          }}
                           className="h-11"
                         />
                       </FormControl>
@@ -522,6 +596,146 @@ export default function CreateTicketPage({
                   )}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Refund Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RotateCcw className="h-5 w-5" />
+                Refund Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FormField
+                control={form.control}
+                name="allowRefunds"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Allow Refunds</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Enable refunds for this ticket type
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked);
+                          if (!checked) {
+                            form.setValue("refundPercentageBeforeCutoff", undefined);
+                            form.setValue("refundCutoffHoursAfterPayment", undefined);
+                          } else {
+                            form.setValue("refundPercentageBeforeCutoff", 1);
+                            form.setValue("refundCutoffHoursAfterPayment", 4);
+                          }
+                        }}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {form.watch("allowRefunds") && (
+                <div className="space-y-4 pl-4 border-l-2 border-primary/20">
+                  <FormField
+                    control={form.control}
+                    name="refundPercentageBeforeCutoff"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center gap-2">
+                          <FormLabel>Refund Percentage</FormLabel>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p>Percentage of ticket price refunded (0.0 to 1.0, e.g., 0.8 = 80%)</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <FormDescription>
+                          Percentage of ticket price to refund (0.0 to 1.0)
+                        </FormDescription>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="1"
+                            placeholder="1.0"
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === "" || value === "-") {
+                                field.onChange(undefined);
+                                return;
+                              }
+                              const numValue = parseFloat(value);
+                              if (!isNaN(numValue) && numValue >= 0 && numValue <= 1) {
+                                field.onChange(numValue);
+                              }
+                            }}
+                            className="h-11"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="refundCutoffHoursAfterPayment"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center gap-2">
+                          <FormLabel>Refund Cutoff Hours</FormLabel>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p>Number of hours after payment when refunds are no longer allowed</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <FormDescription>
+                          Hours after payment when refunds are no longer allowed
+                        </FormDescription>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="4"
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === "" || value === "-") {
+                                field.onChange(undefined);
+                                return;
+                              }
+                              const numValue = parseInt(value);
+                              if (!isNaN(numValue) && numValue >= 0) {
+                                field.onChange(numValue);
+                              }
+                            }}
+                            className="h-11"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
 
