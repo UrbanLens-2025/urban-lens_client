@@ -554,79 +554,66 @@ export default function LocationBookingDetailPage({
                     slot.startTime.getTime() < slot.endTime.getTime()
                   );
                   
-                  // Group slots by date for easier merging
-                  const slotsByDate = validSortedDates.reduce((acc, slot) => {
-                    const dateKey = format(slot.date, "yyyy-MM-dd");
-                    if (!acc[dateKey]) {
-                      acc[dateKey] = [];
-                    }
-                    acc[dateKey].push(slot);
-                    return acc;
-                  }, {} as Record<string, typeof validSortedDates>);
+                  // Merge slots across all dates (not just within each date)
+                  // Sort all slots by start time first
+                  let slotsToMerge = [...validSortedDates].sort((a, b) => 
+                    a.startTime.getTime() - b.startTime.getTime()
+                  );
                   
-                  // Merge slots for each date
-                  const mergedSlots: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
-                  
-                  Object.entries(slotsByDate).forEach(([dateKey, slots]) => {
-                    // Sort slots by start time for this date
-                    let slotsToMerge = [...slots].sort((a, b) => 
-                      a.startTime.getTime() - b.startTime.getTime()
-                    );
+                  // Keep merging until no more merges are possible
+                  let changed = true;
+                  while (changed && slotsToMerge.length > 1) {
+                    changed = false;
+                    const newSlots: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
+                    const used = new Set<number>();
                     
-                    // Keep merging until no more merges are possible
-                    let changed = true;
-                    while (changed && slotsToMerge.length > 1) {
-                      changed = false;
-                      const newSlots: Array<{ date: Date; startTime: Date; endTime: Date; isAllDay: boolean }> = [];
-                      const used = new Set<number>();
+                    for (let i = 0; i < slotsToMerge.length; i++) {
+                      if (used.has(i)) continue;
                       
-                      for (let i = 0; i < slotsToMerge.length; i++) {
-                        if (used.has(i)) continue;
+                      let currentSlot = { ...slotsToMerge[i] };
+                      let merged = false;
+                      
+                      // Try to merge with remaining slots
+                      for (let j = i + 1; j < slotsToMerge.length; j++) {
+                        if (used.has(j)) continue;
                         
-                        let currentSlot = { ...slotsToMerge[i] };
-                        let merged = false;
+                        const otherSlot = slotsToMerge[j];
+                        const currentStart = currentSlot.startTime.getTime();
+                        const currentEnd = currentSlot.endTime.getTime();
+                        const otherStart = otherSlot.startTime.getTime();
+                        const otherEnd = otherSlot.endTime.getTime();
                         
-                        // Try to merge with remaining slots
-                        for (let j = i + 1; j < slotsToMerge.length; j++) {
-                          if (used.has(j)) continue;
-                          
-                          const otherSlot = slotsToMerge[j];
-                          const currentStart = currentSlot.startTime.getTime();
-                          const currentEnd = currentSlot.endTime.getTime();
-                          const otherStart = otherSlot.startTime.getTime();
-                          const otherEnd = otherSlot.endTime.getTime();
-                          
-                          // Check if overlapping, adjacent, or contained
-                          const isOverlapping = (currentStart <= otherEnd && currentEnd >= otherStart);
-                          const isAdjacent = (currentEnd === otherStart || otherEnd === currentStart);
-                          const isContained = (currentStart >= otherStart && currentEnd <= otherEnd) || 
-                                             (otherStart >= currentStart && otherEnd <= currentEnd);
-                          
-                          if (isOverlapping || isAdjacent || isContained) {
-                            // Merge: take earliest start and latest end
-                            currentSlot.startTime = new Date(Math.min(currentStart, otherStart));
-                            currentSlot.endTime = new Date(Math.max(currentEnd, otherEnd));
-                            const mergedStart = currentSlot.startTime;
-                            const mergedEnd = currentSlot.endTime;
-                            currentSlot.isAllDay = mergedStart.getHours() === 0 && 
-                                                  mergedStart.getMinutes() === 0 &&
-                                                  mergedEnd.getHours() === 23 && 
-                                                  mergedEnd.getMinutes() === 59;
-                            used.add(j);
-                            merged = true;
-                            changed = true;
-                          }
+                        // Check if overlapping, adjacent (including across days), or contained
+                        const isOverlapping = (currentStart <= otherEnd && currentEnd >= otherStart);
+                        const isAdjacent = (currentEnd === otherStart || otherEnd === currentStart);
+                        const isContained = (currentStart >= otherStart && currentEnd <= otherEnd) || 
+                                           (otherStart >= currentStart && otherEnd <= currentEnd);
+                        
+                        if (isOverlapping || isAdjacent || isContained) {
+                          // Merge: take earliest start and latest end
+                          currentSlot.startTime = new Date(Math.min(currentStart, otherStart));
+                          currentSlot.endTime = new Date(Math.max(currentEnd, otherEnd));
+                          // Update date to the start date of the merged range
+                          currentSlot.date = startOfDay(currentSlot.startTime);
+                          const mergedStart = currentSlot.startTime;
+                          const mergedEnd = currentSlot.endTime;
+                          currentSlot.isAllDay = mergedStart.getHours() === 0 && 
+                                                mergedStart.getMinutes() === 0 &&
+                                                mergedEnd.getHours() === 23 && 
+                                                mergedEnd.getMinutes() === 59;
+                          used.add(j);
+                          merged = true;
+                          changed = true;
                         }
-                        
-                        newSlots.push(currentSlot);
                       }
                       
-                      slotsToMerge = newSlots;
+                      newSlots.push(currentSlot);
                     }
                     
-                    // Add all merged slots for this date to the final array
-                    mergedSlots.push(...slotsToMerge);
-                  });
+                    slotsToMerge = newSlots;
+                  }
+                  
+                  const mergedSlots = slotsToMerge;
                   
                   // Filter out any merged slots that ended up with zero or negative duration
                   const validSlots = mergedSlots.filter(slot => 

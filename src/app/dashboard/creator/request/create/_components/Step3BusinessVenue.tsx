@@ -498,45 +498,46 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
           </div>
           <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-green-300 scrollbar-track-transparent">
             {(() => {
-              // Group slots by date
-              const groupedByDate = dateRanges.reduce((acc, slot) => {
-                const dateKey = format(new Date(slot.startDateTime), "yyyy-MM-dd");
+              // Sort all slots by start time (regardless of date) and merge consecutive ones across days
+              const sortedSlots = [...dateRanges].sort((a, b) => 
+                new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
+              );
+              
+              const mergedRanges: Array<{ start: Date; end: Date }> = [];
+              for (let i = 0; i < sortedSlots.length; i++) {
+                const currentStart = new Date(sortedSlots[i].startDateTime);
+                const currentEnd = new Date(sortedSlots[i].endDateTime);
+                
+                if (mergedRanges.length === 0) {
+                  mergedRanges.push({ start: currentStart, end: currentEnd });
+                } else {
+                  const lastRange = mergedRanges[mergedRanges.length - 1];
+                  // Merge if consecutive (end time equals start time) - can span across days
+                  if (lastRange.end.getTime() === currentStart.getTime()) {
+                    lastRange.end = currentEnd;
+                  } else {
+                    mergedRanges.push({ start: currentStart, end: currentEnd });
+                  }
+                }
+              }
+              
+              // Group merged ranges by their start date for display
+              const groupedByDate = mergedRanges.reduce((acc, range) => {
+                const dateKey = format(range.start, "yyyy-MM-dd");
                 if (!acc[dateKey]) {
                   acc[dateKey] = [];
                 }
-                acc[dateKey].push(slot);
+                acc[dateKey].push(range);
                 return acc;
-              }, {} as Record<string, typeof dateRanges>);
+              }, {} as Record<string, Array<{ start: Date; end: Date }>>);
               
               // Sort dates
               const sortedDates = Object.keys(groupedByDate).sort();
               
               return sortedDates.map((dateKey) => {
-                const slots = groupedByDate[dateKey];
+                const ranges = groupedByDate[dateKey];
                 const date = new Date(dateKey + "T00:00:00");
                 const dayName = format(date, "EEEE");
-                
-                // Sort slots by start time and merge consecutive ones
-                const sortedSlots = [...slots].sort((a, b) => 
-                  new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
-                );
-                
-                const ranges: Array<{ start: Date; end: Date }> = [];
-                for (let i = 0; i < sortedSlots.length; i++) {
-                  const currentStart = new Date(sortedSlots[i].startDateTime);
-                  const currentEnd = new Date(sortedSlots[i].endDateTime);
-                  
-                  if (ranges.length === 0) {
-                    ranges.push({ start: currentStart, end: currentEnd });
-                  } else {
-                    const lastRange = ranges[ranges.length - 1];
-                    if (lastRange.end.getTime() === currentStart.getTime()) {
-                      lastRange.end = currentEnd;
-                    } else {
-                      ranges.push({ start: currentStart, end: currentEnd });
-                    }
-                  }
-                }
                 
                 return (
                   <div key={dateKey} className="p-2.5 bg-white dark:bg-gray-900/50 rounded-md border border-green-200 dark:border-green-800">

@@ -777,7 +777,7 @@ export function AvailabilityCalendar({
     );
   };
 
-  // Get selected slots for display, combining consecutive slots on the same day
+  // Get selected slots for display, combining consecutive slots across days
   const selectedSlotsList = useMemo(() => {
     // Parse all slots into date objects
     const allSlots = Array.from(selectedSlots).map((slotKey) => {
@@ -791,66 +791,49 @@ export function AvailabilityCalendar({
         start: startDate, 
         end: endDate, 
         key: slotKey,
-        dateKey: dateStr,
-        hourIndex: hours
       };
     });
 
-    // Group by date
-    const slotsByDate = new Map<string, typeof allSlots>();
-    allSlots.forEach((slot) => {
-      if (!slotsByDate.has(slot.dateKey)) {
-        slotsByDate.set(slot.dateKey, []);
-      }
-      slotsByDate.get(slot.dateKey)!.push(slot);
-    });
+    // Sort all slots by start time (regardless of date)
+    allSlots.sort((a, b) => a.start.getTime() - b.start.getTime());
+    
+    if (allSlots.length === 0) return [];
 
-    // Combine consecutive slots on each date
+    // Combine consecutive slots across days
     const combinedRanges: Array<{ start: Date; end: Date; keys: string[] }> = [];
     
-    slotsByDate.forEach((dateSlots, dateKey) => {
-      // Sort by hour index
-      dateSlots.sort((a, b) => a.hourIndex - b.hourIndex);
+    let rangeStart = allSlots[0];
+    let rangeEnd = allSlots[0];
+    let rangeKeys = [rangeStart.key];
+    
+    for (let i = 1; i < allSlots.length; i++) {
+      const currentSlot = allSlots[i];
       
-      if (dateSlots.length === 0) return;
-      
-      // Find consecutive ranges
-      let rangeStart = dateSlots[0];
-      let rangeEnd = dateSlots[0];
-      let rangeKeys = [rangeStart.key];
-      
-      for (let i = 1; i < dateSlots.length; i++) {
-        const currentSlot = dateSlots[i];
+      // Check if this slot is consecutive (end time of previous slot equals start time of current)
+      if (rangeEnd.end.getTime() === currentSlot.start.getTime()) {
+        // Extend the range (can span across days)
+        rangeEnd = currentSlot;
+        rangeKeys.push(currentSlot.key);
+      } else {
+        // Save the current range and start a new one
+        combinedRanges.push({
+          start: rangeStart.start,
+          end: rangeEnd.end,
+          keys: [...rangeKeys] // Create a copy of the array
+        });
         
-        // Check if this slot is consecutive (end time of previous slot equals start time of current)
-        if (rangeEnd.end.getTime() === currentSlot.start.getTime()) {
-          // Extend the range
-          rangeEnd = currentSlot;
-          rangeKeys.push(currentSlot.key);
-        } else {
-          // Save the current range and start a new one
-          combinedRanges.push({
-            start: rangeStart.start,
-            end: rangeEnd.end,
-            keys: [...rangeKeys] // Create a copy of the array
-          });
-          
-          rangeStart = currentSlot;
-          rangeEnd = currentSlot;
-          rangeKeys = [currentSlot.key]; // Create a new array
-        }
+        rangeStart = currentSlot;
+        rangeEnd = currentSlot;
+        rangeKeys = [currentSlot.key]; // Create a new array
       }
-      
-      // Don't forget the last range
-      combinedRanges.push({
-        start: rangeStart.start,
-        end: rangeEnd.end,
-        keys: [...rangeKeys] // Create a copy of the array
-      });
+    }
+    
+    // Don't forget the last range
+    combinedRanges.push({
+      start: rangeStart.start,
+      end: rangeEnd.end,
+      keys: [...rangeKeys] // Create a copy of the array
     });
-
-    // Sort combined ranges by date and time
-    combinedRanges.sort((a, b) => a.start.getTime() - b.start.getTime());
 
     return combinedRanges;
   }, [selectedSlots]);
