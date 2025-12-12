@@ -216,6 +216,9 @@ export default function BusinessDashboardPage() {
     },
   };
 
+  // Chart gradient ID for unified styling
+  const chartGradientId = "checkInsGradient";
+
   return (
     <PageContainer>
       {/* Professional Header */}
@@ -253,13 +256,6 @@ export default function BusinessDashboardPage() {
           iconColor="text-blue-600"
           iconBg="bg-blue-500/10"
           description={`${stats.approvedLocations} visible on map`}
-          footer={
-            stats.approvedLocations < stats.totalLocations && (
-              <Badge variant="outline" className="text-xs">
-                {stats.totalLocations - stats.approvedLocations} hidden
-              </Badge>
-            )
-          }
           onClick={() => router.push('/dashboard/business/locations')}
         />
 
@@ -280,14 +276,6 @@ export default function BusinessDashboardPage() {
           iconColor="text-purple-600"
           iconBg="bg-purple-500/10"
           description={`${stats.recentBookings} in last 30 days`}
-          trend={
-            stats.bookingsChange !== 0
-              ? {
-                  value: stats.bookingsChange,
-                  isPositive: stats.bookingsChange > 0,
-                }
-              : undefined
-          }
           onClick={() => router.push('/dashboard/business/location-bookings')}
         />
 
@@ -298,60 +286,10 @@ export default function BusinessDashboardPage() {
           iconColor="text-amber-600"
           iconBg="bg-amber-500/10"
           description={`${formatCurrency(stats.thisMonthRevenue)} this month`}
-          trend={
-            stats.revenueChange !== 0
-              ? {
-                  value: stats.revenueChange,
-                  isPositive: stats.revenueChange > 0,
-                }
-              : undefined
-          }
           onClick={() => router.push('/dashboard/business/wallet')}
         />
       </div>
 
-      {/* Quick Actions & Insights */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Pending Bookings"
-          value={stats.pendingBookings}
-          icon={Clock}
-          iconColor="text-orange-600"
-          iconBg="bg-orange-500/10"
-          description="Requires your action"
-          onClick={() => router.push('/dashboard/business/location-bookings')}
-        />
-
-        <StatCard
-          title="Active Bookings"
-          value={stats.activeBookings}
-          icon={CheckCircle2}
-          iconColor="text-green-600"
-          iconBg="bg-green-500/10"
-          description="Upcoming events"
-          onClick={() => router.push('/dashboard/business/location-bookings')}
-        />
-
-        <StatCard
-          title="Visible Locations"
-          value={stats.approvedLocations}
-          icon={MapPin}
-          iconColor="text-blue-600"
-          iconBg="bg-blue-500/10"
-          description="On the map"
-          onClick={() => router.push('/dashboard/business/locations')}
-        />
-
-        <StatCard
-          title="This Month Revenue"
-          value={formatCurrency(stats.thisMonthRevenue)}
-          icon={Wallet}
-          iconColor="text-emerald-600"
-          iconBg="bg-emerald-500/10"
-          description="View wallet"
-          onClick={() => router.push('/dashboard/business/wallet')}
-        />
-      </div>
 
       {/* Charts Section */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -397,6 +335,12 @@ export default function BusinessDashboardPage() {
                 <ChartContainer config={locationChartConfig} className="h-full w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={topLocationsForChart}>
+                      <defs>
+                        <linearGradient id={chartGradientId} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(24, 95%, 53%)" stopOpacity={1} />
+                          <stop offset="100%" stopColor="hsl(24, 95%, 53%)" stopOpacity={0.7} />
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid
                         strokeDasharray="3 3"
                         vertical={false}
@@ -406,11 +350,7 @@ export default function BusinessDashboardPage() {
                         dataKey="name"
                         tickLine={false}
                         axisLine={false}
-                        tickMargin={10}
-                        tick={{ fontSize: 11 }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
+                        hide={true}
                       />
                       <YAxis
                         tickLine={false}
@@ -426,7 +366,7 @@ export default function BusinessDashboardPage() {
                       />
                       <Bar
                         dataKey="checkIns"
-                        fill="var(--color-checkIns)"
+                        fill={`url(#${chartGradientId})`}
                         radius={[4, 4, 0, 0]}
                       />
                     </BarChart>
@@ -531,63 +471,71 @@ export default function BusinessDashboardPage() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-b">
-                    <TableHead className="font-semibold">Name</TableHead>
-                    <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="font-semibold">Check-ins</TableHead>
-                    <TableHead className="font-semibold">Address</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentLocations.map((location) => (
-                    <TableRow
-                      key={location.id}
-                      className="hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => router.push(`/dashboard/business/locations/${location.id}`)}
-                    >
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          {location.name}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {location.isVisibleOnMap ? (
-                          <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Visible
-                          </Badge>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-b">
+                  <TableHead className="font-semibold w-[40%]">Name</TableHead>
+                  <TableHead className="font-semibold w-[30%]">Status</TableHead>
+                  <TableHead className="font-semibold w-[30%]">Check-ins</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentLocations.map((location) => (
+                  <TableRow
+                    key={location.id}
+                    className="hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => router.push(`/dashboard/business/locations/${location.id}`)}
+                  >
+                    <TableCell className="font-medium">
+                      <div className="flex items-start gap-2 min-w-0">
+                        {location.imageUrl && location.imageUrl.length > 0 ? (
+                          <img
+                            src={location.imageUrl[0]}
+                            alt={location.name}
+                            className="h-8 w-8 rounded object-cover shrink-0 mt-0.5"
+                          />
                         ) : (
-                          <Badge variant="secondary" className="font-medium">
-                            <Eye className="h-3 w-3 mr-1" />
-                            Hidden
-                          </Badge>
+                          <div className="h-8 w-8 rounded bg-muted shrink-0 flex items-center justify-center mt-0.5">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                          </div>
                         )}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-3 w-3 text-muted-foreground" />
-                          {parseInt(location.totalCheckIns || "0").toLocaleString()}
+                        <div className="flex flex-col gap-1 min-w-0 flex-1">
+                          <span className="truncate font-medium">{location.name}</span>
+                          {location.addressLine && (
+                            <div className="flex items-center gap-1 min-w-0">
+                              <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground truncate">
+                                {location.addressLine}
+                                {location.addressLevel2 && `, ${location.addressLevel2}`}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1 max-w-[200px]">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          <span className="truncate">
-                            {location.addressLine
-                              ? `${location.addressLine}, ${location.addressLevel2}`
-                              : "N/A"}
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {location.isVisibleOnMap ? (
+                        <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Visible
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="font-medium">
+                          <Eye className="h-3 w-3 mr-1" />
+                          Hidden
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-1">
+                        <Users className="h-3 w-3 text-muted-foreground" />
+                        {parseInt(location.totalCheckIns || "0").toLocaleString()}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </DashboardSection>
 

@@ -95,7 +95,7 @@ export function StatCard({
       onClick={onClick}
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-sm font-semibold text-muted-foreground">
+        <CardTitle className="text-base font-semibold text-muted-foreground">
           {title}
         </CardTitle>
         <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shadow-md", colors.bg)}>
@@ -109,9 +109,9 @@ export function StatCard({
           </div>
         ) : (
           <>
-            <div className="text-3xl font-bold mb-2">{value}</div>
+            <div className="text-4xl font-bold mb-2">{value}</div>
             {description && (
-              <p className="text-xs text-muted-foreground mb-2">{description}</p>
+              <p className="text-sm text-muted-foreground mb-2">{description}</p>
             )}
             {trend && (
               <div className={cn(
