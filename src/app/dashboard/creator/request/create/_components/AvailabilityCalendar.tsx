@@ -1079,7 +1079,7 @@ export function AvailabilityCalendar({
               {/* Header Row - Dates - 7 Days */}
               <div className="grid grid-cols-[90px_repeat(7,minmax(0,1fr))] gap-0 border-b-2 border-border bg-card">
                 {/* Time Column Header */}
-                <div className="h-16 flex items-center justify-center border-r-2 border-border font-bold text-sm text-foreground bg-gradient-to-br from-primary/10 via-muted/50 to-muted/30 sticky left-0 z-20 shadow-md">
+                <div className="h-20 flex items-center justify-center border-r-2 border-border font-bold text-sm text-foreground bg-gradient-to-br from-primary/10 via-muted/50 to-muted/30 sticky left-0 z-20 shadow-md">
                   <div className="flex flex-col items-center gap-1">
                     <Clock className="h-4 w-4 text-primary" />
                     <span className="text-xs font-semibold">Time</span>
@@ -1096,7 +1096,7 @@ export function AvailabilityCalendar({
                       key={date.toISOString()}
                       onClick={() => !isDatePast && handleDateHeaderClick(dateIndex)}
                       className={cn(
-                        "h-16 text-center font-semibold border-r border-b-2 flex flex-col items-center justify-center transition-all duration-200 relative group",
+                        "h-20 text-center font-semibold border-r border-b-2 flex flex-col items-center justify-between py-2 px-1 transition-all duration-200 relative group",
                         {
                           "bg-gradient-to-br from-muted/50 to-muted/20 text-foreground cursor-pointer hover:from-muted/70 hover:to-muted/40 hover:shadow-md hover:scale-[1.02]": !isDatePast && !hasSelected && !isToday,
                           "bg-gradient-to-br from-green-200 via-green-100 to-green-50 dark:from-green-900/50 dark:via-green-900/30 dark:to-green-900/20 text-green-800 dark:text-green-200 border-green-500 dark:border-green-700 cursor-pointer hover:from-green-300 hover:via-green-200 hover:to-green-100 dark:hover:from-green-900/60 dark:hover:via-green-900/40 dark:hover:to-green-900/30 shadow-md": !isDatePast && hasSelected,
@@ -1105,8 +1105,8 @@ export function AvailabilityCalendar({
                         }
                       )}
                     >
-                      {/* Day Abbreviation */}
-                      <div className={cn("text-xs font-extrabold uppercase tracking-widest mb-1", {
+                      {/* Top Section: Day Abbreviation */}
+                      <div className={cn("text-[10px] font-extrabold uppercase tracking-wider leading-tight", {
                         "text-muted-foreground/70": !isDatePast && !hasSelected && !isToday,
                         "text-green-700 dark:text-green-300": hasSelected,
                         "text-blue-700 dark:text-blue-300": isToday && !hasSelected,
@@ -1114,32 +1114,39 @@ export function AvailabilityCalendar({
                       })}>
                         {format(date, "EEE")}
                       </div>
-                      {/* Day Number */}
-                      <div className={cn("text-lg font-black leading-none", {
-                        "text-foreground": !isDatePast && !hasSelected && !isToday,
-                        "text-green-800 dark:text-green-200": hasSelected,
-                        "text-blue-800 dark:text-blue-200": isToday && !hasSelected,
-                        "text-muted-foreground": isDatePast,
-                      })}>
-                        {format(date, "d")}
+                      
+                      {/* Middle Section: Day Number and Month */}
+                      <div className="flex flex-col items-center gap-0.5">
+                        <div className={cn("text-xl font-black leading-none", {
+                          "text-foreground": !isDatePast && !hasSelected && !isToday,
+                          "text-green-800 dark:text-green-200": hasSelected,
+                          "text-blue-800 dark:text-blue-200": isToday && !hasSelected,
+                          "text-muted-foreground": isDatePast,
+                        })}>
+                          {format(date, "d")}
+                        </div>
+                        {/* Month Abbreviation */}
+                        <div className={cn("text-[9px] font-semibold uppercase leading-tight", {
+                          "text-muted-foreground/60": !isDatePast && !hasSelected && !isToday,
+                          "text-green-600 dark:text-green-400": hasSelected,
+                          "text-blue-600 dark:text-blue-400": isToday && !hasSelected,
+                          "text-muted-foreground": isDatePast,
+                        })}>
+                          {format(date, "MMM")}
+                        </div>
                       </div>
-                      {/* Month Abbreviation */}
-                      <div className={cn("text-[10px] font-semibold mt-0.5 uppercase", {
-                        "text-muted-foreground/60": !isDatePast && !hasSelected && !isToday,
-                        "text-green-600 dark:text-green-400": hasSelected,
-                        "text-blue-600 dark:text-blue-400": isToday && !hasSelected,
-                        "text-muted-foreground": isDatePast,
-                      })}>
-                        {format(date, "MMM")}
+                      
+                      {/* Bottom Section: Indicator */}
+                      <div className="h-2 flex items-center justify-center">
+                        {/* Today Indicator */}
+                        {isToday && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 ring-1 ring-blue-200 dark:ring-blue-800"></div>
+                        )}
+                        {/* Selected Indicator */}
+                        {hasSelected && !isToday && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 ring-1 ring-green-200 dark:ring-green-800"></div>
+                        )}
                       </div>
-                      {/* Today Indicator */}
-                      {isToday && (
-                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-blue-500 ring-2 ring-blue-200 dark:ring-blue-800"></div>
-                      )}
-                      {/* Selected Indicator */}
-                      {hasSelected && !isToday && (
-                        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-500 ring-2 ring-green-200 dark:ring-green-800"></div>
-                      )}
                     </div>
                   );
                 })}
