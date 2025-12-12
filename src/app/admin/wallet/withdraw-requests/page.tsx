@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { useDebounce } from '@/hooks/useDebounce';
+import { useDebounce } from 'use-debounce';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
