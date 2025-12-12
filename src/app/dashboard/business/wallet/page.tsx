@@ -45,10 +45,13 @@ import {
   Activity,
   BarChart3,
   FileDown,
+  RefreshCw,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { useWallet } from "@/hooks/user/useWallet";
 import { useWalletExternalTransactions } from "@/hooks/wallet/useWalletExternalTransactions";
 import type { WalletExternalTransaction, WalletTransaction } from "@/types";
@@ -56,10 +59,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useWalletExternalTransactionById } from "@/hooks/wallet/useWalletExternalTransactionById";
 import { useWalletTransactions } from "@/hooks/wallet/useWalletTransactions";
 import { useCancelWithdrawTransaction } from "@/hooks/wallet/useCancelWithdrawTransaction";
-import { format, subDays, subMonths, isSameMonth } from "date-fns";
+import { format, subDays, subMonths, subYears, isSameMonth, isSameYear, isSameDay, startOfDay, startOfMonth, startOfYear } from "date-fns";
 import {
   Line,
   LineChart,
+  Bar,
+  BarChart,
   ResponsiveContainer,
   XAxis,
   YAxis,
@@ -171,10 +176,13 @@ function mapInternalType(type: string): "transfer_in" | "transfer_out" | "transf
   return "transfer";
 }
 
+type PeriodType = "day" | "month" | "year";
+
 export default function BusinessWalletPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: walletData, isLoading, error } = useWallet();
+  const [earningsPeriod, setEarningsPeriod] = useState<PeriodType>("month");
   const [currentInternalPage, setCurrentInternalPage] = useState(1);
   const [currentExternalPage, setCurrentExternalPage] = useState(1);
   const itemsPerPage = 10;
@@ -373,53 +381,6 @@ export default function BusinessWalletPage() {
     };
   }, [externalTransactions, internalTransactions, walletData]);
 
-  // Mock transaction trends (last 6 months)
-  const transactionTrends = useMemo(() => {
-    const months = [];
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const monthDate = subMonths(now, i);
-      const monthDeposits = externalTransactions
-        .filter(t => {
-          const date = new Date(t.createdAt);
-          return isSameMonth(date, monthDate) && t.direction.toUpperCase() === "DEPOSIT" && t.status.toUpperCase() === "COMPLETED";
-        })
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-      const monthWithdrawals = externalTransactions
-        .filter(t => {
-          const date = new Date(t.createdAt);
-          return isSameMonth(date, monthDate) && t.direction.toUpperCase() === "WITHDRAWAL" && t.status.toUpperCase() === "COMPLETED";
-        })
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-      // Mock earnings for the month
-      const monthEarnings = Math.floor(Math.random() * 2000000) + 500000;
-
-      months.push({
-        month: format(monthDate, "MMM"),
-        deposits: monthDeposits || Math.floor(Math.random() * 3000000) + 1000000,
-        withdrawals: monthWithdrawals || Math.floor(Math.random() * 1000000) + 200000,
-        earnings: monthEarnings,
-      });
-    }
-    return months;
-  }, [externalTransactions]);
-
-  const trendsChartConfig: ChartConfig = {
-    deposits: {
-      label: "Deposits",
-      color: "hsl(var(--chart-1))",
-    },
-    withdrawals: {
-      label: "Withdrawals",
-      color: "hsl(var(--chart-2))",
-    },
-    earnings: {
-      label: "Earnings",
-      color: "hsl(var(--chart-3))",
-    },
-  };
 
   // Filter transactions
   const filteredInternalTransactions = useMemo(() => {
@@ -495,137 +456,144 @@ export default function BusinessWalletPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
-      </div>
+      <PageContainer>
+        <PageHeader
+          title="Wallet"
+          description="Manage your balance, transactions, and earnings"
+          icon={Wallet}
+        />
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Loading wallet information...</p>
+          </div>
+        </div>
+      </PageContainer>
     );
   }
 
   if (error) {
     return (
-      <div className="space-y-6 p-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Wallet</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your balance and transactions
-          </p>
-        </div>
-        <Card>
+      <PageContainer>
+        <PageHeader
+          title="Wallet"
+          description="Manage your balance, transactions, and earnings"
+          icon={Wallet}
+        />
+        <Card className="border-2 border-destructive/20 shadow-xl bg-card/80 backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-              <p className="text-destructive font-medium">Failed to load wallet information</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Please try refreshing the page
+              <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+              </div>
+              <p className="text-lg font-semibold text-foreground mb-2">Failed to load wallet information</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Please try refreshing the page or contact support if the problem persists
               </p>
+              <Button onClick={() => window.location.reload()} variant="outline">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Page
+              </Button>
             </div>
           </CardContent>
         </Card>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Wallet</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your balance, transactions, and earnings
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <FileDown className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-        </div>
-      </div>
+    <PageContainer>
 
       {/* Enhanced Balance Card */}
-      <Card className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white border-0 shadow-lg">
-        <CardHeader>
+      <Card className="border-2 border-primary/10 shadow-xl bg-gradient-to-br from-card via-card/95 to-card/90 backdrop-blur-sm overflow-hidden relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+        <CardHeader className="relative z-10 pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-white text-lg">Total Balance</CardTitle>
-            <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
-              <Wallet className="h-6 w-6 text-white" />
+            <div>
+              <CardTitle className="text-base font-semibold text-muted-foreground mb-1">
+                Total Balance
+              </CardTitle>
+              <div className="text-5xl font-bold text-foreground tracking-tight mt-2">
+                {formatCurrency(totalBalance)}
+              </div>
+            </div>
+            <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shadow-lg">
+              <Wallet className="h-8 w-8 text-primary" />
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <div className="text-5xl font-bold">
-                {formatCurrency(totalBalance)}
-              </div>
-              {lockedBalance > 0 && (
-                <div className="space-y-2 text-sm opacity-90 pt-2 border-t border-white/20">
-                  <div className="flex items-center justify-between">
-                    <span className="opacity-80">Available Balance</span>
-                    <span className="font-semibold text-lg">{formatCurrency(availableBalance)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="opacity-80">Locked Balance</span>
-                    <span className="font-semibold text-yellow-200">{formatCurrency(lockedBalance)}</span>
-                  </div>
+        <CardContent className="relative z-10 space-y-6">
+          {lockedBalance > 0 && (
+            <div className="space-y-3 pt-4 border-t border-border/50">
+              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <span className="text-sm font-medium text-muted-foreground">Available Balance</span>
                 </div>
-              )}
+                <span className="font-bold text-lg text-foreground">{formatCurrency(availableBalance)}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-amber-500" />
+                  <span className="text-sm font-medium text-muted-foreground">Locked Balance</span>
+                </div>
+                <span className="font-bold text-lg text-amber-600 dark:text-amber-500">{formatCurrency(lockedBalance)}</span>
+              </div>
             </div>
-            {walletData?.isLocked && (
-              <Badge variant="destructive" className="bg-red-500/20 text-red-100 border-red-300">
-                <AlertCircle className="h-3 w-3 mr-1" />
-                Wallet Locked
-              </Badge>
-            )}
-            <div className="flex gap-3 pt-2">
-              <Link href="/dashboard/business/wallet/deposit" className="flex-1">
-                <Button 
-                  className="bg-white text-blue-600 hover:bg-gray-100 w-full"
-                  size="sm"
-                  disabled={walletData?.isLocked}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Deposit
-                </Button>
-              </Link>
-              <Link href="/dashboard/business/wallet/withdraw" className="flex-1">
-                <Button 
-                  className="bg-white text-blue-600 hover:bg-gray-100 w-full"
-                  size="sm"
-                  disabled={walletData?.isLocked}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  Withdraw
-                </Button>
-              </Link>
-            </div>
+          )}
+          {walletData?.isLocked && (
+            <Badge variant="destructive" className="w-full justify-center py-2 bg-red-500/20 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700">
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Wallet Locked
+            </Badge>
+          )}
+          <div className="flex gap-3 pt-2">
+            <Link href="/dashboard/business/wallet/deposit" className="flex-1">
+              <Button 
+                className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all"
+                disabled={walletData?.isLocked}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Deposit
+              </Button>
+            </Link>
+            <Link href="/dashboard/business/wallet/withdraw" className="flex-1">
+              <Button 
+                className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all"
+                disabled={walletData?.isLocked}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Withdraw
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>
 
       {/* Enhanced Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="group border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Total Deposits
             </CardTitle>
-            <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <Download className="h-4 w-4 text-emerald-600" />
+            <div className="h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
+              <Download className="h-5 w-5 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-emerald-600">
+            <div className="text-3xl font-bold text-primary mb-3">
               {formatCurrency(stats.totalDeposits)}
             </div>
-            <div className="flex items-center gap-2 mt-2">
-              <p className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between pt-2 border-t border-border/50">
+              <p className="text-xs font-medium text-muted-foreground">
                 {formatCurrency(stats.thisMonthDeposits)} this month
               </p>
               {stats.depositsChange !== 0 && (
-                <div className={`flex items-center gap-1 text-xs ${
-                  stats.depositsChange > 0 ? "text-emerald-600" : "text-red-600"
+                <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md ${
+                  stats.depositsChange > 0 
+                    ? "text-green-600 dark:text-green-400 bg-green-500/10" 
+                    : "text-red-600 dark:text-red-400 bg-red-500/10"
                 }`}>
                   {stats.depositsChange > 0 ? (
                     <TrendingUp className="h-3 w-3" />
@@ -639,26 +607,28 @@ export default function BusinessWalletPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="group border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Total Earnings
             </CardTitle>
-            <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-amber-600" />
+            <div className="h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
+              <TrendingUp className="h-5 w-5 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-amber-600">
+            <div className="text-3xl font-bold text-primary mb-3">
               {formatCurrency(stats.totalEarnings)}
             </div>
-            <div className="flex items-center gap-2 mt-2">
-              <p className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between pt-2 border-t border-border/50">
+              <p className="text-xs font-medium text-muted-foreground">
                 {formatCurrency(stats.thisMonthEarnings)} this month
               </p>
               {stats.earningsChange !== 0 && (
-                <div className={`flex items-center gap-1 text-xs ${
-                  stats.earningsChange > 0 ? "text-emerald-600" : "text-red-600"
+                <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md ${
+                  stats.earningsChange > 0 
+                    ? "text-green-600 dark:text-green-400 bg-green-500/10" 
+                    : "text-red-600 dark:text-red-400 bg-red-500/10"
                 }`}>
                   {stats.earningsChange > 0 ? (
                     <TrendingUp className="h-3 w-3" />
@@ -672,122 +642,147 @@ export default function BusinessWalletPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="group border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Total Withdrawals
             </CardTitle>
-            <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center">
-              <Upload className="h-4 w-4 text-orange-600" />
+            <div className="h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
+              <Upload className="h-5 w-5 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-orange-600">
+            <div className="text-3xl font-bold text-primary mb-3">
               {formatCurrency(stats.totalWithdrawals)}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs font-medium text-muted-foreground pt-2 border-t border-border/50">
               To bank account
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="group border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Total Transactions
             </CardTitle>
-            <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <Activity className="h-4 w-4 text-blue-600" />
+            <div className="h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
+              <Activity className="h-5 w-5 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">
+            <div className="text-3xl font-bold text-primary mb-3">
               {stats.totalTransactions}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs font-medium text-muted-foreground pt-2 border-t border-border/50">
               All time transactions
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Transaction Trends Chart */}
-      <Card className="border-border/60 shadow-sm">
-        <CardHeader>
+      {/* Monthly Earnings Chart */}
+      <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-primary" />
-                Transaction Trends
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                </div>
+                Earnings Performance
               </CardTitle>
-              <CardDescription className="mt-1">
-                Deposits, withdrawals, and earnings over the last 6 months
+              <CardDescription className="mt-2 text-sm">
+                Earnings breakdown over time
               </CardDescription>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                variant={earningsPeriod === "day" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setEarningsPeriod("day")}
+                className="h-8 px-3 text-xs"
+              >
+                Day
+              </Button>
+              <Button
+                variant={earningsPeriod === "month" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setEarningsPeriod("month")}
+                className="h-8 px-3 text-xs"
+              >
+                Month
+              </Button>
+              <Button
+                variant={earningsPeriod === "year" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setEarningsPeriod("year")}
+                className="h-8 px-3 text-xs"
+              >
+                Year
+              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="h-64">
-            {transactionTrends.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <BarChart3 className="h-12 w-12 text-muted-foreground/50 mb-3" />
-                <p className="text-sm text-muted-foreground font-medium">
-                  No transaction data yet
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Trends will appear as you make transactions
-                </p>
-              </div>
-            ) : (
-              <ChartContainer config={trendsChartConfig} className="h-full w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={transactionTrends}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      className="stroke-muted"
-                    />
-                    <XAxis
-                      dataKey="month"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={10}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <RechartsTooltip
-                      cursor={{ strokeDasharray: "3 3" }}
-                      content={<ChartTooltipContent />}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="deposits"
-                      stroke="var(--color-deposits)"
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="withdrawals"
-                      stroke="var(--color-withdrawals)"
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="earnings"
-                      stroke="var(--color-earnings)"
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            )}
+            <ChartContainer config={earningsChartConfig} className="h-full w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyEarnings}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    className="stroke-muted"
+                  />
+                  <XAxis
+                    dataKey="period"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    tick={{ fontSize: 11 }}
+                    angle={earningsPeriod === "day" ? -45 : 0}
+                    textAnchor={earningsPeriod === "day" ? "end" : "middle"}
+                    height={earningsPeriod === "day" ? 80 : 40}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(value) => {
+                      if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+                      if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+                      return value.toString();
+                    }}
+                  />
+                  <RechartsTooltip
+                    cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload || payload.length === 0) return null;
+                      const value = payload[0].value as number;
+                      return (
+                        <div className="rounded-lg border bg-background px-3 py-2 shadow-sm">
+                          <p className="mb-1 text-[11px] font-medium text-muted-foreground">
+                            {label}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-[hsl(221.2 83.2% 53.3%)]" />
+                            <span className="text-[11px] font-medium">Earnings</span>
+                            <span className="ml-auto text-[11px] font-semibold">
+                              {formatCurrency(value)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Bar
+                    dataKey="earnings"
+                    fill="hsl(221.2 83.2% 53.3%)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </div>
         </CardContent>
       </Card>
@@ -829,9 +824,9 @@ export default function BusinessWalletPage() {
 
             {/* Internal Transactions Tab */}
             <TabsContent value="internal" className="space-y-4">
-              <div className="rounded-md border border-blue-200 bg-blue-50/50 dark:border-blue-700 dark:bg-blue-950/50 p-3 mb-4">
-                <p className="text-sm text-blue-900 dark:text-blue-200 font-medium flex items-center gap-2">
-                  <ArrowLeftRight className="h-4 w-4" />
+              <div className="rounded-md border border-primary/20 bg-primary/5 dark:border-primary/30 dark:bg-primary/10 p-3 mb-4">
+                <p className="text-sm text-foreground font-medium flex items-center gap-2">
+                  <ArrowLeftRight className="h-4 w-4 text-primary" />
                   Internal transactions represent money movements within the platform (e.g., to/from escrow)
                 </p>
               </div>
@@ -1001,9 +996,9 @@ export default function BusinessWalletPage() {
 
             {/* External Transactions Tab */}
             <TabsContent value="external" className="space-y-4">
-              <div className="rounded-md border border-amber-200 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-950/50 p-3 mb-4">
-                <p className="text-sm text-amber-900 dark:text-amber-200 font-medium flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
+              <div className="rounded-md border border-primary/20 bg-primary/5 dark:border-primary/30 dark:bg-primary/10 p-3 mb-4">
+                <p className="text-sm text-foreground font-medium flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" />
                   External transactions are deposits from or withdrawals to your bank account
                 </p>
               </div>
@@ -1254,6 +1249,6 @@ export default function BusinessWalletPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   );
 }
