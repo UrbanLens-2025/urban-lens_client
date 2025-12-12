@@ -183,6 +183,10 @@ function buildBreadcrumbs(
 
     currentPath += `/${segment}`;
     
+    // Check if next segment is an action page (create/edit/new) - if so, skip adding current segment
+    const nextSegment = index < segments.length - 1 ? segments[index + 1] : null;
+    const isNextActionPage = nextSegment === "edit" || nextSegment === "create" || nextSegment === "new";
+    
     // Handle special action pages
     if (segment === "edit" || segment === "create" || segment === "new") {
       const actionLabel = segment === "new" ? "Create" : segment.charAt(0).toUpperCase() + segment.slice(1);
@@ -197,14 +201,25 @@ function buildBreadcrumbs(
         parentLabel = actualPrevSegment ? routeLabels[actualPrevSegment] || actualPrevSegment : "Item";
       }
       
+      // For "create request" pages, just show "Create request" without the parent
+      let finalLabel = `${actionLabel} ${parentLabel}`;
+      if (segment === "create" && actualPrevSegment === "request") {
+        finalLabel = "Create request";
+      }
+      
       breadcrumbs.push({
-        label: `${actionLabel} ${parentLabel}`,
+        label: finalLabel,
         icon: FileText,
         // Store the locationId if we're editing a location
         ...(segment === "edit" && isIdSegment(actualPrevSegment || "") && segments[index - 2] === "locations" 
           ? { locationId: actualPrevSegment } 
           : {}),
       });
+      return;
+    }
+
+    // Skip adding current segment if next segment is an action page
+    if (isNextActionPage) {
       return;
     }
 
