@@ -86,6 +86,11 @@ const adminNavGroups = [
     groupLabel: 'Financial',
     items: [
       { title: 'Wallet', url: '/admin/wallet', icon: IconWallet },
+      {
+        title: 'Withdraw Requests',
+        url: '/admin/wallet/withdraw-requests',
+        icon: IconFileText,
+      },
     ],
   },
   {
