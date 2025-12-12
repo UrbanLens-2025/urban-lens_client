@@ -309,28 +309,20 @@ function LocationDetailLayoutContent({
                 </div>
                 
                 {truncatedDescription && (
-                  <p className="text-base text-muted-foreground leading-relaxed max-w-3xl line-clamp-2">
+                  <p className="text-base text-muted-foreground leading-relaxed max-w-3xl line-clamp-2 pt-3">
                     {truncatedDescription}
                   </p>
                 )}
 
                 {/* Address Information */}
-                <div className="space-y-2 pt-2">
+                <div className="space-y-2 pt-2 flex">
                   <div className="flex flex-wrap items-center gap-3">
                     {/* Address */}
                     <div className="flex items-center gap-2 text-sm bg-muted/50 px-3 py-1.5 rounded-lg">
                       <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <span className="font-medium whitespace-nowrap">
-                        {location.addressLine}
+                        {location.addressLine}, {location.addressLevel1}, {location.addressLevel2}
                       </span>
-                      {location.addressLevel1 && location.addressLevel2 && (
-                        <>
-                          <span className="text-muted-foreground mx-1.5">•</span>
-                          <span className="text-muted-foreground text-xs">
-                            {location.addressLevel1}, {location.addressLevel2}
-                          </span>
-                        </>
-                      )}
                     </div>
                   </div>
                   

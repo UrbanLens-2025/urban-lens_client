@@ -18,7 +18,7 @@ export function useCreateLocationRequest() {
       queryClient.invalidateQueries({ queryKey: ['myLocationRequests'] });
       queryClient.invalidateQueries({ queryKey: ['myLocations'] });
       // Navigate back to locations page without reload
-      router.push('/dashboard/business/locations');
+      router.push('/dashboard/business/location-requests');
     },
 
     onError: (err) => {

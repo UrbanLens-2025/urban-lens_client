@@ -215,6 +215,7 @@ import {
 } from "@/components/ui/tabs";
 import { useOwnerLocationBookings } from "@/hooks/locations/useOwnerLocationBookings";
 import { startOfDay, startOfWeek, startOfMonth, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, format, isSameDay, isSameWeek, isSameMonth, eachDayOfInterval, eachWeekOfInterval, getDay, endOfWeek, endOfMonth } from "date-fns";
+import { CurrencyInfo } from "@/components/ui/currency-display";
 
 function InfoRow({
   label,
@@ -257,267 +258,6 @@ const COLORS = {
   completed: "hsl(217, 91%, 60%)",
   primary: "hsl(var(--primary))",
 };
-
-function VoucherStatusChart({ vouchers }: { vouchers: LocationVoucher[] }) {
-  const data = useMemo(() => {
-    const now = new Date();
-    const counts = { active: 0, scheduled: 0, expired: 0 };
-    vouchers.forEach((voucher) => {
-      const start = new Date(voucher.startDate);
-      const end = new Date(voucher.endDate);
-      if (start > now) counts.scheduled += 1;
-      else if (end < now) counts.expired += 1;
-      else counts.active += 1;
-    });
-    return [
-      { name: "Active", value: counts.active, color: COLORS.active },
-      { name: "Scheduled", value: counts.scheduled, color: COLORS.scheduled },
-      { name: "Expired", value: counts.expired, color: COLORS.expired },
-    ].filter((item) => item.value > 0);
-  }, [vouchers]);
-
-  const chartConfig: ChartConfig = {
-    value: {
-      label: "Vouchers",
-      color: COLORS.primary,
-    },
-  };
-
-  if (data.length === 0) {
-    return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
-        No voucher data available
-      </div>
-    );
-  }
-
-  return (
-    <ChartContainer config={chartConfig} className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
-            outerRadius={80}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Pie>
-          <RechartsTooltip content={<ChartTooltipContent />} />
-        </PieChart>
-      </ResponsiveContainer>
-    </ChartContainer>
-  );
-}
-
-function MissionStatusChart({ missions }: { missions: LocationMission[] }) {
-  const data = useMemo(() => {
-    const now = new Date();
-    const counts = { active: 0, scheduled: 0, completed: 0 };
-    missions.forEach((mission) => {
-      const start = new Date(mission.startDate);
-      const end = new Date(mission.endDate);
-      if (start > now) counts.scheduled += 1;
-      else if (end < now) counts.completed += 1;
-      else counts.active += 1;
-    });
-    return [
-      { name: "Active", value: counts.active, color: COLORS.active },
-      { name: "Scheduled", value: counts.scheduled, color: COLORS.scheduled },
-      { name: "Completed", value: counts.completed, color: COLORS.completed },
-    ].filter((item) => item.value > 0);
-  }, [missions]);
-
-  const chartConfig: ChartConfig = {
-    value: {
-      label: "Missions",
-      color: COLORS.primary,
-    },
-  };
-
-  if (data.length === 0) {
-    return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
-        No mission data available
-      </div>
-    );
-  }
-
-  return (
-    <ChartContainer config={chartConfig} className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
-            outerRadius={80}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Pie>
-          <RechartsTooltip content={<ChartTooltipContent />} />
-        </PieChart>
-      </ResponsiveContainer>
-    </ChartContainer>
-  );
-}
-
-// Revenue Trend Chart Component
-function RevenueTrendChart({ revenueData }: { revenueData: { total: number; thisMonth: number; change: number } }) {
-  // Mock data for last 6 months
-  const chartData = useMemo(() => {
-    const months = [];
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const date = subMonths(now, i);
-      const monthName = format(date, "MMM");
-      // Generate mock revenue data with some variation
-      const baseRevenue = revenueData.thisMonth / 6;
-      const revenue = baseRevenue * (0.8 + Math.random() * 0.4);
-      months.push({
-        month: monthName,
-        revenue: Math.round(revenue),
-      });
-    }
-    return months;
-  }, [revenueData]);
-
-  const chartConfig: ChartConfig = {
-    revenue: {
-      label: "Revenue",
-      color: "hsl(var(--chart-1))",
-    },
-  };
-
-  return (
-    <ChartContainer config={chartConfig} className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
-          <YAxis />
-          <RechartsTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-    </ChartContainer>
-  );
-}
-
-// Check-ins Trend Chart Component
-function CheckInsTrendChart({ totalCheckIns }: { totalCheckIns: number }) {
-  // Mock data for last 6 months
-  const chartData = useMemo(() => {
-    const months = [];
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const date = subMonths(now, i);
-      const monthName = format(date, "MMM");
-      // Generate mock check-ins data
-      const baseCheckIns = totalCheckIns / 6;
-      const checkIns = baseCheckIns * (0.7 + Math.random() * 0.6);
-      months.push({
-        month: monthName,
-        checkIns: Math.round(checkIns),
-      });
-    }
-    return months;
-  }, [totalCheckIns]);
-
-  const chartConfig: ChartConfig = {
-    checkIns: {
-      label: "Check-ins",
-      color: "hsl(var(--chart-2))",
-    },
-  };
-
-  return (
-    <ChartContainer config={chartConfig} className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
-          <YAxis />
-          <RechartsTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey="checkIns" fill="var(--color-checkIns)" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-    </ChartContainer>
-  );
-}
-
-function ActivityOverviewChart({ 
-  vouchers, 
-  missions 
-}: { 
-  vouchers: LocationVoucher[]; 
-  missions: LocationMission[] 
-}) {
-  const data = useMemo(() => {
-    const months = Array.from({ length: 6 }, (_, i) => {
-      const date = subMonths(new Date(), 5 - i);
-      const monthStart = startOfMonth(date);
-      const monthEnd = endOfMonth(date);
-      const monthLabel = format(date, "MMM yyyy");
-      
-      const voucherCount = vouchers.filter((v) => {
-        const created = new Date(v.createdAt);
-        return created >= monthStart && created <= monthEnd;
-      }).length;
-
-      const missionCount = missions.filter((m) => {
-        const created = new Date(m.createdAt);
-        return created >= monthStart && created <= monthEnd;
-      }).length;
-
-      return {
-        month: monthLabel,
-        vouchers: voucherCount,
-        missions: missionCount,
-      };
-    });
-    return months;
-  }, [vouchers, missions]);
-
-  const chartConfig: ChartConfig = {
-    vouchers: {
-      label: "Vouchers",
-      color: "hsl(var(--chart-1))",
-    },
-    missions: {
-      label: "Missions",
-      color: "hsl(var(--chart-2))",
-    },
-  };
-
-  return (
-    <ChartContainer config={chartConfig} className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
-          <YAxis />
-          <RechartsTooltip content={<ChartTooltipContent />} />
-          <Legend />
-          <Bar dataKey="vouchers" fill="var(--color-vouchers)" />
-          <Bar dataKey="missions" fill="var(--color-missions)" />
-        </BarChart>
-      </ResponsiveContainer>
-    </ChartContainer>
-  );
-}
 
 // Vouchers Tab Component - Memoized for performance
 const VouchersTab = React.memo(function VouchersTab({ locationId }: { locationId: string }) {
@@ -638,7 +378,7 @@ const VouchersTab = React.memo(function VouchersTab({ locationId }: { locationId
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openVoucherEditTab(voucher.id, voucher.title)}>
-              <Edit className="mr-2 h-4 w-4" /> Edit
+            <Edit className="mr-2 h-4 w-4" /> Edit
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setVoucherToDelete(voucher)} className="text-red-500">
             <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -652,8 +392,8 @@ const VouchersTab = React.memo(function VouchersTab({ locationId }: { locationId
     <div className="space-y-4">
       <div className="flex items-center justify-end">
         <Button size="sm" onClick={openVoucherCreateTab}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create voucher
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Create voucher
         </Button>
       </div>
 
@@ -756,7 +496,7 @@ const VouchersTab = React.memo(function VouchersTab({ locationId }: { locationId
                     filteredVouchers.map((voucher) => (
                       <TableRow key={voucher.id} className="hover:bg-muted/20">
                         <TableCell className="space-y-1">
-                          <div 
+                          <div
                             className="flex items-start gap-3 cursor-pointer"
                             onClick={() => openVoucherDetailTab(voucher.id, voucher.title)}
                           >
@@ -976,10 +716,10 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
 
   const handleDownloadQRCode = () => {
     if (!generatedQRCode) return;
-    
+
     // Generate QR code image from data using a QR code API service
     const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(generatedQRCode.qrCodeData)}`;
-    
+
     const link = document.createElement("a");
     link.href = qrCodeImageUrl;
     link.download = `qr-code-${locationId}-${Date.now()}.png`;
@@ -992,12 +732,12 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
 
   const getQRCodeImageUrl = () => {
     if (!generatedQRCode) return null;
-    
+
     // If qrCodeUrl is provided, use it; otherwise generate from qrCodeData
     if (generatedQRCode.qrCodeUrl) {
       return generatedQRCode.qrCodeUrl;
     }
-    
+
     // Generate QR code image from data using a QR code API service
     return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(generatedQRCode.qrCodeData)}`;
   };
@@ -1035,9 +775,9 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openMissionEditTab(mission.id, mission.title)}>
-              <Edit className="mr-2 h-4 w-4" /> Edit
+            <Edit className="mr-2 h-4 w-4" /> Edit
           </DropdownMenuItem>
-          <DropdownMenuItem 
+          <DropdownMenuItem
             onClick={handleGenerateQRCodeForMission}
             disabled={isGeneratingQR}
           >
@@ -1070,8 +810,8 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
           </p>
         </div>
         <Button size="default" className="shrink-0" onClick={openMissionCreateTab}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create Mission
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Create Mission
         </Button>
       </div>
 
@@ -1208,11 +948,11 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
             <div className="w-full sm:w-80">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search missions by title..." 
-                  value={searchTerm} 
-                  onChange={(e) => setSearchTerm(e.target.value)} 
-                  className="h-10 pl-9" 
+                <Input
+                  placeholder="Search missions by title..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="h-10 pl-9"
                 />
               </div>
             </div>
@@ -1267,7 +1007,7 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
                       missions.map((mission) => (
                         <TableRow key={mission.id} className="hover:bg-muted/30 transition-colors">
                           <TableCell className="py-4">
-                            <div 
+                            <div
                               className="space-y-1.5 cursor-pointer"
                               onClick={() => openMissionDetailTab(mission.id, mission.title)}
                             >
@@ -1326,7 +1066,7 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
                             <div className="space-y-1">
                               <p className="text-base font-semibold">No missions found</p>
                               <p className="text-sm text-muted-foreground max-w-sm">
-                                {searchTerm 
+                                {searchTerm
                                   ? "Try adjusting your search terms or create a new mission"
                                   : "Get started by creating your first mission to engage with your customers"}
                               </p>
@@ -1344,7 +1084,7 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
                   </TableBody>
                 </Table>
               </div>
-              
+
               {/* Pagination */}
               {meta && meta.totalPages > 1 && (
                 <div className="flex items-center justify-between pt-4 border-t mt-4">
@@ -1356,10 +1096,10 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
                     of <span className="font-medium text-foreground">{meta.totalItems}</span> missions
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setPage(page - 1)} 
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page - 1)}
                       disabled={!meta || meta.currentPage <= 1}
                       className="h-9"
                     >
@@ -1391,10 +1131,10 @@ const MissionsTab = React.memo(({ locationId }: { locationId: string }) => {
                         );
                       })}
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setPage(page + 1)} 
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page + 1)}
                       disabled={!meta || meta.currentPage >= meta.totalPages}
                       className="h-9"
                     >
@@ -1579,14 +1319,14 @@ const formatCurrency = (amount: number, currency: string) => {
 };
 
 // Memoized Preview Card Component
-const BookingPreviewCard = React.memo(({ 
-  allowBooking, 
-  basePrice, 
-  currency, 
-  minDuration, 
-  maxDuration, 
-  gapMinutes 
-}: { 
+const BookingPreviewCard = React.memo(({
+  allowBooking,
+  basePrice,
+  currency,
+  minDuration,
+  maxDuration,
+  gapMinutes
+}: {
   allowBooking: boolean;
   basePrice: number;
   currency: string;
@@ -1650,7 +1390,7 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
   const { data: availabilities, isLoading: isLoadingAvailabilities } = useWeeklyAvailabilities(locationId);
   const createConfig = useCreateLocationBookingConfig();
   const updateConfig = useUpdateLocationBookingConfig();
-  
+
   // Check if availability is configured
   const hasAvailability = useMemo(() => {
     return availabilities && availabilities.length > 0;
@@ -1815,86 +1555,86 @@ function BookingConfigTab({ locationId }: { locationId: string }) {
 
                   {/* Duration Settings - Hidden */}
                   {false && (
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Duration Settings
-                    </h3>
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Duration Settings
+                      </h3>
 
-                    <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name="minBookingDurationMinutes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Minimum Duration (minutes)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  placeholder="30"
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  className="h-8"
+                                />
+                              </FormControl>
+                              <FormDescription className="text-xs">
+                                Minimum booking duration in minutes
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="maxBookingDurationMinutes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Maximum Duration (minutes)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  placeholder="240"
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  className="h-8"
+                                />
+                              </FormControl>
+                              <FormDescription className="text-xs">
+                                Maximum booking duration in minutes
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
                       <FormField
                         control={form.control}
-                        name="minBookingDurationMinutes"
+                        name="minGapBetweenBookingsMinutes"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs">Minimum Duration (minutes)</FormLabel>
+                            <FormLabel className="text-xs">Minimum Gap Between Bookings (minutes)</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
-                                min="1"
-                                placeholder="30"
+                                min="0"
+                                placeholder="15"
                                 {...field}
                                 onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                                 className="h-8"
                               />
                             </FormControl>
                             <FormDescription className="text-xs">
-                              Minimum booking duration in minutes
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="maxBookingDurationMinutes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Maximum Duration (minutes)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min="1"
-                                placeholder="240"
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                className="h-8"
-                              />
-                            </FormControl>
-                            <FormDescription className="text-xs">
-                              Maximum booking duration in minutes
+                              Minimum time required between consecutive bookings
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
-
-                    <FormField
-                      control={form.control}
-                      name="minGapBetweenBookingsMinutes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Minimum Gap Between Bookings (minutes)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              placeholder="15"
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                              className="h-8"
-                            />
-                          </FormControl>
-                          <FormDescription className="text-xs">
-                            Minimum time required between consecutive bookings
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
                   )}
 
                   <div className="space-y-3 pt-3 border-t">
@@ -2150,7 +1890,7 @@ function EditLocationTab({ locationId }: { locationId: string }) {
 
   const onSubmit = useCallback(async (values: FormValues) => {
     if (!location) return;
-    
+
     try {
       const { name, description, imageUrl, isVisibleOnMap, tagIds: newTagIds } = values;
       const mainPayload = {
@@ -2658,7 +2398,7 @@ function AnnouncementsTab({ locationId }: { locationId: string }) {
                   {announcements.map((announcement) => (
                     <TableRow key={announcement.id} className="hover:bg-muted/20">
                       <TableCell>
-                        <div 
+                        <div
                           className="flex items-start gap-3 cursor-pointer"
                           onClick={() => openAnnouncementDetailTab(announcement.id, announcement.title)}
                         >
@@ -2813,16 +2553,16 @@ function BookingAndAvailabilityTab({ locationId }: { locationId: string }) {
             Settings
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="current" className="mt-6">
           <CurrentBookingTab locationId={locationId} />
-          </TabsContent>
+        </TabsContent>
         <TabsContent value="history" className="mt-6">
           <BookingHistoryTab locationId={locationId} />
-          </TabsContent>
+        </TabsContent>
         <TabsContent value="settings" className="mt-6">
           <BookingConfigTab locationId={locationId} />
-          </TabsContent>
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -2898,13 +2638,13 @@ function CurrentBookingTab({ locationId }: { locationId: string }) {
 
   const formatBookingDateRange = (dates: { startDateTime: string; endDateTime: string }[]) => {
     if (!dates || dates.length === 0) return { from: "N/A", to: "N/A" };
-    
+
     const startDates = dates.map(d => new Date(d.startDateTime));
     const endDates = dates.map(d => new Date(d.endDateTime));
-    
+
     const earliestStart = new Date(Math.min(...startDates.map(d => d.getTime())));
     const latestEnd = new Date(Math.max(...endDates.map(d => d.getTime())));
-    
+
     return {
       from: format(earliestStart, "MMM dd, yyyy"),
       to: format(latestEnd, "MMM dd, yyyy")
@@ -3044,13 +2784,13 @@ function BookingHistoryTab({ locationId }: { locationId: string }) {
 
   const formatBookingDateRange = (dates: { startDateTime: string; endDateTime: string }[] | undefined) => {
     if (!dates || dates.length === 0) return { from: "N/A", to: "N/A" };
-    
+
     const startDates = dates.map(d => new Date(d.startDateTime));
     const endDates = dates.map(d => new Date(d.endDateTime));
-    
+
     const earliestStart = new Date(Math.min(...startDates.map(d => d.getTime())));
     const latestEnd = new Date(Math.max(...endDates.map(d => d.getTime())));
-    
+
     return {
       from: format(earliestStart, "MMM dd, yyyy"),
       to: format(latestEnd, "MMM dd, yyyy")
@@ -3527,21 +3267,21 @@ function AvailabilityTab({ locationId }: { locationId: string }) {
   const [editedStartHour, setEditedStartHour] = useState<number>(0);
   const [editedEndHour, setEditedEndHour] = useState<number>(0);
   const [editErrors, setEditErrors] = useState<{ start?: string; end?: string; overlap?: string }>({});
-  
+
   // Track hovered block for highlighting
   const [hoveredBlock, setHoveredBlock] = useState<WeeklyAvailabilitySlot | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Track if we should show dialog after selection
   const selectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Track if user is dragging to select multiple cells
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ day: number; hour: number } | null>(null);
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef<{ day: number; hour: number } | null>(null);
   const hasMovedRef = useRef(false);
-  
+
   // Track resize state (resizing an existing slot)
   const [isResizing, setIsResizing] = useState(false);
   const [resizeSlot, setResizeSlot] = useState<WeeklyAvailabilitySlot | null>(null);
@@ -5968,7 +5708,7 @@ function VoucherDetailView({ voucherId, locationId, onClose }: { voucherId: stri
               </CardTitle>
             </CardHeader>
             <CardContent className="h-80 rounded-lg overflow-hidden">
-              <GoogleMapsPicker position={position} onPositionChange={() => {}} />
+              <GoogleMapsPicker position={position} onPositionChange={() => { }} />
             </CardContent>
           </Card>
         </div>
@@ -6121,7 +5861,7 @@ function MissionDetailView({ missionId, locationId, onClose }: { missionId: stri
               </CardTitle>
             </CardHeader>
             <CardContent className="h-80 rounded-lg overflow-hidden">
-              <GoogleMapsPicker position={position} onPositionChange={() => {}} />
+              <GoogleMapsPicker position={position} onPositionChange={() => { }} />
             </CardContent>
           </Card>
         </div>
@@ -6268,7 +6008,7 @@ export default function LocationDetailsPage({
   const router = useRouter();
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState("overview");
-  
+
   // Fetch all vouchers and missions for visualizations
   const { data: allVouchersResponse } = useLocationVouchers({
     locationId,
@@ -6276,7 +6016,7 @@ export default function LocationDetailsPage({
     limit: 1000,
     sortBy: "createdAt:DESC",
   });
-  
+
   const { data: allMissionsResponse } = useLocationMissions({
     locationId,
     page: 1,
@@ -6286,7 +6026,7 @@ export default function LocationDetailsPage({
 
   const allVouchers = allVouchersResponse?.data || [];
   const allMissions = allMissionsResponse?.data || [];
-  
+
   const {
     voucherCreateTab,
     openVoucherCreateTab,
@@ -6334,24 +6074,24 @@ export default function LocationDetailsPage({
   const revenueData = useMemo(() => {
     const allBookings = bookingsData?.data || [];
     const locationBookings = allBookings.filter((b: any) => b.locationId === location?.id);
-    
+
     const totalRevenue = locationBookings.reduce((sum: number, booking: any) => {
       const amount = parseFloat(booking.amountToPay || "0");
       return sum + (isNaN(amount) ? 0 : amount);
     }, 0);
-    
+
     const thisMonthRevenue = locationBookings
       .filter((booking: any) => {
         const bookingDate = new Date(booking.createdAt);
         const now = new Date();
-        return bookingDate.getMonth() === now.getMonth() && 
-               bookingDate.getFullYear() === now.getFullYear();
+        return bookingDate.getMonth() === now.getMonth() &&
+          bookingDate.getFullYear() === now.getFullYear();
       })
       .reduce((sum: number, booking: any) => {
         const amount = parseFloat(booking.amountToPay || "0");
         return sum + (isNaN(amount) ? 0 : amount);
       }, 0);
-    
+
     // If no bookings, use mock data
     if (totalRevenue === 0) {
       return {
@@ -6360,7 +6100,7 @@ export default function LocationDetailsPage({
         change: 15.5,
       };
     }
-    
+
     return {
       total: totalRevenue,
       thisMonth: thisMonthRevenue,
@@ -6382,7 +6122,7 @@ export default function LocationDetailsPage({
         return hasFutureDate;
       })
       .slice(0, 5);
-    
+
     // If no bookings, use mock data
     if (locationBookings.length === 0) {
       return [
@@ -6409,9 +6149,9 @@ export default function LocationDetailsPage({
         },
       ];
     }
-    
+
     return locationBookings.map((booking: any) => {
-      const earliestDate = booking.dates?.[0]?.startDateTime 
+      const earliestDate = booking.dates?.[0]?.startDateTime
         ? new Date(booking.dates[0].startDateTime)
         : new Date();
       return {
@@ -6506,597 +6246,398 @@ export default function LocationDetailsPage({
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       {/* Tab Content */}
       <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
-            <TabsContent value="overview" className="mt-0">
-              <div className="space-y-6">
-                {/* Enhanced Stats Cards - 8 Cards in 2 rows */}
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  {/* Row 1 */}
-                  <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Total Check-ins
-                      </CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Users className="h-4 w-4 text-primary" />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold">{totalCheckIns.toLocaleString()}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        All time check-ins
-                      </p>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Total Revenue
-                      </CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                        <DollarSign className="h-4 w-4 text-emerald-600" />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-emerald-600">
-                        {formatCurrencyOverview(revenueData.total)}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        <span className="text-emerald-600">+{revenueData.change}%</span> vs last month
-                      </p>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Active Bookings
-                      </CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                        <CalendarDays className="h-4 w-4 text-blue-600" />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-blue-600">{activeBookingsCount}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Upcoming bookings
-                      </p>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Upcoming Bookings
-                      </CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                        <CalendarDays className="h-4 w-4 text-purple-600" />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-purple-600">{upcomingBookings.length}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Next 5 bookings
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  {/* Row 2 */}
-                  <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Visibility Status
-                      </CardTitle>
-                      <div className={`h-8 w-8 rounded-full flex items-center justify-center ${location.isVisibleOnMap ? 'bg-emerald-500/10' : 'bg-muted'}`}>
-                        {location.isVisibleOnMap ? (
-                          <Eye className="h-4 w-4 text-emerald-600" />
-                        ) : (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className={`text-2xl font-bold ${location.isVisibleOnMap ? 'text-emerald-600' : 'text-muted-foreground'}`}>
-                        {location.isVisibleOnMap ? 'Visible' : 'Hidden'}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {location.isVisibleOnMap ? 'On map' : 'From map'}
-                      </p>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Service Radius
-                      </CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                        <MapPin className="h-4 w-4 text-blue-600" />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-blue-600">{location.radiusMeters}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        meters
-                      </p>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Total Vouchers
-                      </CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center">
-                        <Ticket className="h-4 w-4 text-orange-600" />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-orange-600">{allVouchers.length}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {allVouchers.filter((v: any) => v.status === "ACTIVE").length} active
-                      </p>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Total Missions
-                      </CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                        <Rocket className="h-4 w-4 text-purple-600" />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-purple-600">{allMissions.length}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {allMissions.filter((m: any) => m.status === "ACTIVE").length} active
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Upcoming Bookings & Recent Activity */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Upcoming Bookings Widget */}
-                  <Card className="border-border/60 shadow-sm">
-                    <CardHeader className="pb-3 pt-4">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        Upcoming Bookings
-                      </CardTitle>
-                      <CardDescription>Next 5 upcoming bookings</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {upcomingBookings.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No upcoming bookings</p>
-                        </div>
-                      ) : (
-                        upcomingBookings.map((booking: any) => (
-                          <div
-                            key={booking.id}
-                            onClick={() => router.push(`/dashboard/business/location-bookings/${booking.id}`)}
-                            className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm truncate">{booking.eventName}</p>
-                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {format(booking.date, "MMM dd, yyyy")}
-                                </span>
-                                <span className="flex items-center gap-1 text-emerald-600 font-medium">
-                                  <DollarSign className="h-3 w-3" />
-                                  {formatCurrencyOverview(booking.amount)}
-                                </span>
-                              </div>
-                            </div>
-                            <Badge
-                              variant={
-                                booking.status === "PAYMENT_RECEIVED"
-                                  ? "default"
-                                  : booking.status === "AWAITING_BUSINESS_PROCESSING"
-                                  ? "secondary"
-                                  : "outline"
-                              }
-                              className="ml-2 shrink-0"
-                            >
-                              {booking.status === "PAYMENT_RECEIVED"
-                                ? "Paid"
-                                : booking.status === "AWAITING_BUSINESS_PROCESSING"
-                                ? "Pending"
-                                : booking.status}
-                            </Badge>
-                          </div>
-                        ))
-                      )}
-                      {upcomingBookings.length > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full mt-2"
-                          onClick={() => router.push(`/dashboard/business/locations/${locationId}/availability?tab=calendar`)}
-                        >
-                          View All Bookings
-                          <ArrowRight className="h-4 w-4 ml-2" />
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Recent Activity Feed */}
-                  <Card className="border-border/60 shadow-sm">
-                    <CardHeader className="pb-3 pt-4">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Activity className="h-5 w-5 text-primary" />
-                        Recent Activity
-                      </CardTitle>
-                      <CardDescription>Latest location activity</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {recentActivity.map((activity) => {
-                        const Icon = activity.icon;
-                        return (
-                          <div
-                            key={activity.id}
-                            className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors"
-                          >
-                            <div className={`p-2 rounded-lg bg-background ${activity.color}`}>
-                              <Icon className="h-4 w-4" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium">{activity.message}</p>
-                              <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Enhanced Analytics Charts */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <Card className="border-border/60 shadow-sm">
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4" />
-                        Revenue Trend
-                      </CardTitle>
-                      <CardDescription>Revenue over the last 6 months</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <RevenueTrendChart revenueData={revenueData} />
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="border-border/60 shadow-sm">
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4" />
-                        Check-ins Trend
-                      </CardTitle>
-                      <CardDescription>Check-ins over the last 6 months</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <CheckInsTrendChart totalCheckIns={totalCheckIns} />
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="border-border/60 shadow-sm">
-                    <CardHeader>
-                      <CardTitle className="text-base">Voucher Status</CardTitle>
-                      <CardDescription>Distribution of voucher status</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <VoucherStatusChart vouchers={allVouchers} />
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="border-border/60 shadow-sm">
-                    <CardHeader>
-                      <CardTitle className="text-base">Mission Status</CardTitle>
-                      <CardDescription>Distribution of mission status</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <MissionStatusChart missions={allMissions} />
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="border-border/60 shadow-sm md:col-span-2 lg:col-span-1">
-                    <CardHeader>
-                      <CardTitle className="text-base">Activity Overview</CardTitle>
-                      <CardDescription>Vouchers & Missions created over time</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ActivityOverviewChart vouchers={allVouchers} missions={allMissions} />
-                    </CardContent>
-                  </Card>
-                </div>
-
-              {/* Map - Main Component */}
-              <Card className="border-border/60 shadow-sm">
-                <CardHeader className="pb-3 pt-4">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    Location Map
+        <TabsContent value="overview" className="mt-0">
+          <div className="space-y-6">
+            {/* Enhanced Stats Cards - 8 Cards in 2 rows */}
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              {/* Row 1 */}
+              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total Check-ins
                   </CardTitle>
-                  <CardDescription className="text-sm">
-                    {location.addressLine}
-                    {location.addressLevel1 && location.addressLevel2 && `, ${location.addressLevel1}, ${location.addressLevel2}`}
-                  </CardDescription>
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Users className="h-4 w-4 text-primary" />
+                  </div>
                 </CardHeader>
-                <CardContent className="h-[500px] md:h-[600px] rounded-lg overflow-hidden pt-0 pb-4">
-                  <GoogleMapsPicker
-                    position={position}
-                    onPositionChange={() => {}}
-                  />
+                <CardContent>
+                  <div className="text-3xl font-bold">{totalCheckIns.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    All time check-ins
+                  </p>
                 </CardContent>
               </Card>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* LEFT COLUMN: DETAILS */}
-                <div className="space-y-4">
-                  {/* Basic Information & Address - Consolidated */}
+              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total Revenue
+                  </CardTitle>
+                  <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                    <DollarSign className="h-4 w-4 text-emerald-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-emerald-600">
+                    {formatCurrencyOverview(revenueData.total)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <span className="text-emerald-600">+{revenueData.change}%</span> vs last month
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Upcoming Bookings
+                  </CardTitle>
+                  <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+                    <CalendarDays className="h-4 w-4 text-purple-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-purple-600">{upcomingBookings.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Next 5 bookings
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total Vouchers
+                  </CardTitle>
+                  <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center">
+                    <Ticket className="h-4 w-4 text-orange-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-orange-600">{allVouchers.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {allVouchers.filter((v: any) => v.status === "ACTIVE").length} active
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total Missions
+                  </CardTitle>
+                  <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+                    <Rocket className="h-4 w-4 text-purple-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-purple-600">{allMissions.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {allMissions.filter((m: any) => m.status === "ACTIVE").length} active
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Upcoming Bookings & Recent Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+              {/* Images & Tags */}
+              <div className="space-y-4">
+                {location.imageUrl && location.imageUrl.length > 0 && (
                   <Card className="border-border/60 shadow-sm">
                     <CardHeader className="pb-3 pt-4">
                       <CardTitle className="flex items-center gap-2 text-sm">
-                        <Layers className="h-4 w-4" />
-                        Location Details
+                        <ImageIcon className="h-4 w-4" />
+                        Location Images
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4 pt-0 pb-4">
-                      {/* Basic Info Section */}
-                      <div className="space-y-3">
-                        <InfoRow
-                          label="Description"
-                          value={location.description || "No description"}
-                        />
-                        <InfoRow
-                          label="Category"
-                          value={location.business?.category || "N/A"}
-                        />
-                      </div>
-                      
-                      {/* Divider */}
-                      <div className="border-t pt-3">
-                        <div className="flex items-center gap-2 mb-3">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <p className="text-xs font-semibold text-muted-foreground">Address & Location</p>
-                        </div>
-                        <div className="space-y-3">
-                          <InfoRow label="Address" value={location.addressLine} icon={MapPin} />
-                          <div className="grid grid-cols-2 gap-3">
-                            <InfoRow
-                              label="District/Ward"
-                              value={location.addressLevel1 || "N/A"}
+                    <CardContent className="pt-0 pb-4">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 pb-4">
+                        {location.imageUrl.map((url, index) => (
+                          <div key={index} className="flex flex-col gap-1">
+                            <img
+                              src={url || "/placeholder.svg"}
+                              alt={`Location image ${index + 1}`}
+                              // Image viewer is handled in layout
+                              className="w-full h-24 object-cover rounded-md border cursor-pointer"
                             />
-                            <InfoRow
-                              label="Province/City"
-                              value={location.addressLevel2 || "N/A"}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Tags */}
-                  {location.tags && location.tags.length > 0 && (
-                    <Card className="border-border/60 shadow-sm">
-                      <CardHeader className="pb-3 pt-4">
-                        <CardTitle className="flex items-center gap-2 text-sm">
-                          <Tag className="h-4 w-4" />
-                          Tags
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 pb-4">
-                        <DisplayTags tags={location.tags} maxCount={12} />
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-
-                {/* RIGHT COLUMN: IMAGES */}
-                <div className="space-y-4">
-                  {location.imageUrl && location.imageUrl.length > 0 && (
-                    <Card className="border-border/60 shadow-sm">
-                      <CardHeader className="pb-3 pt-4">
-                        <CardTitle className="flex items-center gap-2 text-sm">
-                          <ImageIcon className="h-4 w-4" />
-                          Location Images
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 pb-4">
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                          {location.imageUrl.map((url, index) => (
-                            <div key={index} className="flex flex-col gap-1">
-                              <img
-                                src={url || "/placeholder.svg"}
-                                alt={`Location image ${index + 1}`}
-                                // Image viewer is handled in layout
-                                className="w-full h-24 object-cover rounded-md border cursor-pointer"
-                              />
-                              <p className="text-[10px] text-muted-foreground text-center">
-                                Image {index + 1}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              </div>
-              </div>
-            </TabsContent>
-            <TabsContent value="vouchers" className="mt-0">
-              {voucherCreateTab.isOpen ? (
-              <div className="space-y-8 p-6 max-w-4xl mx-auto">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Button type="button" variant="outline" size="icon" onClick={closeVoucherCreateTab}>
-                      <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <div>
-                      <h1 className="text-3xl font-bold">Create Voucher</h1>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Add a new voucher for {location.name}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <CreateVoucherForm 
-                  locationId={location.id} 
-                  locationName={location.name}
-                  onSuccess={() => setActiveTab("vouchers")}
-                />
-              </div>
-            ) : voucherEditTab.isOpen && voucherEditTab.voucherId ? (
-              <div className="space-y-8 p-6 max-w-4xl mx-auto">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Button type="button" variant="outline" size="icon" onClick={closeVoucherEditTab}>
-                      <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <div>
-                      <h1 className="text-3xl font-bold">Edit Voucher</h1>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Update voucher details for {location.name}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <EditVoucherForm 
-                  locationId={location.id}
-                  voucherId={voucherEditTab.voucherId}
-                  locationName={location.name}
-                  onSuccess={() => setActiveTab("vouchers")}
-                />
-              </div>
-            ) : voucherDetailTab.isOpen && voucherDetailTab.voucherId ? (
-              <div className="space-y-6 p-6">
-                <VoucherDetailView 
-                  voucherId={voucherDetailTab.voucherId}
-                  locationId={location.id}
-                  onClose={() => {
-                    closeVoucherDetailTab();
-                    setActiveTab("vouchers");
-                  }}
-                />
-              </div>
-            ) : (
-              <VouchersTab locationId={location.id} />
-            )}
-            </TabsContent>
-            <TabsContent value="missions" className="mt-0">
-              {missionCreateTab.isOpen ? (
-              <div className="space-y-8 p-6 max-w-4xl mx-auto">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Button type="button" variant="outline" size="icon" onClick={closeMissionCreateTab}>
-                      <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <div>
-                      <h1 className="text-3xl font-bold">Create Mission</h1>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Add a new mission for {location.name}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <CreateMissionForm 
-                  locationId={location.id}
-                  locationName={location.name}
-                  onSuccess={() => setActiveTab("missions")}
-                />
-              </div>
-            ) : missionEditTab.isOpen && missionEditTab.missionId ? (
-              <div className="space-y-8 p-6 max-w-4xl mx-auto">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Button type="button" variant="outline" size="icon" onClick={closeMissionEditTab}>
-                      <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <div>
-                      <h1 className="text-3xl font-bold">Edit Mission</h1>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Update mission details for {location.name}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <EditMissionForm 
-                  locationId={location.id}
-                  missionId={missionEditTab.missionId}
-                  locationName={location.name}
-                  onSuccess={() => setActiveTab("missions")}
-                />
-              </div>
-            ) : missionDetailTab.isOpen && missionDetailTab.missionId ? (
-              <div className="space-y-6 p-6">
-                <MissionDetailView 
-                  missionId={missionDetailTab.missionId}
-                  locationId={location.id}
-                  onClose={() => {
-                    closeMissionDetailTab();
-                    setActiveTab("missions");
-                  }}
-                />
-              </div>
-            ) : (
-              <MissionsTab locationId={location.id} />
-            )}
-            </TabsContent>
-            <TabsContent value="booking" className="mt-0">
-              <BookingAndAvailabilityTab locationId={location.id} />
-            </TabsContent>
-            <TabsContent value="announcements" className="mt-0">
-              {announcementCreateTab.isOpen ? (
-                    <div className="space-y-8 p-6 max-w-4xl mx-auto">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <Button type="button" variant="outline" size="icon" onClick={closeAnnouncementCreateTab}>
-                            <ArrowLeft className="h-4 w-4" />
-                          </Button>
-                          <div>
-                            <h1 className="text-3xl font-bold">Create Announcement</h1>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Publish news and updates for {location.name}
+                            <p className="text-[10px] text-muted-foreground text-center">
+                              Image {index + 1}
                             </p>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                      <CreateAnnouncementForm 
-                        locationId={location.id} 
-                        locationName={location.name}
-                        onSuccess={() => setActiveTab("announcements")}
-                      />
+                      {location.tags && location.tags.length > 0 && (
+                        <div className="border-t pt-3">
+                          <div className="pb-3 pt-4">
+                            <div className="flex items-center gap-2 text-sm font-semibold">
+                              <Tag className="h-4 w-4" />
+                              Tags
+                            </div>
+                          </div>
+                          <div className="pt-0 pb-4">
+                            <DisplayTags tags={location.tags} maxCount={12} />
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Upcoming Bookings Widget */}
+              <Card className="border-border/60 shadow-sm">
+                <CardHeader className="pb-3 pt-4">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    Upcoming Bookings
+                  </CardTitle>
+                  <CardDescription>Next 5 upcoming bookings</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {upcomingBookings.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No upcoming bookings</p>
                     </div>
-                  ) : announcementDetailTab.isOpen && announcementDetailTab.announcementId ? (
-                    <div className="space-y-6 p-6">
-                      <AnnouncementDetailView 
-                        announcementId={announcementDetailTab.announcementId}
-                        locationId={location.id}
-                        onClose={() => {
-                          closeAnnouncementDetailTab();
-                          setActiveTab("announcements");
-                        }}
-                      />
-                    </div>
-              ) : (
-                <AnnouncementsTab locationId={location.id} />
-              )}
-            </TabsContent>
-            <TabsContent value="edit" className="mt-0">
-              <EditLocationTab locationId={location.id} />
-            </TabsContent>
+                  ) : (
+                    upcomingBookings.map((booking: any) => (
+                      <div
+                        key={booking.id}
+                        onClick={() => router.push(`/dashboard/business/location-bookings/${booking.id}`)}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{booking.eventName}</p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {format(booking.date, "MMM dd, yyyy")}
+                            </span>
+                            <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                              <DollarSign className="h-3 w-3" />
+                              {formatCurrencyOverview(booking.amount)}
+                            </span>
+                          </div>
+                        </div>
+                        <Badge
+                          variant={
+                            booking.status === "PAYMENT_RECEIVED"
+                              ? "default"
+                              : booking.status === "AWAITING_BUSINESS_PROCESSING"
+                                ? "secondary"
+                                : "outline"
+                          }
+                          className="ml-2 shrink-0"
+                        >
+                          {booking.status === "PAYMENT_RECEIVED"
+                            ? "Paid"
+                            : booking.status === "AWAITING_BUSINESS_PROCESSING"
+                              ? "Pending"
+                              : booking.status}
+                        </Badge>
+                      </div>
+                    ))
+                  )}
+                  {upcomingBookings.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => router.push(`/dashboard/business/locations/${locationId}/availability?tab=calendar`)}
+                    >
+                      View All Bookings
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Map - Main Component */}
+            <Card className="border-border/60 shadow-sm">
+              <CardHeader className="pb-3 pt-4">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  Location Map
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  {location.addressLine}
+                  {location.addressLevel1 && location.addressLevel2 && `, ${location.addressLevel1}, ${location.addressLevel2}`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-[500px] md:h-[600px] rounded-lg overflow-hidden pt-0 pb-4">
+                <GoogleMapsPicker
+                  position={position}
+                  onPositionChange={() => { }}
+                />
+              </CardContent>
+            </Card>
           </div>
-        </Tabs>
+        </TabsContent>
+        <TabsContent value="vouchers" className="mt-0">
+          {voucherCreateTab.isOpen ? (
+            <div className="space-y-8 p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button type="button" variant="outline" size="icon" onClick={closeVoucherCreateTab}>
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div>
+                    <h1 className="text-3xl font-bold">Create Voucher</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Add a new voucher for {location.name}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <CreateVoucherForm
+                locationId={location.id}
+                locationName={location.name}
+                onSuccess={() => setActiveTab("vouchers")}
+              />
+            </div>
+          ) : voucherEditTab.isOpen && voucherEditTab.voucherId ? (
+            <div className="space-y-8 p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button type="button" variant="outline" size="icon" onClick={closeVoucherEditTab}>
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div>
+                    <h1 className="text-3xl font-bold">Edit Voucher</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Update voucher details for {location.name}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <EditVoucherForm
+                locationId={location.id}
+                voucherId={voucherEditTab.voucherId}
+                locationName={location.name}
+                onSuccess={() => setActiveTab("vouchers")}
+              />
+            </div>
+          ) : voucherDetailTab.isOpen && voucherDetailTab.voucherId ? (
+            <div className="space-y-6 p-6">
+              <VoucherDetailView
+                voucherId={voucherDetailTab.voucherId}
+                locationId={location.id}
+                onClose={() => {
+                  closeVoucherDetailTab();
+                  setActiveTab("vouchers");
+                }}
+              />
+            </div>
+          ) : (
+            <VouchersTab locationId={location.id} />
+          )}
+        </TabsContent>
+        <TabsContent value="missions" className="mt-0">
+          {missionCreateTab.isOpen ? (
+            <div className="space-y-8 p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button type="button" variant="outline" size="icon" onClick={closeMissionCreateTab}>
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div>
+                    <h1 className="text-3xl font-bold">Create Mission</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Add a new mission for {location.name}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <CreateMissionForm
+                locationId={location.id}
+                locationName={location.name}
+                onSuccess={() => setActiveTab("missions")}
+              />
+            </div>
+          ) : missionEditTab.isOpen && missionEditTab.missionId ? (
+            <div className="space-y-8 p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button type="button" variant="outline" size="icon" onClick={closeMissionEditTab}>
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div>
+                    <h1 className="text-3xl font-bold">Edit Mission</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Update mission details for {location.name}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <EditMissionForm
+                locationId={location.id}
+                missionId={missionEditTab.missionId}
+                locationName={location.name}
+                onSuccess={() => setActiveTab("missions")}
+              />
+            </div>
+          ) : missionDetailTab.isOpen && missionDetailTab.missionId ? (
+            <div className="space-y-6 p-6">
+              <MissionDetailView
+                missionId={missionDetailTab.missionId}
+                locationId={location.id}
+                onClose={() => {
+                  closeMissionDetailTab();
+                  setActiveTab("missions");
+                }}
+              />
+            </div>
+          ) : (
+            <MissionsTab locationId={location.id} />
+          )}
+        </TabsContent>
+        <TabsContent value="booking" className="mt-0">
+          <BookingAndAvailabilityTab locationId={location.id} />
+        </TabsContent>
+        <TabsContent value="announcements" className="mt-0">
+          {announcementCreateTab.isOpen ? (
+            <div className="space-y-8 p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button type="button" variant="outline" size="icon" onClick={closeAnnouncementCreateTab}>
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div>
+                    <h1 className="text-3xl font-bold">Create Announcement</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Publish news and updates for {location.name}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <CreateAnnouncementForm
+                locationId={location.id}
+                locationName={location.name}
+                onSuccess={() => setActiveTab("announcements")}
+              />
+            </div>
+          ) : announcementDetailTab.isOpen && announcementDetailTab.announcementId ? (
+            <div className="space-y-6 p-6">
+              <AnnouncementDetailView
+                announcementId={announcementDetailTab.announcementId}
+                locationId={location.id}
+                onClose={() => {
+                  closeAnnouncementDetailTab();
+                  setActiveTab("announcements");
+                }}
+              />
+            </div>
+          ) : (
+            <AnnouncementsTab locationId={location.id} />
+          )}
+        </TabsContent>
+        <TabsContent value="edit" className="mt-0">
+          <EditLocationTab locationId={location.id} />
+        </TabsContent>
+      </div>
+    </Tabs>
   );
 }
