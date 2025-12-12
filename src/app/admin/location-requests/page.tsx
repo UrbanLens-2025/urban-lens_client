@@ -5,24 +5,12 @@ import { useDebounce } from 'use-debounce';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
-  SortableTableHeader,
-  SortDirection,
-} from '@/components/shared/SortableTableHeader';
-import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -33,29 +21,41 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Loader2,
-  MapPin,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Building2,
-  Globe,
-  User,
-  FileText,
-  Eye,
-  Search,
-  Filter,
-  ChevronLeft,
-  ChevronRight,
-  AlertTriangle,
-} from 'lucide-react';
+  IconSearch,
+  IconFilter,
+  IconMapPin,
+  IconClock,
+  IconCheck,
+  IconX,
+  IconRefresh,
+  IconUser,
+  IconFileText,
+  IconCalendar,
+  IconBuilding,
+  IconWorld,
+  IconMail,
+  IconPhone,
+} from '@tabler/icons-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
 import { LocationRequest, LocationStatus } from '@/types';
 import { useLocationAdminRequests } from '@/hooks/admin/useLocationAdminRequests';
+import { useLocationRequestByIdForAdmin } from '@/hooks/admin/useLocationRequestByIdForAdmin';
+import { useProcessLocationRequest } from '@/hooks/admin/useProcessLocationRequest';
 import { useQueryClient } from '@tanstack/react-query';
-import { formatShortDate } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type StatusFilter = 'all' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -71,17 +71,10 @@ export default function LocationRequestsPage() {
   );
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
-    (searchParams.get('status') as StatusFilter) || 'all'
+    (searchParams.get('status') as StatusFilter) || 'PENDING'
   );
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
-  const [sort, setSort] = useState<{
-    column: string;
-    direction: SortDirection;
-  }>({
-    column: 'createdAt',
-    direction: 'DESC',
-  });
-  const itemsPerPage = 7;
+  const itemsPerPage = 10;
 
   // Update URL when filters change
   useEffect(() => {
@@ -94,7 +87,7 @@ export default function LocationRequestsPage() {
       params.delete('search');
     }
 
-    if (statusFilter !== 'all') {
+    if (statusFilter !== 'PENDING') {
       params.set('status', statusFilter);
     } else {
       params.delete('status');
@@ -117,48 +110,118 @@ export default function LocationRequestsPage() {
     return 'REJECTED';
   };
 
-  const sortBy = sort.direction
-    ? `${sort.column}:${sort.direction}`
-    : 'createdAt:DESC';
-
-  // Data fetching for current view
-  const { data, isLoading, error } = useLocationAdminRequests(
+  const {
+    data: response,
+    isLoading,
+    isFetching,
+  } = useLocationAdminRequests(
     page,
     itemsPerPage,
     debouncedSearchTerm.trim() || undefined,
     getRequestStatus(),
-    sortBy
+    'createdAt:DESC'
   );
+  const requests = response?.data || [];
+  const meta = response?.meta;
 
-  // Fetch statistics for all statuses (without pagination, just to get counts)
-  const { data: pendingData, isLoading: isLoadingPending } =
-    useLocationAdminRequests(
-      1,
-      1,
-      undefined,
-      'AWAITING_ADMIN_REVIEW',
-      'createdAt:DESC'
+  const { mutate: processRequest, isPending } = useProcessLocationRequest();
+
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [approvingRequest, setApprovingRequest] =
+    useState<LocationRequest | null>(null);
+  const [rejectingRequest, setRejectingRequest] =
+    useState<LocationRequest | null>(null);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [expandedDescription, setExpandedDescription] = useState(false);
+
+  // Fetch full details of selected request
+  const { data: selectedRequestData } = useLocationRequestByIdForAdmin(
+    selectedRequestId
+  );
+  const selectedRequest = selectedRequestData || null;
+
+  const handleConfirmApprove = () => {
+    if (!approvingRequest) return;
+    processRequest(
+      { id: approvingRequest.id, payload: { status: 'APPROVED' } },
+      {
+        onSuccess: () => {
+          setStatusFilter('APPROVED');
+          setPage(1);
+          queryClient.invalidateQueries({ queryKey: ['locationRequests'] });
+          queryClient.invalidateQueries({ queryKey: ['locationAdminRequest'] });
+          setApprovingRequest(null);
+        },
+      }
     );
+  };
 
-  const { data: approvedData, isLoading: isLoadingApproved } =
-    useLocationAdminRequests(1, 1, undefined, 'APPROVED', 'createdAt:DESC');
-
-  const { data: rejectedData, isLoading: isLoadingRejected } =
-    useLocationAdminRequests(1, 1, undefined, 'REJECTED', 'createdAt:DESC');
-
-  const requests = data?.data || [];
-  const meta = data?.meta;
+  const handleConfirmReject = () => {
+    if (!rejectingRequest) return;
+    processRequest(
+      {
+        id: rejectingRequest.id,
+        payload: { status: 'REJECTED', adminNotes: adminNotes },
+      },
+      {
+        onSuccess: () => {
+          setStatusFilter('REJECTED');
+          setPage(1);
+          queryClient.invalidateQueries({ queryKey: ['locationRequests'] });
+          queryClient.invalidateQueries({ queryKey: ['locationAdminRequest'] });
+          setRejectingRequest(null);
+          setAdminNotes('');
+        },
+      }
+    );
+  };
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['locationRequests'] });
     queryClient.invalidateQueries({ queryKey: ['locationAdminRequest'] });
   };
 
-  // Calculate real statistics from API data
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  // Fetch statistics for all statuses
+  const { data: pendingResponse } = useLocationAdminRequests(
+    1,
+    1,
+    undefined,
+    'AWAITING_ADMIN_REVIEW',
+    'createdAt:DESC'
+  );
+
+  const { data: approvedResponse } = useLocationAdminRequests(
+    1,
+    1,
+    undefined,
+    'APPROVED',
+    'createdAt:DESC'
+  );
+
+  const { data: rejectedResponse } = useLocationAdminRequests(
+    1,
+    1,
+    undefined,
+    'REJECTED',
+    'createdAt:DESC'
+  );
+
+  // Calculate statistics from API data
   const stats = useMemo(() => {
-    const pending = pendingData?.meta?.totalItems || 0;
-    const approved = approvedData?.meta?.totalItems || 0;
-    const rejected = rejectedData?.meta?.totalItems || 0;
+    const pending = pendingResponse?.meta?.totalItems || 0;
+    const approved = approvedResponse?.meta?.totalItems || 0;
+    const rejected = rejectedResponse?.meta?.totalItems || 0;
     const total = pending + approved + rejected;
 
     return {
@@ -166,25 +229,12 @@ export default function LocationRequestsPage() {
       pending,
       approved,
       rejected,
-      isLoading: isLoadingPending || isLoadingApproved || isLoadingRejected,
     };
   }, [
-    pendingData?.meta?.totalItems,
-    approvedData?.meta?.totalItems,
-    rejectedData?.meta?.totalItems,
-    isLoadingPending,
-    isLoadingApproved,
-    isLoadingRejected,
+    pendingResponse?.meta?.totalItems,
+    approvedResponse?.meta?.totalItems,
+    rejectedResponse?.meta?.totalItems,
   ]);
-
-  const handleSort = (column: string, direction: SortDirection) => {
-    setSort({ column, direction: direction || 'DESC' });
-    setPage(1);
-  };
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
-  };
 
   const getStatusBadge = (status: LocationStatus) => {
     const statusUpper = status?.toUpperCase();
@@ -225,391 +275,626 @@ export default function LocationRequestsPage() {
     );
   };
 
-  if (error) {
-    return (
-      <div className='space-y-6'>
-        <Card className='border-red-200 dark:border-red-800'>
-          <CardContent className='pt-6'>
-            <div className='flex items-center gap-3 text-red-600 dark:text-red-400'>
-              <AlertTriangle className='h-5 w-5' />
-              <p>Error loading location requests. Please try again.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  };
 
   return (
     <div className='space-y-6'>
       {/* Statistics Cards */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-blue-500'>
+        <Card
+          className='hover:shadow-md transition-shadow border-l-4 border-l-blue-500 cursor-pointer'
+          onClick={() => {
+            setStatusFilter('all');
+            setPage(1);
+          }}
+        >
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
             <CardTitle className='text-sm font-medium'>
               Total Requests
             </CardTitle>
             <div className='h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center'>
-              <MapPin className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+              <IconMapPin className='h-5 w-5 text-blue-600 dark:text-blue-400' />
             </div>
           </CardHeader>
           <CardContent>
-            <div className='text-3xl font-bold'>
-              {stats.isLoading ? '—' : stats.total.toLocaleString()}
-            </div>
+            <div className='text-3xl font-bold'>{stats.total}</div>
             <p className='text-xs text-muted-foreground mt-1'>
-              {requests.length} on this page
+              All location requests
             </p>
           </CardContent>
         </Card>
 
-        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-orange-500'>
+        <Card
+          className='hover:shadow-md transition-shadow border-l-4 border-l-yellow-500 cursor-pointer'
+          onClick={() => {
+            setStatusFilter('PENDING');
+            setPage(1);
+          }}
+        >
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>
-              Pending Review
-            </CardTitle>
-            <div className='h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-950 flex items-center justify-center'>
-              <Clock className='h-5 w-5 text-orange-600 dark:text-orange-400' />
+            <CardTitle className='text-sm font-medium'>Pending</CardTitle>
+            <div className='h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-950 flex items-center justify-center'>
+              <IconClock className='h-5 w-5 text-yellow-600 dark:text-yellow-400' />
             </div>
           </CardHeader>
           <CardContent>
-            <div className='text-3xl font-bold'>
-              {stats.isLoading ? '—' : stats.pending.toLocaleString()}
+            <div className='text-3xl font-bold text-yellow-600 dark:text-yellow-400'>
+              {stats.pending}
             </div>
             <p className='text-xs text-muted-foreground mt-1'>
-              {stats.total > 0
-                ? Math.round((stats.pending / stats.total) * 100)
-                : 0}
-              % of total
+              Awaiting review
             </p>
           </CardContent>
         </Card>
 
-        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-green-500'>
+        <Card
+          className='hover:shadow-md transition-shadow border-l-4 border-l-green-500 cursor-pointer'
+          onClick={() => {
+            setStatusFilter('APPROVED');
+            setPage(1);
+          }}
+        >
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
             <CardTitle className='text-sm font-medium'>Approved</CardTitle>
             <div className='h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center'>
-              <CheckCircle2 className='h-5 w-5 text-green-600 dark:text-green-400' />
+              <IconCheck className='h-5 w-5 text-green-600 dark:text-green-400' />
             </div>
           </CardHeader>
           <CardContent>
-            <div className='text-3xl font-bold'>
-              {stats.isLoading ? '—' : stats.approved.toLocaleString()}
+            <div className='text-3xl font-bold text-green-600 dark:text-green-400'>
+              {stats.approved}
             </div>
             <p className='text-xs text-muted-foreground mt-1'>
-              {stats.total > 0
-                ? Math.round((stats.approved / stats.total) * 100)
-                : 0}
-              % of total
+              Approved requests
             </p>
           </CardContent>
         </Card>
 
-        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-red-500'>
+        <Card
+          className='hover:shadow-md transition-shadow border-l-4 border-l-red-500 cursor-pointer'
+          onClick={() => {
+            setStatusFilter('REJECTED');
+            setPage(1);
+          }}
+        >
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
             <CardTitle className='text-sm font-medium'>Rejected</CardTitle>
             <div className='h-10 w-10 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center'>
-              <XCircle className='h-5 w-5 text-red-600 dark:text-red-400' />
+              <IconX className='h-5 w-5 text-red-600 dark:text-red-400' />
             </div>
           </CardHeader>
           <CardContent>
-            <div className='text-3xl font-bold'>
-              {stats.isLoading ? '—' : stats.rejected.toLocaleString()}
+            <div className='text-3xl font-bold text-red-600 dark:text-red-400'>
+              {stats.rejected}
             </div>
             <p className='text-xs text-muted-foreground mt-1'>
-              {stats.total > 0
-                ? Math.round((stats.rejected / stats.total) * 100)
-                : 0}
-              % of total
+              Rejected requests
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Card */}
-      <Card>
-        <CardHeader>
-          <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
-            <div>
-              <CardTitle>Location Requests</CardTitle>
-              <CardDescription className='mt-1'>
-                Total {meta?.totalItems || 0} requests in the system
-              </CardDescription>
+      {/* Two Column Layout */}
+      <div className='grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-280px)]'>
+        {/* Left Column - Request List */}
+        <div className='lg:col-span-5 xl:col-span-4 flex flex-col border rounded-lg bg-card overflow-hidden'>
+          {/* Search and Filters */}
+          <div className='p-4 border-b space-y-3'>
+            <div className='flex items-center justify-between'>
+              <h2 className='text-lg font-semibold'>All Requests</h2>
+              <Button
+                variant='outline'
+                size='icon'
+                onClick={refresh}
+                disabled={isFetching}
+              >
+                {isFetching ? (
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                ) : (
+                  <IconRefresh className='h-4 w-4' />
+                )}
+              </Button>
             </div>
-            <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2'>
-              <div className='relative'>
-                <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
-                <Input
-                  placeholder='Search requests...'
-                  className='pl-9 w-full sm:w-[280px]'
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </div>
-              <Select
-                value={statusFilter}
-                onValueChange={(value) => {
-                  setStatusFilter(value as StatusFilter);
+            <div className='relative'>
+              <IconSearch className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
+              <Input
+                placeholder='Search requests...'
+                className='pl-8'
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-              >
-                <SelectTrigger className='w-full sm:w-[200px]'>
-                  <div className='flex items-center gap-2'>
-                    <Filter className='h-4 w-4' />
-                    <SelectValue placeholder='Filter by status' />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='all'>All Status</SelectItem>
-                  <SelectItem value='PENDING'>Pending</SelectItem>
-                  <SelectItem value='APPROVED'>Approved</SelectItem>
-                  <SelectItem value='REJECTED'>Rejected</SelectItem>
-                </SelectContent>
-              </Select>
+              />
+            </div>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => {
+                setStatusFilter(value as StatusFilter);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger>
+                <div className='flex items-center gap-2'>
+                  <IconFilter className='h-4 w-4' />
+                  <SelectValue placeholder='Filter by Status' />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All</SelectItem>
+                <SelectItem value='PENDING'>Pending</SelectItem>
+                <SelectItem value='APPROVED'>Approved</SelectItem>
+                <SelectItem value='REJECTED'>Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className='text-sm text-muted-foreground'>
+              {meta?.totalItems || 0} results
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className='flex flex-col items-center justify-center h-64 gap-3'>
-              <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
-              <p className='text-sm text-muted-foreground'>Loading data...</p>
+
+          {/* Request List */}
+          <div className='flex-1 overflow-y-auto'>
+            {isLoading ? (
+              <div className='flex items-center justify-center h-64'>
+                <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
+              </div>
+            ) : requests.length === 0 ? (
+              <div className='flex items-center justify-center h-64 text-muted-foreground'>
+                <div className='text-center'>
+                  <IconMapPin className='h-12 w-12 mx-auto mb-2 opacity-50' />
+                  <p>No requests found</p>
+                </div>
+              </div>
+            ) : (
+              <div className='divide-y'>
+                {requests.map((req: LocationRequest, index: number) => (
+                  <div
+                    key={req.id}
+                    onClick={() => {
+                      setSelectedRequestId(req.id);
+                      setExpandedDescription(false);
+                    }}
+                    className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
+                      selectedRequestId === req.id
+                        ? 'bg-muted border-l-4 border-l-primary'
+                        : ''
+                    }`}
+                  >
+                    <div className='flex items-start justify-between mb-2'>
+                      <h3 className='font-semibold text-base line-clamp-1'>
+                        {req.name}
+                      </h3>
+                      {getStatusBadge(req.status)}
+                    </div>
+                    <p className='text-sm text-muted-foreground mb-1'>
+                      {req.addressLine}
+                    </p>
+                    <div className='flex items-center justify-between mt-2'>
+                      <span className='text-xs text-muted-foreground'>
+                        {formatDateTime(req.createdAt)}
+                      </span>
+                      <Badge variant='secondary' className='text-xs'>
+                        {req.type === 'BUSINESS_OWNED' ? (
+                          <IconBuilding className='h-3 w-3 mr-1' />
+                        ) : (
+                          <IconWorld className='h-3 w-3 mr-1' />
+                        )}
+                        {req.type === 'BUSINESS_OWNED' ? 'Business' : 'Public'}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {meta && meta.totalPages > 1 && (
+            <div className='p-4 border-t flex items-center justify-between'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setPage(page - 1)}
+                disabled={page <= 1}
+              >
+                Previous
+              </Button>
+              <div className='text-sm text-muted-foreground'>
+                Page {page} of {meta.totalPages}
+              </div>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setPage(page + 1)}
+                disabled={page >= meta.totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column - Details Panel */}
+        <div className='lg:col-span-7 xl:col-span-8 border rounded-lg bg-card overflow-hidden'>
+          {selectedRequest ? (
+            <div className='h-full overflow-y-auto'>
+              <div className='p-6'>
+                {/* Header with Name and Actions */}
+                <div className='flex items-start justify-between mb-4'>
+                  <div className='flex-1'>
+                    <div className='flex items-start gap-4'>
+                      {selectedRequest.locationImageUrls &&
+                      selectedRequest.locationImageUrls.length > 0 ? (
+                        <div className='relative w-16 h-16 rounded-lg overflow-hidden border flex-shrink-0'>
+                          <Image
+                            src={selectedRequest.locationImageUrls[0]}
+                            alt={selectedRequest.name}
+                            fill
+                            className='object-cover'
+                            sizes='64px'
+                          />
+                        </div>
+                      ) : (
+                        <div className='w-16 h-16 rounded-lg bg-muted border flex items-center justify-center flex-shrink-0'>
+                          <IconMapPin className='h-8 w-8 text-muted-foreground' />
+                        </div>
+                      )}
+                      <div className='flex-1'>
+                        <h1 className='text-2xl font-bold mb-2'>
+                          {selectedRequest.name}
+                        </h1>
+                        <div className='flex items-center gap-2 flex-wrap'>
+                          {getStatusBadge(selectedRequest.status)}
+                          <Badge variant='secondary'>
+                            {selectedRequest.type === 'BUSINESS_OWNED' ? (
+                              <>
+                                <IconBuilding className='h-3 w-3 mr-1' />
+                                Business
+                              </>
+                            ) : (
+                              <>
+                                <IconWorld className='h-3 w-3 mr-1' />
+                                Public
+                              </>
+                            )}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Description - Truncated */}
+                    {selectedRequest.description && (
+                      <div className='mt-4'>
+                        <p
+                          className={`text-sm text-muted-foreground ${
+                            !expandedDescription ? 'line-clamp-2' : ''
+                          }`}
+                        >
+                          {selectedRequest.description}
+                        </p>
+                        {selectedRequest.description.length > 150 && (
+                          <button
+                            onClick={() =>
+                              setExpandedDescription(!expandedDescription)
+                            }
+                            className='text-sm text-blue-600 hover:underline mt-1'
+                          >
+                            {expandedDescription ? 'Show less' : 'Read more'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {selectedRequest.status === 'AWAITING_ADMIN_REVIEW' && (
+                    <div className='flex gap-2 ml-4'>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => setApprovingRequest(selectedRequest)}
+                        className='border-green-600 text-green-700 hover:bg-green-50 hover:text-green-800'
+                      >
+                        <IconCheck className='h-4 w-4 mr-1' />
+                        Approve
+                      </Button>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => setRejectingRequest(selectedRequest)}
+                        className='border-red-600 text-red-700 hover:bg-red-50 hover:text-red-800'
+                      >
+                        <IconX className='h-4 w-4 mr-1' />
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Two Column Grid */}
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-6'>
+                  {/* Submitter Information Card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className='text-base flex items-center gap-2'>
+                        <IconUser className='h-4 w-4' />
+                        Submitter Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className='space-y-3'>
+                      {selectedRequest.createdBy && (
+                        <>
+                          <div className='flex items-start gap-2'>
+                            <Avatar className='h-10 w-10 border-2 border-background'>
+                              {selectedRequest.createdBy.avatarUrl && (
+                                <AvatarImage
+                                  src={selectedRequest.createdBy.avatarUrl}
+                                  alt={`${selectedRequest.createdBy.firstName} ${selectedRequest.createdBy.lastName}`}
+                                  className='object-cover'
+                                />
+                              )}
+                              <AvatarFallback className='bg-primary/10 text-primary font-semibold text-xs'>
+                                {getInitials(
+                                  selectedRequest.createdBy.firstName || '',
+                                  selectedRequest.createdBy.lastName || ''
+                                )}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className='flex-1'>
+                              <p className='text-sm font-medium'>
+                                {selectedRequest.createdBy.firstName}{' '}
+                                {selectedRequest.createdBy.lastName}
+                              </p>
+                              {selectedRequest.createdBy.email && (
+                                <p className='text-xs text-muted-foreground break-all'>
+                                  {selectedRequest.createdBy.email}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Location Information Card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className='text-base flex items-center gap-2'>
+                        <IconMapPin className='h-4 w-4' />
+                        Location
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className='space-y-3'>
+                      <div>
+                        <p className='text-xs font-medium text-muted-foreground mb-1'>
+                          Address
+                        </p>
+                        <p className='text-sm'>{selectedRequest.addressLine}</p>
+                      </div>
+                      {selectedRequest.addressLevel1 && (
+                        <div>
+                          <p className='text-xs font-medium text-muted-foreground mb-1'>
+                            District/City
+                          </p>
+                          <p className='text-sm'>
+                            {selectedRequest.addressLevel1}
+                          </p>
+                        </div>
+                      )}
+                      {selectedRequest.addressLevel2 && (
+                        <div>
+                          <p className='text-xs font-medium text-muted-foreground mb-1'>
+                            Province/State
+                          </p>
+                          <p className='text-sm'>
+                            {selectedRequest.addressLevel2}
+                          </p>
+                        </div>
+                      )}
+                      <div className='grid grid-cols-2 gap-2 pt-2'>
+                        <div>
+                          <p className='text-xs font-medium text-muted-foreground mb-1'>
+                            Latitude
+                          </p>
+                          <p className='text-xs font-mono bg-muted px-2 py-1 rounded'>
+                            {selectedRequest.latitude}
+                          </p>
+                        </div>
+                        <div>
+                          <p className='text-xs font-medium text-muted-foreground mb-1'>
+                            Longitude
+                          </p>
+                          <p className='text-xs font-mono bg-muted px-2 py-1 rounded'>
+                            {selectedRequest.longitude}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Submission Details Card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className='text-base flex items-center gap-2'>
+                        <IconCalendar className='h-4 w-4' />
+                        Submission Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className='space-y-3'>
+                      <div>
+                        <p className='text-xs font-medium text-muted-foreground mb-1'>
+                          Request ID
+                        </p>
+                        <p className='text-xs font-mono break-all bg-muted px-2 py-1 rounded'>
+                          {selectedRequest.id}
+                        </p>
+                      </div>
+                      <div>
+                        <p className='text-xs font-medium text-muted-foreground mb-1'>
+                          Submitted
+                        </p>
+                        <p className='text-sm'>
+                          {formatDateTime(selectedRequest.createdAt)}
+                        </p>
+                      </div>
+                      {selectedRequest.updatedAt && (
+                        <div>
+                          <p className='text-xs font-medium text-muted-foreground mb-1'>
+                            Last Updated
+                          </p>
+                          <p className='text-sm'>
+                            {formatDateTime(selectedRequest.updatedAt)}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <p className='text-xs font-medium text-muted-foreground mb-1'>
+                          Radius
+                        </p>
+                        <p className='text-sm'>
+                          {selectedRequest.radiusMeters} meters
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Admin Notes Card */}
+                  {selectedRequest.adminNotes && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className='text-base flex items-center gap-2'>
+                          <IconFileText className='h-4 w-4' />
+                          Admin Notes
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className='text-sm whitespace-pre-wrap'>
+                          {selectedRequest.adminNotes}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Location Images - Full Width */}
+                {selectedRequest.locationImageUrls &&
+                  selectedRequest.locationImageUrls.length > 0 && (
+                    <Card className='mt-4'>
+                      <CardHeader>
+                        <CardTitle className='text-base flex items-center gap-2'>
+                          <IconFileText className='h-4 w-4' />
+                          Location Images
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3'>
+                          {selectedRequest.locationImageUrls.map(
+                            (url: string, index: number) => (
+                              <a
+                                key={index}
+                                href={url}
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors'
+                              >
+                                <Image
+                                  src={url}
+                                  alt={`Location image ${index + 1}`}
+                                  fill
+                                  className='object-cover'
+                                  sizes='(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
+                                />
+                                <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
+                              </a>
+                            )
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                {/* Action Link */}
+                <div className='mt-6 pt-4 border-t'>
+                  <Link
+                    href={`/admin/location-requests/${selectedRequest.id}`}
+                    className='text-sm text-blue-600 hover:underline inline-flex items-center gap-1'
+                  >
+                    View full request details
+                    <span>→</span>
+                  </Link>
+                </div>
+              </div>
             </div>
           ) : (
-            <>
-              <div className='rounded-md border overflow-x-auto'>
-                <Table>
-                  <TableHeader>
-                    <TableRow className='bg-muted/50 hover:bg-muted/50'>
-                      <TableHead className='w-[60px] text-center'>#</TableHead>
-                      <SortableTableHeader
-                        column='name'
-                        currentSort={sort}
-                        onSort={handleSort}
-                      >
-                        Location Request
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        column='createdBy.firstName'
-                        currentSort={sort}
-                        onSort={handleSort}
-                      >
-                        Submitted By
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        column='type'
-                        currentSort={sort}
-                        onSort={handleSort}
-                      >
-                        Type
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        column='addressLine'
-                        currentSort={sort}
-                        onSort={handleSort}
-                      >
-                        Address
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        column='status'
-                        currentSort={sort}
-                        onSort={handleSort}
-                      >
-                        Status
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        column='createdAt'
-                        currentSort={sort}
-                        onSort={handleSort}
-                      >
-                        Submitted
-                      </SortableTableHeader>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {requests.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className='text-center h-32'>
-                          <div className='flex flex-col items-center justify-center gap-2'>
-                            <FileText className='h-12 w-12 text-muted-foreground/50' />
-                            <p className='text-muted-foreground font-medium'>
-                              No requests found
-                            </p>
-                            <p className='text-sm text-muted-foreground'>
-                              Try changing filters or search keywords
-                            </p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      requests.map((req: any, index: number) => (
-                        <TableRow
-                          key={req.id}
-                          className='hover:bg-muted/50 transition-colors'
-                        >
-                          <TableCell className='text-center text-muted-foreground font-medium'>
-                            {(page - 1) * itemsPerPage + index + 1}
-                          </TableCell>
-                          <TableCell>
-                            <Link
-                              href={`/admin/location-requests/${req.id}`}
-                              className='flex items-center gap-3 group'
-                            >
-                              {req.locationImageUrls &&
-                              req.locationImageUrls.length > 0 ? (
-                                <div className='relative h-10 w-10 flex-shrink-0 rounded-md overflow-hidden border-2 border-background'>
-                                  <Image
-                                    src={req.locationImageUrls[0]}
-                                    alt={req.name}
-                                    fill
-                                    className='object-cover'
-                                    sizes='40px'
-                                  />
-                                </div>
-                              ) : (
-                                <div className='h-10 w-10 flex-shrink-0 rounded-md bg-muted border-2 border-background flex items-center justify-center'>
-                                  <MapPin className='h-4 w-4 text-muted-foreground' />
-                                </div>
-                              )}
-                              <div className='flex-1 min-w-0'>
-                                <p className='font-medium group-hover:text-primary transition-colors truncate'>
-                                  {req.name}
-                                </p>
-                                {req.description && (
-                                  <p className='text-xs text-muted-foreground truncate'>
-                                    {req.description}
-                                  </p>
-                                )}
-                              </div>
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            {req.createdBy ? (
-                              <div className='flex items-center gap-2'>
-                                <Avatar className='h-8 w-8 border-2 border-background'>
-                                  {req.createdBy.avatarUrl && (
-                                    <AvatarImage
-                                      src={req.createdBy.avatarUrl}
-                                      alt={`${req.createdBy.firstName} ${req.createdBy.lastName}`}
-                                      className='object-cover'
-                                    />
-                                  )}
-                                  <AvatarFallback className='bg-primary/10 text-primary font-semibold text-xs'>
-                                    {getInitials(
-                                      req.createdBy.firstName || '',
-                                      req.createdBy.lastName || ''
-                                    )}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className='flex-1 min-w-0'>
-                                  <p className='text-sm font-medium truncate'>
-                                    {req.createdBy.firstName}{' '}
-                                    {req.createdBy.lastName}
-                                  </p>
-                                  {req.createdBy.email && (
-                                    <p className='text-xs text-muted-foreground truncate'>
-                                      {req.createdBy.email}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <span className='text-sm text-muted-foreground'>
-                                N/A
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {req.type === 'BUSINESS_OWNED' ? (
-                              <Badge
-                                variant='outline'
-                                className='flex items-center w-fit gap-1 bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200 dark:bg-orange-950 dark:text-orange-400 dark:border-orange-800'
-                              >
-                                <Building2 className='h-3 w-3' />
-                                Business
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant='outline'
-                                className='flex items-center w-fit gap-1 bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800'
-                              >
-                                <Globe className='h-3 w-3' />
-                                Public
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className='text-muted-foreground max-w-[200px]'>
-                            <div className='truncate' title={req.addressLine}>
-                              {req.addressLine}
-                              {req.addressLevel1 && `, ${req.addressLevel1}`}
-                              {req.addressLevel2 && `, ${req.addressLevel2}`}
-                            </div>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(req.status)}</TableCell>
-                          <TableCell className='text-sm text-muted-foreground'>
-                            {formatShortDate(req.createdAt)}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+            <div className='h-full flex items-center justify-center text-muted-foreground'>
+              <div className='text-center'>
+                <IconMapPin className='h-16 w-16 mx-auto mb-4 opacity-20' />
+                <p className='text-lg font-medium'>Select a request</p>
+                <p className='text-sm mt-1'>
+                  Choose a request from the list to view details
+                </p>
               </div>
-
-              {/* Pagination */}
-              {meta && meta.totalPages > 1 && (
-                <div className='flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t'>
-                  <div className='text-sm text-muted-foreground'>
-                    Showing{' '}
-                    <span className='font-medium text-foreground'>
-                      {(page - 1) * itemsPerPage + 1}
-                    </span>{' '}
-                    -{' '}
-                    <span className='font-medium text-foreground'>
-                      {Math.min(page * itemsPerPage, meta.totalItems)}
-                    </span>{' '}
-                    of{' '}
-                    <span className='font-medium text-foreground'>
-                      {meta.totalItems}
-                    </span>{' '}
-                    requests
-                  </div>
-                  <div className='flex items-center gap-2'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => setPage(page - 1)}
-                      disabled={page <= 1}
-                      className='gap-1'
-                    >
-                      <ChevronLeft className='h-4 w-4' />
-                      Previous
-                    </Button>
-                    <div className='flex items-center gap-1 px-3'>
-                      <span className='text-sm font-medium'>
-                        Page {page} of {meta.totalPages}
-                      </span>
-                    </div>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => setPage(page + 1)}
-                      disabled={page >= meta.totalPages}
-                      className='gap-1'
-                    >
-                      Next
-                      <ChevronRight className='h-4 w-4' />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      <AlertDialog
+        open={!!approvingRequest}
+        onOpenChange={() => setApprovingRequest(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve this Location Request?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to approve the location request &quot;
+              {approvingRequest?.name}&quot;?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmApprove}
+              disabled={isPending}
+            >
+              {isPending && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+              Confirm Approve
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!rejectingRequest}
+        onOpenChange={() => setRejectingRequest(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject this Location Request?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please provide a reason for rejecting &quot;
+              {rejectingRequest?.name}&quot;.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder='Reason for rejection...'
+            value={adminNotes}
+            onChange={(e) => setAdminNotes(e.target.value)}
+            className='mt-4'
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmReject}
+              disabled={isPending}
+            >
+              {isPending && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+              Confirm Reject
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
