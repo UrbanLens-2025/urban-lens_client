@@ -68,39 +68,25 @@ export function SingleFileUpload({ value, onChange }: SingleFileUploadProps) {
 
   if (value) {
     return (
-      <div className="w-full space-y-3">
-        <div className="relative w-full aspect-square min-h-[200px] sm:min-h-[220px] bg-muted/50 rounded-lg overflow-hidden border-2 border-border transition-all duration-300 shadow-sm">
+      <div className="w-full space-y-2">
+        <div className="relative inline-block max-w-sm w-full bg-muted/30 rounded-lg overflow-hidden border border-border transition-all duration-300 group">
           {/* Image Preview - Show new image while uploading, old image otherwise */}
           <Dialog onOpenChange={(open) => !open && setZoomedImage(null)}>
             <DialogTrigger asChild>
-              <div className="relative w-full h-full group cursor-pointer hover:border-primary/50 transition-all duration-300">
+              <button
+                type="button"
+                className="relative w-full h-auto max-h-[100px] sm:max-h-[200px] block cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 rounded-lg overflow-hidden"
+              >
                 <img
                   src={uploadingPreview || value}
                   alt="Preview"
                   className={cn(
-                    "w-full h-full object-cover transition-all duration-300",
-                    !isUploading && "group-hover:scale-105",
-                    isUploading && "opacity-60"
+                    "w-full h-full object-contain transition-all duration-300",
+                    !isUploading && "group-hover:opacity-90",
+                    isUploading && "opacity-50"
                   )}
                 />
-                {!isUploading && (
-                  <>
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:scale-110 shadow-lg"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemove();
-                      }}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
-                )}
-              </div>
+              </button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl p-0 bg-transparent border-none shadow-none">
               <VisuallyHidden>
@@ -114,54 +100,48 @@ export function SingleFileUpload({ value, onChange }: SingleFileUploadProps) {
             </DialogContent>
           </Dialog>
 
+          {/* Action buttons overlay */}
+          {!isUploading && (
+            <div className="absolute top-1.5 right-1.5 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className="h-7 w-7 bg-background/90 backdrop-blur-sm hover:bg-background shadow-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  open();
+                }}
+                title="Replace image"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="h-7 w-7 bg-background/90 backdrop-blur-sm hover:bg-destructive shadow-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemove();
+                }}
+                title="Remove image"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+
           {/* Uploading Overlay */}
           {isUploading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm z-10 rounded-lg">
-              <div className="flex flex-col items-center gap-3">
-                <div className="relative">
-                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="h-6 w-6 rounded-full bg-primary/20 animate-pulse" />
-                  </div>
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="text-sm font-semibold text-foreground">Replacing image...</p>
-                  <p className="text-xs text-muted-foreground">Please wait</p>
-                </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm z-10 rounded-lg">
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="text-xs font-medium text-foreground">Replacing...</p>
               </div>
             </div>
           )}
         </div>
-
-        {/* Replace button - disabled during upload */}
-        {!isUploading && (
-          <div
-            {...getRootProps()}
-            className={cn(
-              "relative border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-all duration-300",
-              isDragActive
-                ? "border-primary bg-primary/5 scale-[1.01] shadow-md"
-                : "border-border hover:border-primary/50 hover:bg-muted/30"
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isUploading) {
-                open();
-              }
-            }}
-          >
-            <input {...getInputProps()} disabled={isUploading} />
-            <div className="flex items-center justify-center gap-2 text-sm">
-              <RefreshCw className={cn(
-                "h-4 w-4 transition-transform duration-300",
-                isDragActive && "animate-spin"
-              )} />
-              <span className="text-muted-foreground font-medium">
-                {isDragActive ? "Drop to replace" : "Click to replace image"}
-              </span>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -170,7 +150,7 @@ export function SingleFileUpload({ value, onChange }: SingleFileUploadProps) {
     <div
       {...getRootProps()}
       className={cn(
-        "relative border-2 border-dashed rounded-lg p-6 sm:p-8 text-center cursor-pointer transition-all duration-300 min-h-[200px] sm:min-h-[220px] flex items-center justify-center",
+        "relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-300 max-w-sm w-full min-h-[96px] sm:min-h-[120px] flex items-center justify-center",
         isDragActive
           ? "border-primary bg-primary/5 scale-[1.01] shadow-md"
           : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm",
@@ -179,31 +159,23 @@ export function SingleFileUpload({ value, onChange }: SingleFileUploadProps) {
     >
       <input {...getInputProps()} disabled={isUploading} />
       {isUploading ? (
-        <div className="flex flex-col items-center justify-center gap-3 w-full">
-          <div className="relative">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="h-6 w-6 rounded-full bg-primary/20 animate-pulse" />
-            </div>
-          </div>
-          <div className="text-center space-y-1">
-            <p className="text-sm font-semibold text-foreground">Uploading...</p>
-            <p className="text-xs text-muted-foreground">Please wait</p>
-          </div>
+        <div className="flex flex-col items-center justify-center gap-2 w-full">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <p className="text-xs font-medium text-foreground">Uploading...</p>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center gap-3 w-full">
+        <div className="flex flex-col items-center justify-center gap-2.5 w-full">
           <div className={cn(
-            "p-3 rounded-full bg-muted transition-all duration-300",
-            isDragActive && "bg-primary/10 scale-110"
+            "p-2.5 rounded-lg bg-muted/50 transition-all duration-300",
+            isDragActive && "bg-primary/10 scale-105"
           )}>
             <UploadCloud className={cn(
-              "h-8 w-8 sm:h-10 sm:w-10 transition-colors duration-300",
+              "h-5 w-5 transition-colors duration-300",
               isDragActive ? "text-primary" : "text-muted-foreground"
             )} />
           </div>
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-foreground">
               <span className="text-primary">Click to upload</span> or drag and drop
             </p>
             <p className="text-xs text-muted-foreground">
