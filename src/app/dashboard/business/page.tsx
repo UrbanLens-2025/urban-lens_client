@@ -212,7 +212,7 @@ export default function BusinessDashboardPage() {
   const locationChartConfig: ChartConfig = {
     checkIns: {
       label: "Check-ins",
-      color: "hsl(var(--primary))",
+      color: "lab(58.8635% 31.6645 115.942)",
     },
   };
 
@@ -337,8 +337,8 @@ export default function BusinessDashboardPage() {
                     <BarChart data={topLocationsForChart}>
                       <defs>
                         <linearGradient id={chartGradientId} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(24, 95%, 53%)" stopOpacity={1} />
-                          <stop offset="100%" stopColor="hsl(24, 95%, 53%)" stopOpacity={0.7} />
+                          <stop offset="0%" stopColor="lab(58.8635% 31.6645 115.942)" stopOpacity={1} />
+                          <stop offset="100%" stopColor="lab(58.8635% 31.6645 115.942)" stopOpacity={0.7} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid

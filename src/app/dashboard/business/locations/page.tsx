@@ -97,11 +97,27 @@ export default function MyLocationsPage() {
     });
   };
 
+  const formatDateWithoutYear = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).replace(',', '');
+  };
+
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -327,9 +343,6 @@ export default function MyLocationsPage() {
                               )}
                               <div className="flex flex-col gap-1 min-w-0">
                                 <span className="font-semibold text-foreground hover:text-primary transition-colors truncate">{location.name}</span>
-                                <span className="text-xs text-muted-foreground font-mono">
-                                  {location.id.substring(0, 8)}...
-                                </span>
                               </div>
                             </div>
                           </Link>
@@ -382,10 +395,10 @@ export default function MyLocationsPage() {
                         <TableCell className="py-4">
                           <div className="flex flex-col gap-0.5">
                             <span className="text-sm font-medium">
-                              {formatDate(location.createdAt)}
+                              {formatDateWithoutYear(location.createdAt)}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {formatDateTime(location.createdAt).split(',')[1]?.trim()}
+                              {formatTime(location.createdAt)}
                             </span>
                           </div>
                         </TableCell>

@@ -192,7 +192,7 @@ export default function MyLocationRequestsPage() {
   return (
     <div className="space-y-4">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Requests</CardTitle>
@@ -216,20 +216,6 @@ export default function MyLocationRequestsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-amber-600">{requestStats.awaitingReview.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              This page only
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Needs More Info</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center">
-              <AlertCircle className="h-4 w-4 text-orange-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-600">{requestStats.needsMoreInfo.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground mt-1">
               This page only
             </p>
@@ -269,7 +255,7 @@ export default function MyLocationRequestsPage() {
         <CardContent className="pt-4 pb-0 px-0">
           <div className="space-y-3 mt-0">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-6 mb-4">
-              <div className="relative flex-1">
+              <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
                   placeholder="Search requests..."
@@ -278,7 +264,7 @@ export default function MyLocationRequestsPage() {
                     setRequestsSearchTerm(e.target.value);
                     setRequestsPage(1);
                   }}
-                  className="h-8 pl-10 pr-4 w-full"
+                  className="h-12 pl-10 pr-4 w-full"
                 />
               </div>
               <Select

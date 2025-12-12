@@ -451,7 +451,7 @@ export default function BusinessWalletPage() {
   const earningsChartConfig: ChartConfig = {
     earnings: {
       label: "Earnings",
-      color: "hsl(221.2 83.2% 53.3%)",
+      color: "lab(58.8635% 31.6645 115.942)",
     },
   };
 
@@ -645,87 +645,59 @@ export default function BusinessWalletPage() {
 
       {/* Enhanced Statistics Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="group border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer">
+        <Card className="group border-2 border-blue-500/20 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-blue-500/30 transition-all duration-300 cursor-pointer">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Total Deposits
             </CardTitle>
-            <div className="h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
-              <Download className="h-5 w-5 text-primary" />
+            <div className="h-10 w-10 rounded-xl bg-blue-500/10 group-hover:bg-blue-500/20 flex items-center justify-center transition-colors">
+              <Download className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary mb-3">
+            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-3">
               {formatCurrency(stats.totalDeposits)}
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-border/50">
               <p className="text-xs font-medium text-muted-foreground">
-                {formatCurrency(stats.thisMonthDeposits)} this month
+                All time deposits
               </p>
-              {stats.depositsChange !== 0 && (
-                <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md ${
-                  stats.depositsChange > 0 
-                    ? "text-green-600 dark:text-green-400 bg-green-500/10" 
-                    : "text-red-600 dark:text-red-400 bg-red-500/10"
-                }`}>
-                  {stats.depositsChange > 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  {Math.abs(stats.depositsChange).toFixed(1)}%
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="group border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer">
+        <Card className="group border-2 border-emerald-500/20 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-emerald-500/30 transition-all duration-300 cursor-pointer">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Total Earnings
             </CardTitle>
-            <div className="h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
-              <TrendingUp className="h-5 w-5 text-primary" />
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 group-hover:bg-emerald-500/20 flex items-center justify-center transition-colors">
+              <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary mb-3">
+            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-3">
               {formatCurrency(stats.totalEarnings)}
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-border/50">
               <p className="text-xs font-medium text-muted-foreground">
-                {formatCurrency(stats.thisMonthEarnings)} this month
+                All time earnings
               </p>
-              {stats.earningsChange !== 0 && (
-                <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md ${
-                  stats.earningsChange > 0 
-                    ? "text-green-600 dark:text-green-400 bg-green-500/10" 
-                    : "text-red-600 dark:text-red-400 bg-red-500/10"
-                }`}>
-                  {stats.earningsChange > 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  {Math.abs(stats.earningsChange).toFixed(1)}%
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="group border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer">
+        <Card className="group border-2 border-amber-500/20 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-amber-500/30 transition-all duration-300 cursor-pointer">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Total Withdrawals
             </CardTitle>
-            <div className="h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
-              <Upload className="h-5 w-5 text-primary" />
+            <div className="h-10 w-10 rounded-xl bg-amber-500/10 group-hover:bg-amber-500/20 flex items-center justify-center transition-colors">
+              <Upload className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary mb-3">
+            <div className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-3">
               {formatCurrency(stats.totalWithdrawals)}
             </div>
             <p className="text-xs font-medium text-muted-foreground pt-2 border-t border-border/50">
@@ -734,17 +706,17 @@ export default function BusinessWalletPage() {
           </CardContent>
         </Card>
 
-        <Card className="group border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer">
+        <Card className="group border-2 border-purple-500/20 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-purple-500/30 transition-all duration-300 cursor-pointer">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Total Transactions
             </CardTitle>
-            <div className="h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
-              <Activity className="h-5 w-5 text-primary" />
+            <div className="h-10 w-10 rounded-xl bg-purple-500/10 group-hover:bg-purple-500/20 flex items-center justify-center transition-colors">
+              <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary mb-3">
+            <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-3">
               {stats.totalTransactions}
             </div>
             <p className="text-xs font-medium text-muted-foreground pt-2 border-t border-border/50">
@@ -838,7 +810,7 @@ export default function BusinessWalletPage() {
                             {label}
                           </p>
                           <div className="flex items-center gap-2">
-                            <span className="h-2 w-2 rounded-full bg-[hsl(221.2 83.2% 53.3%)]" />
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "lab(58.8635% 31.6645 115.942)" }} />
                             <span className="text-[11px] font-medium">Earnings</span>
                             <span className="ml-auto text-[11px] font-semibold">
                               {formatCurrency(value)}
@@ -850,7 +822,7 @@ export default function BusinessWalletPage() {
                   />
                   <Bar
                     dataKey="earnings"
-                    fill="hsl(221.2 83.2% 53.3%)"
+                    fill="lab(58.8635% 31.6645 115.942)"
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
@@ -1052,9 +1024,28 @@ export default function BusinessWalletPage() {
                   >
                     Previous
                   </Button>
-                  <span className="text-sm">
-                    Page {currentInternalPage} of {totalInternalPages}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(totalInternalPages, 4) }, (_, i) => {
+                      const pageNum = i + 1;
+                      const isActive = currentInternalPage === pageNum;
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentInternalPage(pageNum)}
+                          disabled={isLoadingInternalTransactions}
+                          style={isActive ? { 
+                            backgroundColor: "lab(58.8635% 31.6645 115.942)", 
+                            borderColor: "lab(58.8635% 31.6645 115.942)",
+                            color: "white"
+                          } : {}}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
@@ -1267,9 +1258,28 @@ export default function BusinessWalletPage() {
                   >
                     Previous
                   </Button>
-                  <span className="text-sm">
-                    Page {currentExternalPage} of {totalExternalPages || 1}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(totalExternalPages || 1, 4) }, (_, i) => {
+                      const pageNum = i + 1;
+                      const isActive = currentExternalPage === pageNum;
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentExternalPage(pageNum)}
+                          disabled={isLoadingExternalTransactions}
+                          style={isActive ? { 
+                            backgroundColor: "lab(58.8635% 31.6645 115.942)", 
+                            borderColor: "lab(58.8635% 31.6645 115.942)",
+                            color: "white"
+                          } : {}}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
