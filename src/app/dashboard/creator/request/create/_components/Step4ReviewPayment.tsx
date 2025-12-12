@@ -308,54 +308,120 @@ export function Step4ReviewPayment({
                     Booked Times
                   </p>
                   {(() => {
-                    // Group slots by date
-                    const groupedByDate = formValues.dateRanges.reduce((acc, range) => {
-                      const dateKey = format(range.startDateTime, "yyyy-MM-dd");
-                      if (!acc[dateKey]) {
-                        acc[dateKey] = [];
+                    // First, sort all slots globally by start time
+                    const sortedSlots = [...formValues.dateRanges].sort((a, b) => 
+                      a.startDateTime.getTime() - b.startDateTime.getTime()
+                    );
+                    
+                    // Merge consecutive time slots across all dates
+                    const mergedRanges: Array<{ 
+                      startDateTime: Date; 
+                      endDateTime: Date;
+                      id: string; // Unique ID for tracking continued ranges
+                    }> = [];
+                    let currentRange: { startDateTime: Date; endDateTime: Date } | null = null;
+                    let rangeIdCounter = 0;
+                    
+                    sortedSlots.forEach((slot) => {
+                      if (!currentRange) {
+                        currentRange = { ...slot };
+                      } else {
+                        // Check if this slot starts exactly when the current range ends (can be across dates)
+                        if (currentRange.endDateTime.getTime() === slot.startDateTime.getTime()) {
+                          // Merge: extend the end time
+                          currentRange.endDateTime = slot.endDateTime;
+                        } else {
+                          // Not consecutive, save current range and start a new one
+                          mergedRanges.push({
+                            ...currentRange,
+                            id: `range-${rangeIdCounter++}`,
+                          });
+                          currentRange = { ...slot };
+                        }
                       }
-                      acc[dateKey].push(range);
-                      return acc;
-                    }, {} as Record<string, Array<{ startDateTime: Date; endDateTime: Date }>>);
-
+                    });
+                    
+                    // Don't forget to add the last range
+                    if (currentRange) {
+                      mergedRanges.push({
+                        ...currentRange,
+                        id: `range-${rangeIdCounter++}`,
+                      });
+                    }
+                    
+                    // Create a structure to track which ranges span multiple dates
+                    type RangeDisplayItem = {
+                      rangeId: string;
+                      startDateTime: Date;
+                      endDateTime: Date;
+                      fullRange?: { startDateTime: Date; endDateTime: Date }; // Full range for continued ranges
+                      isStart: boolean;
+                      isEnd: boolean;
+                      isContinuation: boolean;
+                    };
+                    
+                    const displayItems: Array<{ dateKey: string; items: RangeDisplayItem[] }> = [];
+                    
+                    mergedRanges.forEach((range) => {
+                      const startDateKey = format(range.startDateTime, "yyyy-MM-dd");
+                      const endDateKey = format(range.endDateTime, "yyyy-MM-dd");
+                      
+                      if (startDateKey === endDateKey) {
+                        // Range is on a single date
+                        const existingDateIndex = displayItems.findIndex(item => item.dateKey === startDateKey);
+                        if (existingDateIndex >= 0) {
+                          displayItems[existingDateIndex].items.push({
+                            rangeId: range.id,
+                            startDateTime: range.startDateTime,
+                            endDateTime: range.endDateTime,
+                            isStart: true,
+                            isEnd: true,
+                            isContinuation: false,
+                          });
+                        } else {
+                          displayItems.push({
+                            dateKey: startDateKey,
+                            items: [{
+                              rangeId: range.id,
+                              startDateTime: range.startDateTime,
+                              endDateTime: range.endDateTime,
+                              isStart: true,
+                              isEnd: true,
+                              isContinuation: false,
+                            }],
+                          });
+                        }
+                      } else {
+                        // Range spans multiple dates - only show on start date with full range
+                        const existingDateIndex = displayItems.findIndex(item => item.dateKey === startDateKey);
+                        const item: RangeDisplayItem = {
+                          rangeId: range.id,
+                          startDateTime: range.startDateTime,
+                          endDateTime: range.endDateTime,
+                          fullRange: { startDateTime: range.startDateTime, endDateTime: range.endDateTime },
+                          isStart: true,
+                          isEnd: false,
+                          isContinuation: false,
+                        };
+                        
+                        if (existingDateIndex >= 0) {
+                          displayItems[existingDateIndex].items.push(item);
+                        } else {
+                          displayItems.push({
+                            dateKey: startDateKey,
+                            items: [item],
+                          });
+                        }
+                      }
+                    });
+                    
                     // Sort dates
-                    const sortedDates = Object.keys(groupedByDate).sort();
+                    displayItems.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
 
                     return (
                       <div className="space-y-2.5">
-                        {sortedDates.map((dateKey) => {
-                          const slots = groupedByDate[dateKey];
+                        {displayItems.map(({ dateKey, items }) => {
                           const date = new Date(dateKey + "T00:00:00");
-                          
-                          // Sort slots by start time
-                          const sortedSlots = [...slots].sort((a, b) => 
-                            a.startDateTime.getTime() - b.startDateTime.getTime()
-                          );
-                          
-                          // Merge consecutive time slots
-                          const mergedSlots: Array<{ startDateTime: Date; endDateTime: Date }> = [];
-                          let currentRange: { startDateTime: Date; endDateTime: Date } | null = null;
-                          
-                          sortedSlots.forEach((slot) => {
-                            if (!currentRange) {
-                              currentRange = { ...slot };
-                            } else {
-                              // Check if this slot starts exactly when the current range ends
-                              if (currentRange.endDateTime.getTime() === slot.startDateTime.getTime()) {
-                                // Merge: extend the end time
-                                currentRange.endDateTime = slot.endDateTime;
-                              } else {
-                                // Not consecutive, save current range and start a new one
-                                mergedSlots.push(currentRange);
-                                currentRange = { ...slot };
-                              }
-                            }
-                          });
-                          
-                          // Don't forget to add the last range
-                          if (currentRange) {
-                            mergedSlots.push(currentRange);
-                          }
                           
                           return (
                             <div key={dateKey} className="p-2.5 border rounded-lg bg-muted/30">
@@ -369,12 +435,37 @@ export function Step4ReviewPayment({
                                   </div>
                                 </div>
                                 <div className="flex-1 flex flex-wrap gap-1.5">
-                                  {mergedSlots.map((range, idx) => {
-                                    const startTime = format(range.startDateTime, "h:mm a");
-                                    const endTime = format(range.endDateTime, "h:mm a");
+                                  {items.map((item, idx) => {
+                                    // Check if this is a multi-date range
+                                    if (item.fullRange) {
+                                      const startDateKey = format(item.fullRange.startDateTime, "yyyy-MM-dd");
+                                      const endDateKey = format(item.fullRange.endDateTime, "yyyy-MM-dd");
+                                      
+                                      if (startDateKey !== endDateKey) {
+                                        // Multi-date range - show full range with both dates
+                                        const startDate = format(new Date(startDateKey + "T00:00:00"), "MMM dd");
+                                        const endDate = format(new Date(endDateKey + "T00:00:00"), "MMM dd");
+                                        const fullStartTime = format(item.fullRange.startDateTime, "h:mm a");
+                                        const fullEndTime = format(item.fullRange.endDateTime, "h:mm a");
+                                        
+                                        return (
+                                          <Badge
+                                            key={`${item.rangeId}-${idx}`}
+                                            variant="secondary"
+                                            className="text-xs font-medium px-2 py-0.5 bg-primary/10 text-primary border-primary/20"
+                                          >
+                                            {startDate} {fullStartTime} → {endDate} {fullEndTime}
+                                          </Badge>
+                                        );
+                                      }
+                                    }
+                                    
+                                    // Single date range
+                                    const startTime = format(item.startDateTime, "h:mm a");
+                                    const endTime = format(item.endDateTime, "h:mm a");
                                     return (
                                       <Badge
-                                        key={idx}
+                                        key={`${item.rangeId}-${idx}`}
                                         variant="secondary"
                                         className="text-xs font-medium px-2 py-0.5 bg-primary/10 text-primary border-primary/20"
                                       >

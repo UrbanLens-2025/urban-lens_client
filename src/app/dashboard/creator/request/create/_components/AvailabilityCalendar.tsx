@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Clock, CalendarDays, Calendar } from "lucide-react";
 import { format, addDays, addHours, addWeeks, startOfDay, startOfWeek, parseISO, subWeeks, isBefore, isSameDay, getDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useWeeklyAvailabilitiesForCreator } from "@/hooks/availability/useWeeklyAvailabilitiesForCreator";
@@ -1018,33 +1018,38 @@ export function AvailabilityCalendar({
       )}
 
         {/* Week Navigation */}
-        <div className="flex items-center justify-between py-2 bg-muted/30 rounded-lg px-3">
+        <div className="flex items-center justify-between py-3 px-4 bg-gradient-to-r from-muted/40 via-muted/30 to-muted/40 rounded-xl border border-border/50 shadow-sm">
           <Button
             variant="outline"
             size="sm"
             onClick={goToPreviousWeek}
-            className="h-8 px-3 flex items-center gap-1.5 hover:bg-background transition-colors"
+            className="h-9 px-4 flex items-center gap-2 hover:bg-background hover:border-primary/30 transition-all shadow-sm"
           >
-            <ChevronLeft className="h-3.5 w-3.5" />
-            <span className="text-[10px] font-medium">{previousWeekRange}</span>
+            <ChevronLeft className="h-4 w-4" />
+            <span className="text-xs font-medium">{previousWeekRange}</span>
           </Button>
           
-          <div className="flex items-center gap-2">
-            <div className="text-center">
-              <div className="text-xs font-semibold text-foreground">
+          <div className="flex items-center gap-3">
+            <div className="text-center px-4 py-1.5 bg-background/80 rounded-lg border border-border/50 shadow-sm">
+              <div className="text-sm font-bold text-foreground flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-primary" />
                 {format(dates[0], "MMM d")} - {format(dates[6], "MMM d, yyyy")}
               </div>
               {isThisWeek && (
-                <div className="text-[9px] text-muted-foreground mt-0.5">Current Week</div>
+                <div className="text-[10px] text-primary font-medium mt-1 flex items-center justify-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
+                  Current Week
+                </div>
               )}
             </div>
             {!isThisWeek && (
               <Button
-                variant="ghost"
+                variant="default"
                 size="sm"
                 onClick={goToThisWeek}
-                className="h-8 text-[10px] hover:bg-background px-2"
+                className="h-9 text-xs font-medium hover:bg-primary/90 px-3 shadow-sm"
               >
+                <Calendar className="h-3.5 w-3.5 mr-1.5" />
                 Today
               </Button>
             )}
@@ -1054,28 +1059,33 @@ export function AvailabilityCalendar({
             variant="outline"
             size="sm"
             onClick={goToNextWeek}
-            className="h-8 px-3 flex items-center gap-1.5 hover:bg-background transition-colors"
+            className="h-9 px-4 flex items-center gap-2 hover:bg-background hover:border-primary/30 transition-all shadow-sm"
           >
-            <span className="text-[10px] font-medium">{nextWeekRange}</span>
-            <ChevronRight className="h-3.5 w-3.5" />
+            <span className="text-xs font-medium">{nextWeekRange}</span>
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Calendar Grid */}
-        <div className="overflow-x-auto rounded-lg border bg-white shadow-sm overflow-y-hidden" ref={calendarRef}>
+        {/* Calendar Grid - 7 Days */}
+        <div className="overflow-x-auto rounded-xl border-2 border-border bg-card shadow-xl overflow-y-hidden" ref={calendarRef}>
           <div className="inline-block min-w-full">
             <div 
-              className="select-none"
+              className="select-none bg-background"
               onMouseLeave={handleCalendarMouseLeave}
               style={{ 
                 height: '672px' // Fixed height to show all 24 hours (24 hours × 28px = 672px)
               }}
             >
-              {/* Header Row - Dates */}
-              <div className="grid grid-cols-[70px_repeat(7,1fr)] gap-0">
-                <div className="h-10 flex items-center justify-center border-b border-r font-semibold text-xs text-foreground bg-muted/50 sticky left-0 z-10">
-                  Time
+              {/* Header Row - Dates - 7 Days */}
+              <div className="grid grid-cols-[90px_repeat(7,minmax(0,1fr))] gap-0 border-b-2 border-border bg-card">
+                {/* Time Column Header */}
+                <div className="h-16 flex items-center justify-center border-r-2 border-border font-bold text-sm text-foreground bg-gradient-to-br from-primary/10 via-muted/50 to-muted/30 sticky left-0 z-20 shadow-md">
+                  <div className="flex flex-col items-center gap-1">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold">Time</span>
+                  </div>
                 </div>
+                {/* 7 Day Headers */}
                 {dates.map((date, dateIndex) => {
                   const dateStart = startOfDay(date);
                   const isDatePast = isBefore(dateStart, today);
@@ -1086,47 +1096,70 @@ export function AvailabilityCalendar({
                       key={date.toISOString()}
                       onClick={() => !isDatePast && handleDateHeaderClick(dateIndex)}
                       className={cn(
-                        "h-10 text-center font-semibold border-b border-r flex flex-col items-center justify-center transition-all duration-200",
+                        "h-16 text-center font-semibold border-r border-b-2 flex flex-col items-center justify-center transition-all duration-200 relative group",
                         {
-                          "bg-muted/30 text-foreground cursor-pointer hover:bg-muted/50": !isDatePast && !hasSelected && !isToday,
-                          "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700 cursor-pointer hover:bg-green-200 dark:hover:bg-green-900/40": !isDatePast && hasSelected,
-                          "bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300": isToday && !hasSelected,
-                          "text-muted-foreground opacity-50 bg-muted/20 cursor-not-allowed": isDatePast,
+                          "bg-gradient-to-br from-muted/50 to-muted/20 text-foreground cursor-pointer hover:from-muted/70 hover:to-muted/40 hover:shadow-md hover:scale-[1.02]": !isDatePast && !hasSelected && !isToday,
+                          "bg-gradient-to-br from-green-200 via-green-100 to-green-50 dark:from-green-900/50 dark:via-green-900/30 dark:to-green-900/20 text-green-800 dark:text-green-200 border-green-500 dark:border-green-700 cursor-pointer hover:from-green-300 hover:via-green-200 hover:to-green-100 dark:hover:from-green-900/60 dark:hover:via-green-900/40 dark:hover:to-green-900/30 shadow-md": !isDatePast && hasSelected,
+                          "bg-gradient-to-br from-blue-100 via-blue-50 to-blue-100/50 dark:from-blue-950/50 dark:via-blue-950/30 dark:to-blue-950/20 border-blue-500 dark:border-blue-800 text-blue-800 dark:text-blue-200 shadow-md ring-2 ring-blue-400/30": isToday && !hasSelected,
+                          "text-muted-foreground opacity-50 bg-muted/10 cursor-not-allowed": isDatePast,
                         }
                       )}
                     >
-                      <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                        {format(date, "EEE")}
-                      </div>
-                      <div className={cn("text-sm font-semibold", {
+                      {/* Day Abbreviation */}
+                      <div className={cn("text-xs font-extrabold uppercase tracking-widest mb-1", {
+                        "text-muted-foreground/70": !isDatePast && !hasSelected && !isToday,
                         "text-green-700 dark:text-green-300": hasSelected,
                         "text-blue-700 dark:text-blue-300": isToday && !hasSelected,
+                        "text-muted-foreground": isDatePast,
+                      })}>
+                        {format(date, "EEE")}
+                      </div>
+                      {/* Day Number */}
+                      <div className={cn("text-lg font-black leading-none", {
+                        "text-foreground": !isDatePast && !hasSelected && !isToday,
+                        "text-green-800 dark:text-green-200": hasSelected,
+                        "text-blue-800 dark:text-blue-200": isToday && !hasSelected,
+                        "text-muted-foreground": isDatePast,
                       })}>
                         {format(date, "d")}
                       </div>
+                      {/* Month Abbreviation */}
+                      <div className={cn("text-[10px] font-semibold mt-0.5 uppercase", {
+                        "text-muted-foreground/60": !isDatePast && !hasSelected && !isToday,
+                        "text-green-600 dark:text-green-400": hasSelected,
+                        "text-blue-600 dark:text-blue-400": isToday && !hasSelected,
+                        "text-muted-foreground": isDatePast,
+                      })}>
+                        {format(date, "MMM")}
+                      </div>
+                      {/* Today Indicator */}
                       {isToday && (
-                        <div className="absolute bottom-1 w-1 h-1 rounded-full bg-blue-500"></div>
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-blue-500 ring-2 ring-blue-200 dark:ring-blue-800"></div>
+                      )}
+                      {/* Selected Indicator */}
+                      {hasSelected && !isToday && (
+                        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-500 ring-2 ring-green-200 dark:ring-green-800"></div>
                       )}
                     </div>
                   );
                 })}
               </div>
 
-              {/* Time Slot Rows */}
+              {/* Time Slot Rows - 7 Days */}
               <div>
                 {timeSlots.map((timeSlot, timeIndex) => {
                   const timeLabel = `${format(timeSlot, "HH:mm")}`;
                   return (
                     <div
                       key={timeSlot.toISOString()}
-                      className="grid grid-cols-[75px_repeat(7,1fr)] gap-0"
+                      className="grid grid-cols-[90px_repeat(7,minmax(0,1fr))] gap-0"
                     >
-                      {/* Time Label */}
-                      <div className="h-[28px] flex items-center justify-end pr-2 text-[10px] font-medium text-muted-foreground border-r bg-muted/20 sticky left-0 z-10">
-                        {timeLabel}
+                      {/* Time Label - Sticky */}
+                      <div className="h-[28px] flex items-center justify-end pr-4 text-xs font-bold text-muted-foreground border-r-2 border-border bg-gradient-to-r from-muted/40 via-muted/20 to-transparent sticky left-0 z-10">
+                        <span className="tabular-nums font-mono">{timeLabel}</span>
                       </div>
 
-                      {/* Date Cells */}
+                      {/* Date Cells - 7 Days */}
                       {dates.map((date, dateIndex) => {
                         const status = getCellStatus(dateIndex, timeIndex);
                         const isDisabled = status === "unavailable" || status === "booked" || status === "past";
@@ -1134,7 +1167,7 @@ export function AvailabilityCalendar({
                         return (
                           <div
                             key={`${date.toISOString()}_${timeSlot.toISOString()}`}
-                            className="h-[28px] border-r border-b"
+                            className="h-[28px] border-r border-b border-border/50"
                             onMouseDown={(e) => !isDisabled && handleMouseDown(e, dateIndex, timeIndex)}
                             onMouseEnter={() => !isDisabled && handleMouseEnter(dateIndex, timeIndex)}
                             onMouseUp={handleMouseUp}

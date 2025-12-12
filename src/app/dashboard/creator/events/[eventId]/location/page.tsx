@@ -8,11 +8,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { MapPin, Calendar, Plus, Building2, Loader2, CheckCircle, Clock, AlertCircle, List, Info, Star, Mail, Phone, Globe, CreditCard, XCircle, ChevronLeft, ChevronRight, RotateCcw, Copy, Check } from "lucide-react";
+import { MapPin, Calendar, CalendarDays, Plus, Building2, Loader2, CheckCircle, Clock, AlertCircle, List, Info, Star, Mail, Phone, Globe, CreditCard, XCircle, ChevronLeft, ChevronRight, RotateCcw, Copy, Check } from "lucide-react";
 import { useEventTabs } from "@/contexts/EventTabContext";
 import { useEventById } from "@/hooks/events/useEventById";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
-import { format, startOfDay, endOfDay, eachDayOfInterval, differenceInHours, addDays, subDays, startOfWeek, getHours, getMinutes, setHours, setMinutes } from "date-fns";
+import { format, startOfDay, endOfDay, eachDayOfInterval, differenceInHours, addDays, subDays, startOfWeek, getHours, getMinutes, setHours, setMinutes, isSameDay } from "date-fns";
 import Image from "next/image";
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
 import { toast } from "sonner";
@@ -202,7 +202,7 @@ function BookingCalendar({
     return startOfWeek(earliestDate, { weekStartsOn: 1 });
   });
 
-  const DAYS_TO_SHOW = 5;
+  const DAYS_TO_SHOW = 7; // Show full week (7 days)
   const TIME_SLOT_HOURS = 2; // 2-hour increments
 
   // Generate time slots: 00:00, 02:00, 04:00, ..., 22:00
@@ -476,95 +476,116 @@ function BookingCalendar({
 
   return (
     <div className="space-y-4">
-      {/* Calendar Navigation */}
-      <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-primary/10 bg-gradient-to-r from-primary/5 to-primary/10">
+      {/* Calendar Navigation - Compact */}
+      <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-border bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
         <Button
           variant="outline"
-          size="icon"
+          size="sm"
           onClick={goToPrevious}
-          className="h-8 w-8 border border-primary/20 hover:bg-primary/10"
+          className="h-8 px-3 flex items-center gap-1.5 border-primary/20 hover:bg-primary/10 hover:border-primary/30 transition-all"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-3.5 w-3.5" />
+          <span className="text-[10px] font-medium">Prev</span>
         </Button>
-        <div className="flex-1 text-center">
-          <span className="text-sm font-semibold text-foreground">
-            {format(displayedDays[0], "MMM dd")} - {format(displayedDays[DAYS_TO_SHOW - 1], "MMM dd, yyyy")}
-          </span>
+        <div className="flex-1 text-center px-3 py-1.5 bg-background/80 rounded-md border border-border/50">
+          <div className="flex items-center justify-center gap-1.5">
+            <CalendarDays className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-bold text-foreground">
+              {format(displayedDays[0], "MMM dd")} - {format(displayedDays[DAYS_TO_SHOW - 1], "MMM dd, yyyy")}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {dates.length > 0 && !isViewingBookings && (
             <Button
               variant="outline"
-              size="icon"
+              size="sm"
               onClick={goToBookings}
-              className="h-8 w-8 border border-primary/20 hover:bg-primary/10"
+              className="h-8 px-2 border-primary/20 hover:bg-primary/10 hover:border-primary/30 transition-all"
               title="Return to bookings"
             >
-              <RotateCcw className="h-4 w-4" />
+              <RotateCcw className="h-3.5 w-3.5" />
             </Button>
           )}
           <Button
             variant="outline"
-            size="icon"
+            size="sm"
             onClick={goToNext}
-            className="h-8 w-8 border border-primary/20 hover:bg-primary/10"
+            className="h-8 px-3 flex items-center gap-1.5 border-primary/20 hover:bg-primary/10 hover:border-primary/30 transition-all"
           >
-            <ChevronRight className="h-4 w-4" />
+            <span className="text-[10px] font-medium">Next</span>
+            <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="border rounded-lg overflow-hidden">
+      {/* Calendar Grid - Compact, No Scroll */}
+      <div className="border-2 border-border rounded-xl overflow-hidden bg-card shadow-lg">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-muted/50 border-b">
-                <th className="w-20 p-1 text-right text-xs font-semibold text-muted-foreground border-r">
-                  Time
+              <tr className="bg-gradient-to-br from-muted/60 via-muted/40 to-muted/30 border-b-2 border-border">
+                {/* Time Column Header */}
+                <th className="w-16 p-1.5 text-center border-r-2 border-border sticky left-0 z-10 bg-gradient-to-br from-muted/60 via-muted/40 to-muted/30 shadow-sm">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <Clock className="h-3 w-3 text-primary" />
+                    <span className="text-[10px] font-bold uppercase tracking-wide">Time</span>
+                  </div>
                 </th>
-                {displayedDays.map((day) => (
-                  <th
-                    key={format(day, "yyyy-MM-dd")}
-                    className="min-w-[120px] p-1 text-center text-xs font-semibold text-foreground border-r last:border-r-0"
-                  >
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-muted-foreground">
-                        {format(day, "EEE")}
-                      </span>
-                      <span className="text-sm font-bold">
-                        {format(day, "dd MMM")}
-                      </span>
-                    </div>
-                  </th>
-                ))}
+                {/* 7 Day Headers - Compact */}
+                {displayedDays.map((day) => {
+                  const isToday = isSameDay(day, new Date());
+                  return (
+                    <th
+                      key={format(day, "yyyy-MM-dd")}
+                      className="min-w-[100px] max-w-[100px] p-1.5 text-center border-r last:border-r-0"
+                    >
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                          {format(day, "EEE")}
+                        </span>
+                        <span className="text-sm font-black leading-none">
+                          {format(day, "d")}
+                        </span>
+                        <span className="text-[9px] font-semibold uppercase text-muted-foreground">
+                          {format(day, "MMM")}
+                        </span>
+                        {isToday && (
+                          <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-primary ring-1 ring-primary/30"></div>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
               {timeSlots.map((hour) => (
-                <tr key={hour} className="border-b last:border-b-0">
-                  <td className="w-20 p-1 text-xs font-mono text-muted-foreground border-r bg-muted/30">
+                <tr key={hour} className="border-b last:border-b-0 hover:bg-muted/20 transition-colors">
+                  {/* Time Label - Sticky, Compact */}
+                  <td className="w-16 p-1 text-[10px] font-bold font-mono text-muted-foreground border-r-2 border-border bg-gradient-to-r from-muted/40 to-muted/20 sticky left-0 z-10">
                     <div className="text-right pr-1">
                       {String(hour).padStart(2, "0")}:00
                     </div>
                   </td>
+                  {/* 7 Day Cells - Compact */}
                   {displayedDays.map((day) => {
                     const cellBooking = getCellBooking(day, hour);
                     return (
                       <td
                         key={`${format(day, "yyyy-MM-dd")}-${hour}`}
-                        className="min-w-[120px] h-8 p-0.5 border-r last:border-r-0 relative"
+                        className="min-w-[100px] max-w-[100px] h-6 p-0.5 border-r last:border-r-0 relative bg-background hover:bg-muted/10 transition-colors"
                       >
                         {cellBooking.isBooked && (
                           <div
-                            className={`absolute rounded-sm ${
+                            className={`absolute rounded ${
                               cellBooking.isFullCell || cellBooking.isMiddle
-                                ? "inset-0 bg-primary/20 border border-primary/40"
+                                ? "inset-0 bg-gradient-to-br from-primary/30 via-primary/25 to-primary/20 border border-primary/50"
                                 : cellBooking.isTopHalf
-                                ? "bg-primary/20 border border-primary/40 border-b-0 rounded-b-none"
+                                ? "bg-gradient-to-br from-primary/30 via-primary/25 to-primary/20 border border-primary/50 border-b-0 rounded-b-none"
                                 : cellBooking.isBottomHalf
-                                ? "bg-primary/20 border border-primary/40 border-t-0 rounded-t-none"
-                                : "inset-0 bg-primary/20 border border-primary/40"
+                                ? "bg-gradient-to-br from-primary/30 via-primary/25 to-primary/20 border border-primary/50 border-t-0 rounded-t-none"
+                                : "inset-0 bg-gradient-to-br from-primary/30 via-primary/25 to-primary/20 border border-primary/50"
                             }`}
                             style={{
                               ...(cellBooking.isTopHalf && {

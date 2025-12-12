@@ -43,6 +43,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
@@ -172,7 +173,31 @@ function EventDetailLayoutContent({
   // Checklist items for publishing
   const hasNameAndDescription = !!(event?.displayName && event?.description);
   const hasDates = !!(event?.startDate && event?.endDate);
-  // Location is complete ONLY if:
+  // Check if location has been booked (for checklist display)
+  // Shows as checked if there's any active (non-cancelled) location booking
+  const hasLocationBooked = useMemo(() => {
+    if (!event?.locationId) return false;
+    
+    // Check locationBookings from the dedicated API first
+    if (locationBookings && locationBookings.length > 0) {
+      return locationBookings.some(booking => {
+        const status = booking.status?.toUpperCase();
+        return status !== "CANCELLED" && booking.location?.id === event.locationId;
+      });
+    }
+    
+    // Fallback to event.locationBookings
+    if (event?.locationBookings && event.locationBookings.length > 0) {
+      return event.locationBookings.some(booking => {
+        const status = booking.status?.toUpperCase();
+        return status !== "CANCELLED" && booking.location?.id === event.locationId;
+      });
+    }
+    
+    return false;
+  }, [event?.locationId, event?.locationBookings, locationBookings]);
+
+  // Location is complete for publishing ONLY if:
   // 1. Event has a locationId
   // 2. There exists an APPROVED location booking with matching location ID
   const hasLocation = useMemo(() => {
@@ -631,65 +656,113 @@ function EventDetailLayoutContent({
           {/* Key Information */}
           <div className="flex-1 space-y-4">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-3xl md:text-4xl font-bold">{event.displayName}</h1>
-                  <Badge variant={statusVariant(event.status)} className="text-sm">{event.status}</Badge>
+              <div className="flex-1 space-y-3">
+                {/* Event Name and Status */}
+                <div className="flex items-start gap-3 flex-wrap">
+                  <h1 className="text-3xl md:text-4xl font-bold leading-tight">{event.displayName}</h1>
+                  <Badge 
+                    variant={statusVariant(event.status)} 
+                    className="text-xs font-semibold px-2.5 py-1 mt-1.5 h-fit"
+                  >
+                    {event.status}
+                  </Badge>
                 </div>
                 
+                {/* Description */}
                 {truncatedDescription && (
-                  <p className="text-base text-muted-foreground leading-relaxed max-w-3xl line-clamp-2">
+                  <p className="text-base text-muted-foreground leading-relaxed max-w-3xl">
                     {truncatedDescription}
                   </p>
                 )}
 
-                {/* Date and Tags Information */}
-                <div className="flex flex-wrap items-center gap-3 pt-2">
-                  {/* Compact Date Range */}
-                  <div className="flex items-center gap-2 text-sm bg-muted/50 px-3 py-1.5 rounded-lg">
-                    <CalendarDays className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    {event.startDate || event.endDate ? (
-                      <span className="font-medium whitespace-nowrap">
-                        {event.startDate ? formatCompactDateTime(event.startDate) : "Not set"}
+                {/* Metadata Section */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
+                  {/* Date Range */}
+                  {event.startDate || event.endDate ? (
+                    <div className="flex items-center gap-2 text-sm bg-muted/60 hover:bg-muted/80 transition-colors px-4 py-2 rounded-lg border border-border/50">
+                      <CalendarDays className="h-4 w-4 text-primary flex-shrink-0" />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {event.startDate ? (
+                          <span className="font-medium text-foreground">
+                            {formatCompactDateTime(event.startDate)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground italic">Not set</span>
+                        )}
                         {event.endDate && (
                           <>
-                            <span className="text-muted-foreground mx-1.5">→</span>
-                            {formatCompactDateTime(event.endDate)}
+                            <span className="text-muted-foreground">→</span>
+                            <span className="font-medium text-foreground">
+                              {formatCompactDateTime(event.endDate)}
+                            </span>
                           </>
                         )}
                         {!event.endDate && event.startDate && (
-                          <span className="text-muted-foreground ml-1.5">(end date not set)</span>
+                          <span className="text-xs text-muted-foreground/70 ml-1">(no end date)</span>
                         )}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground italic">Dates not set</span>
-                    )}
-                  </div>
-
-                  {/* Limited Tags */}
-                  {visibleTags.length > 0 && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {visibleTags.map((tag) => (
-                        <Badge
-                          key={tag.id}
-                          variant="secondary"
-                          style={{
-                            backgroundColor: `${tag.color}15`,
-                            borderColor: tag.color,
-                            color: tag.color,
-                          }}
-                          className="text-xs border"
-                        >
-                          <span className="mr-1">{tag.icon}</span>
-                          {tag.displayName}
-                        </Badge>
-                      ))}
-                      {remainingTagsCount > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{remainingTagsCount} more
-                        </Badge>
-                      )}
+                      </div>
                     </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm bg-muted/30 px-4 py-2 rounded-lg border border-dashed border-muted-foreground/30">
+                      <CalendarDays className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-muted-foreground italic">Dates not set</span>
+                    </div>
+                  )}
+
+                  {/* Tags Section */}
+                  {visibleTags.length > 0 && (
+                    <TooltipProvider>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {visibleTags.map((tag) => (
+                            <Badge
+                              key={tag.id}
+                              variant="secondary"
+                              style={{
+                                backgroundColor: `${tag.color}15`,
+                                borderColor: `${tag.color}40`,
+                                color: tag.color,
+                              }}
+                              className="text-xs border font-medium px-2.5 py-1 hover:opacity-80 transition-opacity"
+                            >
+                              <span className="mr-1.5 text-xs">{tag.icon}</span>
+                              {tag.displayName}
+                            </Badge>
+                          ))}
+                          {remainingTagsCount > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs cursor-default hover:bg-muted/50 transition-colors"
+                                >
+                                  +{remainingTagsCount} more
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div className="flex flex-wrap gap-2">
+                                  {event.tags?.slice(MAX_VISIBLE_TAGS).map((tag) => (
+                                    <Badge
+                                      key={tag.id}
+                                      variant="secondary"
+                                      style={{
+                                        backgroundColor: `${tag.color}15`,
+                                        borderColor: tag.color,
+                                        color: tag.color,
+                                      }}
+                                      className="text-xs border"
+                                    >
+                                      <span className="mr-1">{tag.icon}</span>
+                                      {tag.displayName}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </div>
+                    </TooltipProvider>
                   )}
                 </div>
               </div>
@@ -845,7 +918,7 @@ function EventDetailLayoutContent({
             },
             {
               label: "Select location",
-              completed: hasLocation,
+              completed: hasLocationBooked,
               action: () => router.push(`/dashboard/creator/events/${eventId}/location`),
             },
             {
