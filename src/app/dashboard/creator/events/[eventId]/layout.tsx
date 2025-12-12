@@ -966,7 +966,7 @@ function EventDetailLayoutContent({
                       key={index}
                       className={cn(
                         "flex items-center gap-2 py-2 px-3 rounded-md transition-colors bg-background/50",
-                        !task.completed && task.action && "hover:bg-background cursor-pointer"
+                        !task.completed && "hover:bg-background cursor-pointer"
                       )}
                       onClick={() => !task.completed && task.action?.()}
                     >

@@ -319,13 +319,18 @@ export function Step4ReviewPayment({
                       endDateTime: Date;
                       id: string; // Unique ID for tracking continued ranges
                     }> = [];
-                    let currentRange: { startDateTime: Date; endDateTime: Date } | null = null;
-                    let rangeIdCounter = 0;
                     
-                    sortedSlots.forEach((slot) => {
-                      if (!currentRange) {
-                        currentRange = { ...slot };
-                      } else {
+                    if (sortedSlots.length === 0) {
+                      // No slots to process
+                    } else {
+                      let currentRange: { startDateTime: Date; endDateTime: Date } = { 
+                        startDateTime: sortedSlots[0].startDateTime, 
+                        endDateTime: sortedSlots[0].endDateTime 
+                      };
+                      let rangeIdCounter = 0;
+                      
+                      for (let i = 1; i < sortedSlots.length; i++) {
+                        const slot = sortedSlots[i];
                         // Check if this slot starts exactly when the current range ends (can be across dates)
                         if (currentRange.endDateTime.getTime() === slot.startDateTime.getTime()) {
                           // Merge: extend the end time
@@ -333,18 +338,21 @@ export function Step4ReviewPayment({
                         } else {
                           // Not consecutive, save current range and start a new one
                           mergedRanges.push({
-                            ...currentRange,
+                            startDateTime: currentRange.startDateTime,
+                            endDateTime: currentRange.endDateTime,
                             id: `range-${rangeIdCounter++}`,
                           });
-                          currentRange = { ...slot };
+                          currentRange = { 
+                            startDateTime: slot.startDateTime, 
+                            endDateTime: slot.endDateTime 
+                          };
                         }
                       }
-                    });
-                    
-                    // Don't forget to add the last range
-                    if (currentRange) {
+                      
+                      // Don't forget to add the last range
                       mergedRanges.push({
-                        ...currentRange,
+                        startDateTime: currentRange.startDateTime,
+                        endDateTime: currentRange.endDateTime,
                         id: `range-${rangeIdCounter++}`,
                       });
                     }
