@@ -1,15 +1,37 @@
 "use client";
 
-import { use } from "react";
+import { use, useMemo } from "react";
 import { useLocationPosts } from "@/hooks/posts/useLocationPosts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageViewer } from "@/components/shared/ImageViewer";
-import { Loader2, Star, MessageSquare, Calendar, CheckCircle2, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
-import { format } from "date-fns";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Loader2,
+  Star,
+  MessageSquare,
+  Calendar,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  Filter,
+  Search,
+  ThumbsUp,
+  Image as ImageIcon,
+} from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -17,6 +39,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDebounce } from "use-debounce";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export default function LocationPostsPage({
   params,
@@ -27,8 +51,13 @@ export default function LocationPostsPage({
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [sortBy, setSortBy] = useState("createdAt:DESC");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterRating, setFilterRating] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState<"all" | "reviews" | "posts">("all");
   const [currentImageSrc, setCurrentImageSrc] = useState("");
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   const { data, isLoading, isError } = useLocationPosts({
     locationId,
@@ -37,30 +66,96 @@ export default function LocationPostsPage({
     sortBy,
   });
 
-  const posts = data?.data || [];
+  const allPosts = data?.data || [];
   const meta = data?.meta;
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const reviews = allPosts.filter((p) => p.rating !== null && p.rating > 0);
+    const posts = allPosts.filter((p) => !p.rating || p.rating === 0);
+    const averageRating =
+      reviews.length > 0
+        ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length
+        : 0;
+
+    const ratingDistribution = {
+      5: reviews.filter((r) => r.rating === 5).length,
+      4: reviews.filter((r) => r.rating === 4).length,
+      3: reviews.filter((r) => r.rating === 3).length,
+      2: reviews.filter((r) => r.rating === 2).length,
+      1: reviews.filter((r) => r.rating === 1).length,
+    };
+
+    return {
+      total: allPosts.length,
+      reviews: reviews.length,
+      posts: posts.length,
+      averageRating: Math.round(averageRating * 10) / 10,
+      ratingDistribution,
+    };
+  }, [allPosts]);
+
+  // Filter posts based on active tab, search, type, and rating
+  const posts = useMemo(() => {
+    let filtered = allPosts;
+
+    // Filter by tab
+    if (activeTab === "reviews") {
+      filtered = filtered.filter((p) => p.rating !== null && p.rating > 0);
+    } else if (activeTab === "posts") {
+      filtered = filtered.filter((p) => !p.rating || p.rating === 0);
+    }
+
+    // Filter by search term
+    if (debouncedSearchTerm) {
+      filtered = filtered.filter(
+        (p) =>
+          p.content.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+          `${p.author.firstName} ${p.author.lastName}`
+            .toLowerCase()
+            .includes(debouncedSearchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by type
+    if (filterType !== "all") {
+      filtered = filtered.filter((p) => p.type === filterType);
+    }
+
+    // Filter by rating
+    if (filterRating !== "all") {
+      const ratingNum = parseInt(filterRating);
+      filtered = filtered.filter((p) => p.rating === ratingNum);
+    }
+
+    return filtered;
+  }, [allPosts, activeTab, debouncedSearchTerm, filterType, filterRating]);
 
   const handleImageClick = (imageUrl: string) => {
     setCurrentImageSrc(imageUrl);
     setIsImageViewerOpen(true);
   };
 
-  const renderStars = (rating: number | null) => {
+  const uniqueTypes = useMemo(() => {
+    return Array.from(new Set(allPosts.map((p) => p.type))).filter(Boolean);
+  }, [allPosts]);
+
+  const renderStars = (rating: number | null, size: "sm" | "md" = "md") => {
     if (!rating) return null;
+    const starSize = size === "sm" ? "h-3 w-3" : "h-4 w-4";
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`h-4 w-4 ${
-              star <= rating
-                ? "fill-yellow-400 text-yellow-400"
-                : "fill-gray-300 text-gray-300"
-            }`}
+            className={`${starSize} ${star <= rating
+                ? "fill-amber-400 text-amber-400"
+                : "fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700"
+              }`}
           />
         ))}
-        <span className="ml-1 text-sm font-medium text-muted-foreground">
-          {rating}/5
+        <span className={`ml-1.5 ${size === "sm" ? "text-xs" : "text-sm"} font-semibold text-foreground`}>
+          {rating}
         </span>
       </div>
     );
@@ -68,8 +163,78 @@ export default function LocationPostsPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        {/* Skeleton Statistics */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="border-border/60">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <div className="h-3 w-16 bg-muted rounded animate-pulse" />
+                    <div className="h-7 w-12 bg-muted rounded animate-pulse" />
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        {/* Skeleton Table */}
+        <Card className="border-border/60 shadow-sm">
+          <CardContent className="p-0">
+            <div className="overflow-hidden rounded-lg border border-border/60">
+              <Table>
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead>Author</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Rating</TableHead>
+                    <TableHead>Content</TableHead>
+                    <TableHead>Images</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+                          <div className="space-y-1.5">
+                            <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                            <div className="h-3 w-16 bg-muted rounded animate-pulse" />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-5 w-16 bg-muted rounded animate-pulse" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1.5">
+                          <div className="h-4 w-full bg-muted rounded animate-pulse" />
+                          <div className="h-4 w-3/4 bg-muted rounded animate-pulse" />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <div className="h-10 w-10 bg-muted rounded animate-pulse" />
+                          <div className="h-10 w-10 bg-muted rounded animate-pulse" />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -90,180 +255,466 @@ export default function LocationPostsPage({
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Location Posts & Reviews</h2>
-          <p className="text-muted-foreground mt-1">
-            View all posts and reviews for this location
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {meta && (
-            <Badge variant="secondary" className="text-sm">
-              {meta.totalItems} {meta.totalItems === 1 ? "post" : "posts"}
-            </Badge>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-2xl font-bold">Posts & Reviews</h2>
+            <p className="text-muted-foreground mt-1">
+              Monitor customer feedback and posts for this location
+            </p>
+          </div>
+
+          {/* Statistics Cards */}
+          {stats.total > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total</p>
+                      <p className="text-2xl font-bold mt-1.5">{stats.total}</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <MessageSquare className="h-5 w-5 text-primary" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reviews</p>
+                      <p className="text-2xl font-bold mt-1.5 text-amber-600">{stats.reviews}</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                      <Star className="h-5 w-5 text-amber-600 fill-amber-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Posts</p>
+                      <p className="text-2xl font-bold mt-1.5 text-blue-600">{stats.posts}</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                      <ImageIcon className="h-5 w-5 text-blue-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {stats.reviews > 0 && (
+                <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Avg Rating</p>
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <p className="text-2xl font-bold text-emerald-600">{stats.averageRating}</p>
+                          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                        </div>
+                      </div>
+                      <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                        <ThumbsUp className="h-5 w-5 text-emerald-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           )}
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[180px]">
-              <div className="flex items-center gap-2">
-                <ArrowUpDown className="h-4 w-4" />
-                <SelectValue placeholder="Sort by" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="createdAt:DESC">Newest First</SelectItem>
-              <SelectItem value="createdAt:ASC">Oldest First</SelectItem>
-              <SelectItem value="updatedAt:DESC">Recently Updated</SelectItem>
-              <SelectItem value="updatedAt:ASC">Least Updated</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
+
+        {/* Filters and Search */}
+        <Card className="border-border/60 bg-muted/30">
+          <CardContent className="pt-4 pb-4">
+            <div className="space-y-4">
+
+              {/* Filters Row */}
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                {/* Search */}
+                <div className="flex-1 relative min-w-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    placeholder="Search by content or author..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setPage(1);
+                    }}
+                    className="pl-9 bg-background"
+                  />
+                </div>
+
+                {/* Type Filter */}
+                {uniqueTypes.length > 0 && (
+                  <Select
+                    value={filterType}
+                    onValueChange={(value) => {
+                      setFilterType(value);
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-full sm:w-[140px] bg-background">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Type" />
+                      {filterType !== "all" && (
+                        <Badge variant="secondary" className="ml-auto mr-2 h-5 px-1.5 text-[10px]">
+                          {filterType}
+                        </Badge>
+                      )}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      {uniqueTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {/* Rating Filter */}
+                {(activeTab === "all" || activeTab === "reviews") && (
+                  <Select
+                    value={filterRating}
+                    onValueChange={(value) => {
+                      setFilterRating(value);
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-full sm:w-[130px] bg-background">
+                      <Star className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Rating" />
+                      {filterRating !== "all" && (
+                        <Badge variant="secondary" className="ml-auto mr-2 h-5 px-1.5 text-[10px]">
+                          {filterRating}★
+                        </Badge>
+                      )}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Ratings</SelectItem>
+                      <SelectItem value="5">
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star key={s} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            ))}
+                          </div>
+                          <span>5 Stars</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="4">
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4].map((s) => (
+                              <Star key={s} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            ))}
+                          </div>
+                          <span>4 Stars</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="3">3 Stars</SelectItem>
+                      <SelectItem value="2">2 Stars</SelectItem>
+                      <SelectItem value="1">1 Star</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {/* Sort */}
+                <Select value={sortBy} onValueChange={(value) => {
+                  setSortBy(value);
+                  setPage(1);
+                }}>
+                  <SelectTrigger className="w-full sm:w-[150px] bg-background">
+                    <ArrowUpDown className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="createdAt:DESC">Newest First</SelectItem>
+                    <SelectItem value="createdAt:ASC">Oldest First</SelectItem>
+                    <SelectItem value="updatedAt:DESC">Recently Updated</SelectItem>
+                    {(activeTab === "all" || activeTab === "reviews") && (
+                      <>
+                        <SelectItem value="rating:DESC">Highest Rated</SelectItem>
+                        <SelectItem value="rating:ASC">Lowest Rated</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Active Filters Display */}
+              {(debouncedSearchTerm || filterType !== "all" || filterRating !== "all") && (
+                <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border/60">
+                  <span className="text-xs text-muted-foreground font-medium">Active filters:</span>
+                  {debouncedSearchTerm && (
+                    <Badge variant="secondary" className="text-xs">
+                      Search: "{debouncedSearchTerm}"
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className="ml-1.5 hover:text-foreground"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+                  {filterType !== "all" && (
+                    <Badge variant="secondary" className="text-xs">
+                      Type: {filterType}
+                      <button
+                        onClick={() => setFilterType("all")}
+                        className="ml-1.5 hover:text-foreground"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+                  {filterRating !== "all" && (
+                    <Badge variant="secondary" className="text-xs">
+                      Rating: {filterRating}★
+                      <button
+                        onClick={() => setFilterRating("all")}
+                        className="ml-1.5 hover:text-foreground"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setFilterType("all");
+                      setFilterRating("all");
+                    }}
+                  >
+                    Clear all
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
+      {/* Posts Table */}
       {posts.length === 0 ? (
         <Card>
-          <CardContent className="py-20 text-center">
-            <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground font-medium">No posts yet</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Posts and reviews from customers will appear here
+          <CardContent className="py-16 text-center">
+            <MessageSquare className="h-14 w-14 mx-auto text-muted-foreground/30 mb-4" />
+            <p className="text-base font-semibold text-foreground">
+              {debouncedSearchTerm || filterType !== "all" || filterRating !== "all"
+                ? "No posts match your filters"
+                : "No posts yet"}
+            </p>
+            <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+              {debouncedSearchTerm || filterType !== "all" || filterRating !== "all"
+                ? "Try adjusting your filters to see more results"
+                : "Posts and reviews from customers will appear here"}
             </p>
           </CardContent>
         </Card>
       ) : (
         <>
-          <div className="space-y-4">
-            {posts.map((post) => (
-              <Card key={post.postId} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3 flex-1">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage
-                          src={post.author.avatarUrl || undefined}
-                          alt={`${post.author.firstName} ${post.author.lastName}`}
-                        />
-                        <AvatarFallback>
-                          {post.author.firstName[0]}
-                          {post.author.lastName[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-semibold">
-                            {post.author.firstName} {post.author.lastName}
-                          </p>
-                          {post.isVerified && (
-                            <Badge variant="secondary" className="text-xs">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Verified
-                            </Badge>
-                          )}
-                          {post.rating && (
-                            <div className="flex items-center">
-                              {renderStars(post.rating)}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(post.createdAt), "MMM dd, yyyy 'at' HH:mm")}
-                          </span>
-                          {post.type && (
-                            <Badge variant="outline" className="text-xs">
-                              {post.type}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {post.content && (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                      {post.content}
-                    </p>
-                  )}
-
-                  {post.imageUrls && post.imageUrls.length > 0 && (
-                    <div
-                      className={`grid gap-2 ${
-                        post.imageUrls.length === 1
-                          ? "grid-cols-1"
-                          : post.imageUrls.length === 2
-                          ? "grid-cols-2"
-                          : "grid-cols-2 md:grid-cols-3"
-                      }`}
-                    >
-                      {post.imageUrls.map((imageUrl, index) => (
-                        <div
-                          key={index}
-                          className="relative aspect-square rounded-lg overflow-hidden border cursor-pointer hover:opacity-90 transition-opacity bg-muted"
-                          onClick={() => handleImageClick(imageUrl)}
+          <Card className="border-border/60 shadow-sm p-0">
+            <CardContent className="p-0">
+              <div className="overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[200px]">Author</TableHead>
+                      <TableHead className="w-[100px]">Is checked in</TableHead>
+                      <TableHead className="w-[120px]">Rating</TableHead>
+                      <TableHead className="min-w-[300px]">Content</TableHead>
+                      <TableHead className="w-[120px]">Images</TableHead>
+                      <TableHead className="w-[180px]">Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {posts.map((post) => {
+                      const isReview = post.rating !== null && post.rating > 0;
+                      return (
+                        <TableRow
+                          key={post.postId}
+                          className={`hover:bg-muted/50 transition-colors ${
+                            isReview
+                              ? "border-l-2 border-l-amber-500"
+                              : "border-l-2 border-l-blue-500"
+                          }`}
                         >
-                          <img
-                            src={imageUrl}
-                            alt={`Post image ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {meta && meta.totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(page - 1)}
-                disabled={page === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(meta.totalPages, 5) }, (_, i) => {
-                  let pageNum;
-                  if (meta.totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (page <= 3) {
-                    pageNum = i + 1;
-                  } else if (page >= meta.totalPages - 2) {
-                    pageNum = meta.totalPages - 4 + i;
-                  } else {
-                    pageNum = page - 2 + i;
-                  }
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={page === pageNum ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setPage(pageNum)}
-                      className="min-w-[40px]"
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
+                                <AvatarImage
+                                  src={post.author.avatarUrl || undefined}
+                                  alt={`${post.author.firstName} ${post.author.lastName}`}
+                                />
+                                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold text-xs">
+                                  {post.author.firstName[0]}
+                                  {post.author.lastName[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="font-semibold text-sm text-foreground truncate">
+                                    {post.author.firstName} {post.author.lastName}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {post.isVerified ? (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-[10px] px-1 py-0 h-4 bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 shrink-0"
+                                    >
+                                      <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+                                      Verified
+                                    </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isReview ? (
+                              renderStars(post.rating, "sm")
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {post.content ? (
+                              <p className="text-sm text-foreground line-clamp-2 max-w-md">
+                                {post.content}
+                              </p>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {post.imageUrls && post.imageUrls.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {post.imageUrls.slice(0, 2).map((imageUrl, index) => (
+                                  <div
+                                    key={index}
+                                    className="relative w-10 h-10 rounded overflow-hidden border cursor-pointer bg-muted/50 shrink-0 hover:ring-2 hover:ring-primary transition-all"
+                                    onClick={() => handleImageClick(imageUrl)}
+                                  >
+                                    <img
+                                      src={imageUrl}
+                                      alt={`Post image ${index + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ))}
+                                {post.imageUrls.length > 2 && (
+                                  <div
+                                    className="relative w-10 h-10 rounded overflow-hidden border cursor-pointer bg-muted/70 flex items-center justify-center hover:bg-muted/90 transition-colors shrink-0"
+                                    onClick={() => handleImageClick(post.imageUrls[2])}
+                                  >
+                                    <span className="text-[10px] text-muted-foreground font-medium">
+                                      +{post.imageUrls.length - 2}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-xs text-foreground font-medium flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {format(new Date(post.createdAt), "MMM dd, yyyy")}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(page + 1)}
-                disabled={page === meta.totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+            </CardContent>
+          </Card>
+
+          {/* Pagination */}
+          {meta && meta.totalPages > 1 && (
+            <Card className="border-border/60 bg-muted/30">
+              <CardContent className="py-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing <span className="font-semibold text-foreground">{posts.length}</span> of{" "}
+                    <span className="font-semibold text-foreground">{meta.totalItems}</span>{" "}
+                    {meta.totalItems === 1 ? "item" : "items"} (Page {meta.currentPage} of {meta.totalPages})
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page - 1)}
+                      disabled={page === 1}
+                      className="gap-1.5"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      <span className="hidden sm:inline">Previous</span>
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(meta.totalPages, 5) }, (_, i) => {
+                        let pageNum;
+                        if (meta.totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (page <= 3) {
+                          pageNum = i + 1;
+                        } else if (page >= meta.totalPages - 2) {
+                          pageNum = meta.totalPages - 4 + i;
+                        } else {
+                          pageNum = page - 2 + i;
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={page === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setPage(pageNum)}
+                            className="min-w-[40px]"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page + 1)}
+                      disabled={page === meta.totalPages}
+                      className="gap-1.5"
+                    >
+                      <span className="hidden sm:inline">Next</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </>
       )}
