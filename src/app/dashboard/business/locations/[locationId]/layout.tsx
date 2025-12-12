@@ -315,7 +315,7 @@ function LocationDetailLayoutContent({
                 )}
 
                 {/* Address Information */}
-                <div className="space-y-2 pt-2 flex">
+                <div className="space-y-2 pt-2 flex justify-between">
                   <div className="flex flex-wrap items-center gap-3">
                     {/* Address */}
                     <div className="flex items-center gap-2 text-sm bg-muted/50 px-3 py-1.5 rounded-lg">

@@ -36,24 +36,16 @@ import {
 import {
   Loader2,
   PlusCircle,
-  MoreHorizontal,
   Edit,
   Trash2,
   ArrowUp,
   ArrowDown,
-  Eye,
   TicketPercent,
   Target,
   CalendarDays,
   Sparkles,
   QrCode,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useDeleteLocationVoucher } from "@/hooks/vouchers/useDeleteLocationVoucher";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -66,32 +58,26 @@ function VoucherActions({
   voucher: LocationVoucher;
   onDeleteClick: () => void;
 }) {
-
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem asChild>
-          <Link
-            href={`/dashboard/business/locations/${voucher.locationId}/vouchers/${voucher.id}`}
-          >
-            <Eye className="mr-2 h-4 w-4" /> View Details
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-           <Link href={`/dashboard/business/locations/${voucher.locationId}/vouchers/${voucher.id}/edit`}>
-            <Edit className="mr-2 h-4 w-4" /> Edit
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onDeleteClick} className="text-red-500">
-          <Trash2 className="mr-2 h-4 w-4" /> Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center justify-end gap-2">
+      <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+        <Link
+          href={`/dashboard/business/locations/${voucher.locationId}/vouchers/${voucher.id}/edit`}
+          title="Edit"
+        >
+          <Edit className="h-4 w-4" />
+        </Link>
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+        onClick={onDeleteClick}
+        title="Delete"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
   );
 }
 
@@ -156,6 +142,16 @@ export default function ManageVouchersPage({
       );
     }
     return <Badge className="bg-emerald-500/90 text-white">Active</Badge>;
+  };
+
+  const getVoucherTypeLabel = (voucherType: string) => {
+    if (voucherType === "public") {
+      return "Free";
+    }
+    if (voucherType === "mission_only") {
+      return "Exchange";
+    }
+    return voucherType.replace(/_/g, " ");
   };
 
   const formatDateRange = (startDate: string, endDate: string) => {
@@ -270,57 +266,6 @@ export default function ManageVouchersPage({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription>Total vouchers</CardDescription>
-            <CardTitle className="flex items-center justify-between text-2xl font-semibold">
-              {voucherStats.total.toLocaleString()}
-              <Sparkles className="h-4 w-4 text-primary" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">
-            Across all time
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription>Active vouchers</CardDescription>
-            <CardTitle className="flex items-center justify-between text-2xl font-semibold">
-              {voucherStats.active.toLocaleString()}
-              <Target className="h-4 w-4 text-emerald-500" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">
-            Currently redeemable by users
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription>Scheduled / Expired</CardDescription>
-            <CardTitle className="text-2xl font-semibold">
-              {voucherStats.scheduled}/{voucherStats.expired}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">
-            Upcoming releases and retired rewards
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription>Reward supply</CardDescription>
-            <CardTitle className="flex items-center justify-between text-2xl font-semibold">
-              {voucherStats.totalSupply.toLocaleString()}
-              <TicketPercent className="h-4 w-4 text-amber-500" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 text-xs text-muted-foreground">
-            <div>Total available quantity</div>
-            <div>Average cost {voucherStats.averagePrice.toLocaleString()} pts</div>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card className="border-border/60 shadow-sm">
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -384,7 +329,9 @@ export default function ManageVouchersPage({
                 <TableHeader className="bg-muted/40">
                   <TableRow>
                     <TableHead className="min-w-[220px]">Voucher</TableHead>
-                    <TableHead>Details</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>
                       <Button
                         variant="ghost"
@@ -396,15 +343,6 @@ export default function ManageVouchersPage({
                     </TableHead>
                     <TableHead>Quantity</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        className="px-0"
-                        onClick={() => handleSort("createdAt")}
-                      >
-                        Created <SortIcon column="createdAt" />
-                      </Button>
-                    </TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -429,12 +367,12 @@ export default function ManageVouchersPage({
                             </div>
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold leading-tight">
+                                <Link
+                                  href={`/dashboard/business/locations/${voucher.locationId}/vouchers/${voucher.id}`}
+                                  className="text-sm font-semibold leading-tight hover:text-primary hover:underline transition-colors"
+                                >
                                   {voucher.title}
-                                </span>
-                                <Badge variant="outline" className="text-[10px] uppercase">
-                                  {voucher.voucherType.replace(/_/g, " ")}
-                                </Badge>
+                                </Link>
                               </div>
                               {voucher.description && (
                                 <p className="max-w-md text-xs text-muted-foreground line-clamp-2">
@@ -444,17 +382,22 @@ export default function ManageVouchersPage({
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="space-y-1 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">Code</span>
-                            <Badge variant="secondary" className="bg-secondary text-secondary-foreground">
-                              {voucher.voucherCode}
-                            </Badge>
-                          </div>
+                        <TableCell className="text-xs text-muted-foreground">
                           <div className="flex items-center gap-2">
                             <CalendarDays className="h-3 w-3 text-muted-foreground" />
-                            <span>{formatDateRange(voucher.startDate, voucher.endDate)}</span>
+                            <span>{formatDate(voucher.startDate)}</span>
                           </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="h-3 w-3 text-muted-foreground" />
+                            <span>{formatDate(voucher.endDate)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {getVoucherTypeLabel(voucher.voucherType)}
+                          </Badge>
                         </TableCell>
                         <TableCell className="font-medium">
                           {voucher.pricePoint.toLocaleString()} pts
@@ -463,9 +406,6 @@ export default function ManageVouchersPage({
                           {voucher.maxQuantity.toLocaleString()}
                         </TableCell>
                         <TableCell>{getStatusBadge(voucher.startDate, voucher.endDate)}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(voucher.createdAt)}
-                        </TableCell>
                         <TableCell className="text-right">
                           <VoucherActions
                             voucher={voucher}
@@ -476,7 +416,7 @@ export default function ManageVouchersPage({
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-32">
+                      <TableCell colSpan={9} className="h-32">
                         <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
                           <div className="text-base font-semibold">
                             No vouchers match your filters

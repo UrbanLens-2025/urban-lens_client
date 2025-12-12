@@ -323,56 +323,6 @@ export default function ManageMissionsPage({
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription>Total missions</CardDescription>
-            <CardTitle className="flex items-center justify-between text-2xl font-semibold">
-              {missionStats.total.toLocaleString()}
-              <Sparkles className="h-4 w-4 text-primary" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">
-            Across all time
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription>Active missions</CardDescription>
-            <CardTitle className="flex items-center justify-between text-2xl font-semibold">
-              {missionStats.active.toLocaleString()}
-              <Target className="h-4 w-4 text-emerald-500" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">
-            Currently visible to creators
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription>Scheduled / Completed</CardDescription>
-            <CardTitle className="text-2xl font-semibold">
-              {missionStats.scheduled}/{missionStats.completed}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">
-            Upcoming and past performance
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription>Total rewards</CardDescription>
-            <CardTitle className="flex items-center justify-between text-2xl font-semibold">
-              {missionStats.totalReward.toLocaleString()} pts
-              <Trophy className="h-4 w-4 text-amber-500" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">
-            Sum of all mission rewards
-          </CardContent>
-        </Card>
-      </div>
-
       {/* --- Missions Table --- */}
       <Card className="border-border/60 shadow-sm">
         <CardHeader>
