@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useLocationPosts } from "@/hooks/posts/useLocationPosts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ export default function LocationPostsPage({
   params: Promise<{ locationId: string }>;
 }) {
   const { locationId } = use(params);
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [sortBy, setSortBy] = useState("createdAt:DESC");
@@ -188,7 +190,7 @@ export default function LocationPostsPage({
                 <TableHeader className="bg-muted/40">
                   <TableRow>
                     <TableHead>Author</TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead>Is checked in</TableHead>
                     <TableHead>Rating</TableHead>
                     <TableHead>Content</TableHead>
                     <TableHead>Images</TableHead>
@@ -203,7 +205,6 @@ export default function LocationPostsPage({
                           <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
                           <div className="space-y-1.5">
                             <div className="h-4 w-24 bg-muted rounded animate-pulse" />
-                            <div className="h-3 w-16 bg-muted rounded animate-pulse" />
                           </div>
                         </div>
                       </TableCell>
@@ -221,7 +222,6 @@ export default function LocationPostsPage({
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <div className="h-10 w-10 bg-muted rounded animate-pulse" />
                           <div className="h-10 w-10 bg-muted rounded animate-pulse" />
                         </div>
                       </TableCell>
@@ -548,11 +548,20 @@ export default function LocationPostsPage({
                       return (
                         <TableRow
                           key={post.postId}
-                          className={`hover:bg-muted/50 transition-colors ${
+                          className={`hover:bg-muted/50 transition-colors cursor-pointer ${
                             isReview
                               ? "border-l-2 border-l-amber-500"
                               : "border-l-2 border-l-blue-500"
                           }`}
+                          onClick={(e) => {
+                            // Don't navigate if clicking on images
+                            if ((e.target as HTMLElement).closest('[data-image-cell]')) {
+                              return;
+                            }
+                            router.push(
+                              `/dashboard/business/locations/${locationId}/posts/${post.postId}`
+                            );
+                          }}
                         >
                           <TableCell>
                             <div className="flex items-center gap-3">
@@ -577,13 +586,13 @@ export default function LocationPostsPage({
                           </TableCell>
                           <TableCell>
                             {post.isVerified ? (
-                                    <Badge
-                                      variant="secondary"
-                                      className="text-[10px] px-1 py-0 h-4 bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 shrink-0"
-                                    >
-                                      <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
-                                      Verified
-                                    </Badge>
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] px-1 py-0 h-4 bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 shrink-0"
+                              >
+                                <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+                                Verified
+                              </Badge>
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
@@ -604,14 +613,17 @@ export default function LocationPostsPage({
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell data-image-cell>
                             {post.imageUrls && post.imageUrls.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
                                 {post.imageUrls.slice(0, 2).map((imageUrl, index) => (
                                   <div
                                     key={index}
                                     className="relative w-10 h-10 rounded overflow-hidden border cursor-pointer bg-muted/50 shrink-0 hover:ring-2 hover:ring-primary transition-all"
-                                    onClick={() => handleImageClick(imageUrl)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleImageClick(imageUrl);
+                                    }}
                                   >
                                     <img
                                       src={imageUrl}
@@ -623,7 +635,10 @@ export default function LocationPostsPage({
                                 {post.imageUrls.length > 2 && (
                                   <div
                                     className="relative w-10 h-10 rounded overflow-hidden border cursor-pointer bg-muted/70 flex items-center justify-center hover:bg-muted/90 transition-colors shrink-0"
-                                    onClick={() => handleImageClick(post.imageUrls[2])}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleImageClick(post.imageUrls[2]);
+                                    }}
                                   >
                                     <span className="text-[10px] text-muted-foreground font-medium">
                                       +{post.imageUrls.length - 2}
