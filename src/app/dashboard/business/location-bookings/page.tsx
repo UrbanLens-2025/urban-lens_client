@@ -28,12 +28,15 @@ import {
   AlertCircle,
   AlertTriangle,
   RefreshCw,
+  MapPin,
+  Sparkles,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useDebounce } from "use-debounce";
 import { useOwnerLocationBookings } from "@/hooks/locations/useOwnerLocationBookings";
 import { useOwnerEventById } from "@/hooks/events/useOwnerEventById";
 import Link from "next/link";
+import Image from "next/image";
 import { format } from "date-fns";
 import {
   PageHeader,
@@ -53,7 +56,7 @@ const getStatusBadge = (status: string) => {
           className="bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-700 font-medium"
         >
           <Clock className="h-3 w-3 mr-1" />
-          Awaiting Processing
+          Processing
         </Badge>
       );
     case "APPROVED":
@@ -155,6 +158,14 @@ function BookingRow({
   
   // Use fetched event data if available, otherwise fall back to booking.event
   const eventDisplayName = eventData?.displayName || booking.event?.displayName || "N/A";
+  const eventAvatarUrl = eventData?.avatarUrl || booking.event?.avatarUrl;
+  const locationImageUrl = booking.location?.imageUrl?.[0];
+  
+  // Shorten location name if too long (max 30 characters)
+  const locationName = booking.location.name;
+  const shortenedLocationName = locationName.length > 30 
+    ? `${locationName.substring(0, 27)}...` 
+    : locationName;
   
   return (
     <TableRow className="border-b transition-colors hover:bg-muted/30 border-border/40">
@@ -177,14 +188,48 @@ function BookingRow({
         </Link>
       </TableCell>
       <TableCell className="py-4">
-        <span className="text-sm font-semibold leading-tight truncate">
-          {eventDisplayName}
-        </span>
+        <div className="flex items-center gap-2">
+          {eventAvatarUrl ? (
+            <div className="relative h-8 w-8 flex-shrink-0 rounded overflow-hidden border">
+              <Image
+                src={eventAvatarUrl}
+                alt={eventDisplayName}
+                fill
+                className="object-cover"
+                sizes="32px"
+              />
+            </div>
+          ) : (
+            <div className="h-8 w-8 flex-shrink-0 rounded bg-muted border flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-muted-foreground" />
+            </div>
+          )}
+          <span className="text-sm font-semibold leading-tight truncate">
+            {eventDisplayName}
+          </span>
+        </div>
       </TableCell>
       <TableCell className="py-4">
-        <span className="text-sm font-semibold leading-tight truncate">
-          {booking.location.name}
-        </span>
+        <div className="flex items-center gap-2">
+          {locationImageUrl ? (
+            <div className="relative h-8 w-8 flex-shrink-0 rounded overflow-hidden border">
+              <Image
+                src={locationImageUrl}
+                alt={locationName}
+                fill
+                className="object-cover"
+                sizes="32px"
+              />
+            </div>
+          ) : (
+            <div className="h-8 w-8 flex-shrink-0 rounded bg-muted border flex items-center justify-center">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+            </div>
+          )}
+          <span className="text-sm font-semibold leading-tight truncate" title={locationName}>
+            {shortenedLocationName}
+          </span>
+        </div>
       </TableCell>
       <TableCell className="py-4">
         <span className="text-sm text-muted-foreground">
@@ -409,7 +454,7 @@ export default function LocationBookingsPage() {
                         onSort={handleSort}
                         className="min-w-[200px] max-w-[280px] text-left text-xs uppercase tracking-wide text-muted-foreground py-3"
                       >
-                        Location Name
+                        Booking At
                       </SortableTableHeader>
                       <SortableTableHeader
                         column="createdAt"
@@ -425,7 +470,7 @@ export default function LocationBookingsPage() {
                         onSort={handleSort}
                         className="text-left text-xs uppercase tracking-wide text-muted-foreground py-3 w-[90px]"
                       >
-                        Total Hours
+                        Hours
                       </SortableTableHeader>
                       <SortableTableHeader
                         column="amountToPay"

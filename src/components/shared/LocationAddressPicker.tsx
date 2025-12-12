@@ -139,7 +139,7 @@ export function LocationAddressPicker() {
           />
         </CardContent>
       </Card>
-      <div className="h-[600px] rounded-md overflow-hidden border relative">
+      <div className="h-[400px] rounded-md overflow-hidden border relative">
         <GoogleMapsPicker
           position={markerPosition}
           onPositionChange={handlePositionChange}
@@ -159,31 +159,15 @@ export function AddressFields({ editable = false }: AddressFieldsProps) {
   const form = useFormContext();
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in-50">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-in fade-in-50">
       <FormField
         name="addressLine"
         control={form.control}
         render={({ field }) => (
-          <FormItem className="md:col-span-2">
+          <FormItem className="md:col-span-3">
             <FormLabel className="text-sm flex items-center gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               Street Address
-            </FormLabel>
-            <FormControl>
-              <Input className="h-9" {...field} disabled={!editable} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        name="addressLevel2"
-        control={form.control}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-sm flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              Province
             </FormLabel>
             <FormControl>
               <Input className="h-9" {...field} disabled={!editable} />
@@ -208,7 +192,23 @@ export function AddressFields({ editable = false }: AddressFieldsProps) {
           </FormItem>
         )}
       />
-      <FormItem className="md:col-span-2">
+      <FormField
+        name="addressLevel2"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-sm flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              Province
+            </FormLabel>
+            <FormControl>
+              <Input className="h-9" {...field} disabled={!editable} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormItem>
         <FormLabel className="text-sm flex items-center gap-2">
           <Globe className="h-4 w-4 text-muted-foreground" />
           Country

@@ -623,29 +623,12 @@ export default function LocationForm({
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-6">
+                  <CardContent>
                     <FormField
                       name="locationImageUrls"
                       control={form.control}
                       render={({ field, fieldState }) => (
                         <FormItem>
-                          <div className="flex items-center gap-2 mb-2">
-                            <FormLabel className="flex items-center gap-2 text-base font-semibold">
-                              <div className="p-1 rounded-md bg-primary/10">
-                                <Image className="h-4 w-4 text-primary" />
-                              </div>
-                              Location Photos
-                              <span className="text-destructive">*</span>
-                            </FormLabel>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="max-w-xs">Upload clear, high-quality photos of your location. Multiple angles help event creators visualize the space better.</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
                           <FormControl>
                             <FileUpload
                               value={field.value}
@@ -679,31 +662,12 @@ export default function LocationForm({
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-6">
+                  <CardContent>
                     <FormField
                       name="tagIds"
                       control={form.control}
                       render={({ field, fieldState }) => (
                         <FormItem>
-                          <div className="flex items-center gap-2 mb-2">
-                            <FormLabel className="flex items-center gap-2 text-base font-semibold">
-                              <div className="p-1 rounded-md bg-primary/10">
-                                <TagIcon className="h-4 w-4 text-primary" />
-                              </div>
-                              Location Categories
-                              <span className="text-destructive">*</span>
-                            </FormLabel>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="max-w-xs">
-                                  Select one or more categories that best describe your location type. This helps event creators find locations that match their event needs.
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
                           <FormControl>
                             <LocationTagsSelector
                               value={field.value}
@@ -711,7 +675,6 @@ export default function LocationForm({
                                 form.setValue("tagIds", ids, { shouldValidate: true })
                               }
                               error={form.formState.errors.tagIds?.message}
-                              helperText="Select the location type and other relevant categories."
                             />
                           </FormControl>
                           <FormMessage />
@@ -726,7 +689,7 @@ export default function LocationForm({
               <div className={cn("space-y-6 animate-in fade-in-50 slide-in-from-bottom-4 duration-500", currentStep !== 1 && "hidden")}>
                 <Alert className="bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-2 border-blue-200 dark:border-blue-800 shadow-sm">
                   <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <AlertDescription className="text-sm text-blue-900 dark:text-blue-200 ml-2">
+                  <AlertDescription className="text-sm text-blue-900 dark:text-blue-200 ml-2 flex flex-row">
                     <strong className="font-semibold">Tip:</strong> You can search for an address, click on the map to select a location, or manually fill in location details below.
                   </AlertDescription>
                 </Alert>
@@ -745,7 +708,7 @@ export default function LocationForm({
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-6">
+                  <CardContent>
                     <div className="space-y-6">
                       <LocationAddressPicker />
                     </div>
@@ -772,7 +735,7 @@ export default function LocationForm({
                       {addressFieldsEditable ? "Done Editing" : "Edit Address"}
                     </Button>
                   </CardHeader>
-                  <CardContent className="pt-6">
+                  <CardContent>
                     <AddressFields editable={addressFieldsEditable} />
                   </CardContent>
                 </Card>
