@@ -102,21 +102,32 @@ export function NavMainGrouped({ groups }: { groups: NavGroup[] }) {
                     onClick={() => router.push(item.url)}
                     isActive={isActive}
                     className={cn(
-                      "transition-all duration-200",
+                      "relative transition-all duration-300 ease-out rounded-lg",
+                      "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:rounded-r-full before:transition-all before:duration-300",
+                      "group-data-[collapsible=icon]:before:hidden group-data-[collapsible=icon]:justify-center",
                       isActive
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-sm"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-sm shadow-sidebar-accent/20 before:bg-sidebar-primary before:h-6"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground before:opacity-0 hover:before:opacity-100 hover:before:bg-sidebar-primary/40"
                     )}
                   >
                     {item.icon && (
                       <item.icon 
                         className={cn(
-                          "h-4 w-4 transition-transform duration-200",
-                          isActive && "scale-110"
+                          "h-4 w-4 transition-all duration-300",
+                          "group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5",
+                          isActive 
+                            ? "text-sidebar-primary scale-110" 
+                            : "text-sidebar-foreground/70 group-hover:text-sidebar-foreground"
                         )} 
                       />
                     )}
-                    <span className="transition-all duration-200">{item.title}</span>
+                    <span className={cn(
+                      "transition-all duration-300",
+                      "group-data-[collapsible=icon]:hidden",
+                      isActive && "font-medium"
+                    )}>
+                      {item.title}
+                    </span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               );
@@ -142,18 +153,21 @@ export function NavMainGrouped({ groups }: { groups: NavGroup[] }) {
           >
             <SidebarGroup className="py-0">
               <SidebarGroupLabel asChild>
-                <CollapsibleTrigger className="flex w-full items-center justify-between hover:bg-sidebar-accent/50 rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-foreground/70 transition-colors">
-                  <span>{group.groupLabel}</span>
+                <CollapsibleTrigger className="flex w-full items-center justify-between hover:bg-sidebar-accent/60 rounded-lg px-3 py-2.5 mx-1 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/60 hover:text-sidebar-foreground/80 transition-all duration-300 group/label group-data-[collapsible=icon]:hidden">
+                  <span className="flex items-center gap-2">
+                    <span className="h-0.5 w-3 bg-sidebar-primary/40 rounded-full group-hover/label:bg-sidebar-primary/60 transition-colors duration-300" />
+                    {group.groupLabel}
+                  </span>
                   <IconChevronDown
                     className={cn(
-                      "h-4 w-4 transition-transform duration-200",
+                      "h-3.5 w-3.5 transition-all duration-300 text-sidebar-foreground/50 group-hover/label:text-sidebar-foreground/70",
                       isOpen && "rotate-180"
                     )}
                   />
                 </CollapsibleTrigger>
               </SidebarGroupLabel>
-              <CollapsibleContent className="transition-all duration-200 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-                <SidebarGroupContent>
+              <CollapsibleContent className="transition-all duration-300 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+                <SidebarGroupContent className="pt-1">
                   <SidebarMenu>
                     {group.items.map((item) => {
                       const isActive = isItemActive(item.url);
@@ -165,21 +179,32 @@ export function NavMainGrouped({ groups }: { groups: NavGroup[] }) {
                             onClick={() => router.push(item.url)}
                             isActive={isActive}
                             className={cn(
-                              "transition-all duration-200",
+                              "relative transition-all duration-300 ease-out rounded-lg mx-1",
+                              "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:rounded-r-full before:transition-all before:duration-300",
+                              "group-data-[collapsible=icon]:before:hidden group-data-[collapsible=icon]:justify-center",
                               isActive
-                                ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-sm"
-                                : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                                ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-sm shadow-sidebar-accent/20 before:bg-sidebar-primary before:h-6"
+                                : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground before:opacity-0 hover:before:opacity-100 hover:before:bg-sidebar-primary/40"
                             )}
                           >
                             {item.icon && (
                               <item.icon 
                                 className={cn(
-                                  "h-4 w-4 transition-transform duration-200",
-                                  isActive && "scale-110"
+                                  "h-4 w-4 transition-all duration-300",
+                                  "group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5",
+                                  isActive 
+                                    ? "text-sidebar-primary scale-110" 
+                                    : "text-sidebar-foreground/70 group-hover:text-sidebar-foreground"
                                 )} 
                               />
                             )}
-                            <span className="transition-all duration-200">{item.title}</span>
+                            <span className={cn(
+                              "transition-all duration-300",
+                              "group-data-[collapsible=icon]:hidden",
+                              isActive && "font-medium"
+                            )}>
+                              {item.title}
+                            </span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       );

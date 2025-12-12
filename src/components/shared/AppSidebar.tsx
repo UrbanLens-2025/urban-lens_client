@@ -21,6 +21,7 @@ import {
   IconSettings,
   IconClock,
   IconBuildingPlus,
+  IconLayout,
 } from '@tabler/icons-react';
 
 import {
@@ -31,6 +32,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { NavMain } from './NavMain';
 import { NavMainGrouped } from './NavMainGrouped';
@@ -43,7 +45,7 @@ import { cn } from '@/lib/utils';
 import { NotificationBadge } from '@/components/notifications/NotificationBadge';
 
 const adminOverview = [
-  { title: 'Overview', url: '/admin', icon: IconDashboard },
+  { title: 'Overview', url: '/admin', icon: IconLayout },
 ];
 
 const adminNavGroups = [
@@ -109,7 +111,7 @@ const adminNavGroups = [
 ];
 
 const getBusinessOverview = () => [
-  { title: 'Overview', url: '/dashboard/business', icon: IconDashboard },
+  { title: 'Overview', url: '/dashboard/business', icon: IconLayout },
   {
     title: 'Add location',
     url: '/dashboard/business/locations/create',
@@ -142,7 +144,7 @@ const businessNavGroups = [
 ];
 
 const getCreatorNav = () => [
-  { title: 'Overview', url: '/dashboard/creator', icon: IconCalendar },
+  { title: 'Overview', url: '/dashboard/creator', icon: IconLayout },
   {
     title: 'Create event',
     url: '/dashboard/creator/request/create',
@@ -156,6 +158,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user, isLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const { state } = useSidebar();
 
   const dashboardTitle = React.useMemo(() => {
     switch (user?.role) {
@@ -266,35 +269,50 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible='icon' {...props}>
-      <SidebarHeader className='border-b border-sidebar-border/50'>
+      <SidebarHeader className='border-b border-sidebar-border/60 bg-gradient-to-b from-sidebar/50 to-sidebar backdrop-blur-sm'>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={() => router.push(dashboardUrl)}
+              tooltip={dashboardTitle}
               className={cn(
-                'data-[slot=sidebar-menu-button]:!p-2 transition-all duration-200 hover:bg-sidebar-accent/50'
+                'data-[slot=sidebar-menu-button]:!p-3 transition-all duration-300 hover:bg-sidebar-accent/60 rounded-lg group/header',
+                'group-data-[collapsible=icon]:!p-2 group-data-[collapsible=icon]:justify-center'
               )}
             >
-              <IconInnerShadowTop
-                className={cn('!size-5 transition-transform duration-200')}
-              />
-              <span className='text-base font-semibold transition-all duration-200'>
-                {dashboardTitle}
-              </span>
+              <div className='flex items-center gap-3 group-data-[collapsible=icon]:justify-center'>
+                <div className={cn(
+                  'flex items-center justify-center rounded-lg bg-sidebar-primary/10 group-hover/header:bg-sidebar-primary/20 transition-colors duration-300',
+                  'size-8 group-data-[collapsible=icon]:size-9'
+                )}>
+                  <IconInnerShadowTop
+                    className={cn(
+                      'text-sidebar-primary transition-transform duration-300 group-hover/header:scale-110',
+                      'size-4 group-data-[collapsible=icon]:size-5'
+                    )}
+                  />
+                </div>
+                <span className={cn(
+                  'text-base font-semibold tracking-tight transition-all duration-300 text-sidebar-foreground',
+                  'group-data-[collapsible=icon]:hidden'
+                )}>
+                  {dashboardTitle}
+                </span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className='gap-0'>
+      <SidebarContent className='gap-1 py-2'>
         {navOverview.length > 0 && <NavMain items={navOverview} />}
         {navGroups.length > 0 ? (
           <NavMainGrouped groups={navGroups} />
         ) : (
           <NavMain items={navMain} />
         )}
-        <NavSecondary items={navSecondary} className='mt-auto' />
+        <NavSecondary items={navSecondary} className='mt-auto pt-2' />
       </SidebarContent>
-      <SidebarFooter className='border-t border-sidebar-border/50'>
+      <SidebarFooter className='border-t border-sidebar-border/60 bg-sidebar/50 backdrop-blur-sm'>
         <NavUser
           user={{
             name: `${user?.firstName} ${user?.lastName}`,

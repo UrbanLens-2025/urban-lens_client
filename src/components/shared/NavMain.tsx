@@ -66,22 +66,37 @@ export function NavMain({
                   onClick={() => router.push(item.url)}
                   isActive={isActive}
                   className={cn(
-                    "transition-all duration-200",
+                    "relative transition-all duration-300 ease-out rounded-lg mx-1",
+                    "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:rounded-r-full before:transition-all before:duration-300",
+                    "group-data-[collapsible=icon]:before:hidden group-data-[collapsible=icon]:justify-center",
                     isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-sm"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-sm shadow-sidebar-accent/20 before:bg-sidebar-primary before:h-6"
+                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground before:opacity-0 hover:before:opacity-100 hover:before:bg-sidebar-primary/40"
                   )}
                 >
                   {item.icon && (
                     <item.icon 
                       className={cn(
-                        "h-4 w-4 transition-transform duration-200",
-                        isActive && "scale-110"
+                        "h-4 w-4 transition-all duration-300",
+                        "group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5",
+                        isActive 
+                          ? "text-sidebar-primary scale-110" 
+                          : "text-sidebar-foreground/70 group-hover:text-sidebar-foreground"
                       )} 
                     />
                   )}
-                  <span className="transition-all duration-200">{item.title}</span>
-                  {item.badge}
+                  <span className={cn(
+                    "transition-all duration-300",
+                    "group-data-[collapsible=icon]:hidden",
+                    isActive && "font-medium"
+                  )}>
+                    {item.title}
+                  </span>
+                  {item.badge && (
+                    <span className="group-data-[collapsible=icon]:hidden">
+                      {item.badge}
+                    </span>
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );
