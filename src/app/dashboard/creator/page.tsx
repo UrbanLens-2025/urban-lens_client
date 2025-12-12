@@ -284,12 +284,12 @@ export default function CreatorDashboardPage() {
         />
 
         <StatCard
-          title="Total Attendees"
-          value={stats.totalAttendees.toLocaleString()}
-          icon={Users}
-          iconColor="text-emerald-600"
-          iconBg="bg-emerald-500/10"
-          description="Across all events"
+          title="Upcoming Events"
+          value={upcomingEvents.length}
+          icon={Ticket}
+          iconColor="text-blue-600"
+          iconBg="bg-blue-500/10"
+          description="Scheduled events"
           onClick={() => router.push('/dashboard/creator/events')}
         />
 
@@ -326,49 +326,6 @@ export default function CreatorDashboardPage() {
               : undefined
           }
           onClick={() => router.push('/dashboard/creator/wallet')}
-        />
-      </div>
-
-      {/* Quick Actions & Insights */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Draft Events"
-          value={stats.draftEvents}
-          icon={Clock}
-          iconColor="text-yellow-600"
-          iconBg="bg-yellow-500/10"
-          description="Needs publishing"
-          onClick={() => router.push('/dashboard/creator/events')}
-        />
-
-        <StatCard
-          title="Completed Events"
-          value={stats.completedEvents}
-          icon={CheckCircle2}
-          iconColor="text-green-600"
-          iconBg="bg-green-500/10"
-          description="Past events"
-          onClick={() => router.push('/dashboard/creator/events')}
-        />
-
-        <StatCard
-          title="This Month Revenue"
-          value={formatCurrency(stats.thisMonthRevenue)}
-          icon={Wallet}
-          iconColor="text-emerald-600"
-          iconBg="bg-emerald-500/10"
-          description="View wallet"
-          onClick={() => router.push('/dashboard/creator/wallet')}
-        />
-
-        <StatCard
-          title="Upcoming Events"
-          value={upcomingEvents.length}
-          icon={Ticket}
-          iconColor="text-blue-600"
-          iconBg="bg-blue-500/10"
-          description="Scheduled events"
-          onClick={() => router.push('/dashboard/creator/events')}
         />
       </div>
 
