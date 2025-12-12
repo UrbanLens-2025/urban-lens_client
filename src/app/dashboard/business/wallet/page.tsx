@@ -381,6 +381,79 @@ export default function BusinessWalletPage() {
     };
   }, [externalTransactions, internalTransactions, walletData]);
 
+  // Mock earnings breakdown based on selected period
+  const monthlyEarnings = useMemo(() => {
+    const now = new Date();
+    const data: Array<{ period: string; earnings: number }> = [];
+    
+    if (earningsPeriod === "day") {
+      // Last 30 days
+      const baseDayEarnings = [850000, 920000, 1100000, 780000, 1300000, 1450000, 980000, 1200000, 1350000, 1150000, 1050000, 1400000, 1250000, 950000, 1600000, 1100000, 1320000, 1480000, 1020000, 1380000, 1150000, 1260000, 1420000, 980000, 1550000, 1180000, 1340000, 1470000, 1080000, 1520000];
+      for (let i = 29; i >= 0; i--) {
+        const dayDate = subDays(now, i);
+        const dayOfWeek = dayDate.getDay();
+        const baseIndex = 29 - i;
+        
+        // Lower earnings on weekends
+        let earnings = baseDayEarnings[baseIndex % baseDayEarnings.length];
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          earnings = Math.floor(earnings * 0.7);
+        }
+        
+        // Add variation
+        earnings = Math.floor(earnings * (0.85 + Math.random() * 0.3));
+        
+        data.push({
+          period: format(dayDate, "MMM dd"),
+          earnings,
+        });
+      }
+    } else if (earningsPeriod === "month") {
+      // Last 12 months
+      const baseMonthEarnings = [8500000, 9200000, 11000000, 7800000, 13000000, 14500000, 9800000, 12000000, 13500000, 11500000, 10500000, 14000000];
+      for (let i = 11; i >= 0; i--) {
+        const monthDate = subMonths(now, i);
+        const baseIndex = 11 - i;
+        let earnings = baseMonthEarnings[baseIndex % baseMonthEarnings.length];
+        
+        // Add upward trend
+        const growthFactor = 1 + (11 - i) * 0.03;
+        earnings = Math.floor(earnings * growthFactor);
+        
+        // Add variation
+        earnings = Math.floor(earnings * (0.9 + Math.random() * 0.2));
+        
+        data.push({
+          period: format(monthDate, "MMM yyyy"),
+          earnings,
+        });
+      }
+    } else {
+      // Last 5 years
+      const baseYearEarnings = [125000000, 142000000, 158000000, 175000000, 198000000];
+      for (let i = 4; i >= 0; i--) {
+        const yearDate = subYears(now, i);
+        const baseIndex = 4 - i;
+        let earnings = baseYearEarnings[baseIndex];
+        
+        // Add variation
+        earnings = Math.floor(earnings * (0.95 + Math.random() * 0.1));
+        
+        data.push({
+          period: format(yearDate, "yyyy"),
+          earnings,
+        });
+      }
+    }
+    return data;
+  }, [earningsPeriod]);
+
+  const earningsChartConfig: ChartConfig = {
+    earnings: {
+      label: "Earnings",
+      color: "hsl(221.2 83.2% 53.3%)",
+    },
+  };
 
   // Filter transactions
   const filteredInternalTransactions = useMemo(() => {
