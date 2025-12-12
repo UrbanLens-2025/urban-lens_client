@@ -124,13 +124,11 @@ export default function CreatorEventsPage() {
     });
   };
 
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
+      hour12: true,
     });
   };
 
@@ -430,7 +428,7 @@ export default function CreatorEventsPage() {
                                 {formatDate(event.startDate)}
                               </span>
                               <span className="text-xs text-muted-foreground">
-                                {formatDateTime(event.startDate).split(',')[1]?.trim()}
+                                {formatTime(event.startDate)}
                               </span>
                             </div>
                           ) : (
@@ -444,7 +442,7 @@ export default function CreatorEventsPage() {
                                 {formatDate(event.endDate)}
                               </span>
                               <span className="text-xs text-muted-foreground">
-                                {formatDateTime(event.endDate).split(',')[1]?.trim()}
+                                {formatTime(event.endDate)}
                               </span>
                             </div>
                           ) : (
@@ -456,9 +454,9 @@ export default function CreatorEventsPage() {
                             <span className="text-sm font-medium">
                               {formatDate(event.createdAt)}
                             </span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDateTime(event.createdAt).split(',')[1]?.trim()}
-                            </span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatTime(event.createdAt)}
+                              </span>
                           </div>
                         </TableCell>
                         <TableCell className="py-4 pr-6">
