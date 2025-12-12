@@ -10,6 +10,8 @@ import {
   Filter,
   Loader2,
   Building2,
+  CalendarDays,
+  Edit,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -44,7 +46,7 @@ import { useAnnouncements } from "@/hooks/announcements/useAnnouncements";
 import { useDeleteAnnouncement } from "@/hooks/announcements/useDeleteAnnouncement";
 import { useLocationById } from "@/hooks/locations/useLocationById";
 import type { Announcement } from "@/types";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, formatShortDate } from "@/lib/utils";
 
 export default function LocationAnnouncementsPage({
   params,
@@ -84,21 +86,6 @@ export default function LocationAnnouncementsPage({
     });
   };
 
-  const renderPublishWindow = (announcement: Announcement) => {
-    const start = announcement.startDate ? formatDateTime(announcement.startDate) : "—";
-    const end = announcement.endDate ? formatDateTime(announcement.endDate) : "—";
-
-    return (
-      <div className="text-xs text-muted-foreground space-y-0.5">
-        <p>
-          <span className="font-medium">Starts:</span> {start}
-        </p>
-        <p>
-          <span className="font-medium">Ends:</span> {end}
-        </p>
-      </div>
-    );
-  };
 
   const activeFilters = useMemo(() => {
     const filters: string[] = [];
@@ -218,9 +205,9 @@ export default function LocationAnnouncementsPage({
                 <TableHeader className="bg-muted/40">
                   <TableRow>
                     <TableHead>Announcement</TableHead>
-                    <TableHead>Schedule</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
                     <TableHead>Visibility</TableHead>
-                    <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -252,40 +239,45 @@ export default function LocationAnnouncementsPage({
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{renderPublishWindow(announcement)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-3 w-3 text-muted-foreground" />
+                          <span>{announcement.startDate ? formatShortDate(announcement.startDate) : "—"}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-3 w-3 text-muted-foreground" />
+                          <span>{announcement.endDate ? formatShortDate(announcement.endDate) : "—"}</span>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="border-border bg-muted/40 text-muted-foreground">
                           {announcement.isHidden ? "Hidden" : "Visible"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="text-xs text-muted-foreground">
-                          <p>Created {formatDateTime(announcement.createdAt)}</p>
-                          <p>Updated {formatDateTime(announcement.updatedAt)}</p>
-                        </div>
-                      </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button size="sm" asChild>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                             <Link
                               href={`/dashboard/business/locations/${locationId}/announcements/${announcement.id}/edit`}
+                              title="Edit"
                             >
-                              Manage
+                              <Edit className="h-4 w-4" />
                             </Link>
                           </Button>
                           <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
                             onClick={() => setAnnouncementToDelete(announcement)}
                             disabled={isDeleting && announcementToDelete?.id === announcement.id}
+                            title="Delete"
                           >
                             {isDeleting && announcementToDelete?.id === announcement.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              <>
-                                <Trash2 className="mr-1.5 h-4 w-4" /> Delete
-                              </>
+                              <Trash2 className="h-4 w-4" />
                             )}
                           </Button>
                         </div>

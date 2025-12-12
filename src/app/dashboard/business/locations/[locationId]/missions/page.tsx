@@ -364,7 +364,8 @@ export default function ManageMissionsPage({
                         Title <SortIcon column="title" />
                       </Button>
                     </TableHead>
-                    <TableHead>Details</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
                     <TableHead>
                       <Button variant="ghost" className="px-0" onClick={() => handleSort("target")}>
                         Target <SortIcon column="target" />
@@ -425,9 +426,17 @@ export default function ManageMissionsPage({
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground space-y-1">
-                          <div>{missionMetricLabel(mission.metric)}</div>
-                          <div>{formatDateRange(mission.startDate, mission.endDate)}</div>
+                        <TableCell className="text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="h-3 w-3 text-muted-foreground" />
+                            <span>{format(new Date(mission.startDate), "MMM d, yyyy")}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="h-3 w-3 text-muted-foreground" />
+                            <span>{format(new Date(mission.endDate), "MMM d, yyyy")}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="font-medium">{mission.target}</TableCell>
                         <TableCell className="font-medium">{mission.reward} pts</TableCell>
@@ -445,7 +454,7 @@ export default function ManageMissionsPage({
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-32">
+                      <TableCell colSpan={9} className="h-32">
                         <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
                           <div className="text-base font-semibold">No missions yet</div>
                           <p className="text-sm text-muted-foreground max-w-sm">
@@ -529,7 +538,7 @@ export default function ManageMissionsPage({
             {generatedQRCode && (
               <>
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">QR Code Data</label>
+                  <label className="text-xs font-medium text-muted-foreground">Mission Code</label>
                   <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
                     <code className="flex-1 text-xs break-all">{generatedQRCode.qrCodeData}</code>
                     <Button

@@ -239,19 +239,6 @@ export default function NewAnnouncementPage({
           </Form>
         </CardContent>
       </Card>
-
-      <Card className="border-border/60 shadow-sm">
-        <CardHeader>
-          <CardTitle>Location</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-start gap-3 text-sm text-muted-foreground">
-          <MapPin className="mt-0.5 h-4 w-4" />
-          <div>
-            <p className="font-medium text-foreground">{location.name}</p>
-            {location.addressLine && <p>{location.addressLine}</p>}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
