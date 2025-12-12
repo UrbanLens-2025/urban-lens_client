@@ -385,10 +385,12 @@ export default function ReportDetailPage({
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Report Information */}
-          <Card>
-            <CardHeader>
+          <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
               <CardTitle className="flex items-center gap-2">
-                <Flag className="h-5 w-5" />
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Flag className="h-5 w-5 text-primary" />
+                </div>
                 Report Information
               </CardTitle>
               <CardDescription>
@@ -452,10 +454,12 @@ export default function ReportDetailPage({
           </Card>
 
           {/* Reason & Description */}
-          <Card>
-            <CardHeader>
+          <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
               <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
                 Reason & Description
               </CardTitle>
               <CardDescription>
@@ -868,10 +872,12 @@ export default function ReportDetailPage({
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Reporter Information */}
-          <Card>
-            <CardHeader>
+          <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
               <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <User className="h-5 w-5 text-primary" />
+                </div>
                 Reporter
               </CardTitle>
               <CardDescription>
@@ -910,10 +916,12 @@ export default function ReportDetailPage({
           </Card>
 
           {/* Timeline */}
-          <Card>
-            <CardHeader>
+          <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Calendar className="h-5 w-5 text-primary" />
+                </div>
                 Timeline
               </CardTitle>
               <CardDescription>
@@ -981,14 +989,24 @@ export default function ReportDetailPage({
 
           {/* Resolution Details */}
           {(report.status === 'RESOLVED' || report.status === 'REJECTED') && (
-            <Card>
-              <CardHeader>
+            <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className={`bg-gradient-to-r ${
+                report.status === 'RESOLVED' 
+                  ? 'from-green-50/50 to-transparent border-green-200' 
+                  : 'from-red-50/50 to-transparent border-red-200'
+              } border-b`}>
                 <CardTitle className="flex items-center gap-2">
-                  {report.status === 'RESOLVED' ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-red-600" />
-                  )}
+                  <div className={`p-2 rounded-lg ${
+                    report.status === 'RESOLVED' 
+                      ? 'bg-green-100' 
+                      : 'bg-red-100'
+                  }`}>
+                    {report.status === 'RESOLVED' ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-600" />
+                    )}
+                  </div>
                   Resolution Details
                 </CardTitle>
                 <CardDescription>

@@ -87,27 +87,79 @@ export default function AdminLocationDetailsPage({
 
   if (isLoading) {
     return (
-      <div className='flex h-screen items-center justify-center'>
-        <Loader2 className='animate-spin' />
+      <div className='container mx-auto py-6 space-y-6'>
+        <div className='flex items-center gap-4'>
+          <div className='h-10 w-10 rounded-md bg-muted animate-pulse' />
+          <div className='space-y-2 flex-1'>
+            <div className='h-8 w-64 bg-muted rounded animate-pulse' />
+            <div className='h-4 w-96 bg-muted rounded animate-pulse' />
+          </div>
+        </div>
+        <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className='border-2'>
+              <CardContent className='pt-6'>
+                <div className='h-20 bg-muted rounded animate-pulse' />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+          <div className='lg:col-span-2 space-y-6'>
+            {[1, 2].map((i) => (
+              <Card key={i} className='border-2'>
+                <CardHeader>
+                  <div className='h-6 w-48 bg-muted rounded animate-pulse' />
+                </CardHeader>
+                <CardContent>
+                  <div className='h-32 w-full bg-muted rounded animate-pulse' />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className='space-y-6'>
+            {[1, 2].map((i) => (
+              <Card key={i} className='border-2'>
+                <CardHeader>
+                  <div className='h-6 w-32 bg-muted rounded animate-pulse' />
+                </CardHeader>
+                <CardContent>
+                  <div className='space-y-3'>
+                    <div className='h-16 bg-muted rounded animate-pulse' />
+                    <div className='h-16 bg-muted rounded animate-pulse' />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   if (isError || !location) {
     return (
-      <div className='container mx-auto py-12'>
-        <Card className='border-destructive'>
+      <div className='container mx-auto py-6'>
+        <Card className='border-destructive/50 shadow-lg'>
           <CardContent className='pt-6'>
             <div className='flex flex-col items-center justify-center py-12 text-center'>
-              <AlertCircle className='h-12 w-12 text-destructive mb-4' />
-              <h2 className='text-xl font-semibold mb-2'>Error Loading Location</h2>
-              <p className='text-muted-foreground mb-4'>
-                Unable to load location details. Please try again.
+              <div className='p-4 rounded-full bg-destructive/10 mb-4'>
+                <AlertCircle className='h-12 w-12 text-destructive' />
+              </div>
+              <h2 className='text-2xl font-bold mb-2'>Error Loading Location</h2>
+              <p className='text-muted-foreground mb-6 max-w-md'>
+                We couldn't load the location details. This might be due to a network error or the location may not exist.
               </p>
-              <Button onClick={() => router.back()} variant='outline'>
-                <ArrowLeft className='h-4 w-4 mr-2' />
-                Go Back
-              </Button>
+              <div className='flex gap-3'>
+                <Button onClick={() => router.back()} variant='outline'>
+                  <ArrowLeft className='h-4 w-4 mr-2' />
+                  Go Back
+                </Button>
+                <Button onClick={() => window.location.reload()}>
+                  <Loader2 className='h-4 w-4 mr-2' />
+                  Retry
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -139,64 +191,80 @@ export default function AdminLocationDetailsPage({
   const checkIns = parseInt(location.totalCheckIns || '0', 10);
 
   return (
-    <div className='space-y-6'>
-      {/* Page Header */}
-      <PageHeader
-        title={location.name}
-        description={location.addressLine}
-        icon={MapPin}
-      />
+    <div className='container mx-auto py-6 space-y-6 max-w-6xl'>
+      {/* Enhanced Page Header */}
+      <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b'>
+        <div className='flex items-center gap-4 flex-1'>
+          <Button 
+            variant='ghost' 
+            size='icon' 
+            onClick={() => router.back()}
+            className='hover:bg-muted'
+          >
+            <ArrowLeft className='h-5 w-5' />
+          </Button>
+          <div className='flex-1'>
+            <h1 className='text-3xl font-bold tracking-tight mb-2'>
+              {location.name}
+            </h1>
+            <p className='text-muted-foreground flex items-center gap-2'>
+              <MapPin className='h-4 w-4' />
+              {location.addressLine}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Quick Stats Summary */}
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-        <Card>
+        <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
           <CardContent className='pt-6'>
             <div className='flex items-center gap-3'>
-              <div className='p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30'>
+              <div className='p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 shadow-sm'>
                 <Users className='h-5 w-5 text-blue-600 dark:text-blue-400' />
               </div>
               <div>
-                <p className='text-xs text-muted-foreground'>Check-ins</p>
-                <p className='text-sm font-semibold'>{checkIns.toLocaleString()}</p>
+                <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Check-ins</p>
+                <p className='text-lg font-bold text-foreground mt-1'>{checkIns.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
           <CardContent className='pt-6'>
             <div className='flex items-center gap-3'>
-              <div className='p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30'>
+              <div className='p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 shadow-sm'>
                 <ImageIcon className='h-5 w-5 text-purple-600 dark:text-purple-400' />
               </div>
               <div>
-                <p className='text-xs text-muted-foreground'>Images</p>
-                <p className='text-sm font-semibold'>{imageCount}</p>
+                <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Images</p>
+                <p className='text-lg font-bold text-foreground mt-1'>{imageCount}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
           <CardContent className='pt-6'>
             <div className='flex items-center gap-3'>
-              <div className='p-2 rounded-lg bg-green-100 dark:bg-green-900/30'>
+              <div className='p-3 rounded-lg bg-green-100 dark:bg-green-900/30 shadow-sm'>
                 <Tag className='h-5 w-5 text-green-600 dark:text-green-400' />
               </div>
               <div>
-                <p className='text-xs text-muted-foreground'>Tags</p>
-                <p className='text-sm font-semibold'>{tagCount}</p>
+                <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Tags</p>
+                <p className='text-lg font-bold text-foreground mt-1'>{tagCount}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
           <CardContent className='pt-6'>
             <div className='flex items-center gap-3'>
-              <div className='p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30'>
+              <div className='p-3 rounded-lg bg-orange-100 dark:bg-orange-900/30 shadow-sm'>
                 <Ruler className='h-5 w-5 text-orange-600 dark:text-orange-400' />
               </div>
               <div>
-                <p className='text-xs text-muted-foreground'>Radius</p>
-                <p className='text-sm font-semibold'>{location.radiusMeters}m</p>
+                <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Radius</p>
+                <p className='text-lg font-bold text-foreground mt-1'>{location.radiusMeters}m</p>
               </div>
             </div>
           </CardContent>

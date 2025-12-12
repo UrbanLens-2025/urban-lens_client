@@ -14,6 +14,8 @@ import {
   Globe,
   Tag,
   ImageIcon,
+  AlertCircle,
+  FileText,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -74,16 +76,73 @@ export default function AdminEventDetailsPage({
 
   if (isLoading) {
     return (
-      <div className='flex h-screen items-center justify-center'>
-        <Loader2 className='animate-spin' />
+      <div className='container mx-auto py-6 space-y-6'>
+        <div className='flex items-center gap-4'>
+          <div className='h-10 w-10 rounded-md bg-muted animate-pulse' />
+          <div className='space-y-2 flex-1'>
+            <div className='h-8 w-64 bg-muted rounded animate-pulse' />
+            <div className='h-4 w-96 bg-muted rounded animate-pulse' />
+          </div>
+        </div>
+        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+          <div className='lg:col-span-2 space-y-6'>
+            {[1, 2].map((i) => (
+              <Card key={i} className='border-2'>
+                <CardHeader>
+                  <div className='h-6 w-48 bg-muted rounded animate-pulse' />
+                </CardHeader>
+                <CardContent>
+                  <div className='h-32 w-full bg-muted rounded animate-pulse' />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className='space-y-6'>
+            {[1, 2].map((i) => (
+              <Card key={i} className='border-2'>
+                <CardHeader>
+                  <div className='h-6 w-32 bg-muted rounded animate-pulse' />
+                </CardHeader>
+                <CardContent>
+                  <div className='space-y-3'>
+                    <div className='h-16 bg-muted rounded animate-pulse' />
+                    <div className='h-16 bg-muted rounded animate-pulse' />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   if (isError || !event) {
     return (
-      <div className='text-center py-20 text-red-500'>
-        Error loading event details.
+      <div className='container mx-auto py-6'>
+        <Card className='border-destructive/50 shadow-lg'>
+          <CardContent className='pt-6'>
+            <div className='flex flex-col items-center justify-center py-12 text-center'>
+              <div className='p-4 rounded-full bg-destructive/10 mb-4'>
+                <AlertCircle className='h-12 w-12 text-destructive' />
+              </div>
+              <h2 className='text-2xl font-bold mb-2'>Error Loading Event</h2>
+              <p className='text-muted-foreground mb-6 max-w-md'>
+                We couldn't load the event details. This might be due to a network error or the event may not exist.
+              </p>
+              <div className='flex gap-3'>
+                <Button variant='outline' onClick={() => router.back()}>
+                  <ArrowLeft className='h-4 w-4 mr-2' />
+                  Go Back
+                </Button>
+                <Button onClick={() => window.location.reload()}>
+                  <Loader2 className='h-4 w-4 mr-2' />
+                  Retry
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -103,20 +162,27 @@ export default function AdminEventDetailsPage({
   };
 
   return (
-    <div className='space-y-6'>
-      {/* Header */}
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-4'>
-          <Button variant='ghost' size='icon' onClick={() => router.back()}>
+    <div className='container mx-auto py-6 space-y-6 max-w-6xl'>
+      {/* Enhanced Header */}
+      <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b'>
+        <div className='flex items-center gap-4 flex-1'>
+          <Button 
+            variant='ghost' 
+            size='icon' 
+            onClick={() => router.back()}
+            className='hover:bg-muted'
+          >
             <ArrowLeft className='h-5 w-5' />
           </Button>
-          <div>
-            <h1 className='text-3xl font-bold'>{event.displayName}</h1>
-            <p className='text-muted-foreground mt-1'>Event Details</p>
+          <div className='flex-1'>
+            <div className='flex items-center gap-3 mb-2'>
+              <h1 className='text-3xl font-bold tracking-tight'>
+                {event.displayName}
+              </h1>
+              {getStatusBadge(event.status)}
+            </div>
+            <p className='text-muted-foreground'>Event Details</p>
           </div>
-        </div>
-        <div className='flex items-center gap-2'>
-          {getStatusBadge(event.status)}
         </div>
       </div>
 
@@ -125,9 +191,14 @@ export default function AdminEventDetailsPage({
         <div className='lg:col-span-2 space-y-6'>
           {/* Event Images */}
           {(event.coverUrl || event.avatarUrl) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Event Images</CardTitle>
+            <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
+              <CardHeader className='bg-gradient-to-r from-primary/5 to-transparent border-b'>
+                <CardTitle className='flex items-center gap-2'>
+                  <div className='p-2 rounded-lg bg-primary/10'>
+                    <ImageIcon className='h-5 w-5 text-primary' />
+                  </div>
+                  Event Images
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -174,9 +245,14 @@ export default function AdminEventDetailsPage({
 
           {/* Event Description */}
           {event.description && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Description</CardTitle>
+            <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
+              <CardHeader className='bg-gradient-to-r from-primary/5 to-transparent border-b'>
+                <CardTitle className='flex items-center gap-2'>
+                  <div className='p-2 rounded-lg bg-primary/10'>
+                    <FileText className='h-5 w-5 text-primary' />
+                  </div>
+                  Description
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className='text-muted-foreground whitespace-pre-wrap'>

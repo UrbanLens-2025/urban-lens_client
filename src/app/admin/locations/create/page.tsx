@@ -20,22 +20,37 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { Loader2, CheckCircle2, MapPin, Image as ImageIcon, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Search, X, FileText, Tag as TagIcon, Eye, Ruler, Save } from 'lucide-react';
+import {
+  Loader2,
+  CheckCircle2,
+  MapPin,
+  Image as ImageIcon,
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  FileText,
+  Tag as TagIcon,
+  Eye,
+  Info,
+} from 'lucide-react';
 import { FileUpload } from '@/components/shared/FileUpload';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
 import { LocationAddressPicker } from '@/components/shared/LocationAddressPicker';
-import { DisplayTags } from '@/components/shared/DisplayTags';
-import { useResolvedTags } from '@/hooks/tags/useResolvedTags';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useTagCategories } from '@/hooks/tags/useTagCategories';
-import type { TagCategory } from '@/types';
-import { Badge } from '@/components/ui/badge';
-import { PageHeader } from '@/components/shared/PageHeader';
-import { PageContainer } from '@/components/shared/PageContainer';
+import { LocationTagsSelector } from '@/components/locations/LocationTagsSelector';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Switch } from '@/components/ui/switch';
 
 const publicLocationSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -78,7 +93,10 @@ const steps = [
   },
 ];
 
-const INITIAL_DISPLAY_COUNT = 5;
+// Helper function to count characters
+const countCharacters = (text: string): number => {
+  return text.length;
+};
 
 export default function CreatePublicLocationPage() {
   const router = useRouter();
@@ -105,46 +123,11 @@ export default function CreatePublicLocationPage() {
   });
 
   const watchedValues = form.watch();
-  const { resolvedTags: tags } = useResolvedTags(watchedValues.tagIds);
-  const { data: tagCategories, isLoading: isLoadingTags } = useTagCategories("LOCATION");
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const descriptionValue = form.watch('description');
   const selectedTagIds = watchedValues.tagIds || [];
-
-  // Filter tags based on search term
-  const filteredTags = useMemo(() => {
-    if (!tagCategories) return [];
-    const term = searchTerm.toLowerCase();
-    return tagCategories.filter((tag) =>
-      tag.name.toLowerCase().includes(term) ||
-      tag.description.toLowerCase().includes(term)
-    );
-  }, [tagCategories, searchTerm]);
-
-  // Get displayed tags (limited if not expanded)
-  const displayedTags = useMemo(() => {
-    return isExpanded ? filteredTags : filteredTags.slice(0, INITIAL_DISPLAY_COUNT);
-  }, [filteredTags, isExpanded]);
-
-  const hasMore = filteredTags.length > INITIAL_DISPLAY_COUNT;
-
-  // Handle tag selection - allow multiple selections
-  const toggleTag = (tagId: number) => {
-    const isSelected = selectedTagIds.includes(tagId);
-    if (isSelected) {
-      form.setValue('tagIds', selectedTagIds.filter((id) => id !== tagId), { shouldValidate: true });
-    } else {
-      // Add to current selection (multiple allowed)
-      form.setValue('tagIds', [...selectedTagIds, tagId], { shouldValidate: true });
-    }
-  };
-
-  // Check if at least one tag is selected
   const hasLocationType = selectedTagIds.length > 0;
 
-  const progress = ((currentStep + 1) / steps.length) * 100;
-  const isFirstStep = currentStep === 0;
-  const isLastStep = currentStep === steps.length - 1;
+  const currentStepData = steps[currentStep];
 
   const handleNextStep = async () => {
     const fields = steps[currentStep].fields;
@@ -180,474 +163,456 @@ export default function CreatePublicLocationPage() {
       return;
     }
 
-    // Include tagIds in the payload
-    createLocation(values as any);
+    createLocation(values as any, {
+      onSuccess: () => {
+        toast.success('Location created successfully!');
+        router.push('/admin/locations');
+      },
+    });
   }
 
   return (
-    <PageContainer maxWidth="2xl">
-      {/* Header Section */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary shadow-md">
-            <MapPin className="h-6 w-6" />
-          </div>
-          <div>
+    <div className="space-y-8 max-w-5xl mx-auto px-4 py-6">
+      {/* Header */}
+      <div className="flex items-start gap-4 pb-6 border-b-2 border-primary/20">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary shadow-md">
+          <Building2 className="h-6 w-6" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
               Create Public Location
             </h1>
-            <p className="text-muted-foreground mt-1 text-base">
-              Add a new public location to the platform
-            </p>
+          </div>
+          <p className="text-base text-muted-foreground">
+            {currentStepData.description}
+          </p>
+          <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+              Step {currentStep + 1} of {steps.length}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Step Indicator */}
-      <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                {(() => {
-                  const StepIcon = steps[currentStep].icon;
-                  return (
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <StepIcon className="h-4 w-4 text-primary" />
-                    </div>
-                  );
-                })()}
-                Step {currentStep + 1} of {steps.length}: {steps[currentStep].title}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {steps[currentStep].description}
-              </p>
-            </div>
-            <Badge variant="outline" className="px-3 py-1.5 text-sm font-medium border-primary/20">
-              {Math.round(progress)}% Complete
-            </Badge>
-          </div>
+      {/* Step Progress Navigation */}
+      <div className="space-y-6">
+        {/* Step Indicators */}
+        <div className="flex items-center justify-between relative">
+          {/* Progress Line Background */}
+          <div className="absolute top-7 left-0 right-0 h-0.5 bg-muted/50 z-0" />
           
-          <div className="flex items-center gap-2 mt-4">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = currentStep === index;
-              const isCompleted = currentStep > index;
-
-              return (
-                <div key={step.id} className="flex items-center flex-1">
-                  <div className="flex flex-col items-center flex-1">
+          {/* Progress Line Fill */}
+          <div 
+            className="absolute top-7 left-0 h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary/60 z-0 transition-all duration-500 ease-out"
+            style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
+          />
+          
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            const isActive = index === currentStep;
+            const isCompleted = index < currentStep;
+            return (
+              <div key={step.id} className="flex items-center flex-1 relative z-10">
+                <div className="flex flex-col items-center flex-1">
+                  <div className="relative flex items-center justify-center w-full mb-3">
                     <div
                       className={cn(
-                        'w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-md',
-                        isCompleted && 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-primary shadow-lg scale-105',
-                        isActive && 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-primary shadow-lg scale-110 ring-4 ring-primary/20',
-                        !isActive && !isCompleted && 'bg-muted/50 border-muted-foreground/20 text-muted-foreground'
+                        "w-14 h-14 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-lg relative z-10",
+                        isCompleted && "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground border-primary shadow-primary/30",
+                        isActive && "bg-gradient-to-br from-primary via-primary/95 to-primary text-primary-foreground border-primary scale-110 shadow-xl shadow-primary/40 ring-4 ring-primary/20",
+                        !isActive && !isCompleted && "bg-background border-muted-foreground/20 text-muted-foreground hover:border-primary/30 hover:scale-105"
                       )}
                     >
                       {isCompleted ? (
-                        <CheckCircle2 className="h-6 w-6" />
+                        <CheckCircle2 className="h-5 w-5" />
                       ) : (
-                        <Icon className="h-6 w-6" />
+                        <Icon className={cn(
+                          "h-5 w-5 transition-all",
+                          isActive && "scale-110"
+                        )} />
                       )}
                     </div>
-                    <div className="mt-3 text-xs text-center max-w-[100px]">
-                      <div
-                        className={cn(
-                          'font-semibold transition-colors',
-                          isActive && 'text-primary',
-                          isCompleted && 'text-primary/80',
-                          !isActive && !isCompleted && 'text-muted-foreground'
-                        )}
-                      >
-                        {step.title}
-                      </div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <div className={cn(
+                      "text-sm font-semibold transition-colors",
+                      isActive && "text-primary",
+                      isCompleted && "text-primary/80",
+                      !isActive && !isCompleted && "text-muted-foreground"
+                    )}>
+                      {step.title}
+                    </div>
+                    <div className={cn(
+                      "text-xs transition-colors",
+                      isActive && "text-primary/70",
+                      !isActive && "text-muted-foreground/70"
+                    )}>
+                      {step.description}
                     </div>
                   </div>
-                  {index < steps.length - 1 && (
-                    <div className="flex-1 mx-3 relative">
-                      <div className="h-0.5 bg-muted absolute top-6 left-0 right-0" />
-                      <div
-                        className={cn(
-                          'h-0.5 absolute top-6 left-0 transition-all duration-500 bg-gradient-to-r from-primary to-primary/50',
-                          isCompleted ? 'right-0' : 'right-full'
-                        )}
-                        style={{ width: isCompleted ? '100%' : '0%' }}
-                      />
-                    </div>
-                  )}
                 </div>
-              );
-            })}
-          </div>
-          
-          <Progress value={progress} className="mt-6 h-2" />
-        </CardHeader>
-        <CardContent className="pt-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              {/* === STEP 1: Basic Information === */}
-              <div className={cn('space-y-8', currentStep !== 0 && 'hidden')}>
-                <Alert className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <AlertDescription className="text-sm font-medium">
-                    Provide basic details about your location. This information will be visible to event creators.
-                  </AlertDescription>
-                </Alert>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 pb-2 border-b border-primary/10">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <FileText className="h-4 w-4 text-primary" />
-                    </div>
-                    <h2 className="text-xl font-semibold">Basic Information</h2>
+      {/* Form Card */}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" id="location-form">
+          {/* === STEP 1: Basic Information === */}
+          <div className={cn("space-y-6 animate-in fade-in-50 slide-in-from-bottom-4 duration-500", currentStep !== 0 && "hidden")}>
+            {/* Card 1: Location Name & Description */}
+            <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="pb-4 border-b border-primary/10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+                    <Building2 className="h-5 w-5 text-primary" />
                   </div>
-
+                  <div>
+                    <CardTitle className="text-xl font-bold">Basic Information</CardTitle>
+                    <CardDescription className="text-sm mt-1">
+                      Provide essential details about your location
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 gap-6">
                   <FormField
                     name="name"
                     control={form.control}
-                    render={({ field }) => (
+                    render={({ field, fieldState }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-base font-semibold">
-                          <MapPin className="h-4 w-4 text-primary" />
-                          Location Name
-                        </FormLabel>
+                        <div className="flex items-center gap-2 mb-2">
+                          <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                            <div className="p-1 rounded-md bg-primary/10">
+                              <Building2 className="h-4 w-4 text-primary" />
+                            </div>
+                            Location Name
+                            <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">Choose a clear, descriptive name that helps event creators identify your location. This will be visible in search results and location listings.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <FormControl>
                           <Input 
                             placeholder="e.g., Downtown Event Hall" 
-                            className="h-12 border-2 border-primary/20 focus:ring-2 focus:ring-primary/20"
+                            className={cn(
+                              "h-12 border-2 transition-all text-base",
+                              fieldState.error 
+                                ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+                                : 'border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                            )}
                             {...field} 
                           />
                         </FormControl>
-                        <FormDescription className="text-sm">
-                          Choose a clear, descriptive name for your location
-                        </FormDescription>
-                        <FormMessage className="text-sm" />
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
                   <FormField
                     name="description"
                     control={form.control}
-                    render={({ field }) => (
+                    render={({ field, fieldState }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-base font-semibold">
-                          <FileText className="h-4 w-4 text-primary" />
-                          Description
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Describe your location, amenities, capacity, and what makes it special..."
-                            className="min-h-[120px] border-2 border-primary/20 focus:ring-2 focus:ring-primary/20 resize-none"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormDescription className="text-sm">
-                          Help event creators understand what your location offers
-                        </FormDescription>
-                        <FormMessage className="text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="tagIds"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-base font-semibold">
-                          <TagIcon className="h-4 w-4 text-primary" />
-                          Location Tags
-                        </FormLabel>
-                        {isLoadingTags ? (
-                          <div className="flex items-center justify-center py-12">
-                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                          </div>
-                        ) : (
-                          <div
-                            className={cn(
-                              'border-2 rounded-xl p-4 space-y-3 bg-gradient-to-br from-card to-muted/20 shadow-sm transition-all',
-                              !hasLocationType && form.formState.errors.tagIds && 'bg-destructive/5 border-destructive border-2 shadow-md ring-2 ring-destructive/20'
-                            )}
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-sm font-semibold">
-                                  Select Location Tags
-                                </h3>
-                                <Badge variant="outline" className="text-xs">
-                                  {filteredTags.length} available
-                                </Badge>
-                              </div>
-                              <div className="relative w-48">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  type="text"
-                                  placeholder="Search tags..."
-                                  value={searchTerm}
-                                  onChange={(e) => setSearchTerm(e.target.value)}
-                                  className="h-10 pl-9 pr-9 text-sm border-2 border-primary/20 focus:ring-2 focus:ring-primary/20"
-                                />
-                                {searchTerm.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setSearchTerm("")}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2 pt-2">
-                              {displayedTags.map((tag: TagCategory) => {
-                                const isSelected = selectedTagIds.includes(tag.id);
-                                return (
-                                  <Badge
-                                    key={tag.id}
-                                    variant={isSelected ? 'default' : 'outline'}
-                                    className={cn(
-                                      'cursor-pointer transition-all px-3 py-1.5 text-sm font-medium shadow-sm hover:shadow-md',
-                                      isSelected && 'ring-2 ring-offset-2 ring-primary/30 scale-105',
-                                      !isSelected && 'hover:scale-105 hover:bg-muted/50'
-                                    )}
-                                    style={
-                                      isSelected
-                                        ? {
-                                            backgroundColor: tag.color,
-                                            color: '#fff',
-                                            borderColor: tag.color,
-                                          }
-                                        : { borderColor: tag.color, color: tag.color }
-                                    }
-                                    onClick={() => toggleTag(tag.id)}
-                                    title={tag.description}
-                                  >
-                                    <span className="mr-1.5">{tag.icon}</span>
-                                    {tag.name}
-                                  </Badge>
-                                );
-                              })}
-                            </div>
-
-                            {hasMore && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setIsExpanded(!isExpanded)}
-                                className="w-full h-9 text-sm border border-primary/20 hover:bg-primary/5 hover:border-primary/40"
-                              >
-                                {isExpanded ? (
-                                  <>
-                                    <ChevronUp className="mr-2 h-4 w-4" />
-                                    Show Less
-                                  </>
-                                ) : (
-                                  <>
-                                    <ChevronDown className="mr-2 h-4 w-4" />
-                                    View More ({filteredTags.length - INITIAL_DISPLAY_COUNT} more)
-                                  </>
-                                )}
-                              </Button>
-                            )}
-
-                            {filteredTags.length === 0 && searchTerm && (
-                              <div className="text-center py-6">
-                                <p className="text-sm text-muted-foreground">
-                                  No tags found for "<span className="font-medium">{searchTerm}</span>"
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <FormDescription className="text-sm">
-                          Select tags that best describe your location (you can select multiple)
-                        </FormDescription>
-                        <FormMessage className="text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                  {tags.length > 0 && (
-                    <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border-2 border-primary/10">
-                      <p className="text-sm font-semibold mb-3 flex items-center gap-2">
-                        <TagIcon className="h-4 w-4 text-primary" />
-                        Selected Tag Categories:
-                      </p>
-                      <DisplayTags tags={tags} maxCount={10} />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* === STEP 2: Address & Map === */}
-              <div className={cn('space-y-8', currentStep !== 1 && 'hidden')}>
-                <Alert className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <AlertDescription className="text-sm font-medium">
-                    Set the exact location and define the coverage area where events can be booked.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 pb-2 border-b border-primary/10">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <MapPin className="h-4 w-4 text-primary" />
-                    </div>
-                    <h2 className="text-xl font-semibold">Address & Location</h2>
-                  </div>
-
-                  <LocationAddressPicker />
-
-                  <FormField
-                    control={form.control}
-                    name="radiusMeters"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-base font-semibold">
-                          <Ruler className="h-4 w-4 text-primary" />
-                          Effective Radius: <span className="text-primary font-bold">{field.value} meters</span>
-                        </FormLabel>
-                        <FormControl>
-                          <div className="px-4 py-6 border-2 border-primary/10 rounded-xl bg-gradient-to-r from-muted/50 to-transparent">
-                            <Slider
-                              min={1}
-                              max={100}
-                              step={1}
-                              onValueChange={(value) => field.onChange(value[0])}
-                              defaultValue={[field.value]}
-                              className="pt-2"
-                            />
-                            <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                              <span>1m</span>
-                              <span>50m</span>
-                              <span>100m</span>
-                            </div>
-                          </div>
-                        </FormControl>
-                        <FormDescription className="text-sm">
-                          Define how far from the location point events can be booked (1-100 meters)
-                        </FormDescription>
-                        <FormMessage className="text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              {/* === STEP 3: Images & Settings === */}
-              <div className={cn('space-y-8', currentStep !== 2 && 'hidden')}>
-                <Alert className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-                  <ImageIcon className="h-5 w-5 text-primary" />
-                  <AlertDescription className="text-sm font-medium">
-                    Upload high-quality photos of your location and configure visibility settings.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 pb-2 border-b border-primary/10">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <ImageIcon className="h-4 w-4 text-primary" />
-                    </div>
-                    <h2 className="text-xl font-semibold">Images & Visibility</h2>
-                  </div>
-
-                  <FormField
-                    name="imageUrl"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-base font-semibold">
-                          <ImageIcon className="h-4 w-4 text-primary" />
-                          Location Photos
-                        </FormLabel>
-                        <FormControl>
-                          <div className="border-2 border-dashed border-primary/20 rounded-lg p-6 bg-muted/30 hover:border-primary/40 transition-colors">
-                            <FileUpload
-                              value={field.value}
-                              onChange={field.onChange}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormDescription className="text-sm">
-                          Showcase your location with clear, professional photos. Multiple angles are recommended.
-                        </FormDescription>
-                        <FormMessage className="text-sm" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="isVisibleOnMap"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-xl border-2 border-primary/10 p-6 bg-gradient-to-r from-muted/50 to-transparent hover:border-primary/20 transition-all">
-                        <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2 mb-2">
                           <FormLabel className="flex items-center gap-2 text-base font-semibold">
-                            <Eye className="h-4 w-4 text-primary" />
-                            Visible on Map
+                            <div className="p-1 rounded-md bg-primary/10">
+                              <FileText className="h-4 w-4 text-primary" />
+                            </div>
+                            Description
+                            <span className="text-destructive">*</span>
                           </FormLabel>
-                          <FormDescription className="text-sm">
-                            Allow this location to appear on the public map for event creators to discover
-                          </FormDescription>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">Provide detailed information about your location including amenities, capacity, unique features, and what makes it suitable for events. This helps creators make informed decisions.</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                         <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            className="data-[state=checked]:bg-primary"
-                          />
+                          <div className="space-y-2">
+                            <Textarea 
+                              placeholder="Describe your location, amenities, capacity, and what makes it special..."
+                              rows={6}
+                              className={cn(
+                                "resize-none border-2 transition-all text-base min-h-[120px]",
+                                fieldState.error 
+                                  ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+                                  : 'border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                              )}
+                              {...field}
+                            />
+                            <div className="flex justify-between items-center">
+                              <FormMessage />
+                              <span className="text-xs text-muted-foreground">
+                                {countCharacters(descriptionValue || "")} characters
+                              </span>
+                            </div>
+                          </div>
                         </FormControl>
                       </FormItem>
                     )}
                   />
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              {/* Navigation Buttons */}
-              <div className="flex flex-col sm:flex-row justify-between gap-3 pt-6 border-t border-primary/10 sticky bottom-0 bg-background/95 backdrop-blur-sm pb-4 -mx-6 px-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={isFirstStep ? () => router.back() : handlePrevStep}
-                  disabled={isPending}
-                  className="h-12 border-2 border-primary/20 hover:bg-muted"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  {isFirstStep ? 'Cancel' : 'Previous'}
-                </Button>
-                {isLastStep ? (
-                  <Button 
-                    type="submit" 
-                    disabled={isPending}
-                    className="h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all"
-                  >
-                    {isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Create Location
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  <Button 
-                    type="button" 
-                    onClick={handleNextStep}
-                    className="h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all"
-                  >
-                    Next
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+            {/* Card 2: Location Categories */}
+            <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="pb-4 border-b border-primary/10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+                    <TagIcon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold">Location Categories</CardTitle>
+                    <CardDescription className="text-sm mt-1">
+                      Categorize your location to help creators find it
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <FormField
+                  name="tagIds"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <FormItem>
+                      <div className="flex items-center gap-2 mb-2">
+                        <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                          <div className="p-1 rounded-md bg-primary/10">
+                            <TagIcon className="h-4 w-4 text-primary" />
+                          </div>
+                          Location Categories
+                          <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs">
+                              Select one or more categories that best describe your location type. This helps event creators find locations that match their event needs.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <FormControl>
+                        <LocationTagsSelector
+                          value={field.value}
+                          onChange={(ids) =>
+                            form.setValue("tagIds", ids, { shouldValidate: true })
+                          }
+                          error={form.formState.errors.tagIds?.message}
+                          helperText="Select the location type and other relevant categories."
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* === STEP 2: Address & Map === */}
+          <div className={cn("space-y-6 animate-in fade-in-50 slide-in-from-bottom-4 duration-500", currentStep !== 1 && "hidden")}>
+            <Alert className="bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-2 border-blue-200 dark:border-blue-800 shadow-sm">
+              <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <AlertDescription className="text-sm text-blue-900 dark:text-blue-200 ml-2">
+                <strong className="font-semibold">Tip:</strong> You can search for an address, click on the map to select a location, or manually fill in location details below.
+              </AlertDescription>
+            </Alert>
+            
+            <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="pb-4 border-b border-primary/10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+                    <MapPin className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold">Location & Address</CardTitle>
+                    <CardDescription className="text-sm mt-1">
+                      Set your location on the map and provide address details
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-6">
+                  <LocationAddressPicker />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* === STEP 3: Images & Settings === */}
+          <div className={cn("space-y-6 animate-in fade-in-50 slide-in-from-bottom-4 duration-500", currentStep !== 2 && "hidden")}>
+            {/* Location Photos Card */}
+            <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="pb-4 border-b border-primary/10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+                    <ImageIcon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold">Location Photos</CardTitle>
+                    <CardDescription className="text-sm mt-1">
+                      Showcase your location with high-quality images
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <FormField
+                  name="imageUrl"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <FormItem>
+                      <div className="flex items-center gap-2 mb-2">
+                        <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                          <div className="p-1 rounded-md bg-primary/10">
+                            <ImageIcon className="h-4 w-4 text-primary" />
+                          </div>
+                          Location Photos
+                          <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs">Upload clear, high-quality photos of your location. Multiple angles help event creators visualize the space better.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <FormControl>
+                        <FileUpload
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="flex justify-between items-center mt-2">
+                        <FormMessage />
+                        <FormDescription className="text-xs text-muted-foreground">
+                          At least 1 photo required. Multiple angles recommended.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Visibility Settings Card */}
+            <Card className="border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="pb-4 border-b border-primary/10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+                    <Eye className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold">Visibility Settings</CardTitle>
+                    <CardDescription className="text-sm mt-1">
+                      Configure how your location appears to event creators
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <FormField
+                  name="isVisibleOnMap"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between space-y-0 rounded-lg border-2 border-primary/10 p-4 bg-gradient-to-r from-muted/50 to-transparent hover:border-primary/20 transition-all">
+                      <div className="space-y-1 flex-1 pr-4">
+                        <FormLabel className="flex items-center gap-2 text-base font-semibold cursor-pointer">
+                          <Eye className="h-4 w-4 text-primary" />
+                          Visible on Map
+                        </FormLabel>
+                        <FormDescription className="text-sm">
+                          Allow this location to appear on the public map for event creators to discover and book
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Navigation Footer */}
+          <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t-2 border-primary/10 shadow-2xl -mx-4 px-4 py-4 mt-8">
+            <div className="flex justify-between items-center max-w-5xl mx-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevStep}
+                disabled={currentStep === 0 || isPending}
+                className={cn(
+                  "h-12 px-6 border-2 transition-all",
+                  currentStep === 0 && "invisible",
+                  "border-primary/20 hover:border-primary/40 hover:bg-primary/5"
                 )}
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-    </PageContainer>
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Previous
+              </Button>
+              
+              {currentStep < steps.length - 1 && (
+                <Button 
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={isPending}
+                  className="h-12 px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg transition-all"
+                >
+                  Next Step
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+              
+              {currentStep === steps.length - 1 && (
+                <Button 
+                  type="submit" 
+                  disabled={isPending}
+                  className="h-12 px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg transition-all"
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Create Location
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 }

@@ -50,14 +50,18 @@ function ValidationSection({
   children: React.ReactNode;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {Icon && <Icon className="h-5 w-5" />}
+    <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
+        <CardTitle className="flex items-center gap-2 text-xl">
+          {Icon && (
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Icon className="h-5 w-5 text-primary" />
+            </div>
+          )}
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className="pt-6">{children}</CardContent>
     </Card>
   );
 }
@@ -75,16 +79,26 @@ function InfoField({
 }) {
   if (!value) return null;
   return (
-    <div className={`p-4 rounded-lg border ${highlight ? "bg-muted/50 border-primary/20" : "bg-background"}`}>
+    <div className={`p-4 rounded-lg border transition-all ${
+      highlight 
+        ? "bg-gradient-to-br from-primary/5 to-primary/10 border-primary/30 shadow-sm" 
+        : "bg-card border-border hover:border-primary/20"
+    }`}>
       <div className="flex items-start gap-3">
         {Icon && (
-          <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+          <div className={`p-2 rounded-md ${
+            highlight ? "bg-primary/20" : "bg-muted"
+          }`}>
+            <Icon className={`h-4 w-4 ${
+              highlight ? "text-primary" : "text-muted-foreground"
+            }`} />
+          </div>
         )}
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-muted-foreground mb-1">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
             {label}
           </p>
-          <div className="text-base font-medium text-foreground">{value}</div>
+          <div className="text-base font-medium text-foreground break-words">{value}</div>
         </div>
       </div>
     </div>
@@ -273,28 +287,65 @@ export default function AdminBusinessDetailsPage({
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="container mx-auto py-6 space-y-6 max-w-4xl">
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-10 rounded-md bg-muted animate-pulse" />
+          <div className="space-y-2 flex-1">
+            <div className="h-8 w-64 bg-muted rounded animate-pulse" />
+            <div className="h-4 w-96 bg-muted rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="space-y-6">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="border-2">
+              <CardHeader>
+                <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="h-20 w-full bg-muted rounded animate-pulse" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="h-16 bg-muted rounded animate-pulse" />
+                    <div className="h-16 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (isError || !user) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Card className="w-full max-w-md">
+      <div className="container mx-auto py-6 max-w-4xl">
+        <Card className="border-destructive/50 shadow-lg">
           <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              Failed to load business account details.
-            </p>
-            <Button
-              variant="outline"
-              className="w-full mt-4"
-              onClick={() => router.back()}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Go Back
-            </Button>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="p-4 rounded-full bg-destructive/10 mb-4">
+                <AlertCircle className="h-12 w-12 text-destructive" />
+              </div>
+              <h2 className="text-2xl font-bold mb-2">Error Loading Account</h2>
+              <p className="text-muted-foreground mb-6 max-w-md">
+                We couldn't load the business account details. This might be due to a network error or the account may not exist.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => router.back()}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Go Back
+                </Button>
+                <Button
+                  onClick={() => window.location.reload()}
+                >
+                  <Loader2 className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -304,19 +355,30 @@ export default function AdminBusinessDetailsPage({
   const isPending = businessProfile?.status === "PENDING";
 
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">Business Account Review</h1>
-          <p className="text-muted-foreground">
-            Review and validate business account information
-          </p>
+    <div className="container mx-auto py-6 space-y-6 max-w-5xl">
+      {/* Enhanced Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b">
+        <div className="flex items-center gap-4 flex-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => router.back()}
+            className="hover:bg-muted"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {businessProfile?.name || 'Business Account Review'}
+              </h1>
+              {getStatusBadge(businessProfile?.status)}
+            </div>
+            <p className="text-muted-foreground">
+              Review and validate business account information
+            </p>
+          </div>
         </div>
-        {getStatusBadge(businessProfile?.status)}
       </div>
 
       {/* Step 1: Business Basic Information */}
@@ -326,18 +388,18 @@ export default function AdminBusinessDetailsPage({
       >
         <div className="space-y-4">
           {businessProfile?.avatar && (
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center mb-6">
               <div
-                className="relative w-32 h-32 rounded-lg overflow-hidden cursor-pointer border-2 border-muted"
+                className="relative w-32 h-32 rounded-xl overflow-hidden cursor-pointer border-4 border-background shadow-lg ring-4 ring-primary/10 hover:ring-primary/20 transition-all group"
                 onClick={() => handleImageClick(businessProfile.avatar)}
               >
                 <img
                   src={businessProfile.avatar}
                   alt={businessProfile.name || "Business avatar"}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                 />
-                <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center">
-                  <ImageIcon className="h-6 w-6 text-white opacity-0 hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <ImageIcon className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
             </div>
@@ -543,21 +605,28 @@ export default function AdminBusinessDetailsPage({
 
       {/* Final Action Section - Single Location for Approve/Reject */}
       {isPending && (
-        <Card className="border-2">
-          <CardHeader>
-            <CardTitle>Review Complete - Make Decision</CardTitle>
+        <Card className="border-2 border-primary/20 shadow-lg bg-gradient-to-br from-card to-primary/5">
+          <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent border-b">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <div className="p-2 rounded-lg bg-primary/20">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+              </div>
+              Review Complete - Make Decision
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                After reviewing all information above, make your decision to
-                approve or reject this business account.
-              </p>
-              <div className="flex gap-3">
+          <CardContent className="pt-6">
+            <div className="space-y-6">
+              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">
+                  After reviewing all information above, make your decision to
+                  approve or reject this business account.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   onClick={() => setShowApproveDialog(true)}
                   disabled={isProcessing}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all"
                   size="lg"
                 >
                   <CheckCircle className="h-5 w-5 mr-2" />
@@ -567,7 +636,7 @@ export default function AdminBusinessDetailsPage({
                   variant="destructive"
                   onClick={() => setShowRejectDialog(true)}
                   disabled={isProcessing}
-                  className="flex-1"
+                  className="flex-1 shadow-md hover:shadow-lg transition-all"
                   size="lg"
                 >
                   <XCircle className="h-5 w-5 mr-2" />
@@ -579,12 +648,17 @@ export default function AdminBusinessDetailsPage({
         </Card>
       )}
 
-      {/* Additional Information (Collapsed by default) */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Additional Information</CardTitle>
+      {/* Additional Information */}
+      <Card className="border-2 shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-muted/50 to-transparent border-b">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <div className="p-2 rounded-lg bg-muted">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </div>
+            Additional Information
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="pt-6 space-y-6">
           <div>
             <p className="text-sm font-semibold text-muted-foreground mb-2">
               Account Owner

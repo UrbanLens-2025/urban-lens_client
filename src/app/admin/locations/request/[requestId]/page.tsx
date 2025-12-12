@@ -323,28 +323,30 @@ export default function AdminLocationRequestDetailsPage({
 
       {/* Review Instructions Banner */}
       {isPending && (
-        <Card className='border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800'>
+        <Card className='border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-blue-50/50 dark:from-blue-950/20 dark:to-blue-950/10 shadow-lg'>
           <CardContent className='pt-6'>
-            <div className='flex items-start gap-3'>
-              <AlertCircle className='h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0' />
+            <div className='flex items-start gap-4'>
+              <div className='p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 shadow-sm flex-shrink-0'>
+                <AlertCircle className='h-6 w-6 text-blue-600 dark:text-blue-400' />
+              </div>
               <div className='flex-1'>
-                <h3 className='font-semibold text-blue-900 dark:text-blue-100 mb-1'>
+                <h3 className='font-bold text-lg text-blue-900 dark:text-blue-100 mb-2'>
                   Review Required
                 </h3>
-                <p className='text-sm text-blue-800 dark:text-blue-200 mb-3'>
+                <p className='text-sm text-blue-800 dark:text-blue-200 mb-4 leading-relaxed'>
                   Please review all sections below carefully before making a decision. 
                   Verify the location details, images, documents, and submitter information.
                 </p>
-                <div className='flex flex-wrap gap-2 mt-3'>
-                  <Badge variant='outline' className='text-xs'>
+                <div className='flex flex-wrap gap-2'>
+                  <Badge variant='outline' className='text-xs bg-white/50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700'>
                     <ImageIcon className='h-3 w-3 mr-1' />
                     {imageCount} Image{imageCount !== 1 ? 's' : ''}
                   </Badge>
-                  <Badge variant='outline' className='text-xs'>
+                  <Badge variant='outline' className='text-xs bg-white/50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700'>
                     <FileText className='h-3 w-3 mr-1' />
                     {documentCount} Document{documentCount !== 1 ? 's' : ''}
                   </Badge>
-                  <Badge variant='outline' className='text-xs'>
+                  <Badge variant='outline' className='text-xs bg-white/50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700'>
                     <TagIcon className='h-3 w-3 mr-1' />
                     {tags.length} Tag{tags.length !== 1 ? 's' : ''}
                   </Badge>
@@ -358,9 +360,14 @@ export default function AdminLocationRequestDetailsPage({
       {/* Main Content */}
       <div className='space-y-6'>
         {/* Request Overview */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Request Overview</CardTitle>
+        <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              Request Overview
+            </CardTitle>
             <CardDescription>
               Basic information about this location request
             </CardDescription>
@@ -407,10 +414,12 @@ export default function AdminLocationRequestDetailsPage({
         </Card>
 
         {/* Address Information */}
-        <Card>
-          <CardHeader>
+        <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
             <CardTitle className='flex items-center gap-2'>
-              <MapPin className='h-5 w-5' />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <MapPin className='h-5 w-5 text-primary' />
+              </div>
               Address Information
             </CardTitle>
             <CardDescription>
@@ -466,10 +475,12 @@ export default function AdminLocationRequestDetailsPage({
 
         {/* Location Images */}
         {request.locationImageUrls && request.locationImageUrls.length > 0 && (
-          <Card>
-            <CardHeader>
+          <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
               <CardTitle className='flex items-center gap-2'>
-                <ImageIcon className='h-5 w-5' />
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <ImageIcon className='h-5 w-5 text-primary' />
+                </div>
                 Location Images
               </CardTitle>
               <CardDescription>
@@ -505,10 +516,12 @@ export default function AdminLocationRequestDetailsPage({
         {/* Validation Documents */}
         {request.locationValidationDocuments &&
           request.locationValidationDocuments.length > 0 && (
-            <Card>
-              <CardHeader>
+            <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
                 <CardTitle className='flex items-center gap-2'>
-                  <FileText className='h-5 w-5' />
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <FileText className='h-5 w-5 text-primary' />
+                  </div>
                   Validation Documents
                 </CardTitle>
                 <CardDescription>
@@ -555,10 +568,12 @@ export default function AdminLocationRequestDetailsPage({
 
         {/* Submitter Information */}
         {request.createdBy && (
-          <Card>
-            <CardHeader>
+          <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
               <CardTitle className='flex items-center gap-2'>
-                <User className='h-5 w-5' />
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <User className='h-5 w-5 text-primary' />
+                </div>
                 Submitter Information
               </CardTitle>
               <CardDescription>
