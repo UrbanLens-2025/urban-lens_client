@@ -86,11 +86,6 @@ const adminNavGroups = [
     groupLabel: 'Financial',
     items: [
       { title: 'Wallet', url: '/admin/wallet', icon: IconWallet },
-      {
-        title: 'External Transactions',
-        url: '/admin/wallet/external-transactions',
-        icon: IconFileText,
-      },
     ],
   },
   {
