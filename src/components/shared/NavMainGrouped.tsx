@@ -73,7 +73,19 @@ export function NavMainGrouped({ groups }: { groups: NavGroup[] }) {
       return pathname === url;
     }
     
+    // Exclude "create", "edit", and "new" pages from matching their parent routes
+    // e.g., /admin/locations/create should not highlight "Locations"
+    const excludedChildRoutes = ["/create", "/edit", "/new"];
+    const isExcludedChild = excludedChildRoutes.some(excluded => 
+      pathname.includes(excluded) && !url.includes(excluded)
+    );
+    
+    if (isExcludedChild) {
+      return false;
+    }
+    
     // For other pages, check if pathname starts with the URL
+    // This handles nested routes like /admin/locations/[locationId]
     return pathname.startsWith(url + "/") || pathname === url;
   };
 
