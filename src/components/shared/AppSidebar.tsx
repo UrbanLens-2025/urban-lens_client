@@ -112,7 +112,7 @@ const getBusinessOverview = () => [
   {
     title: 'Add location',
     url: '/dashboard/business/locations/create',
-    icon: IconPlus,
+    icon: IconBuildingPlus,
   },
   {
     title: 'My Locations',
@@ -121,7 +121,6 @@ const getBusinessOverview = () => [
   },
   { title: 'Wallet', url: '/dashboard/business/wallet', icon: IconWallet },
 ];
-
 const businessNavGroups = [
   {
     groupLabel: 'Requests',

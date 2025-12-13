@@ -1,8 +1,11 @@
-"use client";
+'use client';
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { createWeeklyAvailability, CreateWeeklyAvailabilityPayload } from "@/api/availability";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+  createWeeklyAvailability,
+  CreateWeeklyAvailabilityPayload,
+} from '@/api/availability';
 
 export function useCreateWeeklyAvailability() {
   const queryClient = useQueryClient();
@@ -10,10 +13,10 @@ export function useCreateWeeklyAvailability() {
     mutationFn: (payload: CreateWeeklyAvailabilityPayload) =>
       createWeeklyAvailability(payload),
     onSuccess: (_, variables) => {
-      toast.success("Availability added!");
-      queryClient.invalidateQueries({ queryKey: ["weeklyAvailabilities", variables.locationId] });
+      queryClient.invalidateQueries({
+        queryKey: ['weeklyAvailabilities', variables.locationId],
+      });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 }
-

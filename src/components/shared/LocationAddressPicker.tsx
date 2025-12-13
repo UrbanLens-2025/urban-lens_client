@@ -165,13 +165,13 @@ export function AddressFields({ editable = false }: AddressFieldsProps) {
   const form = useFormContext();
 
   return (
-    <div className='grid grid-cols-1 md:grid-cols-3 gap-3 animate-in fade-in-50'>
+    <div className='grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in-50'>
       <FormField
         name='addressLine'
         control={form.control}
         render={({ field }) => (
-          <FormItem className='md:col-span-3'>
-            <FormLabel className='text-sm flex items-center gap-2'>
+          <FormItem>
+            <FormLabel className='text-sm flex items-center gap-1'>
               <MapPin className='h-4 w-4 text-muted-foreground' />
               Street Address
             </FormLabel>
@@ -187,7 +187,7 @@ export function AddressFields({ editable = false }: AddressFieldsProps) {
         control={form.control}
         render={({ field }) => (
           <FormItem>
-            <FormLabel className='text-sm flex items-center gap-2'>
+            <FormLabel className='text-sm flex items-center gap-1'>
               <Building2 className='h-4 w-4 text-muted-foreground' />
               District
             </FormLabel>
@@ -203,7 +203,7 @@ export function AddressFields({ editable = false }: AddressFieldsProps) {
         control={form.control}
         render={({ field }) => (
           <FormItem>
-            <FormLabel className='text-sm flex items-center gap-2'>
+            <FormLabel className='text-sm flex items-center gap-1'>
               <Building2 className='h-4 w-4 text-muted-foreground' />
               Province
             </FormLabel>
@@ -215,7 +215,7 @@ export function AddressFields({ editable = false }: AddressFieldsProps) {
         )}
       />
       <FormItem>
-        <FormLabel className='text-sm flex items-center gap-2'>
+        <FormLabel className='text-sm flex items-center gap-1'>
           <Globe className='h-4 w-4 text-muted-foreground' />
           Country
         </FormLabel>

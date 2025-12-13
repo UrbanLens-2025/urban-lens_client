@@ -88,6 +88,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LocationTagsSelector } from '@/components/locations/LocationTagsSelector';
+import { PageContainer, PageHeader } from '../shared';
+import { IconBuildingPlus } from '@tabler/icons-react';
 
 // Document types with descriptions
 const DOCUMENT_TYPES = {
@@ -172,7 +174,7 @@ const steps = [
   },
   {
     id: 3,
-    title: 'Images & Documents',
+    title: 'Documents',
     description: 'Upload photos and validation documents',
     icon: Image,
     fields: ['locationImageUrls', 'locationValidationDocuments'] as const,
@@ -184,18 +186,6 @@ const steps = [
     icon: FileCheck,
   },
 ];
-
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
-  if (!value) return null;
-  return (
-    <div className='py-1.5 border-b last:border-0'>
-      <p className='text-xs font-medium text-muted-foreground mb-0.5'>
-        {label}
-      </p>
-      <div className='text-sm'>{value}</div>
-    </div>
-  );
-}
 
 export default function LocationForm({
   isEditMode,
@@ -445,32 +435,16 @@ export default function LocationForm({
   const currentStepData = steps[currentStep];
 
   return (
-    <div className='space-y-8 max-w-5xl mx-auto px-4 py-6'>
+    <PageContainer>
       {/* Header */}
-      <div className='flex items-start gap-4 pb-6 border-b-2 border-primary/20'>
-        <div className='p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary shadow-md'>
-          <Building2 className='h-6 w-6' />
-        </div>
-        <div className='flex-1'>
-          <div className='flex items-center gap-3 mb-2'>
-            <h1 className='text-3xl lg:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text'>
-              {isEditMode ? 'Edit Location Request' : 'Submit a New Location'}
-            </h1>
-          </div>
-          <p className='text-base text-muted-foreground'>
-            {currentStepData.description}
-          </p>
-          <div className='mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg'>
-            <Info className='h-4 w-4 text-blue-600 dark:text-blue-400' />
-            <span className='text-sm text-blue-700 dark:text-blue-300 font-medium'>
-              Step {currentStep + 1} of {steps.length}
-            </span>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title={isEditMode ? 'Edit Location Request' : 'Submit a New Location'}
+        description={currentStepData.description}
+        icon={Building2}
+      />
 
       {/* Step Progress Navigation */}
-      <div className='space-y-6'>
+      <div className='space-y-6 max-w-5xl mx-auto'>
         {/* Step Indicators */}
         <div className='flex items-center justify-between relative'>
           {/* Progress Line Background */}
@@ -549,7 +523,7 @@ export default function LocationForm({
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className='space-y-6'
+          className='space-y-4 max-w-5xl mx-auto'
           id='location-form'
         >
           {/* === STEP 1: Basic Information === */}
@@ -561,7 +535,7 @@ export default function LocationForm({
           >
             {/* Card 1: Location Name & Description */}
             <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm overflow-hidden'>
-              <CardHeader className='pb-4 border-b border-primary/10'>
+              <CardHeader className='border-b border-primary/10'>
                 <div className='flex items-center gap-3'>
                   <div className='p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10'>
                     <Building2 className='h-5 w-5 text-primary' />
@@ -576,7 +550,7 @@ export default function LocationForm({
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className='pt-6'>
+              <CardContent>
                 <div className='grid grid-cols-1 gap-6'>
                   <FormField
                     name='name'
@@ -680,6 +654,26 @@ export default function LocationForm({
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    name='tagIds'
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <FormItem>
+                        <FormControl>
+                          <LocationTagsSelector
+                            value={field.value}
+                            onChange={(ids) =>
+                              form.setValue('tagIds', ids, {
+                                shouldValidate: true,
+                              })
+                            }
+                            error={form.formState.errors.tagIds?.message}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -720,47 +714,6 @@ export default function LocationForm({
                           recommended.
                         </FormDescription>
                       </div>
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Card 2: Location Categories */}
-            <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm overflow-hidden'>
-              <CardHeader className='pb-4 border-b border-primary/10'>
-                <div className='flex items-center gap-3'>
-                  <div className='p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10'>
-                    <TagIcon className='h-5 w-5 text-primary' />
-                  </div>
-                  <div>
-                    <CardTitle className='text-xl font-bold'>
-                      Location Categories
-                    </CardTitle>
-                    <CardDescription className='text-sm mt-1'>
-                      Categorize your location to help creators find it
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <FormField
-                  name='tagIds'
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <FormItem>
-                      <FormControl>
-                        <LocationTagsSelector
-                          value={field.value}
-                          onChange={(ids) =>
-                            form.setValue('tagIds', ids, {
-                              shouldValidate: true,
-                            })
-                          }
-                          error={form.formState.errors.tagIds?.message}
-                        />
-                      </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -1142,17 +1095,23 @@ export default function LocationForm({
               currentStep !== 3 && 'hidden'
             )}
           >
-            <Alert className='bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border-2 border-green-200 dark:border-green-800 shadow-sm'>
-              <FileCheck className='h-5 w-5 text-green-600 dark:text-green-400' />
-              <AlertDescription className='text-sm text-green-900 dark:text-green-200 ml-2'>
-                <strong className='font-semibold'>Review:</strong> Please review
-                all information carefully before submitting. Your request will
-                be reviewed by our team.
-              </AlertDescription>
-            </Alert>
-
             <Card className='border-2 border-primary/10 shadow-2xl overflow-hidden bg-card/80 backdrop-blur-sm'>
-              <CardContent className='p-0'>
+              <CardHeader className='border-b border-primary/10'>
+                <div className='flex items-center gap-3'>
+                  <div className='p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10'>
+                    <FileCheck className='h-5 w-5 text-primary' />
+                  </div>
+                  <div>
+                    <CardTitle className='text-xl font-bold'>
+                      Review Your Submission
+                    </CardTitle>
+                    <CardDescription className='text-sm mt-1'>
+                      Review your submission before submitting.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className='p-4'>
                 {/* Location Images Gallery - Top Section */}
                 {watchedValues.locationImageUrls &&
                   watchedValues.locationImageUrls.length > 0 && (
@@ -1239,17 +1198,14 @@ export default function LocationForm({
                         {watchedValues.description}
                       </p>
                     )}
-                  </div>
 
-                  {/* Tags */}
-                  {tags && tags.length > 0 && (
-                    <div className='space-y-2'>
-                      <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>
-                        Location Categories
-                      </p>
-                      <DisplayTags tags={tags} maxCount={10} />
-                    </div>
-                  )}
+                    {/* Tags */}
+                    {tags && tags.length > 0 && (
+                      <div className='space-y-2'>
+                        <DisplayTags tags={tags} maxCount={10} />
+                      </div>
+                    )}
+                  </div>
 
                   {/* Divider */}
                   <div className='border-t' />
@@ -1437,19 +1393,10 @@ export default function LocationForm({
                 </div>
               </CardContent>
             </Card>
-
-            <Alert className='bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-2 border-blue-200 dark:border-blue-800 shadow-sm'>
-              <Info className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-              <AlertDescription className='text-sm text-blue-900 dark:text-blue-200 ml-2'>
-                <strong className='font-semibold'>Processing Time:</strong> Our
-                admin team will review your submission and respond within 1-2
-                business days.
-              </AlertDescription>
-            </Alert>
           </div>
 
           {/* Navigation Footer */}
-          <div className='sticky bottom-0 bg-background/95 backdrop-blur-sm border-t-2 border-primary/10 shadow-2xl -mx-4 px-4 py-4 mt-8'>
+          <div className='px-4 py-4 mt-8'>
             <div className='flex justify-between items-center max-w-5xl mx-auto'>
               <Button
                 type='button'
@@ -1540,6 +1487,6 @@ export default function LocationForm({
           </div>
         </form>
       </Form>
-    </div>
+    </PageContainer>
   );
 }

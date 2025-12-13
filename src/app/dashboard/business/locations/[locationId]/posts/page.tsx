@@ -1,12 +1,18 @@
-"use client";
+'use client';
 
-import { use, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { useLocationPosts } from "@/hooks/posts/useLocationPosts";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ImageViewer } from "@/components/shared/ImageViewer";
+import { use, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { useLocationPosts } from '@/hooks/posts/useLocationPosts';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ImageViewer } from '@/components/shared/ImageViewer';
 import {
   Table,
   TableBody,
@@ -14,7 +20,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 import {
   Loader2,
   Star,
@@ -28,20 +34,22 @@ import {
   Search,
   ThumbsUp,
   Image as ImageIcon,
-} from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { useDebounce } from "use-debounce";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+} from '@/components/ui/select';
+import { useDebounce } from 'use-debounce';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { StatCard } from '@/components/shared/StatCard';
+import { TrendingUp } from 'lucide-react';
 
 export default function LocationPostsPage({
   params,
@@ -52,12 +60,14 @@ export default function LocationPostsPage({
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
-  const [sortBy, setSortBy] = useState("createdAt:DESC");
-  const [filterType, setFilterType] = useState<string>("all");
-  const [filterRating, setFilterRating] = useState<string>("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<"all" | "reviews" | "posts">("all");
-  const [currentImageSrc, setCurrentImageSrc] = useState("");
+  const [sortBy, setSortBy] = useState('createdAt:DESC');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterRating, setFilterRating] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'reviews' | 'posts'>(
+    'all'
+  );
+  const [currentImageSrc, setCurrentImageSrc] = useState('');
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
@@ -102,9 +112,9 @@ export default function LocationPostsPage({
     let filtered = allPosts;
 
     // Filter by tab
-    if (activeTab === "reviews") {
+    if (activeTab === 'reviews') {
       filtered = filtered.filter((p) => p.rating !== null && p.rating > 0);
-    } else if (activeTab === "posts") {
+    } else if (activeTab === 'posts') {
       filtered = filtered.filter((p) => !p.rating || p.rating === 0);
     }
 
@@ -120,12 +130,12 @@ export default function LocationPostsPage({
     }
 
     // Filter by type
-    if (filterType !== "all") {
+    if (filterType !== 'all') {
       filtered = filtered.filter((p) => p.type === filterType);
     }
 
     // Filter by rating
-    if (filterRating !== "all") {
+    if (filterRating !== 'all') {
       const ratingNum = parseInt(filterRating);
       filtered = filtered.filter((p) => p.rating === ratingNum);
     }
@@ -142,21 +152,26 @@ export default function LocationPostsPage({
     return Array.from(new Set(allPosts.map((p) => p.type))).filter(Boolean);
   }, [allPosts]);
 
-  const renderStars = (rating: number | null, size: "sm" | "md" = "md") => {
+  const renderStars = (rating: number | null, size: 'sm' | 'md' = 'md') => {
     if (!rating) return null;
-    const starSize = size === "sm" ? "h-3 w-3" : "h-4 w-4";
+    const starSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
     return (
-      <div className="flex items-center gap-0.5">
+      <div className='flex items-center gap-0.5'>
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`${starSize} ${star <= rating
-                ? "fill-amber-400 text-amber-400"
-                : "fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700"
-              }`}
+            className={`${starSize} ${
+              star <= rating
+                ? 'fill-amber-400 text-amber-400'
+                : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'
+            }`}
           />
         ))}
-        <span className={`ml-1.5 ${size === "sm" ? "text-xs" : "text-sm"} font-semibold text-foreground`}>
+        <span
+          className={`ml-1.5 ${
+            size === 'sm' ? 'text-xs' : 'text-sm'
+          } font-semibold text-foreground`}
+        >
           {rating}
         </span>
       </div>
@@ -165,29 +180,29 @@ export default function LocationPostsPage({
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className='space-y-6'>
         {/* Skeleton Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="border-border/60">
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-2">
-                    <div className="h-3 w-16 bg-muted rounded animate-pulse" />
-                    <div className="h-7 w-12 bg-muted rounded animate-pulse" />
+            <Card key={i} className='border-border/60'>
+              <CardContent className='pt-4 pb-4'>
+                <div className='flex items-center justify-between'>
+                  <div className='space-y-2'>
+                    <div className='h-3 w-16 bg-muted rounded animate-pulse' />
+                    <div className='h-7 w-12 bg-muted rounded animate-pulse' />
                   </div>
-                  <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+                  <div className='h-10 w-10 rounded-full bg-muted animate-pulse' />
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
         {/* Skeleton Table */}
-        <Card className="border-border/60 shadow-sm">
-          <CardContent className="p-0">
-            <div className="overflow-hidden rounded-lg border border-border/60">
+        <Card className='border-border/60 shadow-sm'>
+          <CardContent className='p-0'>
+            <div className='overflow-hidden rounded-lg border border-border/60'>
               <Table>
-                <TableHeader className="bg-muted/40">
+                <TableHeader className='bg-muted/40'>
                   <TableRow>
                     <TableHead>Author</TableHead>
                     <TableHead>Is checked in</TableHead>
@@ -201,32 +216,32 @@ export default function LocationPostsPage({
                   {[1, 2, 3, 4, 5].map((i) => (
                     <TableRow key={i}>
                       <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-                          <div className="space-y-1.5">
-                            <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                        <div className='flex items-center gap-3'>
+                          <div className='h-8 w-8 rounded-full bg-muted animate-pulse' />
+                          <div className='space-y-1.5'>
+                            <div className='h-4 w-24 bg-muted rounded animate-pulse' />
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="h-5 w-16 bg-muted rounded animate-pulse" />
+                        <div className='h-5 w-16 bg-muted rounded animate-pulse' />
                       </TableCell>
                       <TableCell>
-                        <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+                        <div className='h-4 w-20 bg-muted rounded animate-pulse' />
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1.5">
-                          <div className="h-4 w-full bg-muted rounded animate-pulse" />
-                          <div className="h-4 w-3/4 bg-muted rounded animate-pulse" />
+                        <div className='space-y-1.5'>
+                          <div className='h-4 w-full bg-muted rounded animate-pulse' />
+                          <div className='h-4 w-3/4 bg-muted rounded animate-pulse' />
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
-                          <div className="h-10 w-10 bg-muted rounded animate-pulse" />
+                        <div className='flex gap-1'>
+                          <div className='h-10 w-10 bg-muted rounded animate-pulse' />
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                        <div className='h-4 w-24 bg-muted rounded animate-pulse' />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -241,11 +256,11 @@ export default function LocationPostsPage({
 
   if (isError) {
     return (
-      <div className="space-y-6 p-6">
+      <div className='space-y-6 p-6'>
         <Card>
-          <CardContent className="py-20 text-center">
-            <p className="text-red-500 font-medium">Error loading posts</p>
-            <p className="text-sm text-muted-foreground mt-2">
+          <CardContent className='py-20 text-center'>
+            <p className='text-red-500 font-medium'>Error loading posts</p>
+            <p className='text-sm text-muted-foreground mt-2'>
               Please try refreshing the page
             </p>
           </CardContent>
@@ -255,102 +270,70 @@ export default function LocationPostsPage({
   }
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       {/* Header Section */}
-      <div className="space-y-4">
-        <div className="flex flex-col gap-4">
+      <div className='space-y-4'>
+        <div className='flex flex-col gap-4'>
           <div>
-            <h2 className="text-2xl font-bold">Posts & Reviews</h2>
-            <p className="text-muted-foreground mt-1">
+            <h2 className='text-2xl font-bold'>Posts & Reviews</h2>
+            <p className='text-muted-foreground mt-1'>
               Monitor customer feedback and posts for this location
             </p>
           </div>
 
           {/* Statistics Cards */}
           {stats.total > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total</p>
-                      <p className="text-2xl font-bold mt-1.5">{stats.total}</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <MessageSquare className="h-5 w-5 text-primary" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
+              <StatCard
+                title='Total'
+                value={stats.total}
+                icon={MessageSquare}
+                color='primary'
+              />
 
-              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reviews</p>
-                      <p className="text-2xl font-bold mt-1.5 text-amber-600">{stats.reviews}</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center">
-                      <Star className="h-5 w-5 text-amber-600 fill-amber-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StatCard
+                title='Reviews'
+                value={stats.reviews}
+                icon={Star}
+                color='amber'
+              />
 
-              <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Posts</p>
-                      <p className="text-2xl font-bold mt-1.5 text-blue-600">{stats.posts}</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                      <ImageIcon className="h-5 w-5 text-blue-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StatCard
+                title='Posts'
+                value={stats.posts}
+                icon={ImageIcon}
+                color='blue'
+              />
 
               {stats.reviews > 0 && (
-                <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-                  <CardContent className="pt-4 pb-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Avg Rating</p>
-                        <div className="flex items-center gap-1.5 mt-1.5">
-                          <p className="text-2xl font-bold text-emerald-600">{stats.averageRating}</p>
-                          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                        </div>
-                      </div>
-                      <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                        <ThumbsUp className="h-5 w-5 text-emerald-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <StatCard
+                  title='Avg Rating'
+                  value={stats.averageRating.toFixed(1)}
+                  icon={ThumbsUp}
+                  color='emerald'
+                />
               )}
             </div>
           )}
         </div>
 
         {/* Filters and Search */}
-        <Card className="border-border/60 bg-muted/30">
-          <CardContent className="pt-4 pb-4">
-            <div className="space-y-4">
-
+        <Card className='border-border/60 bg-muted/30'>
+          <CardContent className='pt-4 pb-4'>
+            <div className='space-y-4'>
               {/* Filters Row */}
-              <div className="flex flex-col sm:flex-row gap-2.5">
+              <div className='flex flex-col sm:flex-row gap-2.5'>
                 {/* Search */}
-                <div className="flex-1 relative min-w-0">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <div className='flex-1 relative min-w-0'>
+                  <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none' />
                   <Input
-                    placeholder="Search by content or author..."
+                    placeholder='Search by content or author...'
                     value={searchTerm}
                     onChange={(e) => {
                       setSearchTerm(e.target.value);
                       setPage(1);
                     }}
-                    className="pl-9 bg-background"
+                    className='pl-9 bg-background'
                   />
                 </div>
 
@@ -363,17 +346,20 @@ export default function LocationPostsPage({
                       setPage(1);
                     }}
                   >
-                    <SelectTrigger className="w-full sm:w-[140px] bg-background">
-                      <Filter className="h-4 w-4 mr-2" />
-                      <SelectValue placeholder="Type" />
-                      {filterType !== "all" && (
-                        <Badge variant="secondary" className="ml-auto mr-2 h-5 px-1.5 text-[10px]">
+                    <SelectTrigger className='w-full sm:w-[140px] bg-background'>
+                      <Filter className='h-4 w-4 mr-2' />
+                      <SelectValue placeholder='Type' />
+                      {filterType !== 'all' && (
+                        <Badge
+                          variant='secondary'
+                          className='ml-auto mr-2 h-5 px-1.5 text-[10px]'
+                        >
                           {filterType}
                         </Badge>
                       )}
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value='all'>All Types</SelectItem>
                       {uniqueTypes.map((type) => (
                         <SelectItem key={type} value={type}>
                           {type}
@@ -384,7 +370,7 @@ export default function LocationPostsPage({
                 )}
 
                 {/* Rating Filter */}
-                {(activeTab === "all" || activeTab === "reviews") && (
+                {(activeTab === 'all' || activeTab === 'reviews') && (
                   <Select
                     value={filterRating}
                     onValueChange={(value) => {
@@ -392,61 +378,77 @@ export default function LocationPostsPage({
                       setPage(1);
                     }}
                   >
-                    <SelectTrigger className="w-full sm:w-[130px] bg-background">
-                      <Star className="h-4 w-4 mr-2" />
-                      <SelectValue placeholder="Rating" />
-                      {filterRating !== "all" && (
-                        <Badge variant="secondary" className="ml-auto mr-2 h-5 px-1.5 text-[10px]">
+                    <SelectTrigger className='w-full sm:w-[130px] bg-background'>
+                      <Star className='h-4 w-4 mr-2' />
+                      <SelectValue placeholder='Rating' />
+                      {filterRating !== 'all' && (
+                        <Badge
+                          variant='secondary'
+                          className='ml-auto mr-2 h-5 px-1.5 text-[10px]'
+                        >
                           {filterRating}★
                         </Badge>
                       )}
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Ratings</SelectItem>
-                      <SelectItem value="5">
-                        <div className="flex items-center gap-2">
-                          <div className="flex gap-0.5">
+                      <SelectItem value='all'>All Ratings</SelectItem>
+                      <SelectItem value='5'>
+                        <div className='flex items-center gap-2'>
+                          <div className='flex gap-0.5'>
                             {[1, 2, 3, 4, 5].map((s) => (
-                              <Star key={s} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                              <Star
+                                key={s}
+                                className='h-3 w-3 fill-amber-400 text-amber-400'
+                              />
                             ))}
                           </div>
                           <span>5 Stars</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="4">
-                        <div className="flex items-center gap-2">
-                          <div className="flex gap-0.5">
+                      <SelectItem value='4'>
+                        <div className='flex items-center gap-2'>
+                          <div className='flex gap-0.5'>
                             {[1, 2, 3, 4].map((s) => (
-                              <Star key={s} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                              <Star
+                                key={s}
+                                className='h-3 w-3 fill-amber-400 text-amber-400'
+                              />
                             ))}
                           </div>
                           <span>4 Stars</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="3">3 Stars</SelectItem>
-                      <SelectItem value="2">2 Stars</SelectItem>
-                      <SelectItem value="1">1 Star</SelectItem>
+                      <SelectItem value='3'>3 Stars</SelectItem>
+                      <SelectItem value='2'>2 Stars</SelectItem>
+                      <SelectItem value='1'>1 Star</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
 
                 {/* Sort */}
-                <Select value={sortBy} onValueChange={(value) => {
-                  setSortBy(value);
-                  setPage(1);
-                }}>
-                  <SelectTrigger className="w-full sm:w-[150px] bg-background">
-                    <ArrowUpDown className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Sort by" />
+                <Select
+                  value={sortBy}
+                  onValueChange={(value) => {
+                    setSortBy(value);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className='w-full sm:w-[150px] bg-background'>
+                    <ArrowUpDown className='h-4 w-4 mr-2' />
+                    <SelectValue placeholder='Sort by' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="createdAt:DESC">Newest First</SelectItem>
-                    <SelectItem value="createdAt:ASC">Oldest First</SelectItem>
-                    <SelectItem value="updatedAt:DESC">Recently Updated</SelectItem>
-                    {(activeTab === "all" || activeTab === "reviews") && (
+                    <SelectItem value='createdAt:DESC'>Newest First</SelectItem>
+                    <SelectItem value='createdAt:ASC'>Oldest First</SelectItem>
+                    <SelectItem value='updatedAt:DESC'>
+                      Recently Updated
+                    </SelectItem>
+                    {(activeTab === 'all' || activeTab === 'reviews') && (
                       <>
-                        <SelectItem value="rating:DESC">Highest Rated</SelectItem>
-                        <SelectItem value="rating:ASC">Lowest Rated</SelectItem>
+                        <SelectItem value='rating:DESC'>
+                          Highest Rated
+                        </SelectItem>
+                        <SelectItem value='rating:ASC'>Lowest Rated</SelectItem>
                       </>
                     )}
                   </SelectContent>
@@ -454,50 +456,54 @@ export default function LocationPostsPage({
               </div>
 
               {/* Active Filters Display */}
-              {(debouncedSearchTerm || filterType !== "all" || filterRating !== "all") && (
-                <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border/60">
-                  <span className="text-xs text-muted-foreground font-medium">Active filters:</span>
+              {(debouncedSearchTerm ||
+                filterType !== 'all' ||
+                filterRating !== 'all') && (
+                <div className='flex items-center gap-2 flex-wrap pt-2 border-t border-border/60'>
+                  <span className='text-xs text-muted-foreground font-medium'>
+                    Active filters:
+                  </span>
                   {debouncedSearchTerm && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant='secondary' className='text-xs'>
                       Search: "{debouncedSearchTerm}"
                       <button
-                        onClick={() => setSearchTerm("")}
-                        className="ml-1.5 hover:text-foreground"
+                        onClick={() => setSearchTerm('')}
+                        className='ml-1.5 hover:text-foreground'
                       >
                         ×
                       </button>
                     </Badge>
                   )}
-                  {filterType !== "all" && (
-                    <Badge variant="secondary" className="text-xs">
+                  {filterType !== 'all' && (
+                    <Badge variant='secondary' className='text-xs'>
                       Type: {filterType}
                       <button
-                        onClick={() => setFilterType("all")}
-                        className="ml-1.5 hover:text-foreground"
+                        onClick={() => setFilterType('all')}
+                        className='ml-1.5 hover:text-foreground'
                       >
                         ×
                       </button>
                     </Badge>
                   )}
-                  {filterRating !== "all" && (
-                    <Badge variant="secondary" className="text-xs">
+                  {filterRating !== 'all' && (
+                    <Badge variant='secondary' className='text-xs'>
                       Rating: {filterRating}★
                       <button
-                        onClick={() => setFilterRating("all")}
-                        className="ml-1.5 hover:text-foreground"
+                        onClick={() => setFilterRating('all')}
+                        className='ml-1.5 hover:text-foreground'
                       >
                         ×
                       </button>
                     </Badge>
                   )}
                   <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-xs"
+                    variant='ghost'
+                    size='sm'
+                    className='h-6 text-xs'
                     onClick={() => {
-                      setSearchTerm("");
-                      setFilterType("all");
-                      setFilterRating("all");
+                      setSearchTerm('');
+                      setFilterType('all');
+                      setFilterRating('all');
                     }}
                   >
                     Clear all
@@ -512,34 +518,38 @@ export default function LocationPostsPage({
       {/* Posts Table */}
       {posts.length === 0 ? (
         <Card>
-          <CardContent className="py-16 text-center">
-            <MessageSquare className="h-14 w-14 mx-auto text-muted-foreground/30 mb-4" />
-            <p className="text-base font-semibold text-foreground">
-              {debouncedSearchTerm || filterType !== "all" || filterRating !== "all"
-                ? "No posts match your filters"
-                : "No posts yet"}
+          <CardContent className='py-16 text-center'>
+            <MessageSquare className='h-14 w-14 mx-auto text-muted-foreground/30 mb-4' />
+            <p className='text-base font-semibold text-foreground'>
+              {debouncedSearchTerm ||
+              filterType !== 'all' ||
+              filterRating !== 'all'
+                ? 'No posts match your filters'
+                : 'No posts yet'}
             </p>
-            <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-              {debouncedSearchTerm || filterType !== "all" || filterRating !== "all"
-                ? "Try adjusting your filters to see more results"
-                : "Posts and reviews from customers will appear here"}
+            <p className='text-sm text-muted-foreground mt-2 max-w-md mx-auto'>
+              {debouncedSearchTerm ||
+              filterType !== 'all' ||
+              filterRating !== 'all'
+                ? 'Try adjusting your filters to see more results'
+                : 'Posts and reviews from customers will appear here'}
             </p>
           </CardContent>
         </Card>
       ) : (
         <>
-          <Card className="border-border/60 shadow-sm p-0">
-            <CardContent className="p-0">
-              <div className="overflow-hidden">
+          <Card className='border-border/60 shadow-sm p-0'>
+            <CardContent className='p-0'>
+              <div className='overflow-hidden'>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="min-w-[200px]">Author</TableHead>
-                      <TableHead className="w-[100px]">Is checked in</TableHead>
-                      <TableHead className="w-[120px]">Rating</TableHead>
-                      <TableHead className="min-w-[300px]">Content</TableHead>
-                      <TableHead className="w-[120px]">Images</TableHead>
-                      <TableHead className="w-[180px]">Date</TableHead>
+                      <TableHead className='min-w-[200px]'>Author</TableHead>
+                      <TableHead className='w-[100px]'>Is checked in</TableHead>
+                      <TableHead className='w-[120px]'>Rating</TableHead>
+                      <TableHead className='min-w-[300px]'>Content</TableHead>
+                      <TableHead className='w-[120px]'>Images</TableHead>
+                      <TableHead className='w-[180px]'>Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -550,12 +560,16 @@ export default function LocationPostsPage({
                           key={post.postId}
                           className={`hover:bg-muted/50 transition-colors cursor-pointer ${
                             isReview
-                              ? "border-l-2 border-l-amber-500"
-                              : "border-l-2 border-l-blue-500"
+                              ? 'border-l-2 border-l-amber-500'
+                              : 'border-l-2 border-l-blue-500'
                           }`}
                           onClick={(e) => {
                             // Don't navigate if clicking on images
-                            if ((e.target as HTMLElement).closest('[data-image-cell]')) {
+                            if (
+                              (e.target as HTMLElement).closest(
+                                '[data-image-cell]'
+                              )
+                            ) {
                               return;
                             }
                             router.push(
@@ -564,21 +578,22 @@ export default function LocationPostsPage({
                           }}
                         >
                           <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
+                            <div className='flex items-center gap-3'>
+                              <Avatar className='h-9 w-9 border-2 border-background shadow-sm'>
                                 <AvatarImage
                                   src={post.author.avatarUrl || undefined}
                                   alt={`${post.author.firstName} ${post.author.lastName}`}
                                 />
-                                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold text-xs">
+                                <AvatarFallback className='bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold text-xs'>
                                   {post.author.firstName[0]}
                                   {post.author.lastName[0]}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="flex flex-col min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <p className="font-semibold text-sm text-foreground truncate">
-                                    {post.author.firstName} {post.author.lastName}
+                              <div className='flex flex-col min-w-0'>
+                                <div className='flex items-center gap-1.5'>
+                                  <p className='font-semibold text-sm text-foreground truncate'>
+                                    {post.author.firstName}{' '}
+                                    {post.author.lastName}
                                   </p>
                                 </div>
                               </div>
@@ -587,77 +602,92 @@ export default function LocationPostsPage({
                           <TableCell>
                             {post.isVerified ? (
                               <Badge
-                                variant="secondary"
-                                className="text-[10px] px-1 py-0 h-4 bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 shrink-0"
+                                variant='secondary'
+                                className='text-[10px] px-1 py-0 h-4 bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 shrink-0'
                               >
-                                <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+                                <CheckCircle2 className='h-2.5 w-2.5 mr-0.5' />
                                 Verified
                               </Badge>
                             ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
+                              <span className='text-xs text-muted-foreground'>
+                                —
+                              </span>
                             )}
                           </TableCell>
                           <TableCell>
                             {isReview ? (
-                              renderStars(post.rating, "sm")
+                              renderStars(post.rating, 'sm')
                             ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
+                              <span className='text-xs text-muted-foreground'>
+                                —
+                              </span>
                             )}
                           </TableCell>
                           <TableCell>
                             {post.content ? (
-                              <p className="text-sm text-foreground line-clamp-2 max-w-md">
+                              <p className='text-sm text-foreground line-clamp-2 max-w-md'>
                                 {post.content}
                               </p>
                             ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
+                              <span className='text-xs text-muted-foreground'>
+                                —
+                              </span>
                             )}
                           </TableCell>
                           <TableCell data-image-cell>
                             {post.imageUrls && post.imageUrls.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {post.imageUrls.slice(0, 2).map((imageUrl, index) => (
-                                  <div
-                                    key={index}
-                                    className="relative w-10 h-10 rounded overflow-hidden border cursor-pointer bg-muted/50 shrink-0 hover:ring-2 hover:ring-primary transition-all"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleImageClick(imageUrl);
-                                    }}
-                                  >
-                                    <img
-                                      src={imageUrl}
-                                      alt={`Post image ${index + 1}`}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                ))}
+                              <div className='flex flex-wrap gap-1'>
+                                {post.imageUrls
+                                  .slice(0, 2)
+                                  .map((imageUrl, index) => (
+                                    <div
+                                      key={index}
+                                      className='relative w-10 h-10 rounded overflow-hidden border cursor-pointer bg-muted/50 shrink-0 hover:ring-2 hover:ring-primary transition-all'
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleImageClick(imageUrl);
+                                      }}
+                                    >
+                                      <img
+                                        src={imageUrl}
+                                        alt={`Post image ${index + 1}`}
+                                        className='w-full h-full object-cover'
+                                      />
+                                    </div>
+                                  ))}
                                 {post.imageUrls.length > 2 && (
                                   <div
-                                    className="relative w-10 h-10 rounded overflow-hidden border cursor-pointer bg-muted/70 flex items-center justify-center hover:bg-muted/90 transition-colors shrink-0"
+                                    className='relative w-10 h-10 rounded overflow-hidden border cursor-pointer bg-muted/70 flex items-center justify-center hover:bg-muted/90 transition-colors shrink-0'
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleImageClick(post.imageUrls[2]);
                                     }}
                                   >
-                                    <span className="text-[10px] text-muted-foreground font-medium">
+                                    <span className='text-[10px] text-muted-foreground font-medium'>
                                       +{post.imageUrls.length - 2}
                                     </span>
                                   </div>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
+                              <span className='text-xs text-muted-foreground'>
+                                —
+                              </span>
                             )}
                           </TableCell>
                           <TableCell>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-xs text-foreground font-medium flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {format(new Date(post.createdAt), "MMM dd, yyyy")}
+                            <div className='flex flex-col gap-0.5'>
+                              <span className='text-xs text-foreground font-medium flex items-center gap-1'>
+                                <Calendar className='h-3 w-3' />
+                                {format(
+                                  new Date(post.createdAt),
+                                  'MMM dd, yyyy'
+                                )}
                               </span>
-                              <span className="text-[10px] text-muted-foreground">
-                                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+                              <span className='text-[10px] text-muted-foreground'>
+                                {formatDistanceToNow(new Date(post.createdAt), {
+                                  addSuffix: true,
+                                })}
                               </span>
                             </div>
                           </TableCell>
@@ -672,59 +702,69 @@ export default function LocationPostsPage({
 
           {/* Pagination */}
           {meta && meta.totalPages > 1 && (
-            <Card className="border-border/60 bg-muted/30">
-              <CardContent className="py-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <p className="text-sm text-muted-foreground">
-                    Showing <span className="font-semibold text-foreground">{posts.length}</span> of{" "}
-                    <span className="font-semibold text-foreground">{meta.totalItems}</span>{" "}
-                    {meta.totalItems === 1 ? "item" : "items"} (Page {meta.currentPage} of {meta.totalPages})
+            <Card className='border-border/60 bg-muted/30'>
+              <CardContent className='py-4'>
+                <div className='flex flex-col sm:flex-row items-center justify-between gap-4'>
+                  <p className='text-sm text-muted-foreground'>
+                    Showing{' '}
+                    <span className='font-semibold text-foreground'>
+                      {posts.length}
+                    </span>{' '}
+                    of{' '}
+                    <span className='font-semibold text-foreground'>
+                      {meta.totalItems}
+                    </span>{' '}
+                    {meta.totalItems === 1 ? 'item' : 'items'} (Page{' '}
+                    {meta.currentPage} of {meta.totalPages})
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className='flex items-center gap-2'>
                     <Button
-                      variant="outline"
-                      size="sm"
+                      variant='outline'
+                      size='sm'
                       onClick={() => setPage(page - 1)}
                       disabled={page === 1}
-                      className="gap-1.5"
+                      className='gap-1.5'
                     >
-                      <ChevronLeft className="h-4 w-4" />
-                      <span className="hidden sm:inline">Previous</span>
+                      <ChevronLeft className='h-4 w-4' />
+                      <span className='hidden sm:inline'>Previous</span>
                     </Button>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(meta.totalPages, 5) }, (_, i) => {
-                        let pageNum;
-                        if (meta.totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (page <= 3) {
-                          pageNum = i + 1;
-                        } else if (page >= meta.totalPages - 2) {
-                          pageNum = meta.totalPages - 4 + i;
-                        } else {
-                          pageNum = page - 2 + i;
+                    <div className='flex items-center gap-1'>
+                      {Array.from(
+                        { length: Math.min(meta.totalPages, 5) },
+                        (_, i) => {
+                          let pageNum;
+                          if (meta.totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (page <= 3) {
+                            pageNum = i + 1;
+                          } else if (page >= meta.totalPages - 2) {
+                            pageNum = meta.totalPages - 4 + i;
+                          } else {
+                            pageNum = page - 2 + i;
+                          }
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={page === pageNum ? 'default' : 'outline'}
+                              size='sm'
+                              onClick={() => setPage(pageNum)}
+                              className='min-w-[40px]'
+                            >
+                              {pageNum}
+                            </Button>
+                          );
                         }
-                        return (
-                          <Button
-                            key={pageNum}
-                            variant={page === pageNum ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setPage(pageNum)}
-                            className="min-w-[40px]"
-                          >
-                            {pageNum}
-                          </Button>
-                        );
-                      })}
+                      )}
                     </div>
                     <Button
-                      variant="outline"
-                      size="sm"
+                      variant='outline'
+                      size='sm'
                       onClick={() => setPage(page + 1)}
                       disabled={page === meta.totalPages}
-                      className="gap-1.5"
+                      className='gap-1.5'
                     >
-                      <span className="hidden sm:inline">Next</span>
-                      <ChevronRight className="h-4 w-4" />
+                      <span className='hidden sm:inline'>Next</span>
+                      <ChevronRight className='h-4 w-4' />
                     </Button>
                   </div>
                 </div>
@@ -736,11 +776,10 @@ export default function LocationPostsPage({
 
       <ImageViewer
         src={currentImageSrc}
-        alt="Post image"
+        alt='Post image'
         open={isImageViewerOpen}
         onOpenChange={setIsImageViewerOpen}
       />
     </div>
   );
 }
-
