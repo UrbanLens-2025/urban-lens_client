@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -8,11 +9,25 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import {
   BarChart3,
   Users,
   MapPin,
-  Calendar,
+  Calendar as CalendarIcon,
   DollarSign,
   TrendingUp,
   TrendingDown,
@@ -20,7 +35,9 @@ import {
   ArrowRight,
   Flag,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -34,233 +51,814 @@ import {
   YAxis,
 } from 'recharts';
 import { formatCurrency } from '@/lib/utils';
+import { format, formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
+import { startOfYear, endOfYear } from 'date-fns';
 import Link from 'next/link';
+import {
+  useDashboardAdmin,
+  useUserAnalytics,
+  useWalletAnalytics,
+} from '@/hooks/admin/useDashboardAdmin';
+import { useReports } from '@/hooks/admin/useReports';
+import { cn } from '@/lib/utils';
 
-const summaryCards = [
-  {
-    title: 'Người dùng',
-    value: 12540,
-    delta: 12.5,
-    trend: 'up',
+// Mapping from API response title to card config
+const cardConfigMap: Record<
+  string,
+  { title: string; icon: LucideIcon; description: string }
+> = {
+  Users: {
+    title: 'Users',
     icon: Users,
-    description: 'Tăng so với 7 ngày trước',
+    description: 'Total users',
   },
-  {
+  Locations: {
     title: 'Locations',
-    value: 842,
-    delta: 3.1,
-    trend: 'up',
     icon: MapPin,
-    description: 'Điểm đang hiển thị',
+    description: 'Total locations',
   },
-  {
+  Events: {
     title: 'Events',
-    value: 312,
-    delta: -1.8,
-    trend: 'down',
-    icon: Calendar,
-    description: 'Sự kiện sắp diễn ra',
+    icon: CalendarIcon,
+    description: 'Total events',
   },
-  {
-    title: 'Tổng số dư ví',
-    value: 1850000000,
-    delta: 4.2,
-    trend: 'up',
+  'Total Wallet Balance': {
+    title: 'Total Wallet Balance',
     icon: DollarSign,
     description: 'System + Escrow',
   },
+};
+
+interface SummaryCard {
+  title: string;
+  value: number;
+  icon: LucideIcon;
+  description: string;
+}
+
+// Color mapping for cards
+const getCardColor = (title: string) => {
+  switch (title) {
+    case 'Users':
+      return {
+        borderLeft: 'border-l-4 border-l-blue-500',
+        iconBg: 'bg-blue-100 dark:bg-blue-950',
+        iconColor: 'text-blue-600 dark:text-blue-400',
+      };
+    case 'Locations':
+      return {
+        borderLeft: 'border-l-4 border-l-green-500',
+        iconBg: 'bg-green-100 dark:bg-green-950',
+        iconColor: 'text-green-600 dark:text-green-400',
+      };
+    case 'Events':
+      return {
+        borderLeft: 'border-l-4 border-l-purple-500',
+        iconBg: 'bg-purple-100 dark:bg-purple-950',
+        iconColor: 'text-purple-600 dark:text-purple-400',
+      };
+    case 'Total Wallet Balance':
+      return {
+        borderLeft: 'border-l-4 border-l-amber-500',
+        iconBg: 'bg-amber-100 dark:bg-amber-950',
+        iconColor: 'text-amber-600 dark:text-amber-400',
+      };
+    default:
+      return {
+        borderLeft: 'border-l-4 border-l-gray-500',
+        iconBg: 'bg-muted',
+        iconColor: 'text-muted-foreground',
+      };
+  }
+};
+
+// Dữ liệu Locations vs Events
+const locationEventDataByMonth = [
+  { label: 'T1', locations: 60, events: 22 },
+  { label: 'T2', locations: 68, events: 28 },
+  { label: 'T3', locations: 75, events: 25 },
+  { label: 'T4', locations: 82, events: 31 },
+  { label: 'T5', locations: 90, events: 34 },
+  { label: 'T6', locations: 97, events: 40 },
+  { label: 'T7', locations: 105, events: 38 },
+  { label: 'T8', locations: 112, events: 42 },
+  { label: 'T9', locations: 118, events: 45 },
+  { label: 'T10', locations: 125, events: 48 },
+  { label: 'T11', locations: 132, events: 52 },
+  { label: 'T12', locations: 140, events: 55 },
 ];
-const userGrowthData = [
-  { day: 'T2', users: 120 },
-  { day: 'T3', users: 180 },
-  { day: 'T4', users: 150 },
-  { day: 'T5', users: 210 },
-  { day: 'T6', users: 260 },
-  { day: 'T7', users: 190 },
-  { day: 'CN', users: 230 },
-];
-const revenueData = [
-  { day: 'T2', deposit: 320_000_000, withdraw: 180_000_000 },
-  { day: 'T3', deposit: 410_000_000, withdraw: 220_000_000 },
-  { day: 'T4', deposit: 380_000_000, withdraw: 190_000_000 },
-  { day: 'T5', deposit: 450_000_000, withdraw: 250_000_000 },
-  { day: 'T6', deposit: 520_000_000, withdraw: 310_000_000 },
-  { day: 'T7', deposit: 480_000_000, withdraw: 260_000_000 },
-  { day: 'CN', deposit: 500_000_000, withdraw: 280_000_000 },
-];
-const locationEventData = [
-  { label: 'Tháng 1', locations: 60, events: 22 },
-  { label: 'Tháng 2', locations: 68, events: 28 },
-  { label: 'Tháng 3', locations: 75, events: 25 },
-  { label: 'Tháng 4', locations: 82, events: 31 },
-  { label: 'Tháng 5', locations: 90, events: 34 },
-  { label: 'Tháng 6', locations: 97, events: 40 },
-];
-const recentReports = [
-  {
-    id: '1',
-    type: 'post',
-    title: 'Nội dung không phù hợp',
-    reporter: 'Nguyễn Văn A',
-    target: 'Post #1234',
-    status: 'PENDING',
-    createdAt: '2 giờ trước',
-  },
-  {
-    id: '2',
-    type: 'location',
-    title: 'Thông tin địa điểm sai',
-    reporter: 'Trần Thị B',
-    target: 'Location: Quán cà phê ABC',
-    status: 'PENDING',
-    createdAt: '5 giờ trước',
-  },
-  {
-    id: '3',
-    type: 'event',
-    title: 'Sự kiện vi phạm quy định',
-    reporter: 'Lê Văn C',
-    target: 'Event: Workshop Marketing',
-    status: 'RESOLVED',
-    createdAt: '1 ngày trước',
-  },
-  {
-    id: '4',
-    type: 'post',
-    title: 'Spam hoặc lừa đảo',
-    reporter: 'Phạm Thị D',
-    target: 'Post #5678',
-    status: 'PENDING',
-    createdAt: '2 ngày trước',
-  },
+
+const locationEventDataByYear = [
+  { label: '2020', locations: 320, events: 125 },
+  { label: '2021', locations: 485, events: 198 },
+  { label: '2022', locations: 680, events: 285 },
+  { label: '2023', locations: 920, events: 385 },
+  { label: '2024', locations: 1250, events: 520 },
 ];
 
 export default function AdminDashboardPage() {
+  // Filter state for summary cards
+  const [filterType, setFilterType] = useState<'year' | 'range'>('year');
+  const [selectedYear, setSelectedYear] = useState<string>(
+    format(new Date(), 'yyyy')
+  );
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: startOfYear(new Date()),
+    to: endOfYear(new Date()),
+  });
+
+  // Calculate startDate and endDate based on filter
+  const dateParams = useMemo(() => {
+    let startDate: string | undefined;
+    let endDate: string | undefined;
+
+    if (filterType === 'year') {
+      const start = startOfYear(new Date(parseInt(selectedYear), 0));
+      const end = endOfYear(new Date(parseInt(selectedYear), 0));
+      startDate = format(start, 'yyyy-MM-dd');
+      endDate = format(end, 'yyyy-MM-dd');
+    } else if (filterType === 'range') {
+      if (dateRange.from && dateRange.to) {
+        startDate = format(dateRange.from, 'yyyy-MM-dd');
+        endDate = format(dateRange.to, 'yyyy-MM-dd');
+      }
+    }
+
+    return { startDate, endDate };
+  }, [filterType, selectedYear, dateRange]);
+
+  // Fetch data from API
+  const { data: dashboardData, isLoading } = useDashboardAdmin(dateParams);
+
+  // Map data from API to cards
+  const summaryCards = useMemo((): SummaryCard[] => {
+    if (!dashboardData?.data) {
+      return [];
+    }
+
+    return dashboardData.data.map((item: { title: string; value: number }) => {
+      const config = cardConfigMap[item.title] || {
+        title: item.title,
+        icon: Users,
+        description: '',
+      };
+      return {
+        title: config.title,
+        value: item.value,
+        icon: config.icon,
+        description: config.description,
+      };
+    });
+  }, [dashboardData]);
+
+  const [userGrowthPeriod, setUserGrowthPeriod] = useState<
+    'day' | 'month' | 'year'
+  >('day');
+  const [revenuePeriod, setRevenuePeriod] = useState<'day' | 'month' | 'year'>(
+    'day'
+  );
+  const [locationEventPeriod, setLocationEventPeriod] = useState<
+    'month' | 'year'
+  >('month');
+
+  const { data: userAnalyticsData, isLoading: isLoadingUserAnalytics } =
+    useUserAnalytics(userGrowthPeriod);
+
+  const { data: walletAnalyticsData, isLoading: isLoadingWalletAnalytics } =
+    useWalletAnalytics(revenuePeriod);
+
+  // Fetch recent reports from API
+  const { data: reportsData, isLoading: isLoadingReports } = useReports({
+    page: 1,
+    limit: 3,
+    sortBy: 'createdAt:DESC',
+    status: 'PENDING',
+  });
+
+  // Map reports data from API to display format
+  const recentReports = useMemo(() => {
+    if (!reportsData?.data) {
+      return [];
+    }
+
+    return reportsData.data.map((report) => {
+      const reporterName = report.createdBy
+        ? `${report.createdBy.firstName} ${report.createdBy.lastName}`.trim()
+        : 'Unknown';
+
+      let targetText = '';
+      if (report.targetType === 'event' && report.referencedTargetEvent) {
+        // API returns displayName but type definition has title
+        const event = report.referencedTargetEvent as {
+          displayName?: string;
+          title?: string;
+        };
+        targetText = `Event: ${event.displayName || event.title || 'Event'}`;
+      } else if (report.targetType === 'post' && report.referencedTargetPost) {
+        targetText = `Post: ${
+          report.referencedTargetPost.content?.substring(0, 50) || 'Post'
+        }${
+          report.referencedTargetPost.content &&
+          report.referencedTargetPost.content.length > 50
+            ? '...'
+            : ''
+        }`;
+      } else if (
+        report.targetType === 'location' &&
+        report.referencedTargetLocation
+      ) {
+        targetText = `Location: ${
+          report.referencedTargetLocation.name || 'Location'
+        }`;
+      } else {
+        targetText = `${report.targetType || 'Unknown'}: ${
+          report.targetId?.substring(0, 8) || ''
+        }`;
+      }
+
+      const timeAgo = report.createdAt
+        ? formatDistanceToNow(new Date(report.createdAt), { addSuffix: true })
+        : 'Unknown';
+
+      return {
+        id: report.id,
+        type: report.targetType || 'unknown',
+        title: report.title || 'No title',
+        reporter: reporterName,
+        target: targetText,
+        status: report.status || 'PENDING',
+        createdAt: timeAgo,
+      };
+    });
+  }, [reportsData]);
+
+  const mapDayToVietnamese = (day: string): string => {
+    const dayMap: Record<string, string> = {
+      Sun: 'CN',
+      Mon: 'T2',
+      Tue: 'T3',
+      Wed: 'T4',
+      Thu: 'T5',
+      Fri: 'T6',
+      Sat: 'T7',
+    };
+    return dayMap[day] || day;
+  };
+  const mapMonthToVietnamese = (month: string): string => {
+    const monthMap: Record<string, string> = {
+      Jan: 'T1',
+      Feb: 'T2',
+      Mar: 'T3',
+      Apr: 'T4',
+      May: 'T5',
+      Jun: 'T6',
+      Jul: 'T7',
+      Aug: 'T8',
+      Sep: 'T9',
+      Oct: 'T10',
+      Nov: 'T11',
+      Dec: 'T12',
+    };
+    return monthMap[month] || month;
+  };
+
+  // Get user growth data by time period from API
+  const getUserGrowthData = useMemo<
+    | { day: string; users: number }[]
+    | { month: string; users: number }[]
+    | { year: string; users: number }[]
+  >(() => {
+    if (!userAnalyticsData || isLoadingUserAnalytics) {
+      return [];
+    }
+
+    if (userGrowthPeriod === 'day') {
+      return userAnalyticsData
+        .filter((item): item is { day: string; count: number } => !!item.day)
+        .map((item) => ({
+          day: mapDayToVietnamese(item.day),
+          users: item.count,
+        }));
+    } else if (userGrowthPeriod === 'month') {
+      return userAnalyticsData
+        .filter(
+          (item): item is { month: string; count: number } => !!item.month
+        )
+        .map((item) => ({
+          month: mapMonthToVietnamese(item.month),
+          users: item.count,
+        }));
+    } else if (userGrowthPeriod === 'year') {
+      return userAnalyticsData
+        .filter((item): item is { year: string; count: number } => !!item.year)
+        .map((item) => ({
+          year: item.year,
+          users: item.count,
+        }));
+    }
+    return [];
+  }, [userAnalyticsData, userGrowthPeriod, isLoadingUserAnalytics]);
+
+  // Get wallet flow data by time period from API
+  const getRevenueData = useMemo<
+    | { day: string; deposit: number; withdraw: number }[]
+    | { month: string; deposit: number; withdraw: number }[]
+    | { year: string; deposit: number; withdraw: number }[]
+  >(() => {
+    if (!walletAnalyticsData || isLoadingWalletAnalytics) {
+      return [];
+    }
+
+    if (revenuePeriod === 'day') {
+      return walletAnalyticsData
+        .filter(
+          (item): item is { day: string; deposit: number; withdraw: number } =>
+            !!item.day
+        )
+        .map((item) => ({
+          day: mapDayToVietnamese(item.day),
+          deposit: item.deposit,
+          withdraw: item.withdraw,
+        }));
+    } else if (revenuePeriod === 'month') {
+      return walletAnalyticsData
+        .filter(
+          (
+            item
+          ): item is { month: string; deposit: number; withdraw: number } =>
+            !!item.month
+        )
+        .map((item) => ({
+          month: mapMonthToVietnamese(item.month),
+          deposit: item.deposit,
+          withdraw: item.withdraw,
+        }));
+    } else if (revenuePeriod === 'year') {
+      return walletAnalyticsData
+        .filter(
+          (item): item is { year: string; deposit: number; withdraw: number } =>
+            !!item.year
+        )
+        .map((item) => ({
+          year: item.year,
+          deposit: item.deposit,
+          withdraw: item.withdraw,
+        }));
+    }
+    return [];
+  }, [walletAnalyticsData, revenuePeriod, isLoadingWalletAnalytics]);
+
+  // Get Locations vs Events data by time period
+  const getLocationEventData = () => {
+    switch (locationEventPeriod) {
+      case 'month':
+        return locationEventDataByMonth;
+      case 'year':
+        return locationEventDataByYear;
+    }
+  };
+
+  // Get key for XAxis
+  const getUserGrowthXKey = () => {
+    switch (userGrowthPeriod) {
+      case 'day':
+        return 'day';
+      case 'month':
+        return 'month';
+      case 'year':
+        return 'year';
+    }
+  };
+
+  const getRevenueXKey = () => {
+    switch (revenuePeriod) {
+      case 'day':
+        return 'day';
+      case 'month':
+        return 'month';
+      case 'year':
+        return 'year';
+    }
+  };
+
+  // Get label for tooltip
+  const getUserGrowthLabel = (label: string) => {
+    switch (userGrowthPeriod) {
+      case 'day':
+        return `Day ${label}`;
+      case 'month':
+        return `Month ${label}`;
+      case 'year':
+        return `Year ${label}`;
+    }
+  };
+
+  const getRevenueLabel = (label: string) => {
+    switch (revenuePeriod) {
+      case 'day':
+        return `Day ${label}`;
+      case 'month':
+        return `Month ${label}`;
+      case 'year':
+        return `Year ${label}`;
+    }
+  };
+
+  // Get title for chart
+  const getUserGrowthTitle = () => {
+    switch (userGrowthPeriod) {
+      case 'day':
+        return 'User Growth (7 days)';
+      case 'month':
+        return 'User Growth (12 months)';
+      case 'year':
+        return 'User Growth (5 years)';
+    }
+  };
+
+  const getRevenueTitle = () => {
+    switch (revenuePeriod) {
+      case 'day':
+        return 'Wallet Flow (7 days)';
+      case 'month':
+        return 'Wallet Flow (12 months)';
+      case 'year':
+        return 'Wallet Flow (5 years)';
+    }
+  };
+
+  const getLocationEventTitle = () => {
+    switch (locationEventPeriod) {
+      case 'month':
+        return 'Locations vs Events (12 months)';
+      case 'year':
+        return 'Locations vs Events (5 years)';
+    }
+  };
+
+  // Create year list
+  const years = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 6 }, (_, i) => ({
+      value: String(currentYear - i),
+      label: String(currentYear - i),
+    }));
+  }, []);
+
   return (
-    <div className='space-y-8 pb-10'>
-      {/* Summary */}
-      <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
-        {summaryCards.map((card) => (
-          <Card key={card.title} className='hover:shadow-md transition-shadow'>
-            <CardContent className='p-5'>
-              <div className='flex items-center justify-between'>
-                <div className='space-y-2'>
-                  <p className='text-sm text-muted-foreground'>{card.title}</p>
-                  <p className='text-3xl font-bold'>
-                    {card.title === 'Tổng số dư ví'
-                      ? formatCurrency(card.value)
-                      : card.value.toLocaleString()}
-                  </p>
-                  <div className='flex items-center gap-2 text-sm'>
-                    {card.trend === 'up' ? (
-                      <TrendingUp className='h-4 w-4 text-green-600' />
-                    ) : (
-                      <TrendingDown className='h-4 w-4 text-red-600' />
-                    )}
-                    <span
-                      className={
-                        card.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                      }
+    <div className='space-y-8 p-2'>
+      {/* Filter Section */}
+      <div className='flex items-end gap-4 flex-wrap'>
+        <div className='flex flex-col gap-2'>
+          <label className='text-xs font-medium text-muted-foreground'>
+            Filter Time
+          </label>
+          <Tabs
+            value={filterType}
+            onValueChange={(value) => setFilterType(value as 'year' | 'range')}
+          >
+            <TabsList>
+              <TabsTrigger value='year'>By Year</TabsTrigger>
+              <TabsTrigger value='range'>Date Range</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        <div className='flex gap-3 items-end'>
+          {filterType === 'year' && (
+            <div>
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className='h-9 w-36'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((year) => (
+                    <SelectItem key={year.value} value={year.value}>
+                      {year.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {filterType === 'range' && (
+            <>
+              <div className='w-[180px]'>
+                <label className='text-xs font-medium mb-1.5 block text-muted-foreground'>
+                  From Date
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      className={cn(
+                        'w-full justify-start text-left font-normal h-9',
+                        !dateRange.from && 'text-muted-foreground'
+                      )}
                     >
-                      {card.delta > 0 ? `+${card.delta}%` : `${card.delta}%`}
-                    </span>
-                    <span className='text-muted-foreground text-xs'>
-                      {card.description}
-                    </span>
-                  </div>
-                </div>
-                <div className='h-12 w-12 rounded-full bg-muted flex items-center justify-center'>
-                  <card.icon className='h-5 w-5 text-muted-foreground' />
-                </div>
+                      <CalendarIcon className='mr-2 h-3.5 w-3.5' />
+                      {dateRange.from ? (
+                        format(dateRange.from, 'dd/MM/yyyy', {
+                          locale: vi,
+                        })
+                      ) : (
+                        <span className='text-xs'>Start date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className='w-auto p-0' align='start'>
+                    <CalendarComponent
+                      mode='single'
+                      selected={dateRange.from}
+                      onSelect={(date: Date | undefined) =>
+                        setDateRange((prev) => ({ ...prev, from: date }))
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <div className='w-[180px]'>
+                <label className='text-xs font-medium mb-1.5 block text-muted-foreground'>
+                  To Date
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      className={cn(
+                        'w-full justify-start text-left font-normal h-9',
+                        !dateRange.to && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className='mr-2 h-3.5 w-3.5' />
+                      {dateRange.to ? (
+                        format(dateRange.to, 'dd/MM/yyyy', { locale: vi })
+                      ) : (
+                        <span className='text-xs'>End date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className='w-auto p-0' align='start'>
+                    <CalendarComponent
+                      mode='single'
+                      selected={dateRange.to}
+                      onSelect={(date: Date | undefined) =>
+                        setDateRange((prev) => ({ ...prev, to: date }))
+                      }
+                      disabled={(date: Date) =>
+                        dateRange.from ? date < dateRange.from : false
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+        {/* Summary Cards */}
+        <div className='grid gap-4 md:col-span-2 lg:col-span-4 md:grid-cols-2 lg:grid-cols-4'>
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className='hover:shadow-md transition-shadow'>
+                <CardContent className='p-5'>
+                  <div className='flex items-center justify-center h-32'>
+                    <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : summaryCards.length > 0 ? (
+            summaryCards.map((card) => {
+              const colors = getCardColor(card.title);
+              return (
+                <Card
+                  key={card.title}
+                  className={cn(
+                    'hover:shadow-lg transition-shadow',
+                    colors.borderLeft
+                  )}
+                >
+                  <CardContent className='p-6'>
+                    <div className='flex items-center justify-between'>
+                      <div className='space-y-1'>
+                        <p className='text-md font-medium text-muted-foreground'>
+                          {card.title}
+                        </p>
+                        <p className='text-2xl font-bold'>
+                          {card.title === 'Total Wallet Balance'
+                            ? formatCurrency(card.value)
+                            : card.value.toLocaleString()}
+                        </p>
+                        <p className='text-xs text-muted-foreground'>
+                          {card.description}
+                        </p>
+                      </div>
+                      <div
+                        className={cn(
+                          'h-12 w-12 rounded-full flex items-center justify-center',
+                          colors.iconBg
+                        )}
+                      >
+                        <card.icon
+                          className={cn('h-6 w-6', colors.iconColor)}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          ) : (
+            <div className='col-span-4 text-center py-8 text-muted-foreground'>
+              No data
+            </div>
+          )}
+        </div>
       </div>
       {/* Charts */}
-      <div className='grid gap-6 lg:grid-cols-3'>
-        <Card className='lg:col-span-2'>
-          <CardHeader className='pb-2'>
-            <CardTitle className='flex items-center gap-2'>
-              <BarChart3 className='h-5 w-5' />
-              Tăng trưởng người dùng (7 ngày)
-            </CardTitle>
-            <CardDescription>Lượt đăng ký mới mỗi ngày</CardDescription>
-          </CardHeader>
-          <CardContent className='h-[320px]'>
-            <ResponsiveContainer width='100%' height='100%'>
-              <LineChart data={userGrowthData}>
-                <CartesianGrid strokeDasharray='3 3' vertical={false} />
-                <XAxis dataKey='day' tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} />
-                <RechartsTooltip
-                  formatter={(val: number) => `${val} user`}
-                  labelFormatter={(label) => `Ngày ${label}`}
-                />
-                <Line
-                  type='monotone'
-                  dataKey='users'
-                  stroke='var(--primary)'
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
+      <div className='grid gap-6 lg:grid-cols-2'>
         <Card>
           <CardHeader className='pb-2'>
-            <CardTitle className='flex items-center gap-2'>
-              <DollarSign className='h-5 w-5' />
-              Dòng tiền ví (7 ngày)
-            </CardTitle>
-            <CardDescription>Nạp / Rút theo ngày</CardDescription>
+            <div className='flex items-center justify-between'>
+              <div>
+                <CardTitle className='flex items-center gap-2'>
+                  <BarChart3 className='h-5 w-5' />
+                  {getUserGrowthTitle()}
+                </CardTitle>
+                <CardDescription>
+                  {userGrowthPeriod === 'day'
+                    ? 'New registrations per day'
+                    : userGrowthPeriod === 'month'
+                    ? 'New registrations per month'
+                    : 'New registrations per year'}
+                </CardDescription>
+              </div>
+              <Tabs
+                value={userGrowthPeriod}
+                onValueChange={(value) =>
+                  setUserGrowthPeriod(value as 'day' | 'month' | 'year')
+                }
+              >
+                <TabsList>
+                  <TabsTrigger value='day'>Day</TabsTrigger>
+                  <TabsTrigger value='month'>Month</TabsTrigger>
+                  <TabsTrigger value='year'>Year</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </CardHeader>
           <CardContent className='h-[320px]'>
-            <ResponsiveContainer width='100%' height='100%'>
-              <BarChart data={revenueData}>
-                <CartesianGrid strokeDasharray='3 3' vertical={false} />
-                <XAxis dataKey='day' tickLine={false} axisLine={false} />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v) => `${(v / 1_000_000).toFixed(0)}M`}
-                />
-                <RechartsTooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  labelFormatter={(label) => `Ngày ${label}`}
-                />
-                <Legend />
-                <Bar
-                  dataKey='deposit'
-                  name='Nạp'
-                  fill='var(--primary)'
-                  radius={6}
-                />
-                <Bar
-                  dataKey='withdraw'
-                  name='Rút'
-                  fill='hsl(var(--chart-2))'
-                  radius={6}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            {isLoadingUserAnalytics ? (
+              <div className='flex items-center justify-center h-full'>
+                <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+              </div>
+            ) : getUserGrowthData.length > 0 ? (
+              <ResponsiveContainer width='100%' height='100%'>
+                <LineChart data={getUserGrowthData}>
+                  <CartesianGrid strokeDasharray='3 3' vertical={false} />
+                  <XAxis
+                    dataKey={getUserGrowthXKey()}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis tickLine={false} axisLine={false} />
+                  <RechartsTooltip
+                    formatter={(val: number) => `${val.toLocaleString()} user`}
+                    labelFormatter={(label) => getUserGrowthLabel(label)}
+                  />
+                  <Line
+                    type='monotone'
+                    dataKey='users'
+                    stroke='var(--primary)'
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className='flex items-center justify-center h-full text-muted-foreground'>
+                No data
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className='pb-2'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <CardTitle className='flex items-center gap-2'>
+                  <DollarSign className='h-5 w-5' />
+                  {getRevenueTitle()}
+                </CardTitle>
+                <CardDescription>
+                  {revenuePeriod === 'day'
+                    ? 'Deposit / Withdraw by day'
+                    : revenuePeriod === 'month'
+                    ? 'Deposit / Withdraw by month'
+                    : 'Deposit / Withdraw by year'}
+                </CardDescription>
+              </div>
+              <Tabs
+                value={revenuePeriod}
+                onValueChange={(value) =>
+                  setRevenuePeriod(value as 'day' | 'month' | 'year')
+                }
+              >
+                <TabsList>
+                  <TabsTrigger value='day'>Day</TabsTrigger>
+                  <TabsTrigger value='month'>Month</TabsTrigger>
+                  <TabsTrigger value='year'>Year</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </CardHeader>
+          <CardContent className='h-[320px]'>
+            {isLoadingWalletAnalytics ? (
+              <div className='flex items-center justify-center h-full'>
+                <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+              </div>
+            ) : getRevenueData.length > 0 ? (
+              <ResponsiveContainer width='100%' height='100%'>
+                <BarChart data={getRevenueData}>
+                  <CartesianGrid strokeDasharray='3 3' vertical={false} />
+                  <XAxis
+                    dataKey={getRevenueXKey()}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => {
+                      if (revenuePeriod === 'year') {
+                        return `${(v / 1_000_000_000).toFixed(1)}B`;
+                      }
+                      return `${(v / 1_000_000).toFixed(0)}M`;
+                    }}
+                  />
+                  <RechartsTooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    labelFormatter={(label) => getRevenueLabel(label)}
+                  />
+                  <Legend />
+                  <Bar
+                    dataKey='deposit'
+                    name='Deposit'
+                    fill='var(--primary)'
+                    radius={6}
+                  />
+                  <Bar
+                    dataKey='withdraw'
+                    name='Withdraw'
+                    fill='hsl(var(--chart-2))'
+                    radius={6}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className='flex items-center justify-center h-full text-muted-foreground'>
+                No data
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Locations & Events */}
-      <div className='grid gap-6 lg:grid-cols-2'>
-        <Card>
+      <div className='grid gap-6 lg:grid-cols-3'>
+        <Card className='lg:col-span-2'>
           <CardHeader className='pb-2'>
-            <CardTitle>Locations vs Events (6 tháng)</CardTitle>
-            <CardDescription>Xu hướng tạo mới</CardDescription>
+            <div className='flex items-center justify-between'>
+              <div>
+                <CardTitle>{getLocationEventTitle()}</CardTitle>
+                <CardDescription>New creation trend</CardDescription>
+              </div>
+              <Tabs
+                value={locationEventPeriod}
+                onValueChange={(value) =>
+                  setLocationEventPeriod(value as 'month' | 'year')
+                }
+              >
+                <TabsList>
+                  <TabsTrigger value='month'>Month</TabsTrigger>
+                  <TabsTrigger value='year'>Year</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </CardHeader>
           <CardContent className='h-[320px]'>
             <ResponsiveContainer width='100%' height='100%'>
-              <BarChart data={locationEventData}>
+              <BarChart data={getLocationEventData()}>
                 <CartesianGrid strokeDasharray='3 3' vertical={false} />
                 <XAxis dataKey='label' tickLine={false} axisLine={false} />
                 <YAxis tickLine={false} axisLine={false} />
@@ -282,66 +880,81 @@ export default function AdminDashboardPage() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className='pb-1'>
             <CardTitle className='flex items-center gap-2'>
               <Flag className='h-5 w-5' />
-              Report gần đây
+              Recent Reports
             </CardTitle>
-            <CardDescription>Các báo cáo mới nhất cần xử lý</CardDescription>
+            <CardDescription>
+              Latest reports that need processing
+            </CardDescription>
           </CardHeader>
           <CardContent className='space-y-3'>
-            {recentReports.map((report) => (
-              <Link href={`/admin/reports`} key={report.id} className='block'>
-                <div className='flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors'>
-                  <div
-                    className={`mt-1 p-1.5 rounded ${
-                      report.status === 'PENDING'
-                        ? 'bg-orange-100 dark:bg-orange-950'
-                        : 'bg-green-100 dark:bg-green-950'
-                    }`}
-                  >
-                    {report.status === 'PENDING' ? (
-                      <AlertTriangle className='h-4 w-4 text-orange-600 dark:text-orange-400' />
-                    ) : (
-                      <Flag className='h-4 w-4 text-green-600 dark:text-green-400' />
-                    )}
-                  </div>
-                  <div className='flex-1 min-w-0'>
-                    <p className='font-medium text-sm truncate'>
-                      {report.title}
-                    </p>
-                    <p className='text-xs text-muted-foreground mt-0.5'>
-                      {report.target}
-                    </p>
-                    <div className='flex items-center gap-2 mt-1'>
-                      <span className='text-xs text-muted-foreground'>
-                        {report.reporter}
-                      </span>
-                      <span className='text-xs text-muted-foreground'>·</span>
-                      <span className='text-xs text-muted-foreground'>
-                        {report.createdAt}
+            {isLoadingReports ? (
+              <div className='flex items-center justify-center py-8'>
+                <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+              </div>
+            ) : recentReports.length > 0 ? (
+              recentReports.map((report) => (
+                <Link
+                  href={`/admin/reports/${report.id}`}
+                  key={report.id}
+                  className='block'
+                >
+                  <div className='flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors'>
+                    <div
+                      className={`mt-1 p-1.5 rounded ${
+                        report.status === 'PENDING'
+                          ? 'bg-orange-100 dark:bg-orange-950'
+                          : 'bg-green-100 dark:bg-green-950'
+                      }`}
+                    >
+                      {report.status === 'PENDING' ? (
+                        <AlertTriangle className='h-4 w-4 text-orange-600 dark:text-orange-400' />
+                      ) : (
+                        <Flag className='h-4 w-4 text-green-600 dark:text-green-400' />
+                      )}
+                    </div>
+                    <div className='flex-1 min-w-0'>
+                      <p className='font-medium text-sm truncate'>
+                        {report.title}
+                      </p>
+                      <p className='text-xs text-muted-foreground mt-0.5'>
+                        {report.target}
+                      </p>
+                      <div className='flex items-center gap-2 mt-1'>
+                        <span className='text-xs text-muted-foreground'>
+                          {report.reporter}
+                        </span>
+                        <span className='text-xs text-muted-foreground'>·</span>
+                        <span className='text-xs text-muted-foreground'>
+                          {report.createdAt}
+                        </span>
+                      </div>
+                    </div>
+                    <div className='mt-1'>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded ${
+                          report.status === 'PENDING'
+                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400'
+                            : 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400'
+                        }`}
+                      >
+                        {report.status === 'PENDING' ? 'Pending' : 'Resolved'}
                       </span>
                     </div>
                   </div>
-                  <div className='mt-1'>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded ${
-                        report.status === 'PENDING'
-                          ? 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400'
-                          : 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400'
-                      }`}
-                    >
-                      {report.status === 'PENDING' ? 'Chờ xử lý' : 'Đã xử lý'}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))
+            ) : (
+              <div className='text-center py-8 text-muted-foreground text-sm'>
+                No pending reports
+              </div>
+            )}
             <Link href='/admin/reports'>
               <Button variant='outline' className='w-full mt-2'>
-                Xem tất cả reports
+                View all reports
                 <ArrowRight className='h-4 w-4 ml-2' />
               </Button>
             </Link>

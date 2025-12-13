@@ -285,18 +285,8 @@ export default function AccountsPage() {
           </CardContent>
         </Card>
 
-        <Card className='hover:shadow-lg transition-shadow border-l-4 border-l-purple-500'>
-          <CardHeader>
-            <div className='flex items-center justify-between'>
-              <CardTitle className='text-md font-medium text-muted-foreground'>
-                Classify by role
-              </CardTitle>
-              <div className='h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-950 flex items-center justify-center'>
-                <ShieldCheck className='h-5 w-5 text-purple-600 dark:text-purple-400' />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
+        <Card className='hover:shadow-lg transition-shadow border-l-4 border-l-purple-500 '>
+          <CardContent className='p-6'>
             <div className='space-y-2'>
               {Object.entries(stats.byRole)
                 .filter(([_, count]) => count > 0)
@@ -322,7 +312,7 @@ export default function AccountsPage() {
         <CardHeader>
           <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
             <div>
-              <CardTitle>All accounts</CardTitle>
+              <CardTitle>Accounts</CardTitle>
               <CardDescription className='mt-1'>
                 Total {meta?.totalItems || 0} accounts in the system
               </CardDescription>

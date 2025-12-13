@@ -35,7 +35,6 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { NavMain } from './NavMain';
-import { NavMainGrouped } from './NavMainGrouped';
 import { NavSecondary } from './NavSecondary';
 import { NavUser } from './NavUser';
 import { Loader2 } from 'lucide-react';
@@ -44,14 +43,12 @@ import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { NotificationBadge } from '@/components/notifications/NotificationBadge';
 
-const adminOverview = [
-  { title: 'Overview', url: '/admin', icon: IconLayout },
-];
+const adminOverview = [{ title: 'Overview', url: '/admin', icon: IconLayout }];
 
 const adminNavGroups = [
   {
     groupLabel: 'User Management',
-    items: [{ title: 'All Accounts', url: '/admin/accounts', icon: IconUsers }],
+    items: [{ title: 'Accounts', url: '/admin/accounts', icon: IconUsers }],
   },
   {
     groupLabel: 'Content Management',
@@ -63,7 +60,7 @@ const adminNavGroups = [
         icon: IconBuildingPlus,
       },
       { title: 'Events', url: '/admin/events', icon: IconCalendar },
-      { title: 'Tags', url: '/admin/tags', icon: IconTag },
+      // { title: 'Tags', url: '/admin/tags', icon: IconTag },
     ],
   },
   {
@@ -186,34 +183,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }, [user]);
 
-  const { navMain, navOverview, navGroups } = React.useMemo(() => {
-    if (!user) return { navMain: [], navOverview: [], navGroups: [] };
+  const navMain = React.useMemo(() => {
+    if (!user) return [];
 
     switch (user.role) {
-      case 'ADMIN':
-        return {
-          navMain: [],
-          navOverview: adminOverview,
-          navGroups: adminNavGroups,
-        };
-      case 'BUSINESS_OWNER':
-        return {
-          navMain: [],
-          navOverview: getBusinessOverview(),
-          navGroups: businessNavGroups,
-        };
+      case 'ADMIN': {
+        // Flatten all groups into a single array
+        const allItems = [
+          ...adminOverview,
+          ...adminNavGroups.flatMap((group) => group.items),
+        ];
+        return allItems;
+      }
+      case 'BUSINESS_OWNER': {
+        // Flatten all groups into a single array
+        const allItems = [
+          ...getBusinessOverview(),
+          ...businessNavGroups.flatMap((group) => group.items),
+        ];
+        return allItems;
+      }
       case 'EVENT_CREATOR':
-        return {
-          navMain: getCreatorNav(),
-          navOverview: [],
-          navGroups: [],
-        };
+        return getCreatorNav();
       default:
-        return {
-          navMain: [],
-          navOverview: [],
-          navGroups: [],
-        };
+        return [];
     }
   }, [user]);
 
@@ -269,7 +262,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible='icon' {...props}>
-      <SidebarHeader className='border-b border-sidebar-border/60 bg-gradient-to-b from-sidebar/50 to-sidebar backdrop-blur-sm'>
+      <SidebarHeader className='border-b border-sidebar-border/60'>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -281,10 +274,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               )}
             >
               <div className='flex items-center gap-3 group-data-[collapsible=icon]:justify-center'>
-                <div className={cn(
-                  'flex items-center justify-center rounded-lg bg-sidebar-primary/10 group-hover/header:bg-sidebar-primary/20 transition-colors duration-300',
-                  'size-8 group-data-[collapsible=icon]:size-9'
-                )}>
+                <div
+                  className={cn(
+                    'flex items-center justify-center rounded-lg bg-sidebar-primary/10 group-hover/header:bg-sidebar-primary/20 transition-colors duration-300',
+                    'size-8 group-data-[collapsible=icon]:size-9'
+                  )}
+                >
                   <IconInnerShadowTop
                     className={cn(
                       'text-sidebar-primary transition-transform duration-300 group-hover/header:scale-110',
@@ -292,10 +287,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     )}
                   />
                 </div>
-                <span className={cn(
-                  'text-base font-semibold tracking-tight transition-all duration-300 text-sidebar-foreground',
-                  'group-data-[collapsible=icon]:hidden'
-                )}>
+                <span
+                  className={cn(
+                    'text-base font-semibold tracking-tight transition-all duration-300 text-sidebar-foreground',
+                    'group-data-[collapsible=icon]:hidden'
+                  )}
+                >
                   {dashboardTitle}
                 </span>
               </div>
@@ -304,12 +301,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent className='gap-1 py-2'>
-        {navOverview.length > 0 && <NavMain items={navOverview} />}
-        {navGroups.length > 0 ? (
-          <NavMainGrouped groups={navGroups} />
-        ) : (
-          <NavMain items={navMain} />
-        )}
+        {navMain.length > 0 && <NavMain items={navMain} />}
         <NavSecondary items={navSecondary} className='mt-auto pt-2' />
       </SidebarContent>
       <SidebarFooter className='border-t border-sidebar-border/60 bg-sidebar/50 backdrop-blur-sm'>
