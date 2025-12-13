@@ -126,7 +126,9 @@ export default function LocationRequestsPage() {
 
   const { mutate: processRequest, isPending } = useProcessLocationRequest();
 
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
+    null
+  );
   const [approvingRequest, setApprovingRequest] =
     useState<LocationRequest | null>(null);
   const [rejectingRequest, setRejectingRequest] =
@@ -135,9 +137,8 @@ export default function LocationRequestsPage() {
   const [expandedDescription, setExpandedDescription] = useState(false);
 
   // Fetch full details of selected request
-  const { data: selectedRequestData } = useLocationRequestByIdForAdmin(
-    selectedRequestId
-  );
+  const { data: selectedRequestData } =
+    useLocationRequestByIdForAdmin(selectedRequestId);
   const selectedRequest = selectedRequestData || null;
 
   const handleConfirmApprove = () => {
@@ -398,7 +399,7 @@ export default function LocationRequestsPage() {
               </Button>
             </div>
             <div className='relative'>
-              <IconSearch className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
+              <IconSearch className='absolute left-2.5 top-4 h-4 w-4 text-muted-foreground' />
               <Input
                 placeholder='Search requests...'
                 className='pl-8'
@@ -613,103 +614,67 @@ export default function LocationRequestsPage() {
 
                 {/* Two Column Grid */}
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-6'>
-                  {/* Submitter Information Card */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className='text-base flex items-center gap-2'>
-                        <IconUser className='h-4 w-4' />
-                        Submitter Information
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className='space-y-3'>
-                      {selectedRequest.createdBy && (
-                        <>
-                          <div className='flex items-start gap-2'>
-                            <Avatar className='h-10 w-10 border-2 border-background'>
-                              {selectedRequest.createdBy.avatarUrl && (
-                                <AvatarImage
-                                  src={selectedRequest.createdBy.avatarUrl}
-                                  alt={`${selectedRequest.createdBy.firstName} ${selectedRequest.createdBy.lastName}`}
-                                  className='object-cover'
-                                />
-                              )}
-                              <AvatarFallback className='bg-primary/10 text-primary font-semibold text-xs'>
-                                {getInitials(
-                                  selectedRequest.createdBy.firstName || '',
-                                  selectedRequest.createdBy.lastName || ''
-                                )}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className='flex-1'>
-                              <p className='text-sm font-medium'>
-                                {selectedRequest.createdBy.firstName}{' '}
-                                {selectedRequest.createdBy.lastName}
-                              </p>
-                              {selectedRequest.createdBy.email && (
-                                <p className='text-xs text-muted-foreground break-all'>
-                                  {selectedRequest.createdBy.email}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-
                   {/* Location Information Card */}
                   <Card>
                     <CardHeader>
                       <CardTitle className='text-base flex items-center gap-2'>
                         <IconMapPin className='h-4 w-4' />
-                        Location
+                        Location Information
                       </CardTitle>
                     </CardHeader>
                     <CardContent className='space-y-3'>
+                      <div>
+                        {selectedRequest.createdBy && (
+                          <>
+                            <div className='flex items-start gap-2'>
+                              <Avatar className='h-10 w-10 border-2 border-background'>
+                                {selectedRequest.createdBy.avatarUrl && (
+                                  <AvatarImage
+                                    src={selectedRequest.createdBy.avatarUrl}
+                                    alt={`${selectedRequest.createdBy.firstName} ${selectedRequest.createdBy.lastName}`}
+                                    className='object-cover'
+                                  />
+                                )}
+                                <AvatarFallback className='bg-primary/10 text-primary font-semibold text-xs'>
+                                  {getInitials(
+                                    selectedRequest.createdBy.firstName || '',
+                                    selectedRequest.createdBy.lastName || ''
+                                  )}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className='flex-1'>
+                                <p className='text-sm font-medium'>
+                                  {selectedRequest.createdBy.firstName}{' '}
+                                  {selectedRequest.createdBy.lastName}
+                                </p>
+                                {selectedRequest.createdBy.email && (
+                                  <p className='text-xs text-muted-foreground break-all'>
+                                    {selectedRequest.createdBy.email}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
                       <div>
                         <p className='text-xs font-medium text-muted-foreground mb-1'>
                           Address
                         </p>
                         <p className='text-sm'>{selectedRequest.addressLine}</p>
                       </div>
-                      {selectedRequest.addressLevel1 && (
-                        <div>
-                          <p className='text-xs font-medium text-muted-foreground mb-1'>
-                            District/City
-                          </p>
-                          <p className='text-sm'>
-                            {selectedRequest.addressLevel1}
-                          </p>
-                        </div>
-                      )}
-                      {selectedRequest.addressLevel2 && (
-                        <div>
-                          <p className='text-xs font-medium text-muted-foreground mb-1'>
-                            Province/State
-                          </p>
-                          <p className='text-sm'>
-                            {selectedRequest.addressLevel2}
-                          </p>
-                        </div>
-                      )}
-                      <div className='grid grid-cols-2 gap-2 pt-2'>
-                        <div>
-                          <p className='text-xs font-medium text-muted-foreground mb-1'>
-                            Latitude
-                          </p>
-                          <p className='text-xs font-mono bg-muted px-2 py-1 rounded'>
-                            {selectedRequest.latitude}
-                          </p>
-                        </div>
-                        <div>
-                          <p className='text-xs font-medium text-muted-foreground mb-1'>
-                            Longitude
-                          </p>
-                          <p className='text-xs font-mono bg-muted px-2 py-1 rounded'>
-                            {selectedRequest.longitude}
-                          </p>
-                        </div>
-                      </div>
+                      {selectedRequest.addressLevel1 &&
+                        selectedRequest.addressLevel2 && (
+                          <div>
+                            <p className='text-xs font-medium text-muted-foreground mb-1'>
+                              District/ Province
+                            </p>
+                            <p className='text-sm'>
+                              {selectedRequest.addressLevel1}/
+                              {selectedRequest.addressLevel2}
+                            </p>
+                          </div>
+                        )}
                     </CardContent>
                   </Card>
 
@@ -722,14 +687,6 @@ export default function LocationRequestsPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className='space-y-3'>
-                      <div>
-                        <p className='text-xs font-medium text-muted-foreground mb-1'>
-                          Request ID
-                        </p>
-                        <p className='text-xs font-mono break-all bg-muted px-2 py-1 rounded'>
-                          {selectedRequest.id}
-                        </p>
-                      </div>
                       <div>
                         <p className='text-xs font-medium text-muted-foreground mb-1'>
                           Submitted

@@ -323,19 +323,20 @@ export default function AdminEventsPage() {
                       <TableHead className='text-center'>
                         Participants
                       </TableHead>
-                      <SortableTableHeader
-                        column='status'
-                        currentSort={sort}
-                        onSort={handleSort}
-                      >
-                        Status
-                      </SortableTableHeader>
+
                       <SortableTableHeader
                         column='createdAt'
                         currentSort={sort}
                         onSort={handleSort}
                       >
                         Created
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column='status'
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Status
                       </SortableTableHeader>
                     </TableRow>
                   </TableHeader>
@@ -383,7 +384,7 @@ export default function AdminEventsPage() {
                                   <Calendar className='h-4 w-4 text-muted-foreground' />
                                 </div>
                               )}
-                              <div className='flex-1 min-w-0'>
+                              <div className='flex-1 min-w-0 max-w-64'>
                                 <p className='font-medium group-hover:text-primary transition-colors truncate'>
                                   {event.displayName}
                                 </p>
@@ -435,7 +436,7 @@ export default function AdminEventsPage() {
                             {event.location ? (
                               <div className='flex items-center gap-2 min-w-0'>
                                 <MapPin className='h-4 w-4 text-muted-foreground shrink-0' />
-                                <div className='flex-1 min-w-0'>
+                                <div className='flex-1 min-w-0 max-w-36'>
                                   <p className='text-sm truncate'>
                                     {event.location.name}
                                   </p>
@@ -478,10 +479,11 @@ export default function AdminEventsPage() {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell>{getStatusBadge(event.status)}</TableCell>
+
                           <TableCell className='text-sm text-muted-foreground'>
                             {formatShortDate(event.createdAt)}
                           </TableCell>
+                          <TableCell>{getStatusBadge(event.status)}</TableCell>
                         </TableRow>
                       ))
                     )}

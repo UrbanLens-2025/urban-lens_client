@@ -65,7 +65,10 @@ import {
 } from '@/types';
 import { useReports } from '@/hooks/admin/useReports';
 import { useReportById } from '@/hooks/admin/useReportById';
-import { useProcessReport, useDeleteReport } from '@/hooks/admin/useProcessReport';
+import {
+  useProcessReport,
+  useDeleteReport,
+} from '@/hooks/admin/useProcessReport';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatShortDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -186,7 +189,15 @@ export default function ReportsPage() {
     }
 
     router.replace(`${pathname}?${params.toString()}`);
-  }, [debouncedSearchTerm, statusFilter, typeFilter, page, pathname, router, searchParams]);
+  }, [
+    debouncedSearchTerm,
+    statusFilter,
+    typeFilter,
+    page,
+    pathname,
+    router,
+    searchParams,
+  ]);
 
   // Data fetching
   const {
@@ -211,11 +222,12 @@ export default function ReportsPage() {
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [isProcessDialogOpen, setIsProcessDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [processStatus, setProcessStatus] = useState<
-    'RESOLVED' | 'REJECTED'
-  >('RESOLVED');
-  const [resolutionAction, setResolutionAction] =
-    useState<ReportResolutionActions | ''>('');
+  const [processStatus, setProcessStatus] = useState<'RESOLVED' | 'REJECTED'>(
+    'RESOLVED'
+  );
+  const [resolutionAction, setResolutionAction] = useState<
+    ReportResolutionActions | ''
+  >('');
   const [adminNotes, setAdminNotes] = useState('');
   const [expandedDescription, setExpandedDescription] = useState(false);
 
@@ -317,7 +329,9 @@ export default function ReportsPage() {
     }
   };
 
-  const getResolutionActionLabel = (action: ReportResolutionActions): string => {
+  const getResolutionActionLabel = (
+    action: ReportResolutionActions
+  ): string => {
     const actionStr = String(action);
     if (actionStr === 'NO_ACTION_TAKEN') {
       return 'No Action Taken';
@@ -502,8 +516,8 @@ export default function ReportsPage() {
         {/* Left Column - Report List */}
         <div className='lg:col-span-5 xl:col-span-4 flex flex-col border rounded-lg bg-card overflow-hidden'>
           {/* Search and Filters */}
-          <div className='p-4 border-b space-y-3'>
-            <div className='flex items-center justify-between'>
+          <div className='p-4 border-b space-y-3 w-full'>
+            <div className='flex items-center justify-between gap-4'>
               <h2 className='text-lg font-semibold'>All Reports</h2>
               <Button
                 variant='outline'
@@ -519,7 +533,7 @@ export default function ReportsPage() {
               </Button>
             </div>
             <div className='relative'>
-              <IconSearch className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
+              <IconSearch className='absolute left-2.5 top-4 h-4 w-4 text-muted-foreground' />
               <Input
                 placeholder='Search reports...'
                 className='pl-8'
@@ -530,47 +544,49 @@ export default function ReportsPage() {
                 }}
               />
             </div>
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => {
-                setStatusFilter(value as ReportStatus | 'all');
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <div className='flex items-center gap-2'>
-                  <IconFilter className='h-4 w-4' />
-                  <SelectValue placeholder='Filter by Status' />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All Status</SelectItem>
-                <SelectItem value='PENDING'>Pending</SelectItem>
-                <SelectItem value='IN_PROGRESS'>In Progress</SelectItem>
-                <SelectItem value='RESOLVED'>Resolved</SelectItem>
-                <SelectItem value='REJECTED'>Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={typeFilter}
-              onValueChange={(value) => {
-                setTypeFilter(value as ReportTargetType | 'all');
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <div className='flex items-center gap-2'>
-                  <IconFilter className='h-4 w-4' />
-                  <SelectValue placeholder='Filter by Type' />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All Types</SelectItem>
-                <SelectItem value='post'>Post</SelectItem>
-                <SelectItem value='location'>Location</SelectItem>
-                <SelectItem value='event'>Event</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className='flex item-center'>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value as ReportStatus | 'all');
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <div className='flex items-center gap-2'>
+                    <IconFilter className='h-4 w-4' />
+                    <SelectValue placeholder='Filter by Status' />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>All Status</SelectItem>
+                  <SelectItem value='PENDING'>Pending</SelectItem>
+                  <SelectItem value='IN_PROGRESS'>In Progress</SelectItem>
+                  <SelectItem value='RESOLVED'>Resolved</SelectItem>
+                  <SelectItem value='REJECTED'>Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={typeFilter}
+                onValueChange={(value) => {
+                  setTypeFilter(value as ReportTargetType | 'all');
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <div className='flex items-center gap-2'>
+                    <IconFilter className='h-4 w-4' />
+                    <SelectValue placeholder='Filter by Type' />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>All Types</SelectItem>
+                  <SelectItem value='post'>Post</SelectItem>
+                  <SelectItem value='location'>Location</SelectItem>
+                  <SelectItem value='event'>Event</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className='text-sm text-muted-foreground'>
               {meta?.totalItems || 0} results
             </div>
@@ -1001,7 +1017,10 @@ export default function ReportsPage() {
       </Dialog>
 
       {/* Delete Report Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Report</AlertDialogTitle>

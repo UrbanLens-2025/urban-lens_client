@@ -29,7 +29,13 @@ import {
   ExternalLink,
   Copy,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { GoogleMapsPicker } from '@/components/shared/GoogleMapsPicker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -68,7 +74,9 @@ function InfoRow({
         <Icon className='h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5' />
       )}
       <div className='flex-1 min-w-0'>
-        <p className='text-sm font-semibold text-muted-foreground mb-1'>{label}</p>
+        <p className='text-sm font-semibold text-muted-foreground mb-1'>
+          {label}
+        </p>
         <div className='text-base text-foreground break-words'>{value}</div>
       </div>
     </div>
@@ -157,7 +165,9 @@ export default function AdminLocationRequestDetailsPage({
         <div className='flex h-[60vh] items-center justify-center'>
           <div className='flex flex-col items-center gap-4'>
             <Loader2 className='h-8 w-8 animate-spin text-primary' />
-            <p className='text-sm text-muted-foreground'>Loading request details...</p>
+            <p className='text-sm text-muted-foreground'>
+              Loading request details...
+            </p>
           </div>
         </div>
       </PageContainer>
@@ -171,7 +181,9 @@ export default function AdminLocationRequestDetailsPage({
           <CardContent className='pt-6'>
             <div className='flex flex-col items-center justify-center py-12 text-center'>
               <AlertCircle className='h-12 w-12 text-destructive mb-4' />
-              <h2 className='text-xl font-semibold mb-2'>Error Loading Request</h2>
+              <h2 className='text-xl font-semibold mb-2'>
+                Error Loading Request
+              </h2>
               <p className='text-muted-foreground mb-4'>
                 Unable to load location request details. Please try again.
               </p>
@@ -208,13 +220,14 @@ export default function AdminLocationRequestDetailsPage({
       : 'destructive';
 
   const isPending = request.status === 'AWAITING_ADMIN_REVIEW';
-  
+
   // Calculate stats
   const imageCount = request.locationImageUrls?.length || 0;
-  const documentCount = request.locationValidationDocuments?.reduce(
-    (acc, doc) => acc + doc.documentImageUrls.length,
-    0
-  ) || 0;
+  const documentCount =
+    request.locationValidationDocuments?.reduce(
+      (acc, doc) => acc + doc.documentImageUrls.length,
+      0
+    ) || 0;
 
   // Copy coordinates to clipboard
   const copyCoordinates = () => {
@@ -259,16 +272,13 @@ export default function AdminLocationRequestDetailsPage({
   );
 
   return (
-    <PageContainer maxWidth="xl">
+    <PageContainer maxWidth='xl'>
       {/* Page Header */}
       <PageHeader
         title={request.name}
         description={
           <div className='flex flex-wrap items-center gap-3 mt-2'>
-            <Badge 
-              variant={statusVariant as any}
-              className='text-sm px-3 py-1'
-            >
+            <Badge variant={statusVariant as any} className='text-sm px-3 py-1'>
               {statusBadge}
             </Badge>
             <div className='flex items-center gap-2 text-sm text-muted-foreground'>
@@ -279,7 +289,8 @@ export default function AdminLocationRequestDetailsPage({
               <div className='flex items-center gap-2 text-sm text-muted-foreground'>
                 <User className='h-4 w-4' />
                 <span>
-                  Processed by {request.processedBy.firstName} {request.processedBy.lastName}
+                  Processed by {request.processedBy.firstName}{' '}
+                  {request.processedBy.lastName}
                 </span>
               </div>
             )}
@@ -292,32 +303,32 @@ export default function AdminLocationRequestDetailsPage({
       {/* Quick Stats Summary */}
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
         <StatCard
-          title="Location Type"
+          title='Location Type'
           value={request.type === 'BUSINESS_OWNED' ? 'Business' : 'Public'}
           icon={request.type === 'BUSINESS_OWNED' ? Building : Globe}
-          iconColor="text-blue-600 dark:text-blue-400"
-          iconBg="bg-blue-100 dark:bg-blue-900/30"
+          iconColor='text-blue-600 dark:text-blue-400'
+          iconBg='bg-blue-100 dark:bg-blue-900/30'
         />
         <StatCard
-          title="Images"
+          title='Images'
           value={imageCount}
           icon={ImageIcon}
-          iconColor="text-purple-600 dark:text-purple-400"
-          iconBg="bg-purple-100 dark:bg-purple-900/30"
+          iconColor='text-purple-600 dark:text-purple-400'
+          iconBg='bg-purple-100 dark:bg-purple-900/30'
         />
         <StatCard
-          title="Documents"
+          title='Documents'
           value={documentCount}
           icon={FileText}
-          iconColor="text-orange-600 dark:text-orange-400"
-          iconBg="bg-orange-100 dark:bg-orange-900/30"
+          iconColor='text-orange-600 dark:text-orange-400'
+          iconBg='bg-orange-100 dark:bg-orange-900/30'
         />
         <StatCard
-          title="Tags"
+          title='Tags'
           value={tags.length}
           icon={TagIcon}
-          iconColor="text-green-600 dark:text-green-400"
-          iconBg="bg-green-100 dark:bg-green-900/30"
+          iconColor='text-green-600 dark:text-green-400'
+          iconBg='bg-green-100 dark:bg-green-900/30'
         />
       </div>
 
@@ -334,19 +345,29 @@ export default function AdminLocationRequestDetailsPage({
                   Review Required
                 </h3>
                 <p className='text-sm text-blue-800 dark:text-blue-200 mb-4 leading-relaxed'>
-                  Please review all sections below carefully before making a decision. 
-                  Verify the location details, images, documents, and submitter information.
+                  Please review all sections below carefully before making a
+                  decision. Verify the location details, images, documents, and
+                  submitter information.
                 </p>
                 <div className='flex flex-wrap gap-2'>
-                  <Badge variant='outline' className='text-xs bg-white/50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700'>
+                  <Badge
+                    variant='outline'
+                    className='text-xs bg-white/50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700'
+                  >
                     <ImageIcon className='h-3 w-3 mr-1' />
                     {imageCount} Image{imageCount !== 1 ? 's' : ''}
                   </Badge>
-                  <Badge variant='outline' className='text-xs bg-white/50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700'>
+                  <Badge
+                    variant='outline'
+                    className='text-xs bg-white/50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700'
+                  >
                     <FileText className='h-3 w-3 mr-1' />
                     {documentCount} Document{documentCount !== 1 ? 's' : ''}
                   </Badge>
-                  <Badge variant='outline' className='text-xs bg-white/50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700'>
+                  <Badge
+                    variant='outline'
+                    className='text-xs bg-white/50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700'
+                  >
                     <TagIcon className='h-3 w-3 mr-1' />
                     {tags.length} Tag{tags.length !== 1 ? 's' : ''}
                   </Badge>
@@ -360,11 +381,11 @@ export default function AdminLocationRequestDetailsPage({
       {/* Main Content */}
       <div className='space-y-6'>
         {/* Request Overview */}
-        <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
-            <CardTitle className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <FileText className="h-5 w-5 text-primary" />
+        <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
+          <CardHeader className='bg-gradient-to-r from-primary/5 to-transparent border-b'>
+            <CardTitle className='flex items-center gap-2'>
+              <div className='p-2 rounded-lg bg-primary/10'>
+                <FileText className='h-5 w-5 text-primary' />
               </div>
               Request Overview
             </CardTitle>
@@ -385,9 +406,13 @@ export default function AdminLocationRequestDetailsPage({
                 value={
                   <Badge variant='outline' className='w-fit'>
                     {request.type === 'BUSINESS_OWNED' ? (
-                      <><Building className='h-3 w-3 mr-1' /> Business Owned</>
+                      <>
+                        <Building className='h-3 w-3 mr-1' /> Business Owned
+                      </>
                     ) : (
-                      <><Globe className='h-3 w-3 mr-1' /> Public</>
+                      <>
+                        <Globe className='h-3 w-3 mr-1' /> Public
+                      </>
                     )}
                   </Badge>
                 }
@@ -404,7 +429,9 @@ export default function AdminLocationRequestDetailsPage({
                 <div className='flex gap-3 py-2'>
                   <TagIcon className='h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5' />
                   <div className='flex-1'>
-                    <p className='text-sm font-semibold text-muted-foreground mb-2'>Tags</p>
+                    <p className='text-sm font-semibold text-muted-foreground mb-2'>
+                      Tags
+                    </p>
                     <DisplayTags tags={tags} maxCount={10} />
                   </div>
                 </div>
@@ -414,17 +441,15 @@ export default function AdminLocationRequestDetailsPage({
         </Card>
 
         {/* Address Information */}
-        <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
+        <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
+          <CardHeader className='bg-gradient-to-r from-primary/5 to-transparent border-b'>
             <CardTitle className='flex items-center gap-2'>
-              <div className="p-2 rounded-lg bg-primary/10">
+              <div className='p-2 rounded-lg bg-primary/10'>
                 <MapPin className='h-5 w-5 text-primary' />
               </div>
               Address Information
             </CardTitle>
-            <CardDescription>
-              Location address and coordinates
-            </CardDescription>
+            <CardDescription>Location address and coordinates</CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
             <InfoRow label='Street Address' value={request.addressLine} />
@@ -441,7 +466,9 @@ export default function AdminLocationRequestDetailsPage({
             <Separator />
             <div className='pt-2'>
               <div className='flex items-center justify-between mb-2'>
-                <p className='text-sm font-semibold text-muted-foreground'>Map Location</p>
+                <p className='text-sm font-semibold text-muted-foreground'>
+                  Map Location
+                </p>
                 <div className='flex gap-2'>
                   <Button
                     variant='ghost'
@@ -475,16 +502,17 @@ export default function AdminLocationRequestDetailsPage({
 
         {/* Location Images */}
         {request.locationImageUrls && request.locationImageUrls.length > 0 && (
-          <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
+          <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
+            <CardHeader className='bg-gradient-to-r from-primary/5 to-transparent border-b'>
               <CardTitle className='flex items-center gap-2'>
-                <div className="p-2 rounded-lg bg-primary/10">
+                <div className='p-2 rounded-lg bg-primary/10'>
                   <ImageIcon className='h-5 w-5 text-primary' />
                 </div>
                 Location Images
               </CardTitle>
               <CardDescription>
-                {request.locationImageUrls.length} image{request.locationImageUrls.length !== 1 ? 's' : ''} provided
+                {request.locationImageUrls.length} image
+                {request.locationImageUrls.length !== 1 ? 's' : ''} provided
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -493,7 +521,9 @@ export default function AdminLocationRequestDetailsPage({
                   <div
                     key={index}
                     className='relative aspect-video rounded-lg overflow-hidden border cursor-pointer group hover:border-primary transition-all'
-                    onClick={() => handleImageClick(url, `Location Image ${index + 1}`)}
+                    onClick={() =>
+                      handleImageClick(url, `Location Image ${index + 1}`)
+                    }
                   >
                     <img
                       src={url || '/placeholder.svg'}
@@ -516,10 +546,10 @@ export default function AdminLocationRequestDetailsPage({
         {/* Validation Documents */}
         {request.locationValidationDocuments &&
           request.locationValidationDocuments.length > 0 && (
-            <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
+            <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
+              <CardHeader className='bg-gradient-to-r from-primary/5 to-transparent border-b'>
                 <CardTitle className='flex items-center gap-2'>
-                  <div className="p-2 rounded-lg bg-primary/10">
+                  <div className='p-2 rounded-lg bg-primary/10'>
                     <FileText className='h-5 w-5 text-primary' />
                   </div>
                   Validation Documents
@@ -542,7 +572,12 @@ export default function AdminLocationRequestDetailsPage({
                             key={imgIndex}
                             className='relative aspect-[4/3] rounded-lg overflow-hidden border cursor-pointer group hover:border-primary transition-all'
                             onClick={() =>
-                              handleImageClick(url, `${formatDocumentType(doc.documentType)} - Document ${imgIndex + 1}`)
+                              handleImageClick(
+                                url,
+                                `${formatDocumentType(
+                                  doc.documentType
+                                )} - Document ${imgIndex + 1}`
+                              )
                             }
                           >
                             <img
@@ -568,10 +603,10 @@ export default function AdminLocationRequestDetailsPage({
 
         {/* Submitter Information */}
         {request.createdBy && (
-          <Card className="border-2 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent border-b">
+          <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
+            <CardHeader className='bg-gradient-to-r from-primary/5 to-transparent border-b'>
               <CardTitle className='flex items-center gap-2'>
-                <div className="p-2 rounded-lg bg-primary/10">
+                <div className='p-2 rounded-lg bg-primary/10'>
                   <User className='h-5 w-5 text-primary' />
                 </div>
                 Submitter Information
@@ -654,7 +689,11 @@ export default function AdminLocationRequestDetailsPage({
                           <Link
                             href={`/admin/business/${request.createdBy.businessProfile.accountId}`}
                           >
-                            <Button variant='outline' size='sm' className='w-full sm:w-auto'>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              className='w-full sm:w-auto'
+                            >
                               <Building className='h-4 w-4 mr-2' />
                               View Business Account
                               <ExternalLink className='h-3 w-3 ml-2' />
@@ -680,7 +719,9 @@ export default function AdminLocationRequestDetailsPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className='text-yellow-900 dark:text-yellow-100'>{request.adminNotes}</p>
+              <p className='text-yellow-900 dark:text-yellow-100'>
+                {request.adminNotes}
+              </p>
             </CardContent>
           </Card>
         )}
@@ -735,7 +776,8 @@ export default function AdminLocationRequestDetailsPage({
           <AlertDialogHeader>
             <AlertDialogTitle>Approve this request?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action will approve the location request and make it publicly available. This action cannot be undone.
+              This action will approve the location request and make it publicly
+              available. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -760,7 +802,8 @@ export default function AdminLocationRequestDetailsPage({
           <AlertDialogHeader>
             <AlertDialogTitle>Reject this request?</AlertDialogTitle>
             <AlertDialogDescription>
-              Please provide a reason for rejection. This note will be visible to the submitter.
+              Please provide a reason for rejection. This note will be visible
+              to the submitter.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className='py-4'>

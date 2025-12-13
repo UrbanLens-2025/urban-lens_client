@@ -331,7 +331,7 @@ export default function AdminBusinessPage() {
               </Button>
             </div>
             <div className='relative'>
-              <IconSearch className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
+              <IconSearch className='absolute left-2.5 top-4 h-4 w-4 text-muted-foreground' />
               <Input
                 placeholder='Search businesses...'
                 className='pl-8'
