@@ -10,10 +10,10 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Info, 
-  Users, 
-  FileText, 
+import {
+  Info,
+  Users,
+  FileText,
   Globe,
   Image as ImageIcon,
   Tag,
@@ -41,7 +41,7 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
   const { data: tagCategories, isLoading: isLoadingTags } = useTagCategories("EVENT");
   const selectedTagIds = form.watch("tagIds") || [];
   const locationId = form.watch("locationId"); // Check if venue is selected
-  
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -115,8 +115,8 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
                 </Tooltip>
               </div>
               <FormControl>
-                <Input 
-                  placeholder="Enter event name" 
+                <Input
+                  placeholder="Enter event name"
                   {...field}
                   className="h-12 border-2 border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all w-full text-base"
                 />
@@ -290,14 +290,12 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-xl border-2 border-dashed border-border bg-card/50 p-1 hover:border-primary/50 transition-colors">
-                    <FormControl>
-                      <SingleFileUpload
-                        value={field.value || undefined}
-                        onChange={(url) => field.onChange(url || "")}
-                      />
-                    </FormControl>
-                  </div>
+                  <FormControl>
+                    <SingleFileUpload
+                      value={field.value || undefined}
+                      onChange={(url) => field.onChange(url || "")}
+                    />
+                  </FormControl>
                 </div>
                 <FormMessage className="mt-2" />
               </FormItem>
@@ -332,14 +330,12 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-xl border-2 border-dashed border-border bg-card/50 p-1 hover:border-primary/50 transition-colors">
-                    <FormControl>
-                      <SingleFileUpload
-                        value={field.value || undefined}
-                        onChange={(url) => field.onChange(url || "")}
-                      />
-                    </FormControl>
-                  </div>
+                  <FormControl>
+                    <SingleFileUpload
+                      value={field.value || undefined}
+                      onChange={(url) => field.onChange(url || "")}
+                    />
+                  </FormControl>
                 </div>
                 <FormMessage className="mt-2" />
               </FormItem>
@@ -368,7 +364,7 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
             </TooltipContent>
           </Tooltip>
         </div>
-        
+
         <FormField
           control={form.control}
           name="tagIds"
@@ -427,8 +423,8 @@ export function Step1BasicInfo({ form }: Step1BasicInfoProps) {
                             }
                             className={cn(
                               "cursor-pointer transition-all duration-200 px-3 py-1.5 text-sm font-medium",
-                              isSelected 
-                                ? "shadow-md ring-2 ring-offset-2 ring-primary/30 scale-105" 
+                              isSelected
+                                ? "shadow-md ring-2 ring-offset-2 ring-primary/30 scale-105"
                                 : "hover:shadow-sm hover:scale-105 hover:bg-muted/50"
                             )}
                             onClick={() => toggleTag(tag.id)}

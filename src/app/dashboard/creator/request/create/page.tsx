@@ -651,7 +651,7 @@ export default function CreateEventRequestPage() {
 
           {/* Navigation Footer */}
           {currentStep !== 4 && (
-            <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t pt-4 pb-4 -mx-4 px-4 lg:-mx-6 lg:px-6">
+            <div className="sticky bottom-0 backdrop-blur-sm border-t pt-4 pb-4 -mx-4 px-4 lg:-mx-6 lg:px-6">
               <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
                 <Button
                   variant="outline"

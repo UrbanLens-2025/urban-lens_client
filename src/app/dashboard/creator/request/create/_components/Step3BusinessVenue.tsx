@@ -587,23 +587,6 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
         </div>
       )}
 
-      {/* Info Alert */}
-      {!startDate || !endDate ? (
-        <Alert className="bg-gradient-to-r from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20 border-2 border-amber-200 dark:border-amber-800 shadow-sm">
-          <Info className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-          <AlertDescription className="text-sm text-amber-900 dark:text-amber-200 ml-2">
-            <strong className="font-semibold">Note:</strong> Please set your event dates in the previous step to see venues available during your event time.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <Alert className="bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-2 border-blue-200 dark:border-blue-800 shadow-sm">
-          <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          <AlertDescription className="text-sm text-blue-900 dark:text-blue-200 ml-2">
-            <strong className="font-semibold">Tip:</strong> Only venues available during your event time ({startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}) are shown. You can always add or change the location when editing your event.
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Location Selection */}
       <div className="space-y-4">
         {/* Header with Search and View Toggle */}
@@ -1378,19 +1361,6 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
             </div>
           </DialogContent>
         </Dialog>
-      )}
-
-      {/* No Location Selected State */}
-      {!selectedLocationId && !isLoadingLocations && (
-        <div className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-8 text-center">
-          <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-          <p className="text-sm font-medium text-muted-foreground mb-1">
-            No venue selected
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Select a venue above to view details and book time slots, or skip this step to continue.
-          </p>
-        </div>
       )}
 
       {/* Availability Calendar Modal */}
