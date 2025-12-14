@@ -399,7 +399,7 @@ export default function CreatorDashboardPage() {
   const revenueChartConfig: ChartConfig = {
     revenue: {
       label: "Revenue",
-      color: "hsl(221.2 83.2% 53.3%)", // primary color
+      color: "lab(58.8635% 31.6645 115.942)",
     },
   };
 
@@ -566,7 +566,7 @@ export default function CreatorDashboardPage() {
               ) : (
                 <ChartContainer config={revenueChartConfig} className="h-full w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={revenueData}>
+                    <BarChart data={revenueData}>
                       <CartesianGrid
                         strokeDasharray="3 3"
                         vertical={false}
@@ -593,7 +593,7 @@ export default function CreatorDashboardPage() {
                         }}
                       />
                       <RechartsTooltip
-                        cursor={{ strokeDasharray: "3 3" }}
+                        cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
                         content={({ active, payload, label }) => {
                           if (!active || !payload || payload.length === 0) return null;
                           const value = payload[0].value as number;
@@ -603,7 +603,12 @@ export default function CreatorDashboardPage() {
                                 {label}
                               </p>
                               <div className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-[hsl(var(--chart-1))]" />
+                                <span
+                                  className="h-2 w-2 rounded-full"
+                                  style={{
+                                    backgroundColor: "lab(58.8635% 31.6645 115.942)",
+                                  }}
+                                />
                                 <span className="text-[11px] font-medium">Revenue</span>
                                 <span className="ml-auto text-[11px] font-semibold">
                                   {formatCurrency(value)}
@@ -613,15 +618,12 @@ export default function CreatorDashboardPage() {
                           );
                         }}
                       />
-                      <Line
-                        type="monotone"
+                      <Bar
                         dataKey="revenue"
-                        stroke="hsl(221.2 83.2% 53.3%)"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
+                        fill="lab(58.8635% 31.6645 115.942)"
+                        radius={[4, 4, 0, 0]}
                       />
-                    </LineChart>
+                    </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
               )}
@@ -687,7 +689,7 @@ export default function CreatorDashboardPage() {
               ) : (
                 <ChartContainer config={eventPerformanceChartConfig} className="h-full w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={eventPerformanceData}>
+                    <BarChart data={eventPerformanceData}>
                       <CartesianGrid
                         strokeDasharray="3 3"
                         vertical={false}
@@ -709,7 +711,7 @@ export default function CreatorDashboardPage() {
                         tick={{ fontSize: 11 }}
                       />
                       <RechartsTooltip
-                        cursor={{ strokeDasharray: "3 3" }}
+                        cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
                         content={({ active, payload, label }) => {
                           if (!active || !payload || payload.length === 0) return null;
                           return (
@@ -740,31 +742,22 @@ export default function CreatorDashboardPage() {
                           );
                         }}
                       />
-                      <Line
-                        type="monotone"
+                      <Bar
                         dataKey="created"
-                        stroke="hsl(221.2 83.2% 53.3%)"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
+                        fill="hsl(221.2 83.2% 53.3%)"
+                        radius={[4, 4, 0, 0]}
                       />
-                      <Line
-                        type="monotone"
+                      <Bar
                         dataKey="published"
-                        stroke="hsl(142.1 76.2% 36.3%)"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
+                        fill="hsl(142.1 76.2% 36.3%)"
+                        radius={[4, 4, 0, 0]}
                       />
-                      <Line
-                        type="monotone"
+                      <Bar
                         dataKey="completed"
-                        stroke="hsl(47.9 95.8% 53.1%)"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
+                        fill="hsl(47.9 95.8% 53.1%)"
+                        radius={[4, 4, 0, 0]}
                       />
-                    </LineChart>
+                    </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
               )}
