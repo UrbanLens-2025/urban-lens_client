@@ -9,6 +9,7 @@ import { useEventById } from "@/hooks/events/useEventById";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StatCard } from "@/components/shared/StatCard";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -142,47 +143,30 @@ export default function EventTicketsPage({
   return (
     <div className="space-y-6">
       {/* Header with Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2">
-              <Ticket className="h-4 w-4" />
-              Total Tickets
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{totalTickets}</div>
-          </CardContent>
-        </Card>
+      <div className='grid gap-6 md:grid-cols-3'>
+        <StatCard
+          title='Total Tickets'
+          value={totalTickets}
+          icon={Ticket}
+          color='blue'
+          description='All ticket types'
+        />
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Active Tickets
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{activeTickets}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {totalTickets - activeTickets} inactive
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Active Tickets'
+          value={activeTickets}
+          icon={CheckCircle}
+          color='emerald'
+          description={`${totalTickets - activeTickets} inactive`}
+        />
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Revenue Potential
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {formatCurrency(totalRevenuePotential.toString(), tickets?.[0]?.currency || "VND")}
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Revenue Potential'
+          value={formatCurrency(totalRevenuePotential.toString(), tickets?.[0]?.currency || "VND")}
+          icon={TrendingUp}
+          color='amber'
+          description='Maximum possible revenue'
+        />
       </div>
 
       {/* Main Content Card */}
