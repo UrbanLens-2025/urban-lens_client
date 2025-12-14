@@ -13,10 +13,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  CalendarDays, 
-  PlusCircle, 
-  Search, 
+import {
+  CalendarDays,
+  PlusCircle,
+  Search,
   TrendingUp,
   MapPin,
   Tag as TagIcon,
@@ -90,8 +90,8 @@ export default function CreatorEventsPage() {
   });
   const [debouncedSearchTerm] = useDebounce(search, 300);
 
-  const sortBy = sort.direction 
-    ? `${sort.column}:${sort.direction}` 
+  const sortBy = sort.direction
+    ? `${sort.column}:${sort.direction}`
     : undefined;
 
   const { data: eventsData, isLoading, refetch } = useMyEvents({
@@ -105,8 +105,8 @@ export default function CreatorEventsPage() {
   const meta = eventsData?.meta;
 
   // Filter events by status if status filter is set
-  const events = statusFilter === "all" 
-    ? allEvents 
+  const events = statusFilter === "all"
+    ? allEvents
     : allEvents.filter((event) => event.status?.toUpperCase() === statusFilter.toUpperCase());
 
   // Calculate statistics from actual data
@@ -160,7 +160,7 @@ export default function CreatorEventsPage() {
         description="View and manage your events"
         icon={CalendarDays}
         actions={
-          <Button 
+          <Button
             onClick={() => window.location.href = '/dashboard/creator/request/create'}
             className="h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
           >
@@ -262,207 +262,181 @@ export default function CreatorEventsPage() {
                 </div>
               ) : (
                 <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50 border-b">
-                  <TableHead className="w-12 font-semibold pl-6">#</TableHead>
-                  <TableHead className="w-16 font-semibold">Image</TableHead>
-                  <SortableTableHeader
-                    column="displayName"
-                    currentSort={sort}
-                    onSort={handleSort}
-                  >
-                    Event Name
-                  </SortableTableHeader>
-                  <SortableTableHeader
-                    column="location.name"
-                    currentSort={sort}
-                    onSort={handleSort}
-                  >
-                    Location
-                  </SortableTableHeader>
-                  <TableHead className="font-semibold">Tags</TableHead>
-                  <SortableTableHeader
-                    column="startDate"
-                    currentSort={sort}
-                    onSort={handleSort}
-                  >
-                    Start Date
-                  </SortableTableHeader>
-                  <SortableTableHeader
-                    column="endDate"
-                    currentSort={sort}
-                    onSort={handleSort}
-                  >
-                    End Date
-                  </SortableTableHeader>
-                  <SortableTableHeader
-                    column="createdAt"
-                    currentSort={sort}
-                    onSort={handleSort}
-                  >
-                    Created
-                  </SortableTableHeader>
-                  <SortableTableHeader
-                    column="status"
-                    currentSort={sort}
-                    onSort={handleSort}
-                    className="pr-6"
-                  >
-                    Status
-                  </SortableTableHeader>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 pl-6 pr-6">
-                      <div className="flex flex-col items-center justify-center text-muted-foreground">
-                        <CalendarDays className="h-12 w-12 mb-4" />
-                        <p className="font-medium">No events found</p>
-                        <p className="text-sm mt-2">
-                          {debouncedSearchTerm
-                            ? "Try adjusting your search terms"
-                            : "Create your first event to get started"}
-                        </p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  events.map((event: Event, index: number) => {
-                    const rowNumber = ((meta?.currentPage || 1) - 1) * (meta?.itemsPerPage || 10) + index + 1;
-                    const visibleTags = event.tags?.slice(0, 2) || [];
-                    const remainingTagsCount = (event.tags?.length || 0) - visibleTags.length;
-                    
-                    return (
-                      <TableRow key={event.id} className="hover:bg-muted/30 transition-colors">
-                        <TableCell className="py-4 pl-6">
-                          <span className="text-sm font-medium text-muted-foreground">
-                            {rowNumber}
-                          </span>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
-                            {event.avatarUrl ? (
-                              <Image
-                                src={event.avatarUrl}
-                                alt={event.displayName}
-                                width={48}
-                                height={48}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                            )}
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 border-b">
+                      <TableHead className="w-12 font-semibold pl-6">#</TableHead>
+                      <SortableTableHeader
+                        column="displayName"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Event Name
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="location.name"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Location
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="startDate"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Start Date
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="endDate"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        End Date
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="createdAt"
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Created
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column="status"
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className="pr-6"
+                      >
+                        Status
+                      </SortableTableHeader>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {events.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-12 pl-6 pr-6">
+                          <div className="flex flex-col items-center justify-center text-muted-foreground">
+                            <CalendarDays className="h-12 w-12 mb-4" />
+                            <p className="font-medium">No events found</p>
+                            <p className="text-sm mt-2">
+                              {debouncedSearchTerm
+                                ? "Try adjusting your search terms"
+                                : "Create your first event to get started"}
+                            </p>
                           </div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <Link href={`/dashboard/creator/events/${event.id}`} className="hover:underline">
-                            <div className="flex flex-col gap-1">
-                              <span className="font-semibold text-foreground hover:text-primary transition-colors">{event.displayName}</span>
-                              <span className="text-xs text-muted-foreground font-mono">
-                                {event.id.substring(0, 8)}...
-                              </span>
-                            </div>
-                          </Link>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="flex items-center gap-2 max-w-[200px]">
-                            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <div className="flex flex-col min-w-0 gap-0.5">
-                              <span className="text-sm font-medium truncate">
-                                {event.location?.name || "N/A"}
-                              </span>
-                              <span className="text-xs text-muted-foreground truncate">
-                                {event.location?.addressLine || ""}
-                              </span>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {event.tags && event.tags.length > 0 ? (
-                              <>
-                                {visibleTags.map((tag, tagIndex) => (
-                                  <Badge
-                                    key={tag.id || tagIndex}
-                                    variant="secondary"
-                                    className="text-xs border-0 font-medium"
-                                    style={{ 
-                                      backgroundColor: tag.color || 'hsl(var(--muted))', 
-                                      color: '#fff' 
-                                    }}
-                                  >
-                                    {tag.icon && <span className="mr-1">{tag.icon}</span>}
-                                    {tag.displayName}
-                                  </Badge>
-                                ))}
-                                {remainingTagsCount > 0 && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs px-1.5 py-0.5 font-medium"
-                                  >
-                                    +{remainingTagsCount}
-                                  </Badge>
-                                )}
-                              </>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">No tags</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          {event.startDate ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-sm font-medium">
-                                {formatDate(event.startDate)}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {formatTime(event.startDate)}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">N/A</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-4">
-                          {event.endDate ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-sm font-medium">
-                                {formatDate(event.endDate)}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {formatTime(event.endDate)}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">N/A</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-sm font-medium">
-                              {formatDate(event.createdAt)}
-                            </span>
-                              <span className="text-xs text-muted-foreground">
-                                {formatTime(event.createdAt)}
-                              </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4 pr-6">
-                          <Badge 
-                            variant="outline"
-                            className={`${getStatusBadgeStyle(event.status)} flex items-center gap-1.5 w-fit font-medium`}
-                          >
-                            {getStatusIcon(event.status)}
-                            {getStatusLabel(event.status)}
-                          </Badge>
                         </TableCell>
                       </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                    ) : (
+                      events.map((event: Event, index: number) => {
+                        const rowNumber = ((meta?.currentPage || 1) - 1) * (meta?.itemsPerPage || 10) + index + 1;
+                        const visibleTags = event.tags?.slice(0, 2) || [];
+                        const remainingTagsCount = (event.tags?.length || 0) - visibleTags.length;
+
+                        return (
+                          <TableRow key={event.id} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="py-4 pl-6">
+                              <span className="text-sm font-medium text-muted-foreground">
+                                {rowNumber}
+                              </span>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <Link href={`/dashboard/creator/events/${event.id}`} className="hover:underline">
+                                <div className="flex items-center gap-1">
+                                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                                    {event.avatarUrl ? (
+                                      <Image
+                                        src={event.avatarUrl}
+                                        alt={event.displayName}
+                                        width={48}
+                                        height={48}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                    )}
+                                  </div>
+                                  <span className="font-semibold text-foreground hover:text-primary transition-colors">{event.displayName}</span>
+                                </div>
+                              </Link>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <div className="flex items-center gap-2 max-w-[200px]">
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                                  {event.location?.imageUrl && event.location.imageUrl.length > 0 ? (
+                                    <Image
+                                      src={event.location?.imageUrl[0]}
+                                      alt={event.location.name}
+                                      width={48}
+                                      height={48}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                  )}
+                                </div>
+                                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                <div className="flex flex-col min-w-0 gap-0.5">
+                                  <span className="text-sm font-medium truncate">
+                                    {event.location?.name || "N/A"}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground truncate">
+                                    {event.location?.addressLine || ""}
+                                  </span>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              {event.startDate ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-sm font-medium">
+                                    {formatDate(event.startDate)}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatTime(event.startDate)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">N/A</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-4">
+                              {event.endDate ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-sm font-medium">
+                                    {formatDate(event.endDate)}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatTime(event.endDate)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">N/A</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-sm font-medium">
+                                  {formatDate(event.createdAt)}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatTime(event.createdAt)}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4 pr-6">
+                              <Badge
+                                variant="outline"
+                                className={`${getStatusBadgeStyle(event.status)} flex items-center gap-1.5 w-fit font-medium`}
+                              >
+                                {getStatusIcon(event.status)}
+                                {getStatusLabel(event.status)}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
               )}
             </div>
 

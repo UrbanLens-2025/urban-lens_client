@@ -28,6 +28,8 @@ import {
   ChevronUp,
   Target,
   ExternalLink,
+  FileCheck,
+  Eye,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -227,17 +229,64 @@ export default function EventOverviewPage({
             </Card>
           )}
 
-          {/* Document Creator Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Document Creator
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-            </CardContent>
-          </Card>
+          {/* Event Documents */}
+          {event.eventValidationDocuments && event.eventValidationDocuments.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileCheck className="h-5 w-5" />
+                  Event Documents
+                </CardTitle>
+                <CardDescription>
+                  Validation documents for this event
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {event.eventValidationDocuments.map((document, index) => (
+                  <div key={index} className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-primary" />
+                        <span className="font-semibold text-sm">
+                          {document.documentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {document.documentImageUrls.length} {document.documentImageUrls.length === 1 ? 'image' : 'images'}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {document.documentImageUrls.map((imageUrl, imgIndex) => (
+                        <div
+                          key={imgIndex}
+                          className="relative group aspect-video rounded-md overflow-hidden border bg-muted cursor-pointer"
+                        >
+                          <img
+                            src={imageUrl}
+                            alt={`${document.documentType} - ${imgIndex + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <a
+                              href={imageUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="bg-background/90 rounded-full p-2 shadow-lg">
+                                <Eye className="h-4 w-4 text-primary" />
+                              </div>
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Event Request Link */}
           {event.referencedEventRequestId && (

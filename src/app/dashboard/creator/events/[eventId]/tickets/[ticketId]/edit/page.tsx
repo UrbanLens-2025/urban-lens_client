@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect } from "react";
+import { use, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,6 +24,7 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
+import { DatePicker } from "@/components/shared/DatePicker";
 import {
   Loader2,
   ArrowLeft,
@@ -36,7 +37,7 @@ import {
 } from "lucide-react";
 import type { UpdateTicketPayload } from "@/types";
 
-const updateTicketSchema = z.object({
+const createUpdateTicketSchema = (eventStartDate?: string, eventEndDate?: string) => z.object({
   displayName: z
     .string()
     .min(3, "Ticket name must be at least 3 characters")
@@ -104,9 +105,29 @@ const updateTicketSchema = z.object({
 }, {
   message: "Maximum quantity must be greater than or equal to minimum quantity",
   path: ["maxQuantityPerOrder"],
+}).refine((data) => {
+  if (eventStartDate) {
+    const saleStart = new Date(data.saleStartDate);
+    const eventStart = new Date(eventStartDate);
+    return saleStart >= eventStart;
+  }
+  return true;
+}, {
+  message: "Sale start date must be on or after the event start date",
+  path: ["saleStartDate"],
+}).refine((data) => {
+  if (eventEndDate) {
+    const saleEnd = new Date(data.saleEndDate);
+    const eventEnd = new Date(eventEndDate);
+    return saleEnd <= eventEnd;
+  }
+  return true;
+}, {
+  message: "Sale end date must be on or before the event end date",
+  path: ["saleEndDate"],
 });
 
-type UpdateTicketForm = z.infer<typeof updateTicketSchema>;
+type UpdateTicketForm = z.infer<ReturnType<typeof createUpdateTicketSchema>>;
 
 export default function EditTicketPage({
   params,
@@ -119,11 +140,17 @@ export default function EditTicketPage({
 
   const { data: event, isLoading: isLoadingEvent, isError: isEventError } = useEventById(eventId);
   const { data: tickets, isLoading: isLoadingTickets, isError: isTicketsError } = useEventTickets(eventId);
-  
+
   // Find the ticket from the list
   const ticket = tickets?.find(t => t.id === ticketId);
   const isLoading = isLoadingEvent || isLoadingTickets;
   const isError = isEventError || isTicketsError || !ticket;
+
+  // Create schema with event dates for validation - recreate when event data changes
+  const updateTicketSchema = useMemo(
+    () => createUpdateTicketSchema(event?.startDate, event?.endDate),
+    [event?.startDate, event?.endDate]
+  );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<UpdateTicketForm>({
@@ -150,7 +177,7 @@ export default function EditTicketPage({
     if (ticket) {
       // Convert price from string to number
       const price = parseFloat(ticket.price) || 0;
-      
+
       // Format dates for datetime-local input (YYYY-MM-DDTHH:mm)
       const formatDateForInput = (dateString: string) => {
         const date = new Date(dateString);
@@ -178,6 +205,13 @@ export default function EditTicketPage({
       });
     }
   }, [ticket, form]);
+
+  // Re-validate form when event data loads to apply event date constraints
+  useEffect(() => {
+    if (event && (event.startDate || event.endDate)) {
+      form.trigger(["saleStartDate", "saleEndDate"]);
+    }
+  }, [event?.startDate, event?.endDate, form]);
 
   const onSubmit = async (data: UpdateTicketForm) => {
     const payload: UpdateTicketPayload = {
@@ -291,6 +325,27 @@ export default function EditTicketPage({
 
               <FormField
                 control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Active Status</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Enable or disable ticket sales
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="imageUrl"
                 render={({ field }) => (
                   <FormItem>
@@ -336,7 +391,7 @@ export default function EditTicketPage({
                           value={field.value ?? ""}
                           onChange={(e) => {
                             let value = e.target.value;
-                            
+
                             // Handle empty input
                             if (value === "" || value === "-") {
                               field.onChange(0);
@@ -499,10 +554,15 @@ export default function EditTicketPage({
                         When ticket sales begin
                       </FormDescription>
                       <FormControl>
-                        <Input
-                          type="datetime-local"
-                          {...field}
-                          className="h-11"
+                        <DatePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          error={form.formState.errors.saleStartDate?.message}
+                          minDate={event?.startDate ? new Date(event.startDate) : undefined}
+                          maxDate={event?.endDate ? new Date(event.endDate) : undefined}
+                          placeholder="Select start date"
+                          showTime={true}
+                          defaultTime="00:00"
                         />
                       </FormControl>
                       <FormMessage />
@@ -520,10 +580,15 @@ export default function EditTicketPage({
                         When ticket sales end
                       </FormDescription>
                       <FormControl>
-                        <Input
-                          type="datetime-local"
-                          {...field}
-                          className="h-11"
+                        <DatePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          error={form.formState.errors.saleEndDate?.message}
+                          minDate={event?.startDate ? new Date(event.startDate) : undefined}
+                          maxDate={event?.endDate ? new Date(event.endDate) : undefined}
+                          placeholder="Select end date"
+                          showTime={true}
+                          defaultTime="23:59"
                         />
                       </FormControl>
                       <FormMessage />
@@ -531,58 +596,6 @@ export default function EditTicketPage({
                   )}
                 />
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Additional Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Additional Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <FormField
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Active Status</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Enable or disable ticket sales
-                      </p>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="tos"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Terms of Service</FormLabel>
-                    <FormDescription>
-                      Additional terms and conditions for this ticket type
-                    </FormDescription>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter terms and conditions..."
-                        rows={4}
-                        {...field}
-                        value={field.value || ""}
-                        className="resize-none"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </CardContent>
           </Card>
 
