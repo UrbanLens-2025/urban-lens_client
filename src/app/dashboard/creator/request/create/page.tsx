@@ -18,6 +18,7 @@ import { Step2BasicInfo } from "./_components/Step1BasicInfo";
 import { Step3Documents } from "./_components/Step3Documents";
 import { Step4ReviewPayment } from "./_components/Step4ReviewPayment";
 import { CreateEventRequestPayload } from "@/types";
+import { PageContainer, PageHeader } from "@/components/shared";
 
 // Custom validation for date ranges
 const dateRangeValidation = z
@@ -110,7 +111,7 @@ const formSchema = z
     // If either date has a value, both must have values
     const hasStartDate = !!data.startDate;
     const hasEndDate = !!data.endDate;
-    
+
     if (hasStartDate && !hasEndDate) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -118,7 +119,7 @@ const formSchema = z
         path: ["endDate"],
       });
     }
-    
+
     if (!hasStartDate && hasEndDate) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -126,7 +127,7 @@ const formSchema = z
         path: ["startDate"],
       });
     }
-    
+
     // Validate end date is after start date (only if both are provided)
     if (hasStartDate && hasEndDate && data.startDate && data.endDate) {
       if (data.endDate <= data.startDate) {
@@ -165,7 +166,7 @@ const formSchema = z
           });
         }
       }
-      
+
       // CRITICAL: Validate that dateRanges cover the event period if event dates are provided
       // This is REQUIRED - booking slots MUST cover the entire event period
       if (data.startDate && data.endDate) {
@@ -173,7 +174,7 @@ const formSchema = z
         eventStart.setMilliseconds(0);
         const eventEnd = new Date(data.endDate);
         eventEnd.setMilliseconds(0);
-        
+
         // Find earliest start and latest end across all slots
         const allSlotStarts = data.dateRanges.map(range => {
           const d = new Date(range.startDateTime);
@@ -185,7 +186,7 @@ const formSchema = z
           d.setMilliseconds(0);
           return d.getTime();
         });
-        
+
         if (allSlotStarts.length === 0 || allSlotEnds.length === 0) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -194,15 +195,15 @@ const formSchema = z
           });
           return; // Exit early if no valid slots
         }
-        
+
         const earliestStart = new Date(Math.min(...allSlotStarts));
         const latestEnd = new Date(Math.max(...allSlotEnds));
-        
+
         // CRITICAL VALIDATION RULES:
         // 1. booking start <= event start
         // 2. booking end >= event end
         // 3. (booking end - booking start) >= (event end - event start) - booking must cover full event duration
-        
+
         // Validate: earliest booking start must be <= event start
         if (earliestStart.getTime() > eventStart.getTime()) {
           const earliestStartStr = earliestStart.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
@@ -213,7 +214,7 @@ const formSchema = z
             path: ["dateRanges"],
           });
         }
-        
+
         // Validate: latest booking end must be >= event end
         if (latestEnd.getTime() < eventEnd.getTime()) {
           const latestEndStr = latestEnd.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
@@ -224,7 +225,7 @@ const formSchema = z
             path: ["dateRanges"],
           });
         }
-        
+
       }
     }
   });
@@ -288,31 +289,31 @@ export default function CreateEventRequestPage() {
           const errorMessages = Object.entries(errors)
             .map(([field, error]) => `${field}: ${error.message}`)
             .join(", ");
-        toast.error("Validation errors", {
-          description: (
-            <div className="space-y-1 mt-1">
-              <p className="text-sm">Please fix the following errors before submitting:</p>
-              <p className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
-                {errorMessages.substring(0, 200) + (errorMessages.length > 200 ? "..." : "")}
-              </p>
-            </div>
-          ),
-          icon: <XCircle className="h-4 w-4" />,
-          duration: 8000,
-        });
+          toast.error("Validation errors", {
+            description: (
+              <div className="space-y-1 mt-1">
+                <p className="text-sm">Please fix the following errors before submitting:</p>
+                <p className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
+                  {errorMessages.substring(0, 200) + (errorMessages.length > 200 ? "..." : "")}
+                </p>
+              </div>
+            ),
+            icon: <XCircle className="h-4 w-4" />,
+            duration: 8000,
+          });
         }
         return isValid;
     }
 
     const result = await form.trigger(fieldsToValidate);
-    
+
     // Show error toast with specific field errors
     if (!result) {
       toast.dismiss(); // Dismiss any existing toasts
-      
+
       const errors = form.formState.errors;
       const errorFields = fieldsToValidate.filter(field => errors[field]);
-      
+
       if (errorFields.length > 0) {
         const errorMessages = errorFields
           .map(field => {
@@ -320,7 +321,7 @@ export default function CreateEventRequestPage() {
             return error?.message || `${field} is invalid`;
           })
           .join(", ");
-        
+
         toast.error("Form validation errors", {
           description: (
             <div className="space-y-1 mt-1">
@@ -344,32 +345,32 @@ export default function CreateEventRequestPage() {
         }, 100);
       }
     }
-    
+
     return result;
   };
 
   // Watch form values for reactive validation
   const eventValidationDocuments = form.watch("eventValidationDocuments");
-  
+
   const isCurrentStepValid = () => {
     const errors = form.formState.errors;
     const values = form.getValues();
-    
+
     switch (currentStep) {
       case 1:
         // Check required fields
         const basicFieldsValid = !errors.eventName && !errors.eventDescription && !errors.expectedNumberOfParticipants &&
-                                 values.eventName && values.eventDescription && values.expectedNumberOfParticipants;
-        
+          values.eventName && values.eventDescription && values.expectedNumberOfParticipants;
+
         // Check date fields: if both empty, valid; if either has value, both must be valid
         const hasStartDate = !!values.startDate;
         const hasEndDate = !!values.endDate;
         const datesValid = (!hasStartDate && !hasEndDate) || // Both empty is valid
-                          (hasStartDate && hasEndDate && !errors.startDate && !errors.endDate); // Both provided and no errors
-        
+          (hasStartDate && hasEndDate && !errors.startDate && !errors.endDate); // Both provided and no errors
+
         // Check tags
         const tagsValid = !errors.tagIds && values.tagIds && values.tagIds.length > 0;
-        
+
         return basicFieldsValid && datesValid && tagsValid;
       case 2:
         // Location step - OPTIONAL: can be skipped
@@ -377,8 +378,8 @@ export default function CreateEventRequestPage() {
         // If neither is provided, step is valid (can be skipped)
         if (values.locationId) {
           // If location is selected, dateRanges must be provided and valid
-          return !errors.locationId && !errors.dateRanges && 
-                 values.dateRanges && values.dateRanges.length > 0;
+          return !errors.locationId && !errors.dateRanges &&
+            values.dateRanges && values.dateRanges.length > 0;
         }
         // If no location selected, step is valid (can be skipped)
         return !errors.locationId && !errors.dateRanges;
@@ -415,24 +416,24 @@ export default function CreateEventRequestPage() {
   const handleSubmit = async () => {
     // Dismiss any existing toasts first
     toast.dismiss();
-    
+
     const isValid = await validateStep(5);
     if (!isValid) {
       return;
     }
 
     const values = form.getValues();
-    
-      // Validate booking slots coverage (only if dateRanges are provided)
-      // Rules: 
-      // 1. booking start <= event start
-      // 2. booking end >= event end
+
+    // Validate booking slots coverage (only if dateRanges are provided)
+    // Rules: 
+    // 1. booking start <= event start
+    // 2. booking end >= event end
     if (values.dateRanges && values.dateRanges.length > 0 && values.startDate && values.endDate) {
       const eventStart = new Date(values.startDate);
       eventStart.setMilliseconds(0);
       const eventEnd = new Date(values.endDate);
       eventEnd.setMilliseconds(0);
-      
+
       const allSlotStarts = values.dateRanges.map(range => {
         const d = new Date(range.startDateTime);
         d.setMilliseconds(0);
@@ -443,48 +444,48 @@ export default function CreateEventRequestPage() {
         d.setMilliseconds(0);
         return d.getTime();
       });
-      
+
       const bookingStart = new Date(Math.min(...allSlotStarts));
       const bookingEnd = new Date(Math.max(...allSlotEnds));
-      
+
       // Validation: booking start <= event start AND booking end >= event end
       if (bookingStart.getTime() > eventStart.getTime() || bookingEnd.getTime() < eventEnd.getTime()) {
-        const eventStartStr = eventStart.toLocaleString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
+        const eventStartStr = eventStart.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
           year: 'numeric',
-          hour: '2-digit', 
+          hour: '2-digit',
           minute: '2-digit',
-          hour12: true 
+          hour12: true
         });
-        const eventEndStr = eventEnd.toLocaleString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
+        const eventEndStr = eventEnd.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
           year: 'numeric',
-          hour: '2-digit', 
+          hour: '2-digit',
           minute: '2-digit',
-          hour12: true 
+          hour12: true
         });
-        const bookingStartStr = bookingStart.toLocaleString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
+        const bookingStartStr = bookingStart.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
           year: 'numeric',
-          hour: '2-digit', 
+          hour: '2-digit',
           minute: '2-digit',
-          hour12: true 
+          hour12: true
         });
-        const bookingEndStr = bookingEnd.toLocaleString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
+        const bookingEndStr = bookingEnd.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
           year: 'numeric',
-          hour: '2-digit', 
+          hour: '2-digit',
           minute: '2-digit',
-          hour12: true 
+          hour12: true
         });
-        
+
         let errorTitle = "Cannot submit: Booking doesn't cover event period";
         let errorDescription: React.ReactNode;
-        
+
         if (bookingStart.getTime() > eventStart.getTime() && bookingEnd.getTime() < eventEnd.getTime()) {
           // Both conditions fail
           errorDescription = (
@@ -510,7 +511,7 @@ export default function CreateEventRequestPage() {
             </div>
           );
         }
-        
+
         toast.error(errorTitle, {
           description: errorDescription,
           icon: <Clock className="h-4 w-4" />,
@@ -610,110 +611,87 @@ export default function CreateEventRequestPage() {
   const progressPercentage = ((currentStep - 1) / 3) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="max-w-5xl mx-auto space-y-8 py-8 px-4 lg:px-6">
-        {/* Header Section */}
-        <div className="space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary shadow-lg">
-                <FileText className="h-7 w-7" />
-              </div>
-              <div>
-                <h1 className="text-3xl lg:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-                  Create Event Request
-                </h1>
-                <p className="text-muted-foreground mt-2 text-base">
-                  Follow the steps below to create your event. You can save progress and return later.
-                </p>
-              </div>
-            </div>
-            {/* Progress Indicator */}
-            <div className="hidden md:flex flex-col items-end gap-2 min-w-[120px]">
-              <div className="text-sm font-semibold text-muted-foreground">
-                {currentStep} of 4
-              </div>
-              <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title='Create Event Request'
+        description='Follow the steps below to create your event.'
+        icon={FileText}
+      />
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="max-w-5xl mx-auto space-y-8 py-8 px-4 lg:px-6">
 
-        {/* Step Indicator */}
-        <StepIndicator currentStep={currentStep} />
+          {/* Step Indicator */}
+          <StepIndicator currentStep={currentStep} />
 
-        {/* Validation Alert */}
-        {showValidationErrors && currentStep !== 4 && (
-          <Alert variant="destructive" className="border-2 animate-in slide-in-from-top-2">
-            <AlertCircle className="h-5 w-5" />
-            <AlertTitle className="font-semibold">Please fix the following errors</AlertTitle>
-            <AlertDescription className="mt-1">
-              <ul className="list-disc list-inside space-y-1">
-                {getStepErrorFields(currentStep).map((field, idx) => (
-                  <li key={idx}>{field}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
+          {/* Validation Alert */}
+          {showValidationErrors && currentStep !== 4 && (
+            <Alert variant="destructive" className="border-2 animate-in slide-in-from-top-2">
+              <AlertCircle className="h-5 w-5" />
+              <AlertTitle className="font-semibold">Please fix the following errors</AlertTitle>
+              <AlertDescription className="mt-1">
+                <ul className="list-disc list-inside space-y-1">
+                  {getStepErrorFields(currentStep).map((field, idx) => (
+                    <li key={idx}>{field}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {/* Main Content Card */}
-        <Form {...form}>
-          <Card className="border-2 border-primary/10 shadow-2xl bg-card/80 backdrop-blur-sm overflow-hidden">
-            <CardContent className="p-6 lg:p-8">
-              <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
-                {renderStepContent()}
-              </div>
-            </CardContent>
-          </Card>
-        </Form>
+          {/* Main Content Card */}
+          <Form {...form}>
+            <Card className="border-2 border-primary/10 shadow-2xl bg-card/80 backdrop-blur-sm overflow-hidden">
+              <CardContent className="p-6 lg:p-8">
+                <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
+                  {renderStepContent()}
+                </div>
+              </CardContent>
+            </Card>
+          </Form>
 
-        {/* Navigation Footer */}
-        {currentStep !== 4 && (
-          <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t pt-4 pb-4 -mx-4 px-4 lg:-mx-6 lg:px-6">
-            <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-              <Button
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === 1 || createEvent.isPending}
-                className="w-full sm:w-auto min-w-[120px]"
-                size="lg"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Previous
-              </Button>
-              
-              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                {(currentStep === 2 || currentStep === 3) && (
-                  <Button
-                    variant="ghost"
-                    onClick={handleNext}
-                    disabled={createEvent.isPending}
-                    className="text-muted-foreground hover:text-foreground"
-                    size="lg"
-                  >
-                    {currentStep === 2 ? "Skip Location" : "Skip Documents"}
-                  </Button>
-                )}
+          {/* Navigation Footer */}
+          {currentStep !== 4 && (
+            <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t pt-4 pb-4 -mx-4 px-4 lg:-mx-6 lg:px-6">
+              <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
                 <Button
-                  onClick={handleNext}
-                  disabled={!isCurrentStepValid() || createEvent.isPending}
-                  className="w-full sm:w-auto min-w-[140px] bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={currentStep === 1 || createEvent.isPending}
+                  className="w-full sm:w-auto min-w-[120px]"
                   size="lg"
                 >
-                  {currentStep === 3 ? "Review" : "Continue"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Previous
                 </Button>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                  {(currentStep === 2 || currentStep === 3) && (
+                    <Button
+                      variant="ghost"
+                      onClick={handleNext}
+                      disabled={createEvent.isPending}
+                      className="text-muted-foreground hover:text-foreground"
+                      size="lg"
+                    >
+                      {currentStep === 2 ? "Skip Location" : "Skip Documents"}
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleNext}
+                    disabled={!isCurrentStepValid() || createEvent.isPending}
+                    className="w-full sm:w-auto min-w-[140px] bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
+                    size="lg"
+                  >
+                    {currentStep === 3 ? "Review" : "Continue"}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

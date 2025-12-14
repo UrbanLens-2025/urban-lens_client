@@ -577,6 +577,11 @@ export default function CreatorWalletPage() {
 
   return (
     <PageContainer>
+      <PageHeader
+          title="Wallet"
+          description="Manage your balance, transactions, and earnings"
+          icon={Wallet}
+        />
       {/* Enhanced Balance Card */}
       <Card className="border-2 border-primary/10 shadow-xl bg-gradient-to-br from-card via-card/95 to-card/90 backdrop-blur-sm overflow-hidden relative">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
