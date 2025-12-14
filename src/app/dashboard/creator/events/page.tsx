@@ -38,6 +38,7 @@ import { SortableTableHeader, SortDirection } from "@/components/shared/Sortable
 import { TableFilters } from "@/components/shared/TableFilters";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { StatCard } from "@/components/shared/StatCard";
 
 // Event data will come from API
 
@@ -170,50 +171,38 @@ export default function CreatorEventsPage() {
       />
 
       {/* Quick Statistics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Events</CardTitle>
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalEvents}</div>
-            <p className="text-xs text-muted-foreground">All time</p>
-          </CardContent>
-        </Card>
+      <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
+        <StatCard
+          title='Total Events'
+          value={stats.totalEvents}
+          icon={CalendarDays}
+          color='blue'
+          description='All time'
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Events</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.activeEvents}</div>
-            <p className="text-xs text-muted-foreground">Currently active</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Active Events'
+          value={stats.activeEvents}
+          icon={TrendingUp}
+          color='emerald'
+          description='Currently active'
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Draft Events</CardTitle>
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.draftEvents}</div>
-            <p className="text-xs text-muted-foreground">Not published yet</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Draft Events'
+          value={stats.draftEvents}
+          icon={FileText}
+          color='amber'
+          description='Not published yet'
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tags</CardTitle>
-            <TagIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTags}</div>
-            <p className="text-xs text-muted-foreground">Across all events</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Total Tags'
+          value={stats.totalTags}
+          icon={TagIcon}
+          color='purple'
+          description='Across all events'
+        />
       </div>
 
       {/* Events Table */}

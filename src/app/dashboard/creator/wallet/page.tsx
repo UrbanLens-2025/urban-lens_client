@@ -53,6 +53,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { StatCard } from "@/components/shared/StatCard";
 import { useWallet } from "@/hooks/user/useWallet";
 import { useWalletExternalTransactions } from "@/hooks/wallet/useWalletExternalTransactions";
 import type { WalletExternalTransaction, WalletTransaction } from "@/types";
@@ -649,114 +650,38 @@ export default function CreatorWalletPage() {
       </Card>
 
       {/* Enhanced Statistics Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="group border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Total Deposits
-            </CardTitle>
-            <div className="h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
-              <Download className="h-5 w-5 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary mb-3">
-              {formatCurrency(stats.totalDeposits)}
-            </div>
-            <div className="flex items-center justify-between pt-2 border-t border-border/50">
-              <p className="text-xs font-medium text-muted-foreground">
-                {formatCurrency(stats.thisMonthDeposits)} this month
-              </p>
-              {stats.depositsChange !== 0 && (
-                <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md ${
-                  stats.depositsChange > 0 
-                    ? "text-green-600 dark:text-green-400 bg-green-500/10" 
-                    : "text-red-600 dark:text-red-400 bg-red-500/10"
-                }`}>
-                  {stats.depositsChange > 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  {Math.abs(stats.depositsChange).toFixed(1)}%
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
+        <StatCard
+          title='Total Deposits'
+          value={formatCurrency(stats.totalDeposits)}
+          icon={Download}
+          color='blue'
+          description='All time deposits'
+        />
 
-        <Card className="group border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Total Earnings
-            </CardTitle>
-            <div className="h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
-              <TrendingUp className="h-5 w-5 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary mb-3">
-              {formatCurrency(stats.totalEarnings)}
-            </div>
-            <div className="flex items-center justify-between pt-2 border-t border-border/50">
-              <p className="text-xs font-medium text-muted-foreground">
-                {formatCurrency(stats.thisMonthEarnings)} this month
-              </p>
-              {stats.earningsChange !== 0 && (
-                <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md ${
-                  stats.earningsChange > 0 
-                    ? "text-green-600 dark:text-green-400 bg-green-500/10" 
-                    : "text-red-600 dark:text-red-400 bg-red-500/10"
-                }`}>
-                  {stats.earningsChange > 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  {Math.abs(stats.earningsChange).toFixed(1)}%
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Total Earnings'
+          value={formatCurrency(stats.totalEarnings)}
+          icon={TrendingUp}
+          color='emerald'
+          description='All time earnings'
+        />
 
-        <Card className="group border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Total Withdrawals
-            </CardTitle>
-            <div className="h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
-              <Upload className="h-5 w-5 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary mb-3">
-              {formatCurrency(stats.totalWithdrawals)}
-            </div>
-            <p className="text-xs font-medium text-muted-foreground pt-2 border-t border-border/50">
-              To bank account
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Total Withdrawals'
+          value={formatCurrency(stats.totalWithdrawals)}
+          icon={Upload}
+          color='amber'
+          description='To bank account'
+        />
 
-        <Card className="group border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Total Transactions
-            </CardTitle>
-            <div className="h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
-              <Activity className="h-5 w-5 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary mb-3">
-              {stats.totalTransactions}
-            </div>
-            <p className="text-xs font-medium text-muted-foreground pt-2 border-t border-border/50">
-              All time transactions
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Total Transactions'
+          value={stats.totalTransactions}
+          icon={Activity}
+          color='purple'
+          description='All time transactions'
+        />
       </div>
 
       {/* Monthly Earnings Chart */}

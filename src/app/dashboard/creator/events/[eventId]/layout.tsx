@@ -709,61 +709,6 @@ function EventDetailLayoutContent({
                     </div>
                   )}
 
-                  {/* Tags Section */}
-                  {visibleTags.length > 0 && (
-                    <TooltipProvider>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {visibleTags.map((tag) => (
-                            <Badge
-                              key={tag.id}
-                              variant="secondary"
-                              style={{
-                                backgroundColor: `${tag.color}15`,
-                                borderColor: `${tag.color}40`,
-                                color: tag.color,
-                              }}
-                              className="text-xs border font-medium px-2.5 py-1 hover:opacity-80 transition-opacity"
-                            >
-                              <span className="mr-1.5 text-xs">{tag.icon}</span>
-                              {tag.displayName}
-                            </Badge>
-                          ))}
-                          {remainingTagsCount > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge 
-                                  variant="outline" 
-                                  className="text-xs cursor-default hover:bg-muted/50 transition-colors"
-                                >
-                                  +{remainingTagsCount} more
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="max-w-xs">
-                                <div className="flex flex-wrap gap-2">
-                                  {event.tags?.slice(MAX_VISIBLE_TAGS).map((tag) => (
-                                    <Badge
-                                      key={tag.id}
-                                      variant="secondary"
-                                      style={{
-                                        backgroundColor: `${tag.color}15`,
-                                        borderColor: tag.color,
-                                        color: tag.color,
-                                      }}
-                                      className="text-xs border"
-                                    >
-                                      <span className="mr-1">{tag.icon}</span>
-                                      {tag.displayName}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-                      </div>
-                    </TooltipProvider>
-                  )}
                 </div>
               </div>
             </div>

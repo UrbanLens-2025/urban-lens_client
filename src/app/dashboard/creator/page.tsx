@@ -447,13 +447,12 @@ export default function CreatorDashboardPage() {
       />
 
       {/* Enhanced Statistics Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
         <StatCard
-          title="Total Events"
+          title='Total Events'
           value={stats.totalEvents}
           icon={CalendarDays}
-          iconColor="text-blue-600"
-          iconBg="bg-blue-500/10"
+          color='blue'
           description={`${stats.activeEvents} active`}
           trend={
             stats.eventsChange !== 0
@@ -467,25 +466,23 @@ export default function CreatorDashboardPage() {
         />
 
         <StatCard
-          title="Upcoming Events"
+          title='Upcoming Events'
           value={upcomingEvents.length}
           icon={Ticket}
-          iconColor="text-blue-600"
-          iconBg="bg-blue-500/10"
-          description="Scheduled events"
+          color='blue'
+          description='Scheduled events'
           onClick={() => router.push('/dashboard/creator/events')}
         />
 
         <StatCard
-          title="Active Events"
+          title='Active Events'
           value={stats.activeEvents}
           icon={MapPin}
-          iconColor="text-purple-600"
-          iconBg="bg-purple-500/10"
+          color='purple'
           description={`${stats.draftEvents} drafts`}
           footer={
             stats.completedEvents > 0 && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant='outline' className='text-xs'>
                 {stats.completedEvents} completed
               </Badge>
             )
@@ -494,11 +491,10 @@ export default function CreatorDashboardPage() {
         />
 
         <StatCard
-          title="Total Revenue"
+          title='Total Revenue'
           value={formatCurrency(stats.totalRevenue)}
           icon={DollarSign}
-          iconColor="text-amber-600"
-          iconBg="bg-amber-500/10"
+          color='amber'
           description={`${formatCurrency(stats.thisMonthRevenue)} this month`}
           trend={
             stats.revenueChange !== 0

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { StatCard } from "@/components/shared/StatCard";
 import {
   Loader2,
   MapPin,
@@ -142,87 +143,51 @@ export default function EventOverviewPage({
     <div className="space-y-6">
 
       {/* Key Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
         {/* Total Revenue */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoadingAttendance ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
-              ) : (
-                formatCurrency(totalRevenue)
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              From {paidOrders} paid order{paidOrders !== 1 ? 's' : ''}
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Total Revenue'
+          value={formatCurrency(totalRevenue)}
+          icon={DollarSign}
+          color='emerald'
+          description={`From ${paidOrders} paid order${paidOrders !== 1 ? 's' : ''}`}
+          isLoading={isLoadingAttendance}
+        />
 
         {/* Tickets Sold */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tickets Sold</CardTitle>
-            <Ticket className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoadingAttendance ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
-              ) : (
-                `${totalTicketsSold} / ${totalTicketsAvailable}`
-              )}
-            </div>
-            <Progress value={ticketsSoldPercentage} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {ticketsSoldPercentage.toFixed(1)}% sold
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Tickets Sold'
+          value={`${totalTicketsSold} / ${totalTicketsAvailable}`}
+          icon={Ticket}
+          color='blue'
+          description={`${ticketsSoldPercentage.toFixed(1)}% sold`}
+          isLoading={isLoadingAttendance}
+          footer={
+            !isLoadingAttendance && (
+              <Progress value={ticketsSoldPercentage} className='mt-2' />
+            )
+          }
+        />
 
         {/* Total Attendees */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Attendees</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoadingAttendance ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
-              ) : (
-                totalTicketsSold
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {attendances.length} total order{attendances.length !== 1 ? 's' : ''}
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Attendees'
+          value={totalTicketsSold}
+          icon={Users}
+          color='purple'
+          description={`${attendances.length} total order${attendances.length !== 1 ? 's' : ''}`}
+          isLoading={isLoadingAttendance}
+        />
 
         {/* Ticket Types */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ticket Types</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoadingTickets ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
-              ) : (
-                tickets?.length || 0
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {tickets?.filter(t => t.isActive).length || 0} active
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Ticket Types'
+          value={tickets?.length || 0}
+          icon={Target}
+          color='amber'
+          description={`${tickets?.filter(t => t.isActive).length || 0} active`}
+          isLoading={isLoadingTickets}
+        />
       </div>
 
       {/* Quick Actions & Insights */}
@@ -262,35 +227,15 @@ export default function EventOverviewPage({
             </Card>
           )}
 
-          {/* Creator Info */}
+          {/* Document Creator Info */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
-                Event Creator
+                Document Creator
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-3">
-                <img 
-                  src={event.createdBy?.avatarUrl || "/default-avatar.svg"} 
-                  alt="avatar" 
-                  className="h-10 w-10 rounded-full object-cover border" 
-                />
-                <div>
-                  <div className="font-medium">
-                    {event.createdBy?.firstName} {event.createdBy?.lastName}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {event.createdBy?.email}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Phone className="h-3 w-3" /> {event.createdBy?.phoneNumber}
-                </div>
-              </div>
             </CardContent>
           </Card>
 
