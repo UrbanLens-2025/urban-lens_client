@@ -106,16 +106,6 @@ const createUpdateTicketSchema = (eventStartDate?: string, eventEndDate?: string
   message: "Maximum quantity must be greater than or equal to minimum quantity",
   path: ["maxQuantityPerOrder"],
 }).refine((data) => {
-  if (eventStartDate) {
-    const saleStart = new Date(data.saleStartDate);
-    const eventStart = new Date(eventStartDate);
-    return saleStart >= eventStart;
-  }
-  return true;
-}, {
-  message: "Sale start date must be on or after the event start date",
-  path: ["saleStartDate"],
-}).refine((data) => {
   if (eventEndDate) {
     const saleEnd = new Date(data.saleEndDate);
     const eventEnd = new Date(eventEndDate);
@@ -350,9 +340,6 @@ export default function EditTicketPage({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Ticket Image</FormLabel>
-                    <FormDescription>
-                      Upload an image for this ticket type
-                    </FormDescription>
                     <FormControl>
                       <SingleFileUpload
                         value={field.value || undefined}
@@ -461,9 +448,6 @@ export default function EditTicketPage({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Total Quantity Available *</FormLabel>
-                    <FormDescription>
-                      Maximum number of tickets available for sale
-                    </FormDescription>
                     <FormControl>
                       <Input
                         type="number"
@@ -487,9 +471,6 @@ export default function EditTicketPage({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Minimum Quantity Per Order *</FormLabel>
-                      <FormDescription>
-                        Minimum tickets a customer can purchase
-                      </FormDescription>
                       <FormControl>
                         <Input
                           type="number"
@@ -512,9 +493,6 @@ export default function EditTicketPage({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Maximum Quantity Per Order *</FormLabel>
-                      <FormDescription>
-                        Maximum tickets a customer can purchase
-                      </FormDescription>
                       <FormControl>
                         <Input
                           type="number"
@@ -550,15 +528,11 @@ export default function EditTicketPage({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Sale Start Date *</FormLabel>
-                      <FormDescription>
-                        When ticket sales begin
-                      </FormDescription>
                       <FormControl>
                         <DatePicker
                           value={field.value}
                           onChange={field.onChange}
                           error={form.formState.errors.saleStartDate?.message}
-                          minDate={event?.startDate ? new Date(event.startDate) : undefined}
                           maxDate={event?.endDate ? new Date(event.endDate) : undefined}
                           placeholder="Select start date"
                           showTime={true}
@@ -576,15 +550,11 @@ export default function EditTicketPage({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Sale End Date *</FormLabel>
-                      <FormDescription>
-                        When ticket sales end
-                      </FormDescription>
                       <FormControl>
                         <DatePicker
                           value={field.value}
                           onChange={field.onChange}
                           error={form.formState.errors.saleEndDate?.message}
-                          minDate={event?.startDate ? new Date(event.startDate) : undefined}
                           maxDate={event?.endDate ? new Date(event.endDate) : undefined}
                           placeholder="Select end date"
                           showTime={true}
