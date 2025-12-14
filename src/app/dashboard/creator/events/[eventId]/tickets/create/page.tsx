@@ -129,6 +129,13 @@ const createCreateTicketSchema = (eventStartDate?: string, eventEndDate?: string
   message: "Maximum quantity must be greater than or equal to minimum quantity",
   path: ["maxQuantityPerOrder"],
 }).refine((data) => {
+  const saleStart = new Date(data.saleStartDate);
+  const now = new Date();
+  return saleStart >= now;
+}, {
+  message: "Sale start date cannot be in the past",
+  path: ["saleStartDate"],
+}).refine((data) => {
   if (data.allowRefunds) {
     if (data.refundPercentageBeforeCutoff === undefined || data.refundPercentageBeforeCutoff === null) {
       return false;
@@ -148,6 +155,13 @@ const createCreateTicketSchema = (eventStartDate?: string, eventEndDate?: string
 }, {
   message: "Refund cutoff hours is required when refunds are enabled",
   path: ["refundCutoffHoursAfterPayment"],
+}).refine((data) => {
+  const saleEnd = new Date(data.saleEndDate);
+  const now = new Date();
+  return saleEnd >= now;
+}, {
+  message: "Sale end date cannot be in the past",
+  path: ["saleEndDate"],
 }).refine((data) => {
   if (eventEndDate) {
     const saleEnd = new Date(data.saleEndDate);
@@ -573,7 +587,7 @@ export default function CreateTicketPage({
                         <DatePicker
                           value={field.value}
                           onChange={field.onChange}
-                          error={form.formState.errors.saleStartDate?.message}
+                          minDate={new Date()}
                           maxDate={event?.endDate ? new Date(event.endDate) : undefined}
                           placeholder="Select start date"
                           showTime={true}
@@ -595,7 +609,7 @@ export default function CreateTicketPage({
                         <DatePicker
                           value={field.value}
                           onChange={field.onChange}
-                          error={form.formState.errors.saleEndDate?.message}
+                          minDate={new Date()}
                           maxDate={event?.endDate ? new Date(event.endDate) : undefined}
                           placeholder="Select end date"
                           showTime={true}
