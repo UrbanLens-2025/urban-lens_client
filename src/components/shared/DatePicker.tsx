@@ -119,9 +119,7 @@ export function DatePicker({
   };
 
   const displayValue = selectedDate
-    ? showTime
-      ? format(selectedDate, "PPP 'at' HH:mm")
-      : format(selectedDate, "PPP")
+    ? format(selectedDate, "PPP")
     : undefined;
 
   return (
