@@ -527,7 +527,6 @@ export default function LocationBookingDetailPage({
       {/* Header */}
       <PageHeader
         title='Chi tiết Booking'
-        description={`Booking ID: ${booking.id.substring(0, 8)}...`}
         icon={Calendar}
         actions={
           <div className='flex items-center gap-3'>
@@ -886,46 +885,24 @@ export default function LocationBookingDetailPage({
                       key={group.dateKey}
                       className='border-2 border-border/40 rounded-lg p-4 bg-muted/20'
                     >
-                      <div className='flex items-center justify-between mb-3 pb-2 border-b border-border/40'>
-                        <div className='flex items-center gap-2'>
-                          <Calendar className='h-4 w-4 text-primary' />
-                          <p className='font-semibold text-foreground'>
-                            {format(group.date, 'EEEE, dd MMMM yyyy', {
-                              locale: vi,
-                            })}
-                          </p>
+                      <div className='flex items-center justify-between'>
+                        <div className='flex items-center gap-3'>
+                          <Calendar className='h-5 w-5 text-primary' />
+                          <div>
+                            <p className='font-semibold text-foreground text-base'>
+                              {format(group.date, 'EEEE, dd MMMM yyyy', {
+                                locale: vi,
+                              })}
+                            </p>
+                            <p className='text-sm text-muted-foreground mt-1'>
+                              {format(group.startTime, 'HH:mm')} -{' '}
+                              {format(group.endTime, 'HH:mm')}
+                            </p>
+                          </div>
                         </div>
                         <Badge variant='outline' className='font-semibold'>
                           {group.totalDuration} giờ
                         </Badge>
-                      </div>
-                      <div className='space-y-2'>
-                        {group.slots.map((slot, slotIdx) => {
-                          const duration =
-                            (slot.end.getTime() - slot.start.getTime()) /
-                            (1000 * 60 * 60);
-                          return (
-                            <div
-                              key={slotIdx}
-                              className='flex items-center justify-between p-2 rounded-md bg-background/50 border border-border/30'
-                            >
-                              <div className='flex items-center gap-3'>
-                                <div className='h-8 w-8 rounded-md bg-blue-500/10 flex items-center justify-center'>
-                                  <Clock className='h-3.5 w-3.5 text-blue-600' />
-                                </div>
-                                <div>
-                                  <p className='text-sm font-mono font-semibold text-foreground'>
-                                    {format(slot.start, 'HH:mm')} -{' '}
-                                    {format(slot.end, 'HH:mm')}
-                                  </p>
-                                  <p className='text-xs text-muted-foreground'>
-                                    {Math.round(duration * 10) / 10} giờ
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
                       </div>
                     </div>
                   ))}
@@ -1429,78 +1406,6 @@ export default function LocationBookingDetailPage({
                 </TooltipProvider>
               );
             })()}
-
-          {/* Quick Actions */}
-          <Card className='border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm'>
-            <CardHeader className='bg-white border-b border-primary/20 py-3'>
-              <CardTitle className='text-lg'>Thao tác nhanh</CardTitle>
-            </CardHeader>
-            <CardContent className='pt-4 pb-4 space-y-3'>
-              <Link
-                href={`/dashboard/business/locations/${booking.locationId}`}
-              >
-                <Button
-                  variant='outline'
-                  className='w-full font-medium'
-                  size='lg'
-                >
-                  <MapPin className='h-4 w-4 mr-2' />
-                  Xem địa điểm
-                </Button>
-              </Link>
-
-              {/* Process Booking Actions */}
-              {canProcess && (
-                <>
-                  <Separator className='my-3' />
-                  <div className='space-y-2'>
-                    <Button
-                      variant='default'
-                      className='w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md'
-                      size='lg'
-                      onClick={() => handleProcessClick('APPROVED')}
-                      disabled={
-                        approveBooking.isPending || rejectBookings.isPending
-                      }
-                    >
-                      {approveBooking.isPending ? (
-                        <>
-                          <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                          Đang xử lý...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className='h-4 w-4 mr-2' />
-                          Chấp nhận Booking
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant='destructive'
-                      className='w-full font-semibold shadow-md'
-                      size='lg'
-                      onClick={() => handleProcessClick('REJECTED')}
-                      disabled={
-                        approveBooking.isPending || rejectBookings.isPending
-                      }
-                    >
-                      {rejectBookings.isPending ? (
-                        <>
-                          <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                          Đang xử lý...
-                        </>
-                      ) : (
-                        <>
-                          <X className='h-4 w-4 mr-2' />
-                          Từ chối Booking
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </div>
 

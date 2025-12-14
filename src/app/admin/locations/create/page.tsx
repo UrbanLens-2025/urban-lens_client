@@ -69,7 +69,7 @@ const publicLocationSchema = z.object({
     .array(z.string().url())
     .min(1, 'At least one location image is required.'),
   isVisibleOnMap: z.boolean(),
-  tagIds: z.array(z.number()).min(1, 'At least one tag is required.'),
+  categoryIds: z.array(z.number()).min(1, 'At least one tag is required.'),
 });
 type FormValues = z.infer<typeof publicLocationSchema>;
 
@@ -79,7 +79,7 @@ const steps = [
     title: 'Basic Information',
     description: 'Tell us about your location',
     icon: CheckCircle2,
-    fields: ['name', 'description', 'tagIds'] as const,
+    fields: ['name', 'description', 'categoryIds'] as const,
   },
   {
     id: 2,
@@ -121,34 +121,34 @@ export default function CreatePublicLocationPage() {
       longitude: undefined,
       radiusMeters: 1,
       imageUrl: [],
-      tagIds: [],
+      categoryIds: [],
       isVisibleOnMap: true,
     },
   });
 
   const watchedValues = form.watch();
   const descriptionValue = form.watch('description');
-  const selectedTagIds = watchedValues.tagIds || [];
-  const hasLocationType = selectedTagIds.length > 0;
+  const selectedCategoryIds = watchedValues.categoryIds || [];
+  const hasLocationType = selectedCategoryIds.length > 0;
 
   const currentStepData = steps[currentStep];
 
   const handleNextStep = async () => {
     const fields = steps[currentStep].fields;
     if (fields) {
-      // Additional validation for tagIds in step 1
+      // Additional validation for categoryIds in step 1
       if (
         currentStep === 0 &&
         Array.isArray(fields) &&
-        fields.includes('tagIds' as any)
+        fields.includes('categoryIds' as any)
       ) {
         if (!hasLocationType) {
-          form.setError('tagIds', {
+          form.setError('categoryIds', {
             type: 'manual',
             message:
               'At least one tag category is required. Please select at least one tag category.',
           });
-          await form.trigger('tagIds', { shouldFocus: true });
+          await form.trigger('categoryIds', { shouldFocus: true });
           return;
         }
       }
@@ -164,18 +164,17 @@ export default function CreatePublicLocationPage() {
   async function onSubmit(values: FormValues) {
     // Validate tag categories requirement
     if (!hasLocationType) {
-      form.setError('tagIds', {
+      form.setError('categoryIds', {
         type: 'manual',
         message:
           'At least one tag category is required. Please select at least one tag category.',
       });
-      await form.trigger('tagIds', { shouldFocus: true });
+      await form.trigger('categoryIds', { shouldFocus: true });
       return;
     }
 
     createLocation(values as any, {
       onSuccess: () => {
-        toast.success('Location created successfully!');
         router.push('/admin/locations');
       },
     });
@@ -411,7 +410,7 @@ export default function CreatePublicLocationPage() {
                     )}
                   />
                   <FormField
-                    name='tagIds'
+                    name='categoryIds'
                     control={form.control}
                     render={({ field, fieldState }) => (
                       <FormItem>
@@ -428,11 +427,11 @@ export default function CreatePublicLocationPage() {
                           <LocationTagsSelector
                             value={field.value}
                             onChange={(ids) =>
-                              form.setValue('tagIds', ids, {
+                              form.setValue('categoryIds', ids, {
                                 shouldValidate: true,
                               })
                             }
-                            error={form.formState.errors.tagIds?.message}
+                            error={form.formState.errors.categoryIds?.message}
                           />
                         </FormControl>
                         <FormMessage />

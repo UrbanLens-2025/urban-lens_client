@@ -2358,7 +2358,6 @@ function EditLocationTab({ locationId }: { locationId: string }) {
         await Promise.all(mutationPromises);
         queryClient.invalidateQueries({ queryKey: ['myLocations'] });
         queryClient.invalidateQueries({ queryKey: ['location', locationId] });
-        toast.success('Location updated successfully');
       } catch (err) {
         toast.error('An error occurred while saving. Please try again.');
       }

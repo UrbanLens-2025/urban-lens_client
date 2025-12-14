@@ -92,7 +92,7 @@ export function FileUpload({
             return (
               <div
                 key={url || index}
-                className='relative w-full aspect-square min-h-[200px] sm:min-h-[220px] bg-muted/50 rounded-lg overflow-hidden border-2 border-border transition-all duration-300 shadow-sm'
+                className='relative w-full aspect-square min-h-[150px] sm:min-h-[180px] bg-muted/50 rounded-lg overflow-hidden border-2 border-border transition-all duration-300 shadow-sm'
               >
                 {/* Image Preview - Always visible */}
                 <Dialog onOpenChange={(open) => !open && setZoomedImage(null)}>
@@ -108,7 +108,7 @@ export function FileUpload({
                         src={url}
                         alt={`Preview ${index + 1}`}
                         className={cn(
-                          'w-full h-full object-cover transition-all duration-300',
+                          'w-full h-full object-contain transition-all duration-300',
                           !isUploadingThis && 'group-hover:scale-105',
                           isUploadingThis && 'opacity-60'
                         )}
@@ -175,7 +175,7 @@ export function FileUpload({
         <div
           {...getRootProps()}
           className={cn(
-            'relative border-2 border-dashed rounded-lg p-6 sm:p-8 text-center cursor-pointer transition-all duration-300 min-h-[200px] sm:min-h-[220px] flex items-center justify-center',
+            'relative border-2 border-dashed rounded-lg p-6 sm:p-8 text-center cursor-pointer transition-all duration-300 min-h-[150px] sm:min-h-[180px] flex items-center justify-center',
             isDragActive
               ? 'border-primary bg-primary/5 scale-[1.01] shadow-md'
               : 'border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm',
