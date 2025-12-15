@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 
 // --- Hooks & Components ---
 import { useCreateLocationVoucher } from "@/hooks/vouchers/useCreateLocationVoucher";
@@ -41,21 +41,58 @@ import { use, useEffect } from "react";
 import { CreateLocationVoucherPayload } from "@/types";
 
 // --- Zod Schema (Khớp với Payload) ---
-const voucherSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  voucherCode: z.string().min(1, "Voucher code is required"),
-  imageUrl: z.string().min(1, "Image URL is required").url("Image URL must be a valid URL"),
-  pricePoint: z.number().min(0, "Price must be 0 or more"),
-  maxQuantity: z.number().min(1, "Max quantity must be at least 1"),
-  userRedeemedLimit: z.number().min(1, "Limit must be at least 1"),
-  voucherType: z.string().min(1, "Type is required"),
-  startDate: z.date({ error: "Start date is required." }),
-  endDate: z.date({ error: "End date is required." }),
-}).refine((data) => data.endDate > data.startDate, {
-  message: "End date must be after start date",
-  path: ["endDate"],
-});
+const voucherSchema = z
+  .object({
+    title: z.string().min(1, "Title is required"),
+    description: z.string().min(1, "Description is required"),
+    voucherCode: z.string().min(1, "Voucher code is required"),
+    imageUrl: z
+      .string()
+      .min(1, "Image URL is required")
+      .url("Image URL must be a valid URL"),
+    pricePoint: z.number().min(0, "Price must be 0 or more"),
+    maxQuantity: z.number().min(1, "Max quantity must be at least 1"),
+    userRedeemedLimit: z.number().min(1, "Limit must be at least 1"),
+    voucherType: z.string().min(1, "Type is required"),
+    startDate: z.date({
+      error: "Start date is required.",
+      invalid_type_error: "Start date is required.",
+    }),
+    endDate: z.date({
+      error: "End date is required.",
+      invalid_type_error: "End date is required.",
+    }),
+  })
+  // Start date cannot be in the past
+  .refine(
+    (data) => {
+      const today = startOfDay(new Date());
+      return data.startDate >= today;
+    },
+    {
+      message: "Start date cannot be in the past",
+      path: ["startDate"],
+    }
+  )
+  // End date cannot be in the past
+  .refine(
+    (data) => {
+      const today = startOfDay(new Date());
+      return data.endDate >= today;
+    },
+    {
+      message: "End date cannot be in the past",
+      path: ["endDate"],
+    }
+  )
+  // End date must be strictly after start date
+  .refine(
+    (data) => data.endDate > data.startDate,
+    {
+      message: "End date must be after start date",
+      path: ["endDate"],
+    }
+  );
 type FormValues = z.infer<typeof voucherSchema>;
 
 export default function CreateVoucherPage({
@@ -87,6 +124,7 @@ export default function CreateVoucherPage({
 
   const voucherType = form.watch("voucherType");
   const isPublicVoucher = voucherType === "public";
+  const startDate = form.watch("startDate");
 
   // Reset pricePoint to 0 when voucher type changes to "public"
   useEffect(() => {
@@ -317,6 +355,10 @@ export default function CreateVoucherPage({
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
+                            disabled={(date) => {
+                              const today = startOfDay(new Date());
+                              return date < today;
+                            }}
                           />
                         </PopoverContent>
                       </Popover>
@@ -354,6 +396,13 @@ export default function CreateVoucherPage({
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
+                            disabled={(date) => {
+                              const today = startOfDay(new Date());
+                              const minDate = startDate
+                                ? startOfDay(startDate)
+                                : today;
+                              return date < minDate;
+                            }}
                           />
                         </PopoverContent>
                       </Popover>
