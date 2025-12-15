@@ -56,11 +56,9 @@ const voucherSchema = z
     voucherType: z.string().min(1, "Type is required"),
     startDate: z.date({
       error: "Start date is required.",
-      invalid_type_error: "Start date is required.",
     }),
     endDate: z.date({
       error: "End date is required.",
-      invalid_type_error: "End date is required.",
     }),
   })
   // Start date cannot be in the past
