@@ -7335,7 +7335,7 @@ export default function LocationDetailsPage({
         : new Date();
       return {
         id: booking.id,
-        eventName: booking.referencedEventRequest?.eventName || 'Unnamed Event',
+        eventName: booking.event?.displayName || 'Unnamed Event',
         date: earliestDate,
         amount: parseFloat(booking.amountToPay || '0'),
         status: booking.status,
