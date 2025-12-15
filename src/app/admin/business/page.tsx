@@ -623,46 +623,6 @@ export default function AdminBusinessPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Submission Details Card */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className='text-base flex items-center gap-2'>
-                        <IconCalendar className='h-4 w-4' />
-                        Submission Details
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className='space-y-3'>
-                      <div>
-                        <p className='text-xs font-medium text-muted-foreground mb-1'>
-                          Account ID
-                        </p>
-                        <p className='text-xs font-mono break-all bg-muted px-2 py-1 rounded'>
-                          {selectedBusiness.accountId}
-                        </p>
-                      </div>
-                      <div>
-                        <p className='text-xs font-medium text-muted-foreground mb-1'>
-                          Submitted
-                        </p>
-                        <p className='text-sm'>
-                          {formatDateTime((selectedBusiness as any).createdAt)}
-                        </p>
-                      </div>
-                      {(selectedBusiness as any).updatedAt && (
-                        <div>
-                          <p className='text-xs font-medium text-muted-foreground mb-1'>
-                            Last Updated
-                          </p>
-                          <p className='text-sm'>
-                            {formatDateTime(
-                              (selectedBusiness as any).updatedAt
-                            )}
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
                   {/* Admin Notes Card */}
                   {selectedBusiness.adminNotes && (
                     <Card>

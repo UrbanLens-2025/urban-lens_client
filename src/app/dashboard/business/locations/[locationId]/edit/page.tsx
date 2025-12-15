@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { use, useEffect, useMemo } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useRouter } from "next/navigation";
+import { use, useEffect, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useRouter } from 'next/navigation';
 
-import { useLocationById } from "@/hooks/locations/useLocationById";
-import { useUpdateLocation } from "@/hooks/locations/useUpdateLocation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { useLocationById } from '@/hooks/locations/useLocationById';
+import { useUpdateLocation } from '@/hooks/locations/useUpdateLocation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Form,
   FormControl,
@@ -18,8 +18,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Switch } from "@/components/ui/switch";
+} from '@/components/ui/form';
+import { Switch } from '@/components/ui/switch';
 import {
   Loader2,
   ArrowLeft,
@@ -32,32 +32,32 @@ import {
   FilePenLine,
   Clock,
   CalendarDays,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { FileUpload } from "@/components/shared/FileUpload";
-import { useAddTagsToLocation } from "@/hooks/tags/useAddTagsToLocation";
-import { useRemoveTagsFromLocation } from "@/hooks/tags/useRemoveTagsFromLocation";
-import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
-import { DisplayTags } from "@/components/shared/DisplayTags";
-import { useResolvedTags } from "@/hooks/tags/useResolvedTags";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { LocationTagsSelector } from "@/components/locations/LocationTagsSelector";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/card';
+import { FileUpload } from '@/components/shared/FileUpload';
+import { useAddTagsToLocation } from '@/hooks/tags/useAddTagsToLocation';
+import { useRemoveTagsFromLocation } from '@/hooks/tags/useRemoveTagsFromLocation';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
+import { DisplayTags } from '@/components/shared/DisplayTags';
+import { useResolvedTags } from '@/hooks/tags/useResolvedTags';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { LocationTagsSelector } from '@/components/locations/LocationTagsSelector';
+import { cn } from '@/lib/utils';
 
 const updateLocationSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string().min(1, "Description is required"),
-  imageUrl: z.array(z.string().url()).min(1, "At least one image is required"),
+  name: z.string().min(1, 'Name is required'),
+  description: z.string().min(1, 'Description is required'),
+  imageUrl: z.array(z.string().url()).min(1, 'At least one image is required'),
   isVisibleOnMap: z.boolean().optional(),
-  tagIds: z.array(z.number()).min(1, "At least one tag is required"),
+  tagIds: z.array(z.number()).min(1, 'At least one tag is required'),
 });
 type FormValues = z.infer<typeof updateLocationSchema>;
 
@@ -82,17 +82,17 @@ export default function EditLocationPage({
 
   const form = useForm<FormValues>({
     resolver: zodResolver(updateLocationSchema),
-    mode: "onChange",
-    reValidateMode: "onBlur",
+    mode: 'onChange',
+    reValidateMode: 'onBlur',
     defaultValues: {
-      name: "",
-      description: "",
+      name: '',
+      description: '',
       imageUrl: [],
       isVisibleOnMap: false,
       tagIds: [],
     },
   });
-  
+
   const watchedValues = form.watch();
 
   const { resolvedTags: tags } = useResolvedTags(watchedValues.tagIds);
@@ -151,19 +151,18 @@ export default function EditLocationPage({
 
       await Promise.all(mutationPromises);
 
-      queryClient.invalidateQueries({ queryKey: ["myLocations"] });
-      queryClient.invalidateQueries({ queryKey: ["location", locationId] });
-      toast.success("Location updated successfully");
+      queryClient.invalidateQueries({ queryKey: ['myLocations'] });
+      queryClient.invalidateQueries({ queryKey: ['location', locationId] });
       router.refresh();
     } catch (err) {
-      toast.error("An error occurred while saving. Please try again.");
+      toast.error('An error occurred while saving. Please try again.');
     }
   };
 
   if (isLoadingData) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="animate-spin" />
+      <div className='flex h-screen items-center justify-center'>
+        <Loader2 className='animate-spin' />
       </div>
     );
   }
@@ -174,77 +173,79 @@ export default function EditLocationPage({
   const previewImages = watchedValues.imageUrl ?? [];
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className='space-y-8 pb-16'>
       {/* Location Header Section */}
-      <section className="overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm">
-        <div className="flex flex-col gap-6 bg-muted/40 p-6 sm:p-8 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-4 flex-1">
-            <div className="flex items-start gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <Badge variant="secondary" className="w-fit bg-primary/10 text-primary border-primary/20">
-                    <FilePenLine className="h-3 w-3 mr-1.5" />
+      <section className='overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm'>
+        <div className='flex flex-col gap-6 bg-muted/40 p-6 sm:p-8 md:flex-row md:items-center md:justify-between'>
+          <div className='space-y-4 flex-1'>
+            <div className='flex items-start gap-4'>
+              <div className='flex-1'>
+                <div className='flex items-center gap-3 mb-2'>
+                  <Badge
+                    variant='secondary'
+                    className='w-fit bg-primary/10 text-primary border-primary/20'
+                  >
+                    <FilePenLine className='h-3 w-3 mr-1.5' />
                     Editing location
                   </Badge>
                 </div>
-                <h1 className="text-3xl font-bold tracking-tight mb-2">
+                <h1 className='text-3xl font-bold tracking-tight mb-2'>
                   {location.name}
                 </h1>
-                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">{location.addressLine}</span>
-                  <span className="hidden sm:inline">•</span>
-                  <span className="hidden sm:inline">
+                <div className='flex flex-wrap items-center gap-3 text-sm text-muted-foreground'>
+                  <MapPin className='h-4 w-4 flex-shrink-0' />
+                  <span className='truncate'>{location.addressLine}</span>
+                  <span className='hidden sm:inline'>•</span>
+                  <span className='hidden sm:inline'>
                     {location.addressLevel2}, {location.addressLevel1}
                   </span>
                 </div>
               </div>
             </div>
           </div>
-          <div className="flex flex-col gap-2 text-sm text-muted-foreground md:text-right">
-            <div className="flex items-center gap-2 md:justify-end">
-              <Clock className="h-4 w-4" />
+          <div className='flex flex-col gap-2 text-sm text-muted-foreground md:text-right'>
+            <div className='flex items-center gap-2 md:justify-end'>
+              <Clock className='h-4 w-4' />
               <span>
                 Last updated&nbsp;
-                <span className="font-medium text-foreground">
+                <span className='font-medium text-foreground'>
                   {new Date(location.updatedAt).toLocaleString()}
                 </span>
               </span>
             </div>
-            <div className="flex items-center gap-2 md:justify-end">
-              <CalendarDays className="h-4 w-4" />
-              <span>Created {new Date(location.createdAt).toLocaleDateString()}</span>
+            <div className='flex items-center gap-2 md:justify-end'>
+              <CalendarDays className='h-4 w-4' />
+              <span>
+                Created {new Date(location.createdAt).toLocaleDateString()}
+              </span>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+      <div className='grid gap-6 lg:grid-cols-[2fr_1fr]'>
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-8"
-          >
-            <Card className="border-border/60 shadow-sm">
+          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
+            <Card className='border-border/60 shadow-sm'>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <Tag className="h-4 w-4 text-primary" />
+                <CardTitle className='flex items-center gap-2 text-lg font-semibold'>
+                  <Tag className='h-4 w-4 text-primary' />
                   Core details
                 </CardTitle>
                 <CardDescription>
                   Update the information customers will see on the listing.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className='space-y-6'>
                 <FormField
-                  name="name"
+                  name='name'
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Location name</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="e.g. Skyline Rooftop Venue"
+                          placeholder='e.g. Skyline Rooftop Venue'
                           {...field}
                         />
                       </FormControl>
@@ -254,7 +255,7 @@ export default function EditLocationPage({
                 />
 
                 <FormField
-                  name="description"
+                  name='description'
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
@@ -262,7 +263,7 @@ export default function EditLocationPage({
                       <FormControl>
                         <Textarea
                           rows={5}
-                          placeholder="Describe the ambiance, capacity, and unique features guests should know."
+                          placeholder='Describe the ambiance, capacity, and unique features guests should know.'
                           {...field}
                         />
                       </FormControl>
@@ -272,7 +273,7 @@ export default function EditLocationPage({
                 />
 
                 <FormField
-                  name="tagIds"
+                  name='tagIds'
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
@@ -282,7 +283,7 @@ export default function EditLocationPage({
                           value={field.value}
                           onChange={(ids) => field.onChange(ids)}
                           error={form.formState.errors.tagIds?.message}
-                          helperText="Select the location type and other relevant categories."
+                          helperText='Select the location type and other relevant categories.'
                         />
                       </FormControl>
                       <FormMessage />
@@ -290,15 +291,15 @@ export default function EditLocationPage({
                   )}
                 />
 
-                <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <div className='rounded-lg border border-dashed border-border/60 bg-muted/20 p-3'>
+                  <p className='text-xs font-medium uppercase tracking-wide text-muted-foreground'>
                     Selected tag categories
                   </p>
-                  <div className="mt-3">
+                  <div className='mt-3'>
                     {tags.length > 0 ? (
                       <DisplayTags tags={tags} maxCount={10} />
                     ) : (
-                      <p className="text-sm text-muted-foreground">
+                      <p className='text-sm text-muted-foreground'>
                         No tags selected yet.
                       </p>
                     )}
@@ -307,10 +308,10 @@ export default function EditLocationPage({
               </CardContent>
             </Card>
 
-            <Card className="border-border/60 shadow-sm">
+            <Card className='border-border/60 shadow-sm'>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <ImagePlus className="h-4 w-4 text-primary" />
+                <CardTitle className='flex items-center gap-2 text-lg font-semibold'>
+                  <ImagePlus className='h-4 w-4 text-primary' />
                   Gallery
                 </CardTitle>
                 <CardDescription>
@@ -319,7 +320,7 @@ export default function EditLocationPage({
               </CardHeader>
               <CardContent>
                 <FormField
-                  name="imageUrl"
+                  name='imageUrl'
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
@@ -336,9 +337,9 @@ export default function EditLocationPage({
               </CardContent>
             </Card>
 
-            <Card className="border-border/60 shadow-sm">
+            <Card className='border-border/60 shadow-sm'>
               <CardHeader>
-                <CardTitle className="text-lg font-semibold">
+                <CardTitle className='text-lg font-semibold'>
                   Visibility & publishing
                 </CardTitle>
                 <CardDescription>
@@ -347,14 +348,15 @@ export default function EditLocationPage({
               </CardHeader>
               <CardContent>
                 <FormField
-                  name="isVisibleOnMap"
+                  name='isVisibleOnMap'
                   control={form.control}
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border/60 bg-muted/10 p-4">
-                      <div className="space-y-1">
+                    <FormItem className='flex flex-row items-center justify-between rounded-lg border border-border/60 bg-muted/10 p-4'>
+                      <div className='space-y-1'>
                         <FormLabel>Visible on map</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Toggle off if you want to temporarily hide this location from creators.
+                        <p className='text-sm text-muted-foreground'>
+                          Toggle off if you want to temporarily hide this
+                          location from creators.
                         </p>
                       </div>
                       <FormControl>
@@ -366,44 +368,49 @@ export default function EditLocationPage({
                     </FormItem>
                   )}
                 />
-                <div className="mt-4 flex items-center gap-2 rounded-md border border-dashed border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                <div className='mt-4 flex items-center gap-2 rounded-md border border-dashed border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground'>
                   {watchedValues.isVisibleOnMap ? (
                     <>
-                      <Eye className="h-4 w-4 text-emerald-500" />
-                      <span>This location will appear in venue search results.</span>
+                      <Eye className='h-4 w-4 text-emerald-500' />
+                      <span>
+                        This location will appear in venue search results.
+                      </span>
                     </>
                   ) : (
                     <>
-                      <EyeOff className="h-4 w-4" />
-                      <span>This location is hidden and only accessible via direct links.</span>
+                      <EyeOff className='h-4 w-4' />
+                      <span>
+                        This location is hidden and only accessible via direct
+                        links.
+                      </span>
                     </>
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            <div className="flex flex-col-reverse items-stretch gap-3 border-t pt-6 sm:flex-row sm:justify-end">
+            <div className='flex flex-col-reverse items-stretch gap-3 border-t pt-6 sm:flex-row sm:justify-end'>
               <Button
-                type="button"
-                variant="ghost"
+                type='button'
+                variant='ghost'
                 onClick={() => router.back()}
                 disabled={isUpdating || isAddingTags || isRemovingTags}
               >
                 Cancel
               </Button>
               <Button
-                type="submit"
+                type='submit'
                 disabled={!isDirty || isUpdating}
-                className="sm:min-w-[160px]"
+                className='sm:min-w-[160px]'
               >
                 {isUpdating ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                     Saving…
                   </>
                 ) : (
                   <>
-                    <Save className="mr-2 h-4 w-4" />
+                    <Save className='mr-2 h-4 w-4' />
                     Save changes
                   </>
                 )}
@@ -412,41 +419,45 @@ export default function EditLocationPage({
           </form>
         </Form>
 
-        <div className="space-y-4">
-          <Card className="border-border/60 shadow-sm">
+        <div className='space-y-4'>
+          <Card className='border-border/60 shadow-sm'>
             <CardHeader>
-              <CardTitle className="text-base font-semibold">
+              <CardTitle className='text-base font-semibold'>
                 Current publishing state
               </CardTitle>
               <CardDescription>
                 Quick snapshot of how this location appears today.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/10 px-3 py-2">
-                <div className="text-sm text-muted-foreground">Visibility</div>
+            <CardContent className='space-y-4'>
+              <div className='flex items-center justify-between rounded-lg border border-border/60 bg-muted/10 px-3 py-2'>
+                <div className='text-sm text-muted-foreground'>Visibility</div>
                 <Badge
-                  variant={location.isVisibleOnMap ? "secondary" : "outline"}
-                  className={location.isVisibleOnMap ? "bg-emerald-500/10 text-emerald-600" : ""}
+                  variant={location.isVisibleOnMap ? 'secondary' : 'outline'}
+                  className={
+                    location.isVisibleOnMap
+                      ? 'bg-emerald-500/10 text-emerald-600'
+                      : ''
+                  }
                 >
-                  {location.isVisibleOnMap ? "Visible" : "Hidden"}
+                  {location.isVisibleOnMap ? 'Visible' : 'Hidden'}
                 </Badge>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Total check-ins</span>
-                <span className="font-semibold">
-                  {(location.totalCheckIns || "0").toString()}
+              <div className='flex items-center justify-between text-sm'>
+                <span className='text-muted-foreground'>Total check-ins</span>
+                <span className='font-semibold'>
+                  {(location.totalCheckIns || '0').toString()}
                 </span>
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <p className='text-xs font-medium uppercase tracking-wide text-muted-foreground'>
                   Live tags
                 </p>
-                <div className="mt-2">
+                <div className='mt-2'>
                   {location.tags.length > 0 ? (
                     <DisplayTags tags={location.tags} maxCount={10} />
                   ) : (
-                    <p className="text-sm text-muted-foreground">
+                    <p className='text-sm text-muted-foreground'>
                       No tags currently assigned.
                     </p>
                   )}
@@ -454,7 +465,6 @@ export default function EditLocationPage({
               </div>
             </CardContent>
           </Card>
-
         </div>
       </div>
     </div>
