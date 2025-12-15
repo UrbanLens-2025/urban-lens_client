@@ -29,6 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
+import { DatePicker } from "@/components/shared/DatePicker";
 import {
   Loader2,
   ArrowLeft,
@@ -158,7 +159,8 @@ export default function EditTicketFormPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<UpdateTicketForm>({
     resolver: zodResolver(updateTicketSchema) as any,
-    mode: "onChange",
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
 
   // Populate form with existing ticket data
@@ -657,7 +659,7 @@ export default function EditTicketFormPage({
                     <FormField
                       control={form.control}
                       name="saleStartDate"
-                      render={({ field }) => (
+                      render={({ field, fieldState }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             Sale Start Date
@@ -671,22 +673,17 @@ export default function EditTicketFormPage({
                             </Tooltip>
                           </FormLabel>
                           <FormControl>
-                            <Input
-                              type="date"
-                              {...field}
-                              value={field.value ? field.value.split('T')[0] : ''}
-                              onChange={(e) => {
-                                const dateValue = e.target.value;
-                                // Convert to ISO string format for the form (set time to start of day)
-                                if (dateValue) {
-                                  const date = new Date(dateValue);
-                                  date.setHours(0, 0, 0, 0);
-                                  field.onChange(date.toISOString().slice(0, 16));
-                                } else {
-                                  field.onChange('');
-                                }
+                            <DatePicker
+                              value={field.value || undefined}
+                              onChange={(value) => {
+                                field.onChange(value);
+                                void form.trigger("saleStartDate");
                               }}
-                              className="h-11"
+                              error={fieldState.error?.message}
+                              disabled={updateTicket.isPending}
+                              placeholder="Pick a start date & time"
+                              showTime
+                              defaultTime="00:00"
                             />
                           </FormControl>
                           <FormMessage />
@@ -697,7 +694,7 @@ export default function EditTicketFormPage({
                     <FormField
                       control={form.control}
                       name="saleEndDate"
-                      render={({ field }) => (
+                      render={({ field, fieldState }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             Sale End Date
@@ -711,22 +708,17 @@ export default function EditTicketFormPage({
                             </Tooltip>
                           </FormLabel>
                           <FormControl>
-                            <Input
-                              type="date"
-                              {...field}
-                              value={field.value ? field.value.split('T')[0] : ''}
-                              onChange={(e) => {
-                                const dateValue = e.target.value;
-                                // Convert to ISO string format for the form (set time to end of day)
-                                if (dateValue) {
-                                  const date = new Date(dateValue);
-                                  date.setHours(23, 59, 59, 999);
-                                  field.onChange(date.toISOString().slice(0, 16));
-                                } else {
-                                  field.onChange('');
-                                }
+                            <DatePicker
+                              value={field.value || undefined}
+                              onChange={(value) => {
+                                field.onChange(value);
+                                void form.trigger("saleEndDate");
                               }}
-                              className="h-11"
+                              error={fieldState.error?.message}
+                              disabled={updateTicket.isPending}
+                              placeholder="Pick an end date & time"
+                              showTime
+                              defaultTime="23:59"
                             />
                           </FormControl>
                           <FormMessage />

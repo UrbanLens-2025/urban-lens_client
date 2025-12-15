@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect } from 'react';
+import { use, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -47,8 +47,9 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import type { CreateTicketPayload } from '@/types';
+import { DatePicker } from '@/components/shared/DatePicker';
 
-const createTicketSchema = z
+const baseTicketSchema = z
   .object({
     displayName: z
       .string()
@@ -167,6 +168,16 @@ const createTicketSchema = z
     }
   );
 
+const createCreateTicketSchema = (
+  _eventStartDate?: string | null,
+  _eventEndDate?: string | null
+) => {
+  // NOTE: Currently we are not constraining by event dates.
+  // This factory exists so we can easily plug in additional
+  // date-based validation in the future if needed.
+  return baseTicketSchema;
+};
+
 type CreateTicketForm = z.infer<ReturnType<typeof createCreateTicketSchema>>;
 
 const currencies = ['VND'];
@@ -191,7 +202,8 @@ export default function CreateTicketPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<CreateTicketForm>({
     resolver: zodResolver(createTicketSchema) as any,
-    mode: 'onChange',
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
     defaultValues: {
       displayName: '',
       description: '',
@@ -205,6 +217,9 @@ export default function CreateTicketPage({
       saleEndDate: '',
       minQuantityPerOrder: 1,
       maxQuantityPerOrder: 5,
+      allowRefunds: false,
+      refundPercentageBeforeCutoff: undefined,
+      refundCutoffHoursAfterPayment: undefined,
     },
   });
 
@@ -491,6 +506,7 @@ export default function CreateTicketPage({
                         step='1'
                         placeholder='100'
                         {...field}
+                        value={field.value ?? ''}
                         onChange={(e) =>
                           field.onChange(parseInt(e.target.value) || 0)
                         }
@@ -515,7 +531,8 @@ export default function CreateTicketPage({
                           min='1'
                           step='1'
                           placeholder='1'
-                          {...field}
+                        {...field}
+                        value={field.value ?? ''}
                           onChange={(e) =>
                             field.onChange(parseInt(e.target.value) || 0)
                           }
@@ -539,7 +556,8 @@ export default function CreateTicketPage({
                           min='1'
                           step='1'
                           placeholder='5'
-                          {...field}
+                        {...field}
+                        value={field.value ?? ''}
                           onChange={(e) =>
                             field.onChange(parseInt(e.target.value) || 0)
                           }
@@ -567,27 +585,27 @@ export default function CreateTicketPage({
                 <FormField
                   control={form.control}
                   name='saleStartDate'
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Sale Start Date *</FormLabel>
                       <FormDescription>When ticket sales begin</FormDescription>
                       <FormControl>
-                        <Input
-                          type='date'
-                          {...field}
-                          value={field.value ? field.value.split('T')[0] : ''}
-                          onChange={(e) => {
-                            const dateValue = e.target.value;
-                            // Convert to ISO string format for the form (set time to start of day)
-                            if (dateValue) {
-                              const date = new Date(dateValue);
-                              date.setHours(0, 0, 0, 0);
-                              field.onChange(date.toISOString().slice(0, 16));
-                            } else {
-                              field.onChange('');
-                            }
+                        <DatePicker
+                          value={field.value || undefined}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            void form.trigger('saleStartDate');
                           }}
-                          className='h-11'
+                          disabled={createTicket.isPending}
+                          minDate={
+                            event.startDate ? new Date(event.startDate) : undefined
+                          }
+                          maxDate={
+                            event.endDate ? new Date(event.endDate) : undefined
+                          }
+                          placeholder='Pick a start date & time'
+                          showTime
+                          defaultTime='00:00'
                         />
                       </FormControl>
                       <FormMessage />
@@ -598,27 +616,27 @@ export default function CreateTicketPage({
                 <FormField
                   control={form.control}
                   name='saleEndDate'
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Sale End Date *</FormLabel>
                       <FormDescription>When ticket sales end</FormDescription>
                       <FormControl>
-                        <Input
-                          type='date'
-                          {...field}
-                          value={field.value ? field.value.split('T')[0] : ''}
-                          onChange={(e) => {
-                            const dateValue = e.target.value;
-                            // Convert to ISO string format for the form (set time to end of day)
-                            if (dateValue) {
-                              const date = new Date(dateValue);
-                              date.setHours(23, 59, 59, 999);
-                              field.onChange(date.toISOString().slice(0, 16));
-                            } else {
-                              field.onChange('');
-                            }
+                        <DatePicker
+                          value={field.value || undefined}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            void form.trigger('saleEndDate');
                           }}
-                          className='h-11'
+                          disabled={createTicket.isPending}
+                          minDate={
+                            event.startDate ? new Date(event.startDate) : undefined
+                          }
+                          maxDate={
+                            event.endDate ? new Date(event.endDate) : undefined
+                          }
+                          placeholder='Pick an end date & time'
+                          showTime
+                          defaultTime='23:59'
                         />
                       </FormControl>
                       <FormMessage />
