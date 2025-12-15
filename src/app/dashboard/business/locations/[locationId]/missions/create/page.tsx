@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -38,18 +38,52 @@ import { useCreateLocationMission } from "@/hooks/missions/useCreateLocationMiss
 import { Calendar } from "@/components/ui/calendar";
 import { use } from "react";
 
-const missionSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  metric: z.string().min(1, "Metric is required"),
-  target: z.number().min(1, "Target must be at least 1"),
-  reward: z.number().min(1, "Reward must be at least 1"),
-  startDate: z.date({ error: "Start date is required." }),
-  endDate: z.date({ error: "End date is required." }),
-  imageUrls: z
-    .array(z.string().url())
-    .min(1, "At least one image is required."),
-});
+const missionSchema = z
+  .object({
+    title: z.string().min(1, "Title is required"),
+    description: z.string().min(1, "Description is required"),
+    metric: z.string().min(1, "Metric is required"),
+    target: z.number().min(1, "Target must be at least 1"),
+    reward: z.number().min(1, "Reward must be at least 1"),
+    startDate: z.date({
+      required_error: "Start date is required.",
+      invalid_type_error: "Start date is required.",
+    }),
+    endDate: z.date({
+      required_error: "End date is required.",
+      invalid_type_error: "End date is required.",
+    }),
+    imageUrls: z
+      .array(z.string().url())
+      .min(1, "At least one image is required."),
+  })
+  .refine(
+    (data) => {
+      const today = startOfDay(new Date());
+      return data.startDate >= today;
+    },
+    {
+      message: "Start date cannot be in the past",
+      path: ["startDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      const today = startOfDay(new Date());
+      return data.endDate >= today;
+    },
+    {
+      message: "End date cannot be in the past",
+      path: ["endDate"],
+    }
+  )
+  .refine(
+    (data) => data.endDate > data.startDate,
+    {
+      message: "End date must be after start date",
+      path: ["endDate"],
+    }
+  );
 type FormValues = z.infer<typeof missionSchema>;
 
 export default function CreateMissionPage({
@@ -76,6 +110,8 @@ export default function CreateMissionPage({
       imageUrls: [],
     },
   });
+
+  const startDate = form.watch("startDate");
 
   function onSubmit(values: FormValues) {
     const payload = {
@@ -240,6 +276,10 @@ export default function CreateMissionPage({
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
+                            disabled={(date) => {
+                              const today = startOfDay(new Date());
+                              return date < today;
+                            }}
                           />
                         </PopoverContent>
                       </Popover>
@@ -277,6 +317,13 @@ export default function CreateMissionPage({
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
+                            disabled={(date) => {
+                              const today = startOfDay(new Date());
+                              const minDate = startDate
+                                ? startOfDay(startDate)
+                                : today;
+                              return date < minDate;
+                            }}
                           />
                         </PopoverContent>
                       </Popover>

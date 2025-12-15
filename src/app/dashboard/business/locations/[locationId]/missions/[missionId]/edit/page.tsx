@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 
 // --- Hooks & Components ---
@@ -36,18 +36,52 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 // --- Zod Schema ---
-const missionSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  metric: z.string().min(1, "Metric is required"),
-  target: z.number().min(1, "Target must be at least 1"),
-  reward: z.number().min(1, "Reward must be at least 1"),
-  startDate: z.date({ error: "Start date is required." }),
-  endDate: z.date({ error: "End date is required." }),
-  imageUrls: z
-    .array(z.string().url())
-    .min(1, "At least one image is required."),
-});
+const missionSchema = z
+  .object({
+    title: z.string().min(1, "Title is required"),
+    description: z.string().min(1, "Description is required"),
+    metric: z.string().min(1, "Metric is required"),
+    target: z.number().min(1, "Target must be at least 1"),
+    reward: z.number().min(1, "Reward must be at least 1"),
+    startDate: z.date({
+      required_error: "Start date is required.",
+      invalid_type_error: "Start date is required.",
+    }),
+    endDate: z.date({
+      required_error: "End date is required.",
+      invalid_type_error: "End date is required.",
+    }),
+    imageUrls: z
+      .array(z.string().url())
+      .min(1, "At least one image is required."),
+  })
+  .refine(
+    (data) => {
+      const today = startOfDay(new Date());
+      return data.startDate >= today;
+    },
+    {
+      message: "Start date cannot be in the past",
+      path: ["startDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      const today = startOfDay(new Date());
+      return data.endDate >= today;
+    },
+    {
+      message: "End date cannot be in the past",
+      path: ["endDate"],
+    }
+  )
+  .refine(
+    (data) => data.endDate > data.startDate,
+    {
+      message: "End date must be after start date",
+      path: ["endDate"],
+    }
+  );
 type FormValues = z.infer<typeof missionSchema>;
 
 export default function EditMissionPage({
@@ -80,6 +114,8 @@ export default function EditMissionPage({
       imageUrls: [],
     },
   });
+
+  const startDate = form.watch("startDate");
 
   useEffect(() => {
     if (mission) {
@@ -351,7 +387,16 @@ export default function EditMissionPage({
                               </FormControl>
                             </PopoverTrigger>
                             <PopoverContent align="start" className="p-0">
-                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => {
+                                  const today = startOfDay(new Date());
+                                  return date < today;
+                                }}
+                                initialFocus
+                              />
                             </PopoverContent>
                           </Popover>
                           <FormMessage />
@@ -380,7 +425,19 @@ export default function EditMissionPage({
                               </FormControl>
                             </PopoverTrigger>
                             <PopoverContent align="start" className="p-0">
-                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => {
+                                  const today = startOfDay(new Date());
+                                  const minDate = startDate
+                                    ? startOfDay(startDate)
+                                    : today;
+                                  return date < minDate;
+                                }}
+                                initialFocus
+                              />
                             </PopoverContent>
                           </Popover>
                           <FormMessage />
