@@ -52,6 +52,7 @@ import {
   SortableTableHeader,
   SortDirection,
 } from '@/components/shared/SortableTableHeader';
+import StatisticCard from '@/components/admin/StatisticCard';
 
 export default function AccountsPage() {
   const router = useRouter();
@@ -179,11 +180,11 @@ export default function AccountsPage() {
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'BUSINESS_OWNER':
-        return <Building2 className='h-3 w-3 mr-1.5' />;
+        return <Building2 className='h-4 w-4 mr-2' />;
       case 'EVENT_CREATOR':
-        return <Star className='h-3 w-3 mr-1.5' />;
+        return <Star className='h-4 w-4 mr-2' />;
       default:
-        return <User className='h-3 w-3 mr-1.5' />;
+        return <User className='h-4 w-4 mr-2' />;
     }
   };
 
@@ -221,72 +222,30 @@ export default function AccountsPage() {
   return (
     <div className='space-y-4'>
       {/* Statistics Cards */}
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
-        <Card className='hover:shadow-lg transition-shadow border-l-4 border-l-blue-500'>
-          <CardContent className='p-6'>
-            <div className='flex items-center justify-between'>
-              <div className='space-y-1'>
-                <p className='text-md font-medium text-muted-foreground'>
-                  Total accounts
-                </p>
-                <p className='text-2xl font-bold'>
-                  {stats.total.toLocaleString()}
-                </p>
-                <p className='text-xs text-muted-foreground'>
-                  {stats.onboarded} accounts have completed onboarding
-                </p>
-              </div>
-              <div className='h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center'>
-                <Users className='h-6 w-6 text-blue-600 dark:text-blue-400' />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className='hover:shadow-lg transition-shadow border-l-4 border-l-green-500'>
-          <CardContent className='p-6'>
-            <div className='flex items-center justify-between'>
-              <div className='space-y-1'>
-                <p className='text-md font-medium text-muted-foreground'>
-                  Active accounts
-                </p>
-                <p className='text-2xl font-bold'>
-                  {stats.active.toLocaleString()}
-                </p>
-                <p className='text-xs text-muted-foreground'>
-                  Accounts are not locked
-                </p>
-              </div>
-              <div className='h-12 w-12 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center'>
-                <UserCheck className='h-6 w-6 text-green-600 dark:text-green-400' />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className='hover:shadow-lg transition-shadow border-l-4 border-l-red-500'>
-          <CardContent className='p-6'>
-            <div className='flex items-center justify-between'>
-              <div className='space-y-1'>
-                <p className='text-md font-medium text-muted-foreground'>
-                  Locked accounts
-                </p>
-                <p className='text-2xl font-bold'>
-                  {stats.locked.toLocaleString()}
-                </p>
-                <p className='text-xs text-muted-foreground'>
-                  Accounts are restricted
-                </p>
-              </div>
-              <div className='h-12 w-12 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center'>
-                <UserX className='h-6 w-6 text-red-600 dark:text-red-400' />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className='hover:shadow-lg transition-shadow border-l-4 border-l-purple-500 '>
-          <CardContent className='p-6'>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10'>
+        <StatisticCard
+          title='Total Accounts'
+          value={stats.total.toLocaleString()}
+          icon={Users}
+          iconColorClass='blue'
+          subtitle='All accounts in the system'
+        />
+        <StatisticCard
+          title='Active accounts'
+          value={stats.active.toLocaleString()}
+          icon={Users}
+          iconColorClass='green'
+          subtitle='Accounts are not locked'
+        />
+        <StatisticCard
+          title='Locked accounts'
+          value={stats.locked.toLocaleString()}
+          icon={Users}
+          iconColorClass='red'
+          subtitle='Accounts are locked'
+        />
+        <Card className='hover:shadow-md transition-shadow border-l-6 border-purple-500'>
+          <CardContent className='py-2 px-6'>
             <div className='space-y-2'>
               {Object.entries(stats.byRole)
                 .filter(([_, count]) => count > 0)
@@ -294,7 +253,7 @@ export default function AccountsPage() {
                   <div key={role} className='flex justify-between items-center'>
                     <div className='flex items-center gap-2'>
                       {getRoleIcon(role)}
-                      <span className='text-sm text-muted-foreground'>
+                      <span className='text-md font-medium text-muted-foreground'>
                         {formatRoleName(role)}
                       </span>
                     </div>

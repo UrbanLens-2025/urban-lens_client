@@ -22,8 +22,6 @@ import { Input } from '@/components/ui/input';
 import {
   Calendar,
   MapPin,
-  User,
-  TrendingUp,
   X,
   Loader2,
   Search,
@@ -33,16 +31,14 @@ import {
   Clock,
   Users,
   CheckCircle,
-  AlertTriangle,
 } from 'lucide-react';
-import { Event } from '@/types';
 import { useAllEvents } from '@/hooks/admin/useAllEvents';
 import { useEventStats } from '@/hooks/admin/useEventStats';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
-import { formatDateTime, formatShortDate } from '@/lib/utils';
+import { formatShortDate } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -50,16 +46,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   SortableTableHeader,
   SortDirection,
 } from '@/components/shared/SortableTableHeader';
+import { PageContainer } from '@/components/shared';
+import StatisticCard from '@/components/admin/StatisticCard';
 
 export default function AdminEventsPage() {
-  const queryClient = useQueryClient();
-
-  // Unified search and sort state
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
@@ -77,20 +71,18 @@ export default function AdminEventsPage() {
 
   const itemsPerPage = 7;
 
-  // Data fetching
   const { data: eventsResponse, isLoading } = useAllEvents(
     page,
     itemsPerPage,
     debouncedSearchTerm,
     sortByString || 'createdAt:DESC'
   );
+  console.log('🚀 ~ AdminEventsPage ~ eventsResponse:', eventsResponse);
   const events = eventsResponse?.data || [];
   const eventsMeta = eventsResponse?.meta;
 
-  // Fetch accurate statistics from API
   const eventStats = useEventStats();
 
-  // Filter events by status
   const filteredEvents = useMemo(() => {
     if (statusFilter === 'all') return events;
     return events.filter(
@@ -98,21 +90,10 @@ export default function AdminEventsPage() {
     );
   }, [events, statusFilter]);
 
-  // Clear search
-  const handleClearSearch = () => {
-    setSearchTerm('');
-    setPage(1);
-  };
-
   // Sort
   const handleSort = (column: string, direction: SortDirection) => {
     setSort({ column, direction });
     setPage(1);
-  };
-
-  const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['allEvents'] });
-    queryClient.invalidateQueries({ queryKey: ['eventStats'] });
   };
 
   const getStatusBadge = (status: string) => {
@@ -159,78 +140,44 @@ export default function AdminEventsPage() {
   };
 
   return (
-    <div className='space-y-6'>
+    <PageContainer>
       {/* Statistics Cards */}
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-blue-500'>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Total Events</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center'>
-              <Calendar className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold'>
-              {eventStats.isLoading ? '—' : eventStats.total.toLocaleString()}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              {events.length} on this page
-            </p>
-          </CardContent>
-        </Card>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10'>
+        <StatisticCard
+          title='Total Events'
+          subtitle={`${events.length} on this page`}
+          value={eventStats.isLoading ? '—' : eventStats.total.toLocaleString()}
+          icon={Calendar}
+          iconColorClass='blue'
+        />
 
-        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-green-500'>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Published</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center'>
-              <CheckCircle className='h-5 w-5 text-green-600 dark:text-green-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold'>
-              {eventStats.isLoading
-                ? '—'
-                : eventStats.published.toLocaleString()}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>Active events</p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Published'
+          subtitle='Active events'
+          value={
+            eventStats.isLoading ? '—' : eventStats.published.toLocaleString()
+          }
+          icon={CheckCircle}
+          iconColorClass='green'
+        />
 
-        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-orange-500'>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Draft</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-950 flex items-center justify-center'>
-              <Clock className='h-5 w-5 text-orange-600 dark:text-orange-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold'>
-              {eventStats.isLoading ? '—' : eventStats.draft.toLocaleString()}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              Unpublished events
-            </p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Draft'
+          subtitle='Unpublished events'
+          value={eventStats.isLoading ? '—' : eventStats.draft.toLocaleString()}
+          icon={Clock}
+          iconColorClass='amber'
+        />
 
-        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-red-500'>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Cancelled</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center'>
-              <X className='h-5 w-5 text-red-600 dark:text-red-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold'>
-              {eventStats.isLoading
-                ? '—'
-                : eventStats.cancelled.toLocaleString()}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              Cancelled events
-            </p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Cancelled'
+          subtitle='Cancelled events'
+          value={
+            eventStats.isLoading ? '—' : eventStats.cancelled.toLocaleString()
+          }
+          icon={X}
+          iconColorClass='red'
+        />
       </div>
 
       {/* Main Card */}
@@ -542,6 +489,6 @@ export default function AdminEventsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

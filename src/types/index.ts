@@ -44,31 +44,31 @@ export interface LoginResponseData {
   token: string;
 }
 
-export type UserRole = "USER" | "BUSINESS_OWNER" | "EVENT_CREATOR" | "ADMIN";
+export type UserRole = 'USER' | 'BUSINESS_OWNER' | 'EVENT_CREATOR' | 'ADMIN';
 export type BusinessCategory =
-  | "FOOD"
-  | "RETAIL"
-  | "SERVICE"
-  | "ENTERTAINMENT"
-  | "HEALTH"
-  | "EDUCATION"
-  | "TECHNOLOGY"
-  | "OTHER";
-export type CreatorType = "INDIVIDUAL" | "ORGANIZATION";
+  | 'FOOD'
+  | 'RETAIL'
+  | 'SERVICE'
+  | 'ENTERTAINMENT'
+  | 'HEALTH'
+  | 'EDUCATION'
+  | 'TECHNOLOGY'
+  | 'OTHER';
+export type CreatorType = 'INDIVIDUAL' | 'ORGANIZATION';
 export type LocationStatus =
-  | "AUTO_VALIDATING"
-  | "AWAITING_ADMIN_REVIEW"
-  | "APPROVED"
-  | "NEEDS_MORE_INFO"
-  | "REJECTED"
-  | "CANCELLED_BY_BUSINESS";
-export type SortDirection = "ASC" | "DESC";
-export type BusinessStatus = "PENDING" | "APPROVED" | "REJECTED";
+  | 'AUTO_VALIDATING'
+  | 'AWAITING_ADMIN_REVIEW'
+  | 'APPROVED'
+  | 'NEEDS_MORE_INFO'
+  | 'REJECTED'
+  | 'CANCELLED_BY_BUSINESS';
+export type SortDirection = 'ASC' | 'DESC';
+export type BusinessStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type EventRequestStatus =
-  | "PENDING"
-  | "APPROVED"
-  | "REJECTED"
-  | "UNDER_REVIEW";
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'UNDER_REVIEW';
 
 export interface User {
   id: string;
@@ -111,9 +111,9 @@ export interface BusinessProfile {
 }
 
 export enum AcceptedBusinessLicenseTypes {
-  BUSINESS_LICENSE = "BUSINESS_LICENSE",
-  OPERATING_PERMIT = "OPERATING_PERMIT",
-  TAX_IDENTIFICATION = "TAX_IDENTIFICATION",
+  BUSINESS_LICENSE = 'BUSINESS_LICENSE',
+  OPERATING_PERMIT = 'OPERATING_PERMIT',
+  TAX_IDENTIFICATION = 'TAX_IDENTIFICATION',
 }
 
 export interface BusinessLicense {
@@ -170,7 +170,7 @@ export interface TagCategory {
   description: string;
   color: string;
   icon: string;
-  applicableTypes: ("USER" | "LOCATION" | "EVENT")[];
+  applicableTypes: ('USER' | 'LOCATION' | 'EVENT')[];
 }
 
 export interface GetTagsParams {
@@ -217,7 +217,7 @@ interface ProcessedByAdmin {
   id: string;
   firstName: string;
   lastName: string;
-  role: "ADMIN";
+  role: 'ADMIN';
 }
 
 interface LocationValidationDocument {
@@ -279,11 +279,11 @@ export interface GetRequestsParams {
   status?: LocationStatus;
   sortBy?: string | string[];
   searchBy?: string[];
-  filterVisibleOnMap?: "true" | "false";
+  filterVisibleOnMap?: 'true' | 'false';
 }
 
 export interface ProcessRequestPayload {
-  status: "APPROVED" | "REJECTED";
+  status: 'APPROVED' | 'REJECTED';
   adminNotes?: string;
 }
 
@@ -487,7 +487,11 @@ export interface UpdateLocationVoucherPayload {
   endDate: string;
 }
 
-export type AnnouncementStatus = "DRAFT" | "SCHEDULED" | "PUBLISHED" | "ARCHIVED";
+export type AnnouncementStatus =
+  | 'DRAFT'
+  | 'SCHEDULED'
+  | 'PUBLISHED'
+  | 'ARCHIVED';
 
 export interface Announcement {
   id: string;
@@ -859,7 +863,8 @@ export interface LocationBooking {
   referencedEventRequest: ReferencedEventRequest;
 }
 
-export interface LocationBookingDetail extends Omit<LocationBooking, 'createdBy'> {
+export interface LocationBookingDetail
+  extends Omit<LocationBooking, 'createdBy'> {
   createdBy: UserWithCreatorProfile;
   referencedTransaction: ReferencedTransaction | null;
 }
@@ -873,7 +878,7 @@ export interface GetOwnerLocationBookingsParams {
 }
 
 export interface ProcessLocationBookingPayload {
-  status: "APPROVED" | "REJECTED";
+  status: 'APPROVED' | 'REJECTED';
 }
 
 interface LocationForEvent {
@@ -892,33 +897,6 @@ interface LocationForEvent {
   updatedAt: string;
   isVisibleOnMap: boolean;
   businessId: string | null;
-}
-
-export interface Event {
-  id: string;
-  createdAt: string;
-  updatedAt: string;
-  createdById: string;
-  createdBy: User;
-  displayName: string;
-  description: string;
-  avatarUrl: string | null;
-  coverUrl: string | null;
-  status: string;
-  locationId: string;
-  location: LocationForEvent;
-  social: SocialLink[];
-  refundPolicy: string | null;
-  termsAndConditions: string | null;
-  referencedEventRequestId: string;
-  tags: Tag[];
-  locationBookings?: LocationBooking[];
-  startDate?: string;
-  endDate?: string;
-  eventValidationDocuments?: {
-    documentType: string;
-    documentImageUrls: string[];
-  }[];
 }
 
 export interface GetEventsParams {
@@ -1162,8 +1140,8 @@ export interface RegisteredDevice {
   updatedAt: string;
 }
 
-export type NotificationStatus = "SEEN" | "UNSEEN";
-export type NotificationType = "CUSTOM" | string;
+export type NotificationStatus = 'SEEN' | 'UNSEEN';
+export type NotificationType = 'CUSTOM' | string;
 
 export interface NotificationPayload {
   body: string;
@@ -1204,8 +1182,8 @@ export enum ScheduledJobStatus {
   FAILED = 'FAILED',
 }
 
-export type ReportStatus = "PENDING" | "IN_PROGRESS" | "RESOLVED" | "REJECTED";
-export type ReportTargetType = "post" | "event" | "location";
+export type ReportStatus = 'PENDING' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED';
+export type ReportTargetType = 'post' | 'event' | 'location';
 
 export enum PostReportResolutionActions {
   NO_ACTION_TAKEN = 'NO_ACTION_TAKEN',
@@ -1312,7 +1290,7 @@ export interface GetReportsParams {
 }
 
 export interface ProcessReportPayload {
-  status: "RESOLVED" | "REJECTED";
+  status: 'RESOLVED' | 'REJECTED';
   resolutionAction: ReportResolutionActions; // Required: must be NO_ACTION_TAKEN, MALICIOUS_REPORT, or CANCEL_EVENT
   adminNotes?: string; // Optional notes field if API supports it
 }

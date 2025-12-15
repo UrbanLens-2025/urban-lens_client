@@ -37,9 +37,10 @@ import {
   IconFileText,
   IconCalendar,
   IconUser,
+  IconBriefcase2,
 } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Briefcase, CheckCircle, Clock, Loader2, XCircle } from 'lucide-react';
 import { BusinessProfile, BusinessStatus } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -53,6 +54,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
+import StatisticCard from '@/components/admin/StatisticCard';
 
 export default function AdminBusinessPage() {
   const router = useRouter();
@@ -216,97 +218,36 @@ export default function AdminBusinessPage() {
     <div className='space-y-6'>
       {/* Statistics Cards */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-blue-500 cursor-pointer'
-          onClick={() => {
-            setStatusTab('PENDING');
-            setPage(1);
-          }}
-        >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>
-              Total Businesses
-            </CardTitle>
-            <div className='h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center'>
-              <IconBriefcase className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold'>{stats.total}</div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              All business accounts
-            </p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Total Businesses'
+          value={stats.total}
+          icon={Briefcase}
+          iconColorClass='blue'
+          subtitle='All business accounts'
+        />
 
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-yellow-500 cursor-pointer'
-          onClick={() => {
-            setStatusTab('PENDING');
-            setPage(1);
-          }}
-        >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Pending</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-950 flex items-center justify-center'>
-              <IconClock className='h-5 w-5 text-yellow-600 dark:text-yellow-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold text-yellow-600 dark:text-yellow-400'>
-              {stats.pending}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              Awaiting review
-            </p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Pending Businesses'
+          value={stats.pending}
+          icon={Clock}
+          iconColorClass='amber'
+          subtitle='Awaiting review'
+        />
 
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-green-500 cursor-pointer'
-          onClick={() => {
-            setStatusTab('APPROVED');
-            setPage(1);
-          }}
-        >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Approved</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center'>
-              <IconCheck className='h-5 w-5 text-green-600 dark:text-green-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold text-green-600 dark:text-green-400'>
-              {stats.approved}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              Active businesses
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-red-500 cursor-pointer'
-          onClick={() => {
-            setStatusTab('REJECTED');
-            setPage(1);
-          }}
-        >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Rejected</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center'>
-              <IconX className='h-5 w-5 text-red-600 dark:text-red-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold text-red-600 dark:text-red-400'>
-              {stats.rejected}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              Rejected accounts
-            </p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Approved Businesses'
+          value={stats.approved}
+          icon={CheckCircle}
+          iconColorClass='green'
+          subtitle='Approved businesses'
+        />
+        <StatisticCard
+          title='Rejected Businesses'
+          value={stats.rejected}
+          icon={XCircle}
+          iconColorClass='red'
+          subtitle='Rejected businesses'
+        />
       </div>
 
       {/* Two Column Layout */}

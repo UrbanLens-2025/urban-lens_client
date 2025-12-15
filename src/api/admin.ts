@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axiosInstance from "./axios-config";
-import { ScheduledJobStatus } from "@/types";
+import axiosInstance from './axios-config';
+import { ScheduledJobStatus } from '@/types';
 import type {
   ApiResponse,
   PaginatedData,
@@ -20,10 +20,9 @@ import type {
   Wallet,
   WalletExternalTransaction,
   GetWalletExternalTransactionsParams,
-  Event,
   GetEventsParams,
   User,
-} from "@/types";
+} from '@/types';
 
 export const getLocationRequestsForAdmin = async ({
   page = 1,
@@ -39,11 +38,11 @@ export const getLocationRequestsForAdmin = async ({
 
   if (search) {
     params.search = search;
-    params.searchBy = ["name"];
+    params.searchBy = ['name'];
   }
 
   if (status) {
-    params["filter.status"] = `$eq:${status}`;
+    params['filter.status'] = `$eq:${status}`;
   }
 
   if (sortBy) {
@@ -52,7 +51,7 @@ export const getLocationRequestsForAdmin = async ({
 
   const { data } = await axiosInstance.get<
     ApiResponse<PaginatedData<LocationRequest>>
-  >("/v1/admin/location-request/search", {
+  >('/v1/admin/location-request/search', {
     params: params,
   });
   return data.data;
@@ -91,10 +90,10 @@ export const getBusinessAccounts = async ({
   const params: any = { page, limit };
   if (search) {
     params.search = search;
-    params.searchBy = ["name", "email"];
+    params.searchBy = ['name', 'email'];
   }
   if (status) {
-    params["filter.status"] = `$eq:${status}`;
+    params['filter.status'] = `$eq:${status}`;
   }
   if (sortBy) {
     params.sortBy = sortBy;
@@ -102,7 +101,7 @@ export const getBusinessAccounts = async ({
 
   const { data } = await axiosInstance.get<
     ApiResponse<PaginatedData<BusinessProfile>>
-  >("/v1/admin/account/business", { params });
+  >('/v1/admin/account/business', { params });
   return data.data;
 };
 
@@ -124,7 +123,7 @@ export const createPublicLocation = async (
   payload: CreatePublicLocationPayload
 ): Promise<any> => {
   const { data } = await axiosInstance.post(
-    "/v1/admin/locations/public",
+    '/v1/admin/locations/public',
     payload
   );
   return data;
@@ -137,7 +136,7 @@ export const getAllLocationsForAdmin = async ({
   sortBy,
   isBusiness,
   isVisibleOnMap,
-}: GetLocationsParams & { 
+}: GetLocationsParams & {
   isBusiness?: boolean;
   isVisibleOnMap?: boolean;
 }): Promise<PaginatedData<Location>> => {
@@ -145,22 +144,22 @@ export const getAllLocationsForAdmin = async ({
 
   if (search) {
     params.search = search;
-    params.searchBy = ["name"];
+    params.searchBy = ['name'];
   }
 
   if (isBusiness !== undefined) {
     // Filter by businessId: not null for business locations, null for public locations
     if (isBusiness) {
       // Business locations have a businessId (not null)
-      params["filter.businessId"] = "$ne:null";
+      params['filter.businessId'] = '$ne:null';
     } else {
       // Public locations don't have a businessId (null)
-      params["filter.businessId"] = "$eq:null";
+      params['filter.businessId'] = '$eq:null';
     }
   }
 
   if (isVisibleOnMap !== undefined) {
-    params["filter.isVisibleOnMap"] = `$eq:${isVisibleOnMap}`;
+    params['filter.isVisibleOnMap'] = `$eq:${isVisibleOnMap}`;
   }
 
   if (sortBy) {
@@ -169,7 +168,7 @@ export const getAllLocationsForAdmin = async ({
 
   const { data } = await axiosInstance.get<
     ApiResponse<PaginatedData<Location>>
-  >("/v1/admin/locations/search", { params });
+  >('/v1/admin/locations/search', { params });
   return data.data;
 };
 
@@ -196,11 +195,11 @@ export const updateLocationAsAdmin = async (
 export const getTagsForAdmin = async ({
   page = 1,
   limit = 20,
-  sortBy = "displayName:ASC",
+  sortBy = 'displayName:ASC',
   search,
   isVisible,
   groupName,
-}: GetTagsParams & { 
+}: GetTagsParams & {
   isVisible?: boolean;
   groupName?: string;
 }): Promise<PaginatedData<Tag>> => {
@@ -208,19 +207,19 @@ export const getTagsForAdmin = async ({
 
   if (search) {
     params.search = search;
-    params.searchBy = ["displayName"];
+    params.searchBy = ['displayName'];
   }
 
   if (isVisible !== undefined) {
-    params["filter.isVisible"] = `$eq:${isVisible}`;
+    params['filter.isVisible'] = `$eq:${isVisible}`;
   }
 
   if (groupName) {
-    params["filter.groupName"] = `$eq:${groupName}`;
+    params['filter.groupName'] = `$eq:${groupName}`;
   }
 
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Tag>>>(
-    "/v1/admin/tag",
+    '/v1/admin/tag',
     { params }
   );
   return data.data;
@@ -228,7 +227,7 @@ export const getTagsForAdmin = async ({
 
 export const createTag = async (payload: CreateTagPayload): Promise<Tag> => {
   const { data } = await axiosInstance.post<ApiResponse<Tag>>(
-    "/v1/admin/tag",
+    '/v1/admin/tag',
     payload
   );
   return data.data;
@@ -247,14 +246,14 @@ export const updateTag = async (
 
 export const getEscrowWallet = async (): Promise<Wallet> => {
   const { data } = await axiosInstance.get<ApiResponse<Wallet>>(
-    "/v1/admin/wallet/escrow"
+    '/v1/admin/wallet/escrow'
   );
   return data.data;
 };
 
 export const getSystemWallet = async (): Promise<Wallet> => {
   const { data } = await axiosInstance.get<ApiResponse<Wallet>>(
-    "/v1/admin/wallet/system"
+    '/v1/admin/wallet/system'
   );
   return data.data;
 };
@@ -263,31 +262,32 @@ export const getAdminExternalTransactions = async ({
   page = 1,
   limit = 20,
   sortBy = 'createdAt:DESC',
-}: GetWalletExternalTransactionsParams): Promise<PaginatedData<WalletExternalTransaction>> => {
+}: GetWalletExternalTransactionsParams): Promise<
+  PaginatedData<WalletExternalTransaction>
+> => {
   const params: any = { page, limit, sortBy };
 
-  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<WalletExternalTransaction>>>(
-    '/v1/admin/wallet/transactions/external/search',
-    { params }
-  );
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<WalletExternalTransaction>>
+  >('/v1/admin/wallet/transactions/external/search', { params });
   return data.data;
 };
 
 export const getAdminExternalTransactionById = async (
   transactionId: string
 ): Promise<WalletExternalTransaction> => {
-  const { data } = await axiosInstance.get<ApiResponse<WalletExternalTransaction>>(
-    `/v1/admin/wallet/transactions/external/${transactionId}`
-  );
+  const { data } = await axiosInstance.get<
+    ApiResponse<WalletExternalTransaction>
+  >(`/v1/admin/wallet/transactions/external/${transactionId}`);
   return data.data;
 };
 
 export const startProcessingWithdrawTransaction = async (
   transactionId: string
 ): Promise<WalletExternalTransaction> => {
-  const { data } = await axiosInstance.post<ApiResponse<WalletExternalTransaction>>(
-    `/v1/admin/wallet/transactions/external/${transactionId}/start-processing`
-  );
+  const { data } = await axiosInstance.post<
+    ApiResponse<WalletExternalTransaction>
+  >(`/v1/admin/wallet/transactions/external/${transactionId}/start-processing`);
   return data.data;
 };
 
@@ -296,7 +296,9 @@ export const completeProcessingWithdrawTransaction = async (
   proofOfTransferImages: string[],
   transferBankTransactionId: string
 ): Promise<WalletExternalTransaction> => {
-  const { data } = await axiosInstance.post<ApiResponse<WalletExternalTransaction>>(
+  const { data } = await axiosInstance.post<
+    ApiResponse<WalletExternalTransaction>
+  >(
     `/v1/admin/wallet/transactions/external/${transactionId}/complete-processing`,
     {
       proofOfTransferImages,
@@ -310,7 +312,9 @@ export const markTransferFailed = async (
   transactionId: string,
   failureReason: string
 ): Promise<WalletExternalTransaction> => {
-  const { data } = await axiosInstance.post<ApiResponse<WalletExternalTransaction>>(
+  const { data } = await axiosInstance.post<
+    ApiResponse<WalletExternalTransaction>
+  >(
     `/v1/admin/wallet/transactions/external/${transactionId}/mark-transfer-failed`,
     { failureReason }
   );
@@ -321,10 +325,11 @@ export const rejectWithdrawTransaction = async (
   transactionId: string,
   rejectionReason: string
 ): Promise<WalletExternalTransaction> => {
-  const { data } = await axiosInstance.post<ApiResponse<WalletExternalTransaction>>(
-    `/v1/admin/wallet/transactions/external/${transactionId}/reject`,
-    { rejectionReason }
-  );
+  const { data } = await axiosInstance.post<
+    ApiResponse<WalletExternalTransaction>
+  >(`/v1/admin/wallet/transactions/external/${transactionId}/reject`, {
+    rejectionReason,
+  });
   return data.data;
 };
 
@@ -335,31 +340,31 @@ export const getAllEventsForAdmin = async ({
   search,
   sortBy,
   status,
-}: GetEventsParams & { status?: string }): Promise<PaginatedData<Event>> => {
+}: GetEventsParams & { status?: string }): Promise<PaginatedData<any>> => {
   const params: any = { page, limit };
 
   if (search) {
     params.search = search;
-    params.searchBy = ["displayName", "description"];
+    params.searchBy = ['displayName', 'description'];
   }
 
   if (status) {
-    params["filter.status"] = `$eq:${status}`;
+    params['filter.status'] = `$eq:${status}`;
   }
 
   if (sortBy) {
     params.sortBy = sortBy;
   }
 
-  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Event>>>(
-    "/v1/admin/events",
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<any>>>(
+    '/v1/admin/events',
     { params }
   );
   return data.data;
 };
 
-export const getEventByIdForAdmin = async (id: string): Promise<Event> => {
-  const { data } = await axiosInstance.get<ApiResponse<Event>>(
+export const getEventByIdForAdmin = async (id: string): Promise<any> => {
+  const { data } = await axiosInstance.get<ApiResponse<any>>(
     `/v1/admin/events/${id}`
   );
   return data.data;
@@ -386,9 +391,7 @@ export const getAllAccounts = async ({
   filterRole,
   filterHasOnboarded,
   filterIsLocked,
-}: GetAllAccountsParams = {}): Promise<
-  ApiResponse<PaginatedData<any>>
-> => {
+}: GetAllAccountsParams = {}): Promise<ApiResponse<PaginatedData<any>>> => {
   const params: any = { page, limit };
 
   if (search && searchBy) {
@@ -497,7 +500,9 @@ export const liftSuspension = async (
   accountId: string,
   suspensionId: string
 ): Promise<void> => {
-  await axiosInstance.put(`/v1/admin/account/${accountId}/suspensions/${suspensionId}/lift`);
+  await axiosInstance.put(
+    `/v1/admin/account/${accountId}/suspensions/${suspensionId}/lift`
+  );
 };
 
 export interface AccountWarning {
@@ -617,10 +622,9 @@ export const getScheduledJobs = async (
     queryParams.sortBy = params.sortBy;
   }
 
-  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<ScheduledJob>>>(
-    '/v1/admin/scheduled-jobs',
-    { params: queryParams }
-  );
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<ScheduledJob>>
+  >('/v1/admin/scheduled-jobs', { params: queryParams });
 
   return data.data;
 };
@@ -632,7 +636,9 @@ export const getScheduledJobTypes = async (): Promise<string[]> => {
   return data.data;
 };
 
-export const runScheduledJob = async (scheduledJobId: number): Promise<void> => {
+export const runScheduledJob = async (
+  scheduledJobId: number
+): Promise<void> => {
   await axiosInstance.put<ApiResponse<void>>(
     `/v1/admin/scheduled-jobs/${scheduledJobId}/run`
   );
