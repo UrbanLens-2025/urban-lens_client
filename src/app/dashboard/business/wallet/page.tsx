@@ -369,7 +369,6 @@ export default function BusinessWalletPage() {
     };
   };
 
-  // Calculate statistics with mock data for earnings
   const stats = useMemo(() => {
     const now = new Date();
     const thisMonth = now.getMonth();
@@ -392,7 +391,6 @@ export default function BusinessWalletPage() {
       )
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
-    // Real earnings from internal transactions
     const totalEarnings = internalTransactions
       .filter((t) => {
         const mappedType = mapInternalType(t.type);
@@ -401,12 +399,6 @@ export default function BusinessWalletPage() {
         );
       })
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    // Mock: Add some estimated earnings if no internal transactions
-    const mockEarnings =
-      totalEarnings === 0
-        ? Math.floor(Math.random() * 5000000) + 2000000
-        : totalEarnings;
 
     // Calculate this month vs last month
     const thisMonthDeposits = externalTransactions
@@ -438,9 +430,8 @@ export default function BusinessWalletPage() {
         ? 100
         : 0;
 
-    // Mock earnings change
-    const thisMonthEarnings = mockEarnings * 0.3; // Mock: 30% of total
-    const lastMonthEarnings = mockEarnings * 0.25; // Mock: 25% of total
+    const thisMonthEarnings = 0;
+    const lastMonthEarnings = 0;
     const earningsChange =
       lastMonthEarnings > 0
         ? ((thisMonthEarnings - lastMonthEarnings) / lastMonthEarnings) * 100
@@ -451,7 +442,7 @@ export default function BusinessWalletPage() {
     return {
       totalDeposits,
       totalWithdrawals,
-      totalEarnings: mockEarnings,
+      totalEarnings,
       totalTransactions:
         walletData?.totalTransactions ||
         externalTransactions.length + internalTransactions.length,

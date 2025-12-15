@@ -317,7 +317,6 @@ export default function CreatorWalletPage() {
     };
   };
 
-  // Calculate statistics with mock data for earnings
   const stats = useMemo(() => {
     const now = new Date();
     const thisMonth = now.getMonth();
@@ -332,18 +331,12 @@ export default function CreatorWalletPage() {
       .filter(t => t.direction.toUpperCase() === "WITHDRAWAL" && t.status.toUpperCase() === "COMPLETED")
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
-    // Mock earnings from internal transactions (in real app, calculate from transfer_in)
     const totalEarnings = internalTransactions
       .filter((t) => {
         const mappedType = mapInternalType(t.type);
         return mappedType === "transfer_in" && t.status.toUpperCase() === "COMPLETED";
       })
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    // Mock: Add some estimated earnings if no internal transactions
-    const mockEarnings = totalEarnings === 0 
-      ? Math.floor(Math.random() * 5000000) + 2000000 
-      : totalEarnings;
 
     // Calculate this month vs last month
     const thisMonthDeposits = externalTransactions
@@ -364,9 +357,8 @@ export default function CreatorWalletPage() {
       ? ((thisMonthDeposits - lastMonthDeposits) / lastMonthDeposits) * 100 
       : thisMonthDeposits > 0 ? 100 : 0;
 
-    // Mock earnings change
-    const thisMonthEarnings = mockEarnings * 0.3; // Mock: 30% of total
-    const lastMonthEarnings = mockEarnings * 0.25; // Mock: 25% of total
+    const thisMonthEarnings = 0;
+    const lastMonthEarnings = 0;
     const earningsChange = lastMonthEarnings > 0 
       ? ((thisMonthEarnings - lastMonthEarnings) / lastMonthEarnings) * 100 
       : thisMonthEarnings > 0 ? 100 : 0;
@@ -374,7 +366,7 @@ export default function CreatorWalletPage() {
     return {
       totalDeposits,
       totalWithdrawals,
-      totalEarnings: mockEarnings,
+      totalEarnings,
       totalTransactions: walletData?.totalTransactions || (externalTransactions.length + internalTransactions.length),
       thisMonthDeposits,
       depositsChange,
@@ -383,7 +375,6 @@ export default function CreatorWalletPage() {
     };
   }, [externalTransactions, internalTransactions, walletData]);
 
-  // Mock earnings breakdown based on selected period
   const monthlyEarnings = useMemo(() => {
     const now = new Date();
     const data: Array<{ period: string; earnings: number }> = [];

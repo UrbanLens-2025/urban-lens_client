@@ -72,7 +72,6 @@ export default function CreatorDashboardPage() {
     }).format(amount);
   };
 
-  // Calculate statistics with mock data where APIs don't exist
   const stats = useMemo(() => {
     const totalEvents = meta?.totalItems ?? 0;
     
@@ -88,55 +87,12 @@ export default function CreatorDashboardPage() {
       return e.status?.toUpperCase() === "COMPLETED";
     });
 
-    // Mock data for attendees (estimate based on events)
-    // In real app, this would come from attendance API
-    const totalAttendees = events.reduce((sum, event) => {
-      // Mock: estimate attendees based on event status and age
-      const baseAttendees = event.status?.toUpperCase() === "COMPLETED" ? 50 : 25;
-      const randomFactor = Math.floor(Math.random() * 30) + 1;
-      return sum + baseAttendees + randomFactor;
-    }, 0);
+    // Placeholder real metrics until attendance/revenue APIs are available
+    const totalAttendees = 0;
+    const totalRevenue = 0;
+    const thisMonthRevenue = 0;
+    const revenueChange = 0;
 
-    // Mock revenue data (in real app, get from wallet/transactions API)
-    const now = new Date();
-    const thisMonthEvents = events.filter((e) => {
-      const eventDate = new Date(e.createdAt);
-      return isSameMonth(eventDate, now);
-    });
-
-    const lastMonthEvents = events.filter((e) => {
-      const eventDate = new Date(e.createdAt);
-      return isSameMonth(eventDate, subMonths(now, 1));
-    });
-
-    // Mock revenue calculation
-    const totalRevenue = events.reduce((sum, event) => {
-      if (event.status?.toUpperCase() === "COMPLETED") {
-        // Mock: completed events generate revenue
-        return sum + (Math.floor(Math.random() * 5000000) + 1000000);
-      }
-      return sum;
-    }, 0);
-
-    const thisMonthRevenue = thisMonthEvents.reduce((sum, event) => {
-      if (event.status?.toUpperCase() === "COMPLETED") {
-        return sum + (Math.floor(Math.random() * 3000000) + 500000);
-      }
-      return sum;
-    }, 0);
-
-    const lastMonthRevenue = lastMonthEvents.reduce((sum, event) => {
-      if (event.status?.toUpperCase() === "COMPLETED") {
-        return sum + (Math.floor(Math.random() * 3000000) + 500000);
-      }
-      return sum;
-    }, 0);
-
-    const revenueChange = lastMonthRevenue > 0 
-      ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
-      : thisMonthRevenue > 0 ? 100 : 0;
-
-    // Calculate recent events (last 30 days)
     const thirtyDaysAgo = subDays(now, 30);
     const recentEvents = events.filter((e) => {
       const eventDate = new Date(e.createdAt);

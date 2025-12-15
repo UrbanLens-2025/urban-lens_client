@@ -410,31 +410,10 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     }, 500);
   };
 
-  // Mock data for booked and unavailable slots - TODO: Replace with API calls
-  const mockBookedSlots = useMemo(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(13, 0, 0, 0);
-    
-    const day4 = new Date();
-    day4.setDate(day4.getDate() + 3);
-    day4.setHours(10, 0, 0, 0);
-
-    return [
-      { startDateTime: tomorrow, endDateTime: new Date(tomorrow.getTime() + 60 * 60 * 1000) },
-      { startDateTime: day4, endDateTime: new Date(day4.getTime() + 60 * 60 * 1000) },
-    ];
-  }, []);
-
-  const mockUnavailableSlots = useMemo(() => {
-    const today = new Date();
-    today.setDate(today.getDate());
-    today.setHours(12, 0, 0, 0);
-
-    return [
-      { startDateTime: today, endDateTime: new Date(today.getTime() + 60 * 60 * 1000) },
-    ];
-  }, []);
+  // Booked/unavailable slots should come from booking availability APIs.
+  // For now, we don't inject any predefined blocks; the calendar will show only the slots the user selects.
+  const bookedSlotsPlaceholder: Array<{ startDateTime: Date; endDateTime: Date }> = [];
+  const unavailableSlotsPlaceholder: Array<{ startDateTime: Date; endDateTime: Date }> = [];
 
   const isLocationComplete = selectedLocationId && hasBookedSlots;
 

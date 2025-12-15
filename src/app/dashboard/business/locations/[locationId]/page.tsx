@@ -3481,55 +3481,53 @@ function BookingHistoryTab({ locationId }: { locationId: string }) {
   );
 }
 
-// Booking Calendar Tab Component with Day/Week/Month Views
-interface MockBookingEvent {
-  id: string;
-  title: string;
-  startDateTime: Date;
-  endDateTime: Date;
-  customerName: string;
-  status: 'confirmed' | 'pending' | 'cancelled';
-}
-
 function BookingCalendarTab({ locationId }: { locationId: string }) {
   const [view, setView] = useState<'day' | 'week' | 'month'>('week');
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Mock booking events
-  const mockBookings: MockBookingEvent[] = [
-    {
-      id: '1',
-      title: 'Corporate Event',
-      startDateTime: new Date(new Date().setHours(10, 0, 0, 0)),
-      endDateTime: new Date(new Date().setHours(14, 0, 0, 0)),
-      customerName: 'John Doe',
-      status: 'confirmed' as const,
-    },
-    {
-      id: '2',
-      title: 'Birthday Party',
-      startDateTime: new Date(addDays(new Date(), 1).setHours(15, 0, 0, 0)),
-      endDateTime: new Date(addDays(new Date(), 1).setHours(18, 0, 0, 0)),
-      customerName: 'Jane Smith',
-      status: 'confirmed' as const,
-    },
-    {
-      id: '3',
-      title: 'Wedding Reception',
-      startDateTime: new Date(addDays(new Date(), 3).setHours(16, 0, 0, 0)),
-      endDateTime: new Date(addDays(new Date(), 3).setHours(22, 0, 0, 0)),
-      customerName: 'Mike Johnson',
-      status: 'pending' as const,
-    },
-    {
-      id: '4',
-      title: 'Team Meeting',
-      startDateTime: new Date(addWeeks(new Date(), 1).setHours(9, 0, 0, 0)),
-      endDateTime: new Date(addWeeks(new Date(), 1).setHours(12, 0, 0, 0)),
-      customerName: 'Sarah Williams',
-      status: 'confirmed' as const,
-    },
-  ];
+  const { data: bookingsData } = useOwnerLocationBookings({
+    page: 1,
+    limit: 200,
+    sortBy: 'createdAt:DESC',
+    status: 'ALL',
+  });
+
+  interface CalendarBookingEvent {
+    id: string;
+    title: string;
+    startDateTime: Date;
+    endDateTime: Date;
+    customerName: string;
+    status: string;
+  }
+
+  const calendarEvents: CalendarBookingEvent[] = useMemo(() => {
+    const allBookings = bookingsData?.data || [];
+
+    return allBookings
+      .filter((booking: any) => booking.locationId === locationId)
+      .flatMap((booking: any) =>
+        (booking.dates || []).map((dateSlot: any) => ({
+          id: booking.id,
+          title:
+            booking.event?.displayName ||
+            booking.referencedEventRequest?.eventName ||
+            booking.bookingObject ||
+            'Booking',
+          startDateTime: new Date(dateSlot.startDateTime),
+          endDateTime: new Date(dateSlot.endDateTime),
+          customerName:
+            (booking.createdBy as any)?.creatorProfile?.displayName ||
+            (booking.createdBy as any)?.displayName ||
+            `${(booking.createdBy as any)?.firstName || ''} ${
+              (booking.createdBy as any)?.lastName || ''
+            }`.trim() ||
+            booking.createdBy?.email ||
+            'Customer',
+          status: booking.status ?? 'UNKNOWN',
+        }))
+      );
+  }, [bookingsData, locationId]);
 
   const navigateDate = (direction: 'prev' | 'next') => {
     if (view === 'day') {
@@ -3555,8 +3553,9 @@ function BookingCalendarTab({ locationId }: { locationId: string }) {
     setCurrentDate(new Date());
   };
 
-  const getEventsForDate = (date: Date): MockBookingEvent[] => {
-    return mockBookings.filter((event) => {
+  const getEventsForDate = (date: Date): CalendarBookingEvent[] => {
+    if (!calendarEvents.length) return [];
+    return calendarEvents.filter((event) => {
       if (view === 'day') {
         return isSameDay(event.startDateTime, date);
       } else if (view === 'week') {
@@ -3916,24 +3915,24 @@ function AvailabilityTab({ locationId }: { locationId: string }) {
   const { mutate: updateWeeklyAvailability, isPending: isUpdating } =
     useUpdateWeeklyAvailability(locationId);
 
+  // Local availability is kept in sync with API data for interactive updates during resize
+  const [localAvailability, setLocalAvailability] = useState<
+    WeeklyAvailabilitySlot[]
+  >([]);
+
+  useEffect(() => {
+    if (apiAvailability) {
+      setLocalAvailability(transformApiResponse(apiAvailability));
+    } else {
+      setLocalAvailability([]);
+    }
+  }, [apiAvailability]);
+
   const availability = useMemo(() => {
     if (!apiAvailability) return [];
     return transformApiResponse(apiAvailability);
   }, [apiAvailability]);
 
-  // Local state for availability (for mock updates during resize)
-  const [localAvailability, setLocalAvailability] = useState<
-    WeeklyAvailabilitySlot[]
-  >([]);
-
-  // Sync local availability with API data
-  useEffect(() => {
-    if (apiAvailability) {
-      setLocalAvailability(transformApiResponse(apiAvailability));
-    }
-  }, [apiAvailability]);
-
-  // Use local availability for rendering
   const displayAvailability =
     localAvailability.length > 0 ? localAvailability : availability;
 
@@ -7271,15 +7270,6 @@ export default function LocationDetailsPage({
         return sum + (isNaN(amount) ? 0 : amount);
       }, 0);
 
-    // If no bookings, use mock data
-    if (totalRevenue === 0) {
-      return {
-        total: 12500000,
-        thisMonth: 3200000,
-        change: 15.5,
-      };
-    }
-
     return {
       total: totalRevenue,
       thisMonth: thisMonthRevenue,
@@ -7301,33 +7291,6 @@ export default function LocationDetailsPage({
         return hasFutureDate;
       })
       .slice(0, 5);
-
-    // If no bookings, use mock data
-    if (locationBookings.length === 0) {
-      return [
-        {
-          id: 'mock-1',
-          eventName: 'Summer Music Festival',
-          date: addDays(new Date(), 3),
-          amount: 2500000,
-          status: 'PAYMENT_RECEIVED',
-        },
-        {
-          id: 'mock-2',
-          eventName: 'Corporate Event',
-          date: addDays(new Date(), 7),
-          amount: 1800000,
-          status: 'AWAITING_BUSINESS_PROCESSING',
-        },
-        {
-          id: 'mock-3',
-          eventName: 'Wedding Reception',
-          date: addDays(new Date(), 12),
-          amount: 4500000,
-          status: 'PAYMENT_RECEIVED',
-        },
-      ];
-    }
 
     return locationBookings.map((booking: any) => {
       const earliestDate = booking.dates?.[0]?.startDateTime

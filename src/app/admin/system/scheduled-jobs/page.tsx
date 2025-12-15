@@ -203,7 +203,6 @@ export default function ScheduledJobsPage() {
     }
   };
 
-  // Calculate statistics (mock for now as requested)
   const stats = useMemo(() => {
     return {
       total: meta?.totalItems || 0,

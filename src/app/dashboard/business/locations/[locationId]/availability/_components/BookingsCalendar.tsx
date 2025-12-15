@@ -182,12 +182,6 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
 
     if (!weekBookings) return map;
 
-    // Mock event name data (to be replaced when API returns event information)
-    const mockEventNames: Record<string, string> = {
-      FOR_EVENT: 'Bún Đậu Mẹt Tre - Food Festival 2025',
-      FOR_OTHER: 'Private Event',
-    };
-
     weekBookings.forEach((booking) => {
       // Filter out cancelled bookings
       const status = booking.status?.toUpperCase();
@@ -229,12 +223,12 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
             booking.createdBy?.email ||
             'Unknown';
 
-          // Get event name with mock data fallback
+          // Get event name from real booking data only
           const eventName =
+            booking.event?.displayName ||
             booking.referencedEventRequest?.eventName ||
-            (booking.bookingObject && mockEventNames[booking.bookingObject]) ||
             formatBookingObject(booking.bookingObject) ||
-            'Bún Đậu Mẹt Tre - Food Festival 2025'; // Default mock event name
+            'Event';
 
           // Get consistent color for this booking
           const bookingColor = getBookingColor(booking.id);

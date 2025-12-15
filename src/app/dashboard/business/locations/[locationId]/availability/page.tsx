@@ -418,19 +418,19 @@ export default function AvailabilityPage({
   const resizeSlotRef = useRef<WeeklyAvailabilitySlot | null>(null);
   const resizeEdgeRef = useRef<'start' | 'end' | null>(null);
 
-  // Local state for availability (for mock updates during resize)
+  // Local availability is kept in sync with API data for interactive updates during resize
   const [localAvailability, setLocalAvailability] = useState<
     WeeklyAvailabilitySlot[]
   >([]);
 
-  // Sync local availability with API data
   useEffect(() => {
     if (apiAvailability) {
       setLocalAvailability(transformApiResponse(apiAvailability));
+    } else {
+      setLocalAvailability([]);
     }
   }, [apiAvailability]);
 
-  // Use local availability for rendering
   const displayAvailability =
     localAvailability.length > 0 ? localAvailability : availability;
 
