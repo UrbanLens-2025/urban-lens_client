@@ -1,18 +1,61 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { use, useState, useMemo, useEffect } from 'react';
+import { useDebounce } from 'use-debounce';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { DataTable } from '@/components/shared/DataTable';
+import { useAccountSuspensions } from '@/hooks/admin/useAccountSuspensions';
+import { useAccountWarnings } from '@/hooks/admin/useAccountWarnings';
+import { useSuspendAccount } from '@/hooks/admin/useSuspendAccount';
+import { useLiftSuspension } from '@/hooks/admin/useLiftSuspension';
+import { useCreateWarning } from '@/hooks/admin/useCreateWarning';
+import { TableCell, TableRow } from '@/components/ui/table';
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   IconArrowLeft,
   IconUser,
@@ -36,6 +79,8 @@ import {
   IconMessageCircle,
   IconFileText,
   IconPhoto,
+  IconAlertTriangle,
+  IconBan,
 } from '@tabler/icons-react';
 import { useAccountById } from '@/hooks/admin/useAccountById';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -44,7 +89,6 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { PageContainer } from '@/components/shared/PageContainer';
-import { StatCard } from '@/components/shared/StatCard';
 import { Separator } from '@/components/ui/separator';
 import {
   Copy,
@@ -56,7 +100,6 @@ import {
   Mail,
   Phone,
   MapPin,
-  Wallet,
   Receipt,
   Star,
   MessageCircle,
@@ -64,6 +107,10 @@ import {
   Settings,
   Bell,
   Activity,
+  Plus,
+  Loader2,
+  MoreVertical,
+  Unlock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -79,7 +126,162 @@ export default function AdminAccountDetailPage({
   const { data: account, isLoading, error } = useAccountById(accountId);
   console.log('🚀 ~ AdminAccountDetailPage ~ account:', account);
 
-  const currentTab = searchParams.get('tab') || 'profile';
+  const currentTab = searchParams.get('tab') || 'warnings';
+
+  // Warnings state
+  const [warningsPage, setWarningsPage] = useState(1);
+  const [warningsSearch, setWarningsSearch] = useState('');
+  const [debouncedWarningsSearch] = useDebounce(warningsSearch, 300);
+  const [warningsSort, setWarningsSort] = useState<{
+    column: string;
+    direction: 'ASC' | 'DESC';
+  }>({ column: 'createdAt', direction: 'DESC' });
+  const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
+
+  // Suspensions state
+  const [suspensionsPage, setSuspensionsPage] = useState(1);
+  const [suspensionsSearch, setSuspensionsSearch] = useState('');
+  const [debouncedSuspensionsSearch] = useDebounce(suspensionsSearch, 300);
+  const [suspensionsStatusFilter, setSuspensionsStatusFilter] = useState<
+    string
+  >('all');
+  const [suspensionsSort, setSuspensionsSort] = useState<{
+    column: string;
+    direction: 'ASC' | 'DESC';
+  }>({ column: 'suspendedUntil', direction: 'DESC' });
+  const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+  const [suspensionToLift, setSuspensionToLift] = useState<{ id: string; reason: string | null } | null>(null);
+
+  const suspendAccountMutation = useSuspendAccount();
+  const liftSuspensionMutation = useLiftSuspension();
+  const createWarningMutation = useCreateWarning();
+
+  // Reset page when search changes
+  useEffect(() => {
+    setWarningsPage(1);
+  }, [debouncedWarningsSearch]);
+
+  useEffect(() => {
+    setSuspensionsPage(1);
+  }, [debouncedSuspensionsSearch]);
+
+  const {
+    data: warningsData,
+    isLoading: isLoadingWarnings,
+  } = useAccountWarnings({
+    accountId,
+    page: warningsPage,
+    limit: 20,
+    sortBy: `${warningsSort.column}:${warningsSort.direction}`,
+    search: debouncedWarningsSearch || undefined,
+  });
+
+  const {
+    data: suspensionsDataRaw,
+    isLoading: isLoadingSuspensions,
+  } = useAccountSuspensions({
+    accountId,
+    page: suspensionsPage,
+    limit: 20,
+    sortBy: `${suspensionsSort.column}:${suspensionsSort.direction}`,
+    search: debouncedSuspensionsSearch || undefined,
+    isActive: undefined, // Fetch all, filter client-side
+  });
+
+  // Compute client-side status and filter
+  const suspensionsData = useMemo(() => {
+    if (!suspensionsDataRaw) return suspensionsDataRaw;
+
+    const now = new Date();
+    const filtered = suspensionsDataRaw.data.filter((suspension) => {
+      if (suspensionsStatusFilter === 'all') return true;
+
+      const suspendedUntil = suspension.suspendedUntil ? new Date(suspension.suspendedUntil) : null;
+      const isExpired = suspendedUntil && suspendedUntil < now;
+      const status = isExpired 
+        ? 'EXPIRED' 
+        : suspension.isActive 
+          ? 'ACTIVE' 
+          : 'LIFTED';
+
+      return status === suspensionsStatusFilter.toUpperCase();
+    });
+
+    return {
+      ...suspensionsDataRaw,
+      data: filtered,
+      meta: {
+        ...suspensionsDataRaw.meta,
+        totalItems: filtered.length,
+        totalPages: Math.ceil(filtered.length / 20),
+      },
+    };
+  }, [suspensionsDataRaw, suspensionsStatusFilter]);
+
+  // Suspend form schema
+  const suspendSchema = z.object({
+    suspensionReason: z.string().min(1, 'Suspension reason is required'),
+    suspendUntil: z.string().min(1, 'Suspension end date is required'),
+  });
+
+  type SuspendFormValues = z.infer<typeof suspendSchema>;
+
+  const suspendForm = useForm<SuspendFormValues>({
+    resolver: zodResolver(suspendSchema),
+    defaultValues: {
+      suspensionReason: '',
+      suspendUntil: '',
+    },
+  });
+
+  const onSuspendSubmit = (values: SuspendFormValues) => {
+    suspendAccountMutation.mutate(
+      {
+        accountId,
+        payload: {
+          suspensionReason: values.suspensionReason,
+          suspendUntil: new Date(values.suspendUntil).toISOString(),
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsSuspendModalOpen(false);
+          suspendForm.reset();
+        },
+      }
+    );
+  };
+
+  // Warning form schema
+  const warningSchema = z.object({
+    warningNote: z.string().min(1, 'Warning note is required'),
+  });
+
+  type WarningFormValues = z.infer<typeof warningSchema>;
+
+  const warningForm = useForm<WarningFormValues>({
+    resolver: zodResolver(warningSchema),
+    defaultValues: {
+      warningNote: '',
+    },
+  });
+
+  const onWarningSubmit = (values: WarningFormValues) => {
+    createWarningMutation.mutate(
+      {
+        accountId,
+        payload: {
+          warningNote: values.warningNote,
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsWarningModalOpen(false);
+          warningForm.reset();
+        },
+      }
+    );
+  };
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -158,29 +360,23 @@ export default function AdminAccountDetailPage({
   return (
     <PageContainer>
       {/* Professional Header */}
-      <PageHeader
-        title={`${account.firstName} ${account.lastName}`}
-        description={account.email}
-        icon={UserIcon}
-        actions={
-          <Link href='/admin/accounts'>
-            <Button
-              variant='outline'
-              className='h-11 border-2 border-primary/20'
-            >
-              <IconArrowLeft className='mr-2 h-4 w-4' />
-              Back to Accounts
-            </Button>
-          </Link>
-        }
-      />
+      
 
       {/* Enhanced Profile Card */}
-      <Card className='overflow-hidden border-2 border-primary/10 shadow-xl bg-gradient-to-br from-card via-card to-primary/5'>
+      <Card className='overflow-hidden border-2 border-primary/10 shadow-xl bg-gradient-to-br from-card via-card to-primary/5 pt-0'>
         <CardContent className='p-0'>
           <div className='relative'>
             {/* Header Background */}
             <div className='h-32 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent' />
+            <div className='absolute top-4 left-4'>
+              <Button
+                variant='outline'
+                size='icon'
+                onClick={() => router.back()}
+              >
+                <IconArrowLeft className='h-4 w-4' />
+              </Button>
+            </div>
 
             {/* Profile Content */}
             <div className='relative px-6 pb-6 -mt-16'>
@@ -333,14 +529,6 @@ export default function AdminAccountDetailPage({
         </CardContent>
       </Card>
 
-      {/* Statistics Cards */}
-      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-        <StatCard title='Wallet Balance' value='₫0' icon={Wallet} />
-        <StatCard title='Total Bookings' value='0' icon={Calendar} />
-        <StatCard title='Reviews' value='0' icon={Star} />
-        <StatCard title='Support Tickets' value='0' icon={MessageCircle} />
-      </div>
-
       {/* Content Section */}
       <div>
         <Tabs
@@ -348,387 +536,526 @@ export default function AdminAccountDetailPage({
           onValueChange={handleTabChange}
           className='w-full'
         >
+          <TabsList className='grid w-full grid-cols-2 mb-6'>
+            <TabsTrigger value='warnings' className='flex items-center gap-2'>
+              <IconAlertTriangle className='h-4 w-4' />
+              Warnings
+            </TabsTrigger>
+            <TabsTrigger value='suspensions' className='flex items-center gap-2'>
+              <IconBan className='h-4 w-4' />
+              Suspensions
+            </TabsTrigger>
+          </TabsList>
           {/* Tabs Content Area */}
           <div className='w-full'>
-            <TabsContent value='profile' className='mt-0 space-y-6'>
-              {/* Business Profile Section */}
-              {account.businessProfile && (
-                <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
-                  <CardHeader className='pb-4 border-b border-primary/10 bg-gradient-to-r from-orange-50/50 to-transparent'>
-                    <div className='flex items-center gap-3'>
-                      <div className='p-3 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-500/10 shadow-md'>
-                        <IconBuildingStore className='h-6 w-6 text-orange-600' />
+            <TabsContent value='warnings' className='mt-0'>
+              <DataTable
+                columns={[
+                  { key: 'number', label: '#', sortable: false, className: 'text-center' },
+                  { key: 'warningNote', label: 'Warning Note', sortable: false },
+                  { key: 'createdBy', label: 'Created By', sortable: false },
+                  {
+                    key: 'createdAt',
+                    label: 'Created At',
+                    sortable: true,
+                  },
+                ]}
+                data={warningsData?.data || []}
+                isLoading={isLoadingWarnings}
+                searchValue={warningsSearch}
+                onSearchChange={setWarningsSearch}
+                searchPlaceholder='Search by warning note...'
+                sort={warningsSort}
+                onSort={(column, direction) => {
+                  if (direction) {
+                    setWarningsSort({ column, direction });
+                  }
+                }}
+                actions={
+                  <Button
+                    onClick={() => setIsWarningModalOpen(true)}
+                    className='flex items-center gap-2'
+                  >
+                    <Plus className='h-4 w-4' />
+                    Create Warning
+                  </Button>
+                }
+                emptyState={{
+                  icon: <IconAlertTriangle className='h-12 w-12 text-amber-500/50' />,
+                  title: 'No warnings found',
+                  description: 'This account has no warning history.',
+                }}
+                renderRow={(warning, index) => (
+                  <TableRow key={warning.id}>
+                    <TableCell className="text-center">
+                      {(warningsPage - 1) * 20 + index + 1}
+                    </TableCell>
+                    <TableCell className='max-w-md'>
+                      <div className='truncate' title={warning.warningNote || 'N/A'}>
+                        {warning.warningNote || (
+                          <span className='text-muted-foreground'>N/A</span>
+                        )}
                       </div>
-                      <div>
-                        <CardTitle className='text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text'>
-                          Business Profile
-                        </CardTitle>
-                        <CardDescription className='text-sm mt-1'>
-                          Details for business account
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className='pt-6 grid gap-6'>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                      <div className='space-y-2 p-4 rounded-lg border-2 border-primary/10 bg-muted/30'>
-                        <label className='text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2'>
-                          <IconBuildingStore className='h-3.5 w-3.5' />
-                          Business Name
-                        </label>
-                        <p className='text-base font-semibold text-foreground'>
-                          {account.businessProfile.name}
-                        </p>
-                      </div>
-                      <div className='space-y-2 p-4 rounded-lg border-2 border-primary/10 bg-muted/30'>
-                        <label className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
-                          Category
-                        </label>
+                    </TableCell>
+                    <TableCell>
+                      {warning.createdBy ? (
                         <div>
-                          <Badge
-                            variant='secondary'
-                            className='rounded-md px-3 py-1 font-medium'
-                          >
-                            {account.businessProfile.category}
-                          </Badge>
+                          <div className='font-medium'>
+                            {warning.createdBy.firstName}{' '}
+                            {warning.createdBy.lastName}
+                          </div>
+                          <div className='text-xs text-muted-foreground'>
+                            {warning.createdBy.email}
+                          </div>
                         </div>
-                      </div>
-                      <div className='space-y-2 p-4 rounded-lg border-2 border-primary/10 bg-muted/30'>
-                        <label className='text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2'>
-                          <IconMail className='h-3.5 w-3.5' />
-                          Business Email
-                        </label>
-                        <div className='flex items-center gap-2'>
-                          <p className='text-sm font-medium'>
-                            {account.businessProfile.email}
-                          </p>
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            className='h-6 w-6'
-                            onClick={() =>
-                              copyToClipboard(
-                                account.businessProfile?.email || '',
-                                'Email'
-                              )
-                            }
-                          >
-                            <Copy className='h-3 w-3' />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className='space-y-2 p-4 rounded-lg border-2 border-primary/10 bg-muted/30'>
-                        <label className='text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2'>
-                          <IconPhone className='h-3.5 w-3.5' />
-                          Business Phone
-                        </label>
-                        <div className='flex items-center gap-2'>
-                          <p className='text-sm font-medium'>
-                            {account.businessProfile.phone}
-                          </p>
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            className='h-6 w-6'
-                            onClick={() =>
-                              copyToClipboard(
-                                account.businessProfile?.phone || '',
-                                'Phone'
-                              )
-                            }
-                          >
-                            <Copy className='h-3 w-3' />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className='space-y-2 p-4 rounded-lg border-2 border-primary/10 bg-muted/30 md:col-span-2'>
-                        <label className='text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2'>
-                          <MapPin className='h-3.5 w-3.5' />
-                          Address
-                        </label>
-                        <p className='text-sm font-medium'>
-                          {[
-                            account.businessProfile.addressLine,
-                            account.businessProfile.addressLevel1,
-                            account.businessProfile.addressLevel2,
-                          ]
-                            .filter(Boolean)
-                            .join(', ')}
-                        </p>
-                      </div>
-                      <div className='space-y-2 p-4 rounded-lg border-2 border-primary/10 bg-muted/30 md:col-span-2'>
-                        <label className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
-                          Description
-                        </label>
-                        <p className='text-sm text-muted-foreground leading-relaxed bg-background/50 p-4 rounded-md border border-border/50'>
-                          {account.businessProfile.description ||
-                            'No description provided.'}
-                        </p>
-                      </div>
-                      {account.businessProfile.website && (
-                        <div className='space-y-1 md:col-span-2'>
-                          <label className='text-xs font-medium text-muted-foreground uppercase tracking-wider'>
-                            Website
-                          </label>
-                          <a
-                            href={account.businessProfile.website}
-                            target='_blank'
-                            rel='noopener noreferrer'
-                            className='text-sm text-blue-600 hover:underline flex items-center gap-1.5 w-fit'
-                          >
-                            <IconWorld className='h-3.5 w-3.5' />
-                            {account.businessProfile.website}
-                          </a>
-                        </div>
+                      ) : (
+                        <span className='text-muted-foreground'>System</span>
                       )}
-                      {account.businessProfile.licenses &&
-                        account.businessProfile.licenses.length > 0 && (
-                          <div className='space-y-3 md:col-span-2'>
-                            <label className='text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2'>
-                              <IconFileText className='h-3.5 w-3.5' />
-                              Business Licenses
-                            </label>
-                            <div className='space-y-4'>
-                              {account.businessProfile.licenses.map(
-                                (license: any, index: number) => (
-                                  <div
-                                    key={index}
-                                    className='border border-border rounded-lg p-4 bg-muted/20'
-                                  >
-                                    <div className='flex items-center gap-2 mb-3'>
-                                      <Badge
-                                        variant='outline'
-                                        className='font-medium'
-                                      >
-                                        {license.licenseType?.replace(
-                                          /_/g,
-                                          ' '
-                                        ) || 'License'}
-                                      </Badge>
-                                    </div>
-                                    {license.documentImageUrls &&
-                                      license.documentImageUrls.length > 0 && (
-                                        <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-                                          {license.documentImageUrls.map(
-                                            (url: string, imgIndex: number) => (
-                                              <a
-                                                key={imgIndex}
-                                                href={url}
-                                                target='_blank'
-                                                rel='noopener noreferrer'
-                                                className='group relative aspect-video rounded-md overflow-hidden border border-border hover:border-primary/50 transition-colors'
-                                              >
-                                                <img
-                                                  src={url}
-                                                  alt={`License document ${
-                                                    imgIndex + 1
-                                                  }`}
-                                                  className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-200'
-                                                />
-                                                <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center'>
-                                                  <IconPhoto className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity' />
-                                                </div>
-                                              </a>
-                                            )
-                                          )}
-                                        </div>
-                                      )}
-                                  </div>
-                                )
-                              )}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(warning.createdAt), 'PPp')}
+                    </TableCell>
+                  </TableRow>
+                )}
+                pagination={
+                  warningsData?.meta &&
+                  warningsData.meta.totalPages > 1 ? (
+                    <div className='flex items-center justify-between'>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => setWarningsPage(warningsPage - 1)}
+                        disabled={warningsPage <= 1}
+                      >
+                        Previous
+                      </Button>
+                      <div className='text-sm text-muted-foreground'>
+                        Page {warningsPage} of{' '}
+                        {warningsData.meta.totalPages} (
+                        {warningsData.meta.totalItems} total)
+                      </div>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => setWarningsPage(warningsPage + 1)}
+                        disabled={
+                          warningsPage >= warningsData.meta.totalPages
+                        }
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  ) : undefined
+                }
+              />
+
+              {/* Create Warning Modal */}
+              <Dialog open={isWarningModalOpen} onOpenChange={setIsWarningModalOpen}>
+                <DialogContent className='sm:max-w-[500px]'>
+                  <DialogHeader>
+                    <DialogTitle>Create Warning</DialogTitle>
+                    <DialogDescription>
+                      Add a warning note for this account. This will be recorded in the account&apos;s warning history.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...warningForm}>
+                    <form
+                      onSubmit={warningForm.handleSubmit(onWarningSubmit)}
+                      className='space-y-4'
+                    >
+                      <FormField
+                        control={warningForm.control}
+                        name='warningNote'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Warning Note *</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder='Enter the warning note...'
+                                rows={4}
+                                {...field}
+                                className='resize-none'
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Provide a clear warning note for this account.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <DialogFooter>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          onClick={() => {
+                            setIsWarningModalOpen(false);
+                            warningForm.reset();
+                          }}
+                          disabled={createWarningMutation.isPending}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type='submit'
+                          disabled={createWarningMutation.isPending}
+                        >
+                          {createWarningMutation.isPending ? (
+                            <>
+                              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                              Creating...
+                            </>
+                          ) : (
+                            'Create Warning'
+                          )}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </TabsContent>
+
+            <TabsContent value='suspensions' className='mt-0'>
+              <DataTable
+                columns={[
+                  { key: 'number', label: '#', sortable: false, className: 'text-center' },
+                  { key: 'suspensionReason', label: 'Reason', sortable: false },
+                  {
+                    key: 'suspendedUntil',
+                    label: 'Suspended Until',
+                    sortable: true,
+                  },
+                  { key: 'suspendedBy', label: 'Suspended By', sortable: false },
+                  { key: 'isActive', label: 'Status', sortable: false },
+                  {
+                    key: 'createdAt',
+                    label: 'Created At',
+                    sortable: true,
+                  },
+                  { key: 'actions', label: '', sortable: false },
+                ]}
+                data={suspensionsData?.data || []}
+                isLoading={isLoadingSuspensions}
+                searchValue={suspensionsSearch}
+                onSearchChange={setSuspensionsSearch}
+                searchPlaceholder='Search by reason...'
+                filters={[
+                  {
+                    key: 'status',
+                    label: 'Status',
+                    value: suspensionsStatusFilter,
+                    options: [
+                      { value: 'all', label: 'All' },
+                      { value: 'ACTIVE', label: 'Active' },
+                      { value: 'LIFTED', label: 'Lifted' },
+                      { value: 'EXPIRED', label: 'Expired' },
+                    ],
+                    onValueChange: setSuspensionsStatusFilter,
+                  },
+                ]}
+                sort={suspensionsSort}
+                onSort={(column, direction) => {
+                  if (direction) {
+                    setSuspensionsSort({ column, direction });
+                  }
+                }}
+                actions={
+                  <Button
+                    onClick={() => setIsSuspendModalOpen(true)}
+                    className='flex items-center gap-2'
+                  >
+                    <Plus className='h-4 w-4' />
+                    Add Suspension
+                  </Button>
+                }
+                emptyState={{
+                  icon: <IconBan className='h-12 w-12 text-red-500/50' />,
+                  title: 'No suspensions found',
+                  description: 'This account has no suspension history.',
+                }}
+                renderRow={(suspension, index) => {
+                  const now = new Date();
+                  const suspendedUntil = suspension.suspendedUntil ? new Date(suspension.suspendedUntil) : null;
+                  const isExpired = suspendedUntil && suspendedUntil < now;
+                  const status = isExpired 
+                    ? 'EXPIRED' 
+                    : suspension.isActive 
+                      ? 'ACTIVE' 
+                      : 'LIFTED';
+
+                  const badgeConfig = {
+                    EXPIRED: {
+                      variant: 'secondary' as const,
+                      className: 'bg-slate-700 hover:bg-slate-800 text-white font-semibold border-slate-600',
+                      label: 'Expired',
+                    },
+                    ACTIVE: {
+                      variant: 'destructive' as const,
+                      className: 'bg-red-500 hover:bg-red-600',
+                      label: 'Active',
+                    },
+                    LIFTED: {
+                      variant: 'secondary' as const,
+                      className: 'bg-orange-500 hover:bg-orange-600 text-white font-semibold border-orange-400',
+                      label: 'Lifted',
+                    },
+                  };
+
+                  const config = badgeConfig[status as keyof typeof badgeConfig];
+
+                  return (
+                    <TableRow 
+                      key={suspension.id}
+                      className={status === 'ACTIVE' ? 'bg-red-50/50 hover:bg-red-50' : ''}
+                    >
+                      <TableCell className="text-center">
+                        {(suspensionsPage - 1) * 20 + index + 1}
+                      </TableCell>
+                      <TableCell className='max-w-md'>
+                        <div className='truncate' title={suspension.suspensionReason || 'N/A'}>
+                          {suspension.suspensionReason || (
+                            <span className='text-muted-foreground'>N/A</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {suspension.suspendedUntil ? (
+                          format(new Date(suspension.suspendedUntil), 'PPp')
+                        ) : (
+                          <span className='text-muted-foreground'>N/A</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {suspension.suspendedBy ? (
+                          <div>
+                            <div className='font-medium'>
+                              {suspension.suspendedBy.firstName}{' '}
+                              {suspension.suspendedBy.lastName}
+                            </div>
+                            <div className='text-xs text-muted-foreground'>
+                              {suspension.suspendedBy.email}
                             </div>
                           </div>
+                        ) : (
+                          <span className='text-muted-foreground'>System</span>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={config.variant}
+                          className={config.className}
+                        >
+                          {config.label}
+                        </Badge>
+                      </TableCell>
+                    <TableCell>
+                      {format(new Date(suspension.createdAt), 'PPp')}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant='ghost'
+                            className='h-8 w-8 p-0'
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
+                            <MoreVertical className='h-4 w-4' />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align='end'>
+                          {status === 'ACTIVE' ? (
+                            <DropdownMenuItem
+                              onClick={() => setSuspensionToLift({ id: suspension.id, reason: suspension.suspensionReason })}
+                              className='text-orange-600 focus:text-orange-600'
+                            >
+                              <Unlock className='mr-2 h-4 w-4' />
+                              Lift
+                            </DropdownMenuItem>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                  );
+                }}
+                pagination={
+                  suspensionsData?.meta &&
+                  suspensionsData.meta.totalPages > 1 ? (
+                    <div className='flex items-center justify-between'>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => setSuspensionsPage(suspensionsPage - 1)}
+                        disabled={suspensionsPage <= 1}
+                      >
+                        Previous
+                      </Button>
+                      <div className='text-sm text-muted-foreground'>
+                        Page {suspensionsPage} of{' '}
+                        {suspensionsData.meta.totalPages} (
+                        {suspensionsData.meta.totalItems} total)
+                      </div>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => setSuspensionsPage(suspensionsPage + 1)}
+                        disabled={
+                          suspensionsPage >= suspensionsData.meta.totalPages
+                        }
+                      >
+                        Next
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
+                  ) : undefined
+                }
+              />
 
-            <TabsContent value='transactions' className='mt-0'>
-              <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
-                <CardHeader className='bg-gradient-to-r from-blue-50/50 to-transparent border-b border-primary/10'>
-                  <div className='flex items-center gap-3'>
-                    <div className='p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 shadow-md'>
-                      <IconReceipt className='h-6 w-6 text-blue-600' />
-                    </div>
-                    <div>
-                      <CardTitle className='text-2xl font-bold'>
-                        Transaction History
-                      </CardTitle>
-                      <CardDescription className='text-sm mt-1'>
-                        Recent financial activity for this account
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className='py-20 flex flex-col items-center justify-center text-muted-foreground'>
-                  <div className='p-6 bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-full mb-4 border-2 border-blue-500/20'>
-                    <IconReceipt className='h-12 w-12 text-blue-500/50' />
-                  </div>
-                  <p className='font-semibold text-lg text-foreground'>
-                    No transactions found
-                  </p>
-                  <p className='text-sm mt-2'>
-                    Transaction history feature is coming soon.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
+              {/* Suspend Account Modal */}
+              <Dialog open={isSuspendModalOpen} onOpenChange={setIsSuspendModalOpen}>
+                <DialogContent className='sm:max-w-[500px]'>
+                  <DialogHeader>
+                    <DialogTitle>Suspend Account</DialogTitle>
+                    <DialogDescription>
+                      Suspend this account until a specified date. The account will be unable to access the platform during this period.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...suspendForm}>
+                    <form
+                      onSubmit={suspendForm.handleSubmit(onSuspendSubmit)}
+                      className='space-y-4'
+                    >
+                      <FormField
+                        control={suspendForm.control}
+                        name='suspensionReason'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Suspension Reason *</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder='Enter the reason for suspension...'
+                                rows={4}
+                                {...field}
+                                className='resize-none'
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Provide a clear reason for suspending this account.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={suspendForm.control}
+                        name='suspendUntil'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Suspended Until *</FormLabel>
+                            <FormControl>
+                              <Input
+                                type='datetime-local'
+                                {...field}
+                                className='h-11'
+                                min={new Date().toISOString().slice(0, 16)}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Select the date and time when the suspension should end.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <DialogFooter>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          onClick={() => {
+                            setIsSuspendModalOpen(false);
+                            suspendForm.reset();
+                          }}
+                          disabled={suspendAccountMutation.isPending}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type='submit'
+                          disabled={suspendAccountMutation.isPending}
+                        >
+                          {suspendAccountMutation.isPending ? (
+                            <>
+                              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                              Suspending...
+                            </>
+                          ) : (
+                            'Suspend Account'
+                          )}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
 
-            <TabsContent value='activity' className='mt-0'>
-              <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
-                <CardHeader className='bg-gradient-to-r from-purple-50/50 to-transparent border-b border-primary/10'>
-                  <div className='flex items-center gap-3'>
-                    <div className='p-3 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/10 shadow-md'>
-                      <IconActivity className='h-6 w-6 text-purple-600' />
-                    </div>
-                    <div>
-                      <CardTitle className='text-2xl font-bold'>
-                        Activity Log
-                      </CardTitle>
-                      <CardDescription className='text-sm mt-1'>
-                        System events and user actions
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className='py-20 flex flex-col items-center justify-center text-muted-foreground'>
-                  <div className='p-6 bg-gradient-to-br from-purple-500/10 to-purple-500/5 rounded-full mb-4 border-2 border-purple-500/20'>
-                    <IconActivity className='h-12 w-12 text-purple-500/50' />
-                  </div>
-                  <p className='font-semibold text-lg text-foreground'>
-                    No activity recorded
-                  </p>
-                  <p className='text-sm mt-2'>
-                    Activity logging feature is coming soon.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value='security' className='mt-0'>
-              <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
-                <CardHeader className='bg-gradient-to-r from-red-50/50 to-transparent border-b border-primary/10'>
-                  <div className='flex items-center gap-3'>
-                    <div className='p-3 rounded-xl bg-gradient-to-br from-red-500/20 to-red-500/10 shadow-md'>
-                      <LockIcon className='h-6 w-6 text-red-600' />
-                    </div>
-                    <div>
-                      <CardTitle className='text-2xl font-bold'>
-                        Security Settings
-                      </CardTitle>
-                      <CardDescription className='text-sm mt-1'>
-                        Manage account security and access
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className='py-20 flex flex-col items-center justify-center text-muted-foreground'>
-                  <div className='p-6 bg-gradient-to-br from-red-500/10 to-red-500/5 rounded-full mb-4 border-2 border-red-500/20'>
-                    <LockIcon className='h-12 w-12 text-red-500/50' />
-                  </div>
-                  <p className='font-semibold text-lg text-foreground'>
-                    Security logs unavailable
-                  </p>
-                  <p className='text-sm mt-2'>
-                    Login history and security features are coming soon.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value='content' className='mt-0'>
-              <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
-                <CardHeader className='bg-gradient-to-r from-green-50/50 to-transparent border-b border-primary/10'>
-                  <div className='flex items-center gap-3'>
-                    <div className='p-3 rounded-xl bg-gradient-to-br from-green-500/20 to-green-500/10 shadow-md'>
-                      <IconMessageCircle className='h-6 w-6 text-green-600' />
-                    </div>
-                    <div>
-                      <CardTitle className='text-2xl font-bold'>
-                        User Content
-                      </CardTitle>
-                      <CardDescription className='text-sm mt-1'>
-                        Reviews, posts, and other user-generated content
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className='py-20 flex flex-col items-center justify-center text-muted-foreground'>
-                  <div className='p-6 bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-full mb-4 border-2 border-green-500/20'>
-                    <IconMessageCircle className='h-12 w-12 text-green-500/50' />
-                  </div>
-                  <p className='font-semibold text-lg text-foreground'>
-                    No content found
-                  </p>
-                  <p className='text-sm mt-2'>
-                    Content moderation features are coming soon.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value='notifications' className='mt-0'>
-              <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
-                <CardHeader className='bg-gradient-to-r from-amber-50/50 to-transparent border-b border-primary/10'>
-                  <div className='flex items-center gap-3'>
-                    <div className='p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/10 shadow-md'>
-                      <IconBell className='h-6 w-6 text-amber-600' />
-                    </div>
-                    <div>
-                      <CardTitle className='text-2xl font-bold'>
-                        Notifications
-                      </CardTitle>
-                      <CardDescription className='text-sm mt-1'>
-                        System notifications sent to this user
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className='py-20 flex flex-col items-center justify-center text-muted-foreground'>
-                  <div className='p-6 bg-gradient-to-br from-amber-500/10 to-amber-500/5 rounded-full mb-4 border-2 border-amber-500/20'>
-                    <IconBell className='h-12 w-12 text-amber-500/50' />
-                  </div>
-                  <p className='font-semibold text-lg text-foreground'>
-                    No notifications
-                  </p>
-                  <p className='text-sm mt-2'>
-                    Notification history is coming soon.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value='settings' className='mt-0'>
-              <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
-                <CardHeader className='bg-gradient-to-r from-slate-50/50 to-transparent border-b border-primary/10'>
-                  <div className='flex items-center gap-3'>
-                    <div className='p-3 rounded-xl bg-gradient-to-br from-slate-500/20 to-slate-500/10 shadow-md'>
-                      <IconSettings className='h-6 w-6 text-slate-600' />
-                    </div>
-                    <div>
-                      <CardTitle className='text-2xl font-bold'>
-                        Account Settings
-                      </CardTitle>
-                      <CardDescription className='text-sm mt-1'>
-                        Administrative actions for this account
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className='py-20 flex flex-col items-center justify-center text-muted-foreground'>
-                  <div className='p-6 bg-gradient-to-br from-slate-500/10 to-slate-500/5 rounded-full mb-4 border-2 border-slate-500/20'>
-                    <IconSettings className='h-12 w-12 text-slate-500/50' />
-                  </div>
-                  <p className='font-semibold text-lg text-foreground'>
-                    Settings unavailable
-                  </p>
-                  <p className='text-sm mt-2'>
-                    Account settings management is coming soon.
-                  </p>
-                </CardContent>
-              </Card>
+              {/* Lift Suspension Confirmation Dialog */}
+              <AlertDialog
+                open={!!suspensionToLift}
+                onOpenChange={(open) => !open && setSuspensionToLift(null)}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Lift Suspension</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to lift this suspension? This action is irreversible.
+                      {suspensionToLift?.reason && (
+                        <div className='mt-2 p-3 bg-muted rounded-md'>
+                          <p className='text-sm font-medium mb-1'>Suspension Reason:</p>
+                          <p className='text-sm text-muted-foreground'>{suspensionToLift.reason}</p>
+                        </div>
+                      )}
+                      <p className='mt-3 text-sm font-medium text-amber-600'>
+                        Note: If you need to suspend this account again, you must create a new suspension.
+                      </p>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={liftSuspensionMutation.isPending}>
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        if (suspensionToLift) {
+                          liftSuspensionMutation.mutate(
+                            {
+                              accountId,
+                              suspensionId: suspensionToLift.id,
+                            },
+                            {
+                              onSuccess: () => {
+                                setSuspensionToLift(null);
+                              },
+                            }
+                          );
+                        }
+                      }}
+                      disabled={liftSuspensionMutation.isPending}
+                      className='bg-orange-600 hover:bg-orange-700'
+                    >
+                      {liftSuspensionMutation.isPending ? (
+                        <>
+                          <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                          Lifting...
+                        </>
+                      ) : (
+                        'Lift Suspension'
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </TabsContent>
           </div>
         </Tabs>

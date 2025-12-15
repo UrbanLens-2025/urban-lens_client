@@ -426,6 +426,151 @@ export const getAccountById = async (id: string): Promise<User> => {
   return data.data;
 };
 
+export interface AccountSuspension {
+  id: string;
+  accountId: string;
+  suspensionReason: string | null;
+  suspendedUntil: string | null;
+  suspendedById: string | null;
+  suspendedBy: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  isActive: boolean | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetAccountSuspensionsParams {
+  accountId: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+  isActive?: boolean;
+}
+
+export const getAccountSuspensions = async ({
+  accountId,
+  page = 1,
+  limit = 20,
+  sortBy,
+  search,
+  isActive,
+}: GetAccountSuspensionsParams): Promise<PaginatedData<AccountSuspension>> => {
+  const params: any = { page, limit };
+
+  if (sortBy) {
+    params.sortBy = sortBy;
+  }
+
+  if (search) {
+    params.search = search;
+    params.searchBy = 'suspensionReason';
+  }
+
+  if (isActive !== undefined) {
+    params['filter.isActive'] = `$eq:${isActive}`;
+  }
+
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<AccountSuspension>>
+  >(`/v1/admin/account/${accountId}/suspensions`, { params });
+  return data.data;
+};
+
+export interface SuspendAccountPayload {
+  suspendUntil: string;
+  suspensionReason: string;
+}
+
+export const suspendAccount = async (
+  accountId: string,
+  payload: SuspendAccountPayload
+): Promise<void> => {
+  await axiosInstance.post(`/v1/admin/account/${accountId}/suspend`, payload);
+};
+
+export const liftSuspension = async (
+  accountId: string,
+  suspensionId: string
+): Promise<void> => {
+  await axiosInstance.put(`/v1/admin/account/${accountId}/suspensions/${suspensionId}/lift`);
+};
+
+export interface AccountWarning {
+  id: string;
+  accountId: string;
+  warningNote: string | null;
+  warnedById: string | null;
+  warnedBy: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  createdById: string | null;
+  createdBy: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber?: string | null;
+    role?: string;
+    avatarUrl?: string | null;
+    coverUrl?: string | null;
+    hasOnboarded?: boolean;
+    isLocked?: boolean;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetAccountWarningsParams {
+  accountId: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+}
+
+export const getAccountWarnings = async ({
+  accountId,
+  page = 1,
+  limit = 20,
+  sortBy,
+  search,
+}: GetAccountWarningsParams): Promise<PaginatedData<AccountWarning>> => {
+  const params: any = { page, limit };
+
+  if (sortBy) {
+    params.sortBy = sortBy;
+  }
+
+  if (search) {
+    params.search = search;
+    params.searchBy = 'warningNote';
+  }
+
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<AccountWarning>>
+  >(`/v1/admin/account/${accountId}/warnings`, { params });
+  return data.data;
+};
+
+export interface CreateWarningPayload {
+  warningNote: string;
+}
+
+export const createWarning = async (
+  accountId: string,
+  payload: CreateWarningPayload
+): Promise<void> => {
+  await axiosInstance.post(`/v1/admin/account/${accountId}/warnings`, payload);
+};
+
 export interface ScheduledJob {
   id: number;
   createdAt: string;
