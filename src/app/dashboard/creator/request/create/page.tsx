@@ -11,7 +11,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, FileText, ArrowLeft, ArrowRight, Clock, AlertTriangle, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  FileText,
+  ArrowLeft,
+  ArrowRight,
+  Clock,
+  AlertTriangle,
+  XCircle,
+  Wallet,
+} from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { StepIndicator } from "./_components/StepIndicator";
 import { Step1LocationSelection } from "./_components/Step3LocationSelection";
 import { Step2BasicInfo } from "./_components/Step1BasicInfo";
@@ -235,7 +254,13 @@ export type CreateEventRequestForm = z.infer<typeof formSchema>;
 export default function CreateEventRequestPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
-  const createEvent = useCreateEvent();
+  const [showInsufficientBalanceDialog, setShowInsufficientBalanceDialog] =
+    useState(false);
+  const createEvent = useCreateEvent({
+    onInsufficientBalance: () => {
+      setShowInsufficientBalanceDialog(true);
+    },
+  });
 
   const form = useForm<CreateEventRequestForm>({
     resolver: zodResolver(formSchema),
@@ -613,8 +638,8 @@ export default function CreateEventRequestPage() {
   return (
     <PageContainer>
       <PageHeader
-        title='Create Event Request'
-        description='Follow the steps below to create your event.'
+        title="Create Event Request"
+        description="Follow the steps below to create your event."
         icon={FileText}
       />
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -691,6 +716,37 @@ export default function CreateEventRequestPage() {
           )}
         </div>
       </div>
+
+      {/* Insufficient Balance Dialog */}
+      <AlertDialog
+        open={showInsufficientBalanceDialog}
+        onOpenChange={setShowInsufficientBalanceDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-primary" />
+              Insufficient wallet balance
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Your wallet balance is not enough to pay for the location booking
+              of this event. The event itself has been created, but the booking
+              payment is pending. Please deposit funds into your wallet and then
+              complete the payment from the event page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                window.open("/dashboard/creator/wallet", "_blank");
+              }}
+            >
+              Open wallet in new tab
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   );
 }

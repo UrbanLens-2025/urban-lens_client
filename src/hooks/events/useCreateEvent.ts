@@ -2,10 +2,19 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { createEvent, CreateEventPayload, addLocationBookingToEvent, initiateLocationBookingPayment } from "@/api/events";
+import {
+  createEvent,
+  CreateEventPayload,
+  addLocationBookingToEvent,
+  initiateLocationBookingPayment,
+} from "@/api/events";
 import { useRouter } from "next/navigation";
 
-export function useCreateEvent() {
+type UseCreateEventOptions = {
+  onInsufficientBalance?: () => void;
+};
+
+export function useCreateEvent(options?: UseCreateEventOptions) {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -16,11 +25,15 @@ export function useCreateEvent() {
       
       // If location and date ranges are provided, create location booking and initiate payment
       let paymentError: any = null;
-      if (payload.locationId && payload.dateRanges && payload.dateRanges.length > 0) {
+      if (
+        payload.locationId &&
+        payload.dateRanges &&
+        payload.dateRanges.length > 0
+      ) {
         // Step 2: Create location booking
         const booking = await addLocationBookingToEvent(event.id, {
           locationId: payload.locationId,
-          dates: payload.dateRanges.map(range => ({
+          dates: payload.dateRanges.map((range) => ({
             startDateTime: range.startDateTime,
             endDateTime: range.endDateTime,
           })),
@@ -33,36 +46,51 @@ export function useCreateEvent() {
         } catch (paymentErr: any) {
           // Payment failed - store error but don't cancel booking
           // Extract error message handling all possible formats
-          let errorMessage = '';
-          
-          if (typeof paymentErr === 'string') {
+          let errorMessage = "";
+
+          if (typeof paymentErr === "string") {
             errorMessage = paymentErr;
           } else if (paymentErr?.message) {
             errorMessage = paymentErr.message;
           } else if (paymentErr?.response?.data?.message) {
             errorMessage = paymentErr.response.data.message;
           }
-          
+
           // Check if error is "LocationBooking not found" - this might happen if payment succeeded
           // but API can't find the booking (race condition or API issue)
           // Since wallet balance is reduced and event has location, payment likely succeeded
-          const statusCode = paymentErr?.statusCode ?? paymentErr?.response?.status ?? paymentErr?.response?.data?.statusCode;
-          const isNotFoundError = statusCode === 404 && 
-              (errorMessage.toLowerCase().includes("locationbooking") || 
-               errorMessage.toLowerCase().includes("location booking") ||
-               errorMessage.toLowerCase().includes("not found"));
-          
+          const statusCode =
+            paymentErr?.statusCode ??
+            paymentErr?.response?.status ??
+            paymentErr?.response?.data?.statusCode;
+          const isNotFoundError =
+            statusCode === 404 &&
+            (errorMessage.toLowerCase().includes("locationbooking") ||
+              errorMessage.toLowerCase().includes("location booking") ||
+              errorMessage.toLowerCase().includes("not found"));
+
           if (isNotFoundError) {
             // Payment likely succeeded but API can't find booking immediately - treat as success
-            console.warn("Payment API returned 404 for booking, but payment likely succeeded.", {
-              eventId: event.id,
-              bookingId: booking.id,
-              error: errorMessage
-            });
+            console.warn(
+              "Payment API returned 404 for booking, but payment likely succeeded.",
+              {
+                eventId: event.id,
+                bookingId: booking.id,
+                error: errorMessage,
+              }
+            );
             // Don't set paymentError - treat as success
           } else {
             // Payment failed - store error to show in success message
             paymentError = paymentErr;
+
+            // If failure looks like insufficient balance, trigger optional callback
+            if (
+              errorMessage.toLowerCase().includes("insufficient") ||
+              errorMessage.toLowerCase().includes("balance")
+            ) {
+              options?.onInsufficientBalance?.();
+            }
           }
         }
       }
@@ -122,6 +150,7 @@ export function useCreateEvent() {
       if (errorMessage.toLowerCase().includes("insufficient") || errorMessage.toLowerCase().includes("balance")) {
         userMessage = "Insufficient funds";
         description = "Your account balance is not enough to complete the location booking payment. Please add funds and try again.";
+        options?.onInsufficientBalance?.();
       } else if (errorMessage.toLowerCase().includes("payment") || errorMessage.toLowerCase().includes("transaction")) {
         userMessage = "Payment processing failed";
         description = errorMessage;

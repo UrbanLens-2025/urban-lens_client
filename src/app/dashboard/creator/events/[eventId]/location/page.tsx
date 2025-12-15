@@ -8,7 +8,31 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { MapPin, Calendar, CalendarDays, Plus, Building2, Loader2, CheckCircle, Clock, AlertCircle, List, Info, Star, Mail, Phone, Globe, CreditCard, XCircle, ChevronLeft, ChevronRight, RotateCcw, Copy, Check } from "lucide-react";
+import {
+  MapPin,
+  Calendar,
+  CalendarDays,
+  Plus,
+  Building2,
+  Loader2,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  List,
+  Info,
+  Star,
+  Mail,
+  Phone,
+  Globe,
+  CreditCard,
+  XCircle,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Copy,
+  Check,
+  Wallet,
+} from "lucide-react";
 import { useEventTabs } from "@/contexts/EventTabContext";
 import { useEventById } from "@/hooks/events/useEventById";
 import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
@@ -22,6 +46,16 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { initiateLocationBookingPayment } from "@/api/events";
 import { useEventLocationBookings } from "@/hooks/events/useEventLocationBookings";
 import { CancelBookingDialog } from "./_components/CancelBookingDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Error boundary that catches all errors in the map component to prevent page crash
 class GoogleMapsErrorBoundary extends React.Component<
@@ -829,6 +863,8 @@ export default function EventLocationPage({
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [showInsufficientBalanceDialog, setShowInsufficientBalanceDialog] =
+    useState(false);
   const paymentReturnUrl = typeof window !== "undefined" ? window.location.href : undefined;
 
   const { openBookLocationTab } = useEventTabs();
@@ -935,7 +971,19 @@ export default function EventLocationPage({
       router.refresh();
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Failed to complete payment.");
+      const errorMessage = err?.message || "Failed to complete payment.";
+      const lower = errorMessage.toLowerCase();
+
+      if (lower.includes("insufficient") || lower.includes("balance")) {
+        setShowInsufficientBalanceDialog(true);
+        toast.error("Insufficient funds", {
+          description:
+            "Your wallet balance is not enough to complete this venue booking payment. Please deposit funds and try again.",
+          duration: 6000,
+        });
+      } else {
+        toast.error(errorMessage);
+      }
     },
   });
 
@@ -1371,6 +1419,41 @@ export default function EventLocationPage({
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Insufficient Balance Dialog for venue payment */}
+      <AlertDialog
+        open={showInsufficientBalanceDialog}
+        onOpenChange={setShowInsufficientBalanceDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-primary" />
+              Insufficient wallet balance
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Your wallet balance is not enough to pay for this venue booking.
+              The booking payment is still pending. Please deposit funds into
+              your wallet and then try the payment again from this location tab.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const depositPath = paymentReturnUrl
+                  ? `/dashboard/creator/wallet/deposit?returnUrl=${encodeURIComponent(
+                      paymentReturnUrl
+                    )}`
+                  : "/dashboard/creator/wallet/deposit";
+                window.open(depositPath, "_blank");
+              }}
+            >
+              Open wallet in new tab
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
