@@ -206,6 +206,7 @@ import {
   ChartTooltipContent,
   ChartConfig,
 } from '@/components/ui/chart';
+import { StatCard } from '@/components/shared/StatCard';
 
 // Helper function to format voucher type for display
 const formatVoucherType = (voucherType: string): string => {
@@ -7194,6 +7195,21 @@ export default function LocationDetailsPage({
   const allVouchers = allVouchersResponse?.data || [];
   const allMissions = allMissionsResponse?.data || [];
 
+  // Fetch announcements for overview statistics (use meta totalItems for count)
+  const { data: announcementsOverviewData } = useAnnouncements(
+    {
+      page: 1,
+      limit: 1,
+      sortBy: 'createdAt:DESC',
+      search: '',
+      locationId,
+    },
+    { enabled: Boolean(locationId) }
+  );
+
+  const totalAnnouncements =
+    announcementsOverviewData?.meta?.totalItems ?? 0;
+
   const {
     voucherCreateTab,
     openVoucherCreateTab,
@@ -7393,111 +7409,45 @@ export default function LocationDetailsPage({
             {/* Enhanced Stats Cards - 8 Cards in 2 rows */}
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-5'>
               {/* Row 1 */}
-              <Card className='border-border/60 shadow-sm hover:shadow-md transition-shadow'>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium text-muted-foreground'>
-                    Total Check-ins
-                  </CardTitle>
-                  <div className='h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center'>
-                    <Users className='h-4 w-4 text-primary' />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-3xl font-bold'>
-                    {totalCheckIns.toLocaleString()}
-                  </div>
-                  <p className='text-xs text-muted-foreground mt-1'>
-                    All time check-ins
-                  </p>
-                </CardContent>
-              </Card>
+              <StatCard
+                title='Total Check-ins'
+                value={totalCheckIns.toLocaleString()}
+                icon={Users}
+                color='primary'
+                description='All time check-ins'
+              />
 
-              <Card className='border-border/60 shadow-sm hover:shadow-md transition-shadow'>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium text-muted-foreground'>
-                    Total Revenue
-                  </CardTitle>
-                  <div className='h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center'>
-                    <DollarSign className='h-4 w-4 text-emerald-600' />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-3xl font-bold text-emerald-600'>
-                    {formatCurrencyOverview(revenueData.total)}
-                  </div>
-                  <p className='text-xs text-muted-foreground mt-1'>
-                    <span className='text-emerald-600'>
-                      +{revenueData.change}%
-                    </span>{' '}
-                    vs last month
-                  </p>
-                </CardContent>
-              </Card>
+              <StatCard
+                title='Total Revenue'
+                value={formatCurrencyOverview(revenueData.total)}
+                icon={DollarSign}
+                color='emerald'
+                description={`+${revenueData.change}% vs last month`}
+              />
 
-              <Card className='border-border/60 shadow-sm hover:shadow-md transition-shadow'>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium text-muted-foreground'>
-                    Upcoming Bookings
-                  </CardTitle>
-                  <div className='h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center'>
-                    <CalendarDays className='h-4 w-4 text-purple-600' />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-3xl font-bold text-purple-600'>
-                    {upcomingBookings.length}
-                  </div>
-                  <p className='text-xs text-muted-foreground mt-1'>
-                    Next 5 bookings
-                  </p>
-                </CardContent>
-              </Card>
+              <StatCard
+                title='Total Announcements'
+                value={totalAnnouncements}
+                icon={Megaphone}
+                color='amber'
+                description='Announcements for this location'
+              />
 
-              <Card className='border-border/60 shadow-sm hover:shadow-md transition-shadow'>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium text-muted-foreground'>
-                    Total Vouchers
-                  </CardTitle>
-                  <div className='h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center'>
-                    <Ticket className='h-4 w-4 text-orange-600' />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-3xl font-bold text-orange-600'>
-                    {allVouchers.length}
-                  </div>
-                  <p className='text-xs text-muted-foreground mt-1'>
-                    {
-                      allVouchers.filter((v: any) => v.status === 'ACTIVE')
-                        .length
-                    }{' '}
-                    active
-                  </p>
-                </CardContent>
-              </Card>
+              <StatCard
+                title='Total Vouchers'
+                value={allVouchers.length}
+                icon={Ticket}
+                color='orange'
+                description={`${allVouchers.filter((v: any) => v.status === 'ACTIVE').length} active`}
+              />
 
-              <Card className='border-border/60 shadow-sm hover:shadow-md transition-shadow'>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium text-muted-foreground'>
-                    Total Missions
-                  </CardTitle>
-                  <div className='h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center'>
-                    <Rocket className='h-4 w-4 text-purple-600' />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-3xl font-bold text-purple-600'>
-                    {allMissions.length}
-                  </div>
-                  <p className='text-xs text-muted-foreground mt-1'>
-                    {
-                      allMissions.filter((m: any) => m.status === 'ACTIVE')
-                        .length
-                    }{' '}
-                    active
-                  </p>
-                </CardContent>
-              </Card>
+              <StatCard
+                title='Total Missions'
+                value={allMissions.length}
+                icon={Rocket}
+                color='purple'
+                description={`${allMissions.filter((m: any) => m.status === 'ACTIVE').length} active`}
+              />
             </div>
 
             {/* Upcoming Bookings & Recent Activity */}

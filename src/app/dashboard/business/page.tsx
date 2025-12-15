@@ -27,6 +27,7 @@ import {
   Activity,
   Wallet,
   Eye,
+  MessageCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useMyLocations } from '@/hooks/locations/useMyLocations';
@@ -294,15 +295,6 @@ export default function BusinessDashboardPage() {
         />
 
         <StatCard
-          title='Total Check-ins'
-          value={stats.totalCheckIns.toLocaleString()}
-          icon={Users}
-          color='emerald'
-          description='Across all locations'
-          onClick={() => router.push('/dashboard/business/locations')}
-        />
-
-        <StatCard
           title='Total Bookings'
           value={stats.totalBookings.toLocaleString()}
           icon={Calendar}
@@ -312,11 +304,20 @@ export default function BusinessDashboardPage() {
         />
 
         <StatCard
-          title='Total Revenue'
-          value={formatCurrency(stats.totalRevenue)}
-          icon={DollarSign}
+          title='Total Check-ins'
+          value={stats.totalCheckIns.toLocaleString()}
+          icon={Users}
+          color='emerald'
+          description='Across all locations'
+          onClick={() => router.push('/dashboard/business/locations')}
+        />
+
+        <StatCard
+          title='Total Reivews'
+          value={stats.totalRevenue.toLocaleString()}
+          icon={MessageCircle}
           color='amber'
-          description={`${formatCurrency(stats.thisMonthRevenue)} this month`}
+          description={`${stats.recentBookings} in last 30 days`}
           onClick={() => router.push('/dashboard/business/wallet')}
         />
       </div>

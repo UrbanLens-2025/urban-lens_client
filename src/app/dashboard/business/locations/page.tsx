@@ -186,7 +186,7 @@ export default function MyLocationsPage() {
       />
 
       {/* Quick Statistics */}
-      <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
+      <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
         <StatCard
           title='Total Locations'
           value={stats.totalLocations}
@@ -211,13 +211,6 @@ export default function MyLocationsPage() {
           description='Not visible'
         />
 
-        <StatCard
-          title='Total Check-ins'
-          value={stats.totalCheckIns.toLocaleString()}
-          icon={Users}
-          color='purple'
-          description='All locations'
-        />
       </div>
 
       {/* Locations Table */}
