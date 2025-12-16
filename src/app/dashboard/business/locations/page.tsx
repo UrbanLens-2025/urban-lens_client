@@ -288,6 +288,7 @@ export default function MyLocationsPage() {
                       >
                         Address
                       </SortableTableHeader>
+                      <TableHead className='font-semibold'>Radius</TableHead>
                       <TableHead className='font-semibold'>Tags</TableHead>
                       <SortableTableHeader
                         column='createdAt'
@@ -392,6 +393,11 @@ export default function MyLocationsPage() {
                                   </span>
                                 </div>
                               </div>
+                            </TableCell>
+                            <TableCell className='py-4'>
+                              <span className='text-sm font-medium'>
+                                {location.radiusMeters} m
+                              </span>
                             </TableCell>
                             <TableCell className='py-4'>
                               <div className='flex items-center gap-1.5 flex-wrap'>
