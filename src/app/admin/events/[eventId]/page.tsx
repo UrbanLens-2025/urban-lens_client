@@ -6,27 +6,28 @@ import { useEventByIdForAdmin } from '@/hooks/admin/useEventByIdForAdmin';
 import {
   ArrowLeft,
   Calendar,
-  CalendarDays,
-  Loader2,
   MapPin,
   User,
-  Mail,
   Globe,
   Tag,
-  ImageIcon,
-  AlertCircle,
   FileText,
+  Clock,
+  Users,
+  Ticket,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DisplayTags } from '@/components/shared/DisplayTags';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
 import type React from 'react';
-import { ImageViewer } from '@/components/shared/ImageViewer';
-import { useState } from 'react';
-import { formatDate, formatDateTime } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import Image from 'next/image';
+import LoadingCustom from '@/components/shared/LoadingCustom';
+import ErrorCustom from '@/components/shared/ErrorCustom';
 
 function InfoRow({
   label,
@@ -39,13 +40,46 @@ function InfoRow({
 }) {
   if (!value) return null;
   return (
-    <div className='flex gap-3'>
+    <div className='flex gap-3 py-2'>
       {Icon && (
         <Icon className='h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5' />
       )}
-      <div className='flex-1'>
-        <p className='text-sm font-semibold text-muted-foreground'>{label}</p>
-        <div className='text-base text-foreground'>{value}</div>
+      <div className='flex-1 min-w-0'>
+        <p className='text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1'>
+          {label}
+        </p>
+        <div className='text-sm text-foreground break-words'>{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  variant = 'default',
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string | number;
+  variant?: 'default' | 'success' | 'warning' | 'error';
+}) {
+  const variantColors = {
+    default: 'bg-blue-50 text-blue-600 border-blue-100',
+    success: 'bg-green-50 text-green-600 border-green-100',
+    warning: 'bg-amber-50 text-amber-600 border-amber-100',
+    error: 'bg-red-50 text-red-600 border-red-100',
+  };
+
+  return (
+    <div className='flex items-center gap-3 p-4 rounded-lg border bg-card'>
+      <div className={`p-3 rounded-lg ${variantColors[variant]}`}>
+        <Icon className='h-5 w-5' />
+      </div>
+      <div className='flex-1 min-w-0'>
+        <p className='text-xs text-muted-foreground font-medium'>{label}</p>
+        <p className='text-lg font-semibold truncate'>{value}</p>
       </div>
     </div>
   );
@@ -58,412 +92,512 @@ export default function AdminEventDetailsPage({
 }) {
   const { eventId } = use(params);
   const router = useRouter();
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [currentImageSrc, setCurrentImageSrc] = useState('');
-  const [currentImageAlt, setCurrentImageAlt] = useState('');
-
-  const handleImageClick = (src: string, alt: string) => {
-    setCurrentImageSrc(src);
-    setCurrentImageAlt(alt);
-    setIsImageViewerOpen(true);
-  };
-
-  const {
-    data: event,
-    isLoading,
-    isError,
-  } = useEventByIdForAdmin(eventId);
+  const { data: event, isLoading, isError } = useEventByIdForAdmin(eventId);
+  console.log('🚀 ~ AdminEventDetailsPage ~ event:', event);
 
   if (isLoading) {
-    return (
-      <div className='container mx-auto py-6 space-y-6'>
-        <div className='flex items-center gap-4'>
-          <div className='h-10 w-10 rounded-md bg-muted animate-pulse' />
-          <div className='space-y-2 flex-1'>
-            <div className='h-8 w-64 bg-muted rounded animate-pulse' />
-            <div className='h-4 w-96 bg-muted rounded animate-pulse' />
-          </div>
-        </div>
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-          <div className='lg:col-span-2 space-y-6'>
-            {[1, 2].map((i) => (
-              <Card key={i} className='border-2'>
-                <CardHeader>
-                  <div className='h-6 w-48 bg-muted rounded animate-pulse' />
-                </CardHeader>
-                <CardContent>
-                  <div className='h-32 w-full bg-muted rounded animate-pulse' />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className='space-y-6'>
-            {[1, 2].map((i) => (
-              <Card key={i} className='border-2'>
-                <CardHeader>
-                  <div className='h-6 w-32 bg-muted rounded animate-pulse' />
-                </CardHeader>
-                <CardContent>
-                  <div className='space-y-3'>
-                    <div className='h-16 bg-muted rounded animate-pulse' />
-                    <div className='h-16 bg-muted rounded animate-pulse' />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingCustom />;
   }
 
   if (isError || !event) {
-    return (
-      <div className='container mx-auto py-6'>
-        <Card className='border-destructive/50 shadow-lg'>
-          <CardContent className='pt-6'>
-            <div className='flex flex-col items-center justify-center py-12 text-center'>
-              <div className='p-4 rounded-full bg-destructive/10 mb-4'>
-                <AlertCircle className='h-12 w-12 text-destructive' />
-              </div>
-              <h2 className='text-2xl font-bold mb-2'>Error Loading Event</h2>
-              <p className='text-muted-foreground mb-6 max-w-md'>
-                We couldn't load the event details. This might be due to a network error or the event may not exist.
-              </p>
-              <div className='flex gap-3'>
-                <Button variant='outline' onClick={() => router.back()}>
-                  <ArrowLeft className='h-4 w-4 mr-2' />
-                  Go Back
-                </Button>
-                <Button onClick={() => window.location.reload()}>
-                  <Loader2 className='h-4 w-4 mr-2' />
-                  Retry
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <ErrorCustom />;
   }
 
   const getStatusBadge = (status: string) => {
     const statusUpper = status?.toUpperCase();
     if (statusUpper === 'PUBLISHED') {
-      return <Badge className='bg-green-500 hover:bg-green-600'>Published</Badge>;
+      return (
+        <Badge className='bg-green-500 hover:bg-green-600 flex items-center gap-1'>
+          <CheckCircle2 className='h-3 w-3' />
+          Published
+        </Badge>
+      );
     }
     if (statusUpper === 'DRAFT') {
-      return <Badge variant='secondary'>Draft</Badge>;
+      return (
+        <Badge variant='secondary' className='flex items-center gap-1'>
+          <Clock className='h-3 w-3' />
+          Draft
+        </Badge>
+      );
     }
     if (statusUpper === 'CANCELLED') {
-      return <Badge variant='destructive'>Cancelled</Badge>;
+      return (
+        <Badge variant='destructive' className='flex items-center gap-1'>
+          <XCircle className='h-3 w-3' />
+          Cancelled
+        </Badge>
+      );
     }
     return <Badge variant='outline'>{status || 'Unknown'}</Badge>;
   };
 
   return (
-    <div className='container mx-auto py-6 space-y-6 max-w-6xl'>
-      {/* Enhanced Header */}
-      <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b'>
-        <div className='flex items-center gap-4 flex-1'>
-          <Button 
-            variant='ghost' 
-            size='icon' 
-            onClick={() => router.back()}
-            className='hover:bg-muted'
-          >
-            <ArrowLeft className='h-5 w-5' />
-          </Button>
-          <div className='flex-1'>
-            <div className='flex items-center gap-3 mb-2'>
-              <h1 className='text-3xl font-bold tracking-tight'>
-                {event.displayName}
-              </h1>
-              {getStatusBadge(event.status)}
+    <div className='min-h-screen bg-gradient-to-b from-muted/30 to-background p-4 w-full'>
+      <div>
+        {/* Header with Cover Image */}
+        <div className='relative'>
+          {event.coverUrl && (
+            <div className='relative h-64 rounded-xl overflow-hidden mb-6 shadow-lg'>
+              <Image
+                src={event.coverUrl}
+                alt='Event Cover'
+                fill
+                className='object-cover'
+              />
+              <div className='absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent' />
+              <Button
+                variant='secondary'
+                size='icon'
+                onClick={() => router.back()}
+                className='absolute top-4 left-4 backdrop-blur-sm bg-white/90 hover:bg-white'
+              >
+                <ArrowLeft className='h-5 w-5' />
+              </Button>
             </div>
-            <p className='text-muted-foreground'>Event Details</p>
+          )}
+
+          {!event.coverUrl && (
+            <Button
+              variant='ghost'
+              size='icon'
+              onClick={() => router.back()}
+              className='mb-4'
+            >
+              <ArrowLeft className='h-5 w-5' />
+            </Button>
+          )}
+
+          {/* Title Section */}
+          <div className='flex flex-col sm:flex-row items-start gap-4 mb-6'>
+            {event.avatarUrl && (
+              <div className='relative w-24 h-24 rounded-xl overflow-hidden border-4 border-background shadow-lg cursor-pointer flex-shrink-0'>
+                <Image
+                  src={event.avatarUrl}
+                  alt='Event Avatar'
+                  fill
+                  className='object-cover'
+                />
+              </div>
+            )}
+            <div className='flex-1'>
+              <div className='flex items-start gap-3 mb-2'>
+                <h1 className='text-3xl font-bold tracking-tight flex-1'>
+                  {event.displayName}
+                </h1>
+                {getStatusBadge(event.status)}
+              </div>
+              <div className='flex flex-wrap items-center gap-3 text-sm text-muted-foreground'>
+                <div className='flex items-center gap-1.5'>
+                  <Calendar className='h-4 w-4' />
+                  {formatDate(event.startDate!)}
+                </div>
+                {event.endDate && (
+                  <>
+                    <span>→</span>
+                    <div className='flex items-center gap-1.5'>
+                      {formatDate(event.endDate!)}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+        {/* Tabs to switch between sections, similar to creator view */}
+        <Tabs defaultValue='overview' className='space-y-4'>
+          <TabsList>
+            <TabsTrigger value='overview'>Overview</TabsTrigger>
+            <TabsTrigger value='tickets'>Tickets</TabsTrigger>
+            <TabsTrigger value='reports'>Reports</TabsTrigger>
+          </TabsList>
 
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-        {/* Main Content */}
-        <div className='lg:col-span-2 space-y-6'>
-          {/* Event Images */}
-          {(event.coverUrl || event.avatarUrl) && (
-            <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
-              <CardHeader className='bg-gradient-to-r from-primary/5 to-transparent border-b'>
-                <CardTitle className='flex items-center gap-2'>
-                  <div className='p-2 rounded-lg bg-primary/10'>
-                    <ImageIcon className='h-5 w-5 text-primary' />
-                  </div>
-                  Event Images
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  {event.coverUrl && (
-                    <div
-                      className='relative aspect-video rounded-lg overflow-hidden cursor-pointer border'
-                      onClick={() =>
-                        handleImageClick(event.coverUrl!, 'Event Cover')
-                      }
-                    >
-                      <Image
-                        src={event.coverUrl}
-                        alt='Event Cover'
-                        fill
-                        className='object-cover'
-                      />
-                      <div className='absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center'>
-                        <ImageIcon className='h-8 w-8 text-white opacity-0 hover:opacity-100 transition-opacity' />
+          <TabsContent value='overview' className='space-y-6'>
+            <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+              {/* Main Content */}
+              <div className='lg:col-span-2 space-y-6'>
+                {/* Description */}
+                {event.description && (
+                  <Card className='shadow-sm'>
+                    <CardHeader>
+                      <CardTitle className='text-lg flex items-center gap-2'>
+                        <FileText className='h-5 w-5 text-primary' />
+                        Description
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className='text-muted-foreground whitespace-pre-wrap leading-relaxed'>
+                        {event.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Location */}
+                {event.location && (
+                  <Card className='shadow-sm'>
+                    <CardHeader>
+                      <CardTitle className='text-lg flex items-center gap-2'>
+                        <MapPin className='h-5 w-5 text-primary' />
+                        Location
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className='space-y-4'>
+                      {/* Top: image + basic info */}
+                      <div className='flex flex-col md:flex-row gap-4'>
+                        {event.location.imageUrl &&
+                          event.location.imageUrl.length > 0 && (
+                            <div className='relative w-full md:w-48 h-32 rounded-lg overflow-hidden border bg-muted'>
+                              <Image
+                                src={event.location.imageUrl[0]}
+                                alt={event.location.name}
+                                fill
+                                className='object-cover'
+                              />
+                            </div>
+                          )}
+                        <div className='flex-1 space-y-2'>
+                          <InfoRow
+                            label='Location Name'
+                            value={
+                              <Link
+                                href={`/admin/locations/${event.location.id}`}
+                                className='hover:underline text-primary font-medium'
+                              >
+                                {event.location.name}
+                              </Link>
+                            }
+                          />
+                          {event.location.addressLine && (
+                            <InfoRow
+                              label='Address'
+                              value={
+                                event.location.addressLine +
+                                (event.location.addressLevel1
+                                  ? ' ' + event.location.addressLevel1
+                                  : ',') +
+                                (event.location.addressLevel2
+                                  ? ', ' + event.location.addressLevel2
+                                  : '')
+                              }
+                            />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {event.avatarUrl && (
-                    <div
-                      className='relative aspect-square rounded-lg overflow-hidden cursor-pointer border'
-                      onClick={() =>
-                        handleImageClick(event.avatarUrl!, 'Event Avatar')
-                      }
-                    >
-                      <Image
-                        src={event.avatarUrl}
-                        alt='Event Avatar'
-                        fill
-                        className='object-cover'
-                      />
-                      <div className='absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center'>
-                        <ImageIcon className='h-8 w-8 text-white opacity-0 hover:opacity-100 transition-opacity' />
+
+                      {/* Ownership / Visibility */}
+                      <div className='grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t'>
+                        <InfoRow
+                          label='Ownership'
+                          value={
+                            event.location.ownershipType === 'OWNED_BY_BUSINESS'
+                              ? 'Owned by business'
+                              : event.location.ownershipType || 'N/A'
+                          }
+                        />
+                        <InfoRow
+                          label='Average rating'
+                          value={event.location.averageRating?.toFixed(1) || 0}
+                        />
+                        <InfoRow
+                          label='Total reviews'
+                          value={event.location.totalReviews || 0}
+                        />
+                        <InfoRow
+                          label='Total check-ins'
+                          value={event.location.totalCheckIns || 0}
+                        />
+                        <InfoRow
+                          label='Total posts'
+                          value={event.location.totalPosts || 0}
+                        />
                       </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Event Description */}
-          {event.description && (
-            <Card className='border-2 shadow-sm hover:shadow-md transition-shadow'>
-              <CardHeader className='bg-gradient-to-r from-primary/5 to-transparent border-b'>
-                <CardTitle className='flex items-center gap-2'>
-                  <div className='p-2 rounded-lg bg-primary/10'>
-                    <FileText className='h-5 w-5 text-primary' />
+                      {/* Stats */}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Social Links */}
+                {event.social && event.social.length > 0 && (
+                  <Card className='shadow-sm'>
+                    <CardHeader>
+                      <CardTitle className='text-lg flex items-center gap-2'>
+                        <Globe className='h-5 w-5 text-primary' />
+                        Social Links
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className='space-y-2'>
+                        {event.social.map((link: any, index: number) => (
+                          <a
+                            key={index}
+                            href={link.url}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='flex items-center gap-2 p-2 rounded-md hover:bg-muted transition-colors'
+                          >
+                            <Globe className='h-4 w-4 text-muted-foreground' />
+                            <span className='text-primary hover:underline flex-1'>
+                              {link.platform}
+                            </span>
+                            {link.isMain && (
+                              <Badge variant='outline' className='text-xs'>
+                                Main
+                              </Badge>
+                            )}
+                          </a>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Terms and Policies */}
+                {(event.termsAndConditions || event.refundPolicy) && (
+                  <div className='grid grid-cols-1 gap-6'>
+                    {event.termsAndConditions && (
+                      <Card className='shadow-sm'>
+                        <CardHeader>
+                          <CardTitle className='text-lg'>
+                            Terms and Conditions
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className='text-sm text-muted-foreground whitespace-pre-wrap'>
+                            {event.termsAndConditions}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {event.refundPolicy && (
+                      <Card className='shadow-sm'>
+                        <CardHeader>
+                          <CardTitle className='text-lg'>
+                            Refund Policy
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className='text-sm text-muted-foreground whitespace-pre-wrap'>
+                            {event.refundPolicy}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
-                  Description
+                )}
+              </div>
+
+              {/* Sidebar */}
+              <div className='space-y-6'>
+                {/* Creator Info */}
+                {event.createdBy && (
+                  <Card className='shadow-sm'>
+                    <CardHeader>
+                      <CardTitle className='text-lg flex items-center gap-2'>
+                        <User className='h-5 w-5 text-primary' />
+                        Creator
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className='space-y-3'>
+                      <InfoRow
+                        label='Name'
+                        value={
+                          `${event.createdBy.firstName || ''} ${
+                            event.createdBy.lastName || ''
+                          }`.trim() || 'N/A'
+                        }
+                      />
+                      {event.createdBy.email && (
+                        <InfoRow label='Email' value={event.createdBy.email} />
+                      )}
+                      {event.createdBy.phoneNumber && (
+                        <InfoRow
+                          label='Phone'
+                          value={event.createdBy.phoneNumber}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Tags */}
+                {event.tags && event.tags.length > 0 && (
+                  <Card className='shadow-sm'>
+                    <CardHeader>
+                      <CardTitle className='text-lg flex items-center gap-2'>
+                        <Tag className='h-5 w-5 text-primary' />
+                        Tags
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <DisplayTags tags={event.tags} />
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value='tickets' className='space-y-6'>
+            <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+              <div className='lg:col-span-2 space-y-6'>
+                {event.tickets && event.tickets.length > 0 ? (
+                  <Card className='shadow-sm'>
+                    <CardHeader>
+                      <CardTitle className='text-lg flex items-center gap-2'>
+                        <Ticket className='h-5 w-5 text-primary' />
+                        Tickets ({event.tickets.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className='space-y-3'>
+                      {event.tickets.map((ticket: any) => (
+                        <div
+                          key={ticket.id}
+                          className='p-4 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors'
+                        >
+                          <div className='flex items-start justify-between gap-4 mb-3'>
+                            <div className='flex-1'>
+                              <h4 className='font-semibold mb-1'>
+                                {ticket.displayName}
+                              </h4>
+                              {ticket.description && (
+                                <p className='text-sm text-muted-foreground'>
+                                  {ticket.description}
+                                </p>
+                              )}
+                            </div>
+                            <div className='text-right'>
+                              <p className='text-lg font-bold text-primary'>
+                                {Number(ticket.price).toLocaleString()}{' '}
+                                {ticket.currency}
+                              </p>
+                            </div>
+                          </div>
+                          <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs'>
+                            <div>
+                              <p className='text-muted-foreground mb-0.5'>
+                                Available
+                              </p>
+                              <p className='font-semibold'>
+                                {ticket.totalQuantityAvailable}/
+                                {ticket.totalQuantity}
+                              </p>
+                            </div>
+                            <div>
+                              <p className='text-muted-foreground mb-0.5'>
+                                Reserved
+                              </p>
+                              <p className='font-semibold'>
+                                {ticket.quantityReserved}
+                              </p>
+                            </div>
+                            <div>
+                              <p className='text-muted-foreground mb-0.5'>
+                                Min/Max Order
+                              </p>
+                              <p className='font-semibold'>
+                                {ticket.minQuantityPerOrder}-
+                                {ticket.maxQuantityPerOrder}
+                              </p>
+                            </div>
+                            <div>
+                              <p className='text-muted-foreground mb-0.5'>
+                                Status
+                              </p>
+                              <Badge
+                                variant={
+                                  ticket.isActive ? 'default' : 'secondary'
+                                }
+                                className='text-xs'
+                              >
+                                {ticket.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className='shadow-sm'>
+                    <CardContent className='py-10 text-center text-muted-foreground text-sm'>
+                      This event has no tickets.
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Reuse sidebar for context */}
+              <div className='space-y-6'>
+                {/* Creator Info */}
+                {event.createdBy && (
+                  <Card className='shadow-sm'>
+                    <CardHeader>
+                      <CardTitle className='text-lg flex items-center gap-2'>
+                        <User className='h-5 w-5 text-primary' />
+                        Creator
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className='space-y-3'>
+                      <InfoRow
+                        label='Name'
+                        value={
+                          `${event.createdBy.firstName || ''} ${
+                            event.createdBy.lastName || ''
+                          }`.trim() || 'N/A'
+                        }
+                      />
+                      {event.createdBy.email && (
+                        <InfoRow label='Email' value={event.createdBy.email} />
+                      )}
+                      {event.createdBy.phoneNumber && (
+                        <InfoRow
+                          label='Phone'
+                          value={event.createdBy.phoneNumber}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Actions */}
+                <Card className='shadow-sm'>
+                  <CardHeader>
+                    <CardTitle className='text-lg'>Actions</CardTitle>
+                  </CardHeader>
+                  <CardContent className='space-y-2'>
+                    <Button variant='default' className='w-full' asChild>
+                      <Link href={`/dashboard/creator/events/${event.id}`}>
+                        View Creator View
+                      </Link>
+                    </Button>
+                    <Button variant='outline' className='w-full'>
+                      Edit Event
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value='reports' className='space-y-6'>
+            <Card className='shadow-sm'>
+              <CardHeader>
+                <CardTitle className='text-lg flex items-center gap-2'>
+                  <FileText className='h-5 w-5 text-primary' />
+                  Reports
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className='text-muted-foreground whitespace-pre-wrap'>
-                  {event.description}
+                <p className='text-muted-foreground whitespace-pre-wrap leading-relaxed'>
+                  No reports found for this event.
                 </p>
               </CardContent>
             </Card>
-          )}
-
-          {/* Location Information */}
-          {event.location && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Location</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                <InfoRow
-                  label='Location Name'
-                  value={
-                    <Link
-                      href={`/admin/locations/${event.location.id}`}
-                      className='hover:underline text-primary'
-                    >
-                      {event.location.name}
-                    </Link>
-                  }
-                  icon={MapPin}
-                />
-                {event.location.addressLine && (
-                  <InfoRow
-                    label='Address'
-                    value={event.location.addressLine}
-                    icon={MapPin}
-                  />
-                )}
-                {event.location.latitude && event.location.longitude && (
-                  <div className='mt-4'>
-                    <p className='text-sm font-semibold text-muted-foreground mb-2'>
-                      Coordinates
-                    </p>
-                    <p className='text-sm'>
-                      {event.location.latitude}, {event.location.longitude}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Terms and Conditions */}
-          {event.termsAndConditions && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Terms and Conditions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className='text-muted-foreground whitespace-pre-wrap'>
-                  {event.termsAndConditions}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Refund Policy */}
-          {event.refundPolicy && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Refund Policy</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className='text-muted-foreground whitespace-pre-wrap'>
-                  {event.refundPolicy}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Social Links */}
-          {event.social && event.social.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Social Links</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='space-y-2'>
-                  {event.social.map((link, index) => (
-                    <div key={index} className='flex items-center gap-2'>
-                      <Globe className='h-4 w-4 text-muted-foreground' />
-                      <a
-                        href={link.url}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='text-primary hover:underline'
-                      >
-                        {link.platform}
-                        {link.isMain && (
-                          <Badge variant='outline' className='ml-2'>
-                            Main
-                          </Badge>
-                        )}
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Sidebar */}
-        <div className='space-y-6'>
-          {/* Event Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Event Information</CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <InfoRow
-                label='Event ID'
-                value={<code className='text-xs'>{event.id}</code>}
-              />
-              <InfoRow
-                label='Status'
-                value={getStatusBadge(event.status)}
-              />
-              <InfoRow
-                label='Created At'
-                value={formatDateTime(event.createdAt)}
-                icon={Calendar}
-              />
-              <InfoRow
-                label='Updated At'
-                value={formatDateTime(event.updatedAt)}
-                icon={CalendarDays}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Creator Information */}
-          {event.createdBy && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Creator</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                <InfoRow
-                  label='Name'
-                  value={`${event.createdBy.firstName || ''} ${event.createdBy.lastName || ''}`.trim() || 'N/A'}
-                  icon={User}
-                />
-                {event.createdBy.email && (
-                  <InfoRow
-                    label='Email'
-                    value={event.createdBy.email}
-                    icon={Mail}
-                  />
-                )}
-                {event.createdBy.phoneNumber && (
-                  <InfoRow
-                    label='Phone'
-                    value={event.createdBy.phoneNumber}
-                    icon={Mail}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Tags */}
-          {event.tags && event.tags.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className='flex items-center gap-2'>
-                  <Tag className='h-5 w-5' />
-                  Tags
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DisplayTags tags={event.tags} />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions</CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-2'>
-              <Button
-                variant='outline'
-                className='w-full'
-                asChild
-              >
-                <Link href={`/dashboard/creator/events/${event.id}`}>
-                  View Creator View
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
-
-      {/* Image Viewer */}
-      <ImageViewer
-        isOpen={isImageViewerOpen}
-        onClose={() => setIsImageViewerOpen(false)}
-        src={currentImageSrc}
-        alt={currentImageAlt}
-      />
     </div>
   );
 }
-

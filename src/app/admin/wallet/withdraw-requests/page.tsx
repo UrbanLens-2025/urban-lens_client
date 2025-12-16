@@ -474,13 +474,7 @@ export default function AdminWithdrawRequestsPage() {
 
       {/* Filters */}
       <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
-        <CardHeader className='pb-4 border-b border-primary/10'>
-          <CardTitle className='flex items-center gap-2'>
-            <Search className='h-5 w-5' />
-            Filters & Search
-          </CardTitle>
-        </CardHeader>
-        <CardContent className='pt-6'>
+        <CardContent>
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='relative'>
               <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
@@ -497,7 +491,7 @@ export default function AdminWithdrawRequestsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All Status</SelectItem>
-                <SelectItem value='pending'>Pending & Ready</SelectItem>
+                <SelectItem value='pending'>Pending </SelectItem>
                 <SelectItem value='processing'>Processing</SelectItem>
                 <SelectItem value='COMPLETED'>Completed</SelectItem>
                 <SelectItem value='TRANSFERRED'>Transferred</SelectItem>

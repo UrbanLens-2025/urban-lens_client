@@ -43,17 +43,23 @@ import { Label } from '@/components/ui/label';
 import {
   IconSearch,
   IconFilter,
-  IconFlag,
-  IconClock,
-  IconCheck,
-  IconX,
   IconRefresh,
   IconAlertTriangle,
   IconUser,
   IconFileText,
   IconCalendar,
+  IconCheck,
+  IconFlag,
 } from '@tabler/icons-react';
-import { Loader2 } from 'lucide-react';
+import {
+  CheckCircle,
+  Clock,
+  Flag,
+  FlagIcon,
+  FlagOffIcon,
+  Loader2,
+  XCircle,
+} from 'lucide-react';
 import {
   Report,
   ReportStatus,
@@ -75,6 +81,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
+import { PageContainer } from '@/components/shared';
+import StatisticCard from '@/components/admin/StatisticCard';
 
 function getStatusBadge(status: ReportStatus) {
   switch (status) {
@@ -84,18 +92,8 @@ function getStatusBadge(status: ReportStatus) {
           variant='outline'
           className='bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700'
         >
-          <IconClock className='h-3 w-3 mr-1' />
+          <Clock className='h-3 w-3 mr-1' />
           Pending
-        </Badge>
-      );
-    case 'IN_PROGRESS':
-      return (
-        <Badge
-          variant='outline'
-          className='bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-700'
-        >
-          <IconAlertTriangle className='h-3 w-3 mr-1' />
-          In Progress
         </Badge>
       );
     case 'RESOLVED':
@@ -104,7 +102,7 @@ function getStatusBadge(status: ReportStatus) {
           variant='outline'
           className='bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700'
         >
-          <IconCheck className='h-3 w-3 mr-1' />
+          <CheckCircle className='h-3 w-3 mr-1' />
           Resolved
         </Badge>
       );
@@ -114,7 +112,7 @@ function getStatusBadge(status: ReportStatus) {
           variant='outline'
           className='bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700'
         >
-          <IconX className='h-3 w-3 mr-1' />
+          <XCircle className='h-3 w-3 mr-1' />
           Rejected
         </Badge>
       );
@@ -396,119 +394,72 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className='space-y-6'>
+    <PageContainer>
       {/* Statistics Cards */}
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4'>
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-blue-500 cursor-pointer'
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10'>
+        <div
+          className='cursor-pointer'
           onClick={() => {
             setStatusFilter('all');
             setPage(1);
           }}
         >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Total Reports</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center'>
-              <IconFlag className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold'>{stats.total}</div>
-            <p className='text-xs text-muted-foreground mt-1'>All reports</p>
-          </CardContent>
-        </Card>
+          <StatisticCard
+            title='Total Reports'
+            subtitle='All reports'
+            value={stats.total}
+            icon={FlagIcon}
+            iconColorClass='blue'
+          />
+        </div>
 
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-yellow-500 cursor-pointer'
+        <div
+          className='cursor-pointer'
           onClick={() => {
             setStatusFilter('PENDING');
             setPage(1);
           }}
         >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Pending</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-950 flex items-center justify-center'>
-              <IconClock className='h-5 w-5 text-yellow-600 dark:text-yellow-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold text-yellow-600 dark:text-yellow-400'>
-              {stats.pending}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              Awaiting review
-            </p>
-          </CardContent>
-        </Card>
+          <StatisticCard
+            title='Pending'
+            subtitle='Awaiting review'
+            value={stats.pending}
+            icon={Clock}
+            iconColorClass='amber'
+          />
+        </div>
 
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-blue-500 cursor-pointer'
-          onClick={() => {
-            setStatusFilter('IN_PROGRESS');
-            setPage(1);
-          }}
-        >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>In Progress</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center'>
-              <IconAlertTriangle className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold text-blue-600 dark:text-blue-400'>
-              {stats.inProgress}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              Being processed
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-green-500 cursor-pointer'
+        <div
+          className='cursor-pointer'
           onClick={() => {
             setStatusFilter('RESOLVED');
             setPage(1);
           }}
         >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Resolved</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center'>
-              <IconCheck className='h-5 w-5 text-green-600 dark:text-green-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold text-green-600 dark:text-green-400'>
-              {stats.resolved}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              Successfully resolved
-            </p>
-          </CardContent>
-        </Card>
+          <StatisticCard
+            title='Resolved'
+            subtitle='Successfully resolved'
+            value={stats.resolved}
+            icon={CheckCircle}
+            iconColorClass='green'
+          />
+        </div>
 
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-red-500 cursor-pointer'
+        <div
+          className='cursor-pointer'
           onClick={() => {
             setStatusFilter('REJECTED');
             setPage(1);
           }}
         >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Rejected</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center'>
-              <IconX className='h-5 w-5 text-red-600 dark:text-red-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold text-red-600 dark:text-red-400'>
-              {stats.rejected}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              Rejected reports
-            </p>
-          </CardContent>
-        </Card>
+          <StatisticCard
+            title='Rejected'
+            subtitle='Rejected reports'
+            value={stats.rejected}
+            icon={XCircle}
+            iconColorClass='red'
+          />
+        </div>
       </div>
 
       {/* Two Column Layout */}
@@ -544,7 +495,7 @@ export default function ReportsPage() {
                 }}
               />
             </div>
-            <div className='flex item-center'>
+            <div className='flex item-center justify-between'>
               <Select
                 value={statusFilter}
                 onValueChange={(value) => {
@@ -554,7 +505,7 @@ export default function ReportsPage() {
               >
                 <SelectTrigger>
                   <div className='flex items-center gap-2'>
-                    <IconFilter className='h-4 w-4' />
+                    <IconFilter className='h-3 w-3' />
                     <SelectValue placeholder='Filter by Status' />
                   </div>
                 </SelectTrigger>
@@ -601,7 +552,7 @@ export default function ReportsPage() {
             ) : reports.length === 0 ? (
               <div className='flex items-center justify-center h-64 text-muted-foreground'>
                 <div className='text-center'>
-                  <IconFlag className='h-12 w-12 mx-auto mb-2 opacity-50' />
+                  <FlagOffIcon className='h-12 w-12 mx-auto mb-2 opacity-50' />
                   <p>No reports found</p>
                 </div>
               </div>
@@ -676,7 +627,6 @@ export default function ReportsPage() {
             </div>
           )}
         </div>
-
         {/* Right Column - Details Panel */}
         <div className='lg:col-span-7 xl:col-span-8 border rounded-lg bg-card overflow-hidden'>
           {selectedReport ? (
@@ -1048,6 +998,6 @@ export default function ReportsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   );
 }

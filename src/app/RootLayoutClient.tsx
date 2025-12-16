@@ -32,10 +32,16 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   }, [isLoading, user, router]);
 
   // While determining auth or redirect target, show an app-level splash to avoid layout flash
-  const requiresOnboarding = !!user && (user.role === 'BUSINESS_OWNER' || user.role === 'EVENT_CREATOR') && !user.hasOnboarded;
-  const isPendingAfterOnboard = !!user && user.hasOnboarded && user.businessProfile?.status === 'PENDING';
-  const redirectingToOnboarding = !isLoading && requiresOnboarding && !pathname.startsWith('/onboarding');
-  const redirectingToPending = !isLoading && isPendingAfterOnboard && pathname !== '/onboarding/pending';
+  const requiresOnboarding =
+    !!user &&
+    (user.role === 'BUSINESS_OWNER' || user.role === 'EVENT_CREATOR') &&
+    !user.hasOnboarded;
+  const isPendingAfterOnboard =
+    !!user && user.hasOnboarded && user.businessProfile?.status === 'PENDING';
+  const redirectingToOnboarding =
+    !isLoading && requiresOnboarding && !pathname.startsWith('/onboarding');
+  const redirectingToPending =
+    !isLoading && isPendingAfterOnboard && pathname !== '/onboarding/pending';
 
   // Check if dark mode is active
   const [isDarkMode, setIsDarkMode] = React.useState(false);
@@ -93,7 +99,9 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const sidebarBgColor = isDarkMode ? getDarkBackgroundColor() : getBackgroundColor();
+  const sidebarBgColor = isDarkMode
+    ? getDarkBackgroundColor()
+    : getBackgroundColor();
   const sidebarContentBgColor = () => {
     if (isDarkMode) {
       switch (user.role) {
@@ -161,18 +169,20 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         } as React.CSSProperties
       }
     >
-      <AppSidebar 
-        variant='inset' 
-        className="[&_[data-slot=sidebar-inner]]:!bg-transparent"
-        style={{
-          '--sidebar-bg-color': sidebarContentBgColor(),
-          '--sidebar-active-bg': getActiveButtonBgColor(),
-          '--sidebar-active-text': getActiveButtonTextColor(),
-        } as React.CSSProperties & { 
-          '--sidebar-bg-color': string;
-          '--sidebar-active-bg': string;
-          '--sidebar-active-text': string;
-        }}
+      <AppSidebar
+        variant='inset'
+        className='[&_[data-slot=sidebar-inner]]:!bg-transparent'
+        style={
+          {
+            '--sidebar-bg-color': sidebarContentBgColor(),
+            '--sidebar-active-bg': getActiveButtonBgColor(),
+            '--sidebar-active-text': getActiveButtonTextColor(),
+          } as React.CSSProperties & {
+            '--sidebar-bg-color': string;
+            '--sidebar-active-bg': string;
+            '--sidebar-active-text': string;
+          }
+        }
       />
       <SidebarInset>
         <SiteHeader />
@@ -199,7 +209,7 @@ export default function RootLayoutClient({
     pathname.startsWith('/signup') ||
     pathname.startsWith('/verify') ||
     pathname.startsWith('/onboarding');
-  
+
   // Public pages that don't require authentication
   const isPublicPage = pathname.startsWith('/sepay-return');
 

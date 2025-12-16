@@ -54,11 +54,6 @@ const adminNavGroups = [
     groupLabel: 'Content Management',
     items: [
       { title: 'Locations', url: '/admin/locations', icon: IconMapPin },
-      {
-        title: 'Public new Location',
-        url: '/admin/locations/create',
-        icon: IconBuildingPlus,
-      },
       { title: 'Events', url: '/admin/events', icon: IconCalendar },
       // { title: 'Tags', url: '/admin/tags', icon: IconTag },
     ],
@@ -80,7 +75,7 @@ const adminNavGroups = [
     ],
   },
   {
-    groupLabel: 'Financial',
+    groupLabel: 'Wallets',
     items: [
       { title: 'Wallet', url: '/admin/wallet', icon: IconWallet },
       {

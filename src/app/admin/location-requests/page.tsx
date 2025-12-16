@@ -37,7 +37,14 @@ import {
   IconPhone,
 } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import {
+  CheckCircle,
+  Clock,
+  Loader2,
+  MapPin,
+  MapPinOff,
+  XCircle,
+} from 'lucide-react';
 import { LocationRequest, LocationStatus } from '@/types';
 import { useLocationAdminRequests } from '@/hooks/admin/useLocationAdminRequests';
 import { useLocationRequestByIdForAdmin } from '@/hooks/admin/useLocationRequestByIdForAdmin';
@@ -56,6 +63,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import StatisticCard from '@/components/admin/StatisticCard';
 
 type StatusFilter = 'all' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -284,97 +292,37 @@ export default function LocationRequestsPage() {
     <div className='space-y-6'>
       {/* Statistics Cards */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-blue-500 cursor-pointer'
-          onClick={() => {
-            setStatusFilter('all');
-            setPage(1);
-          }}
-        >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>
-              Total Requests
-            </CardTitle>
-            <div className='h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center'>
-              <IconMapPin className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold'>{stats.total}</div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              All location requests
-            </p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Total Requests'
+          subtitle='All location requests'
+          value={stats.total}
+          icon={MapPin}
+          iconColorClass='blue'
+        />
 
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-yellow-500 cursor-pointer'
-          onClick={() => {
-            setStatusFilter('PENDING');
-            setPage(1);
-          }}
-        >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Pending</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-950 flex items-center justify-center'>
-              <IconClock className='h-5 w-5 text-yellow-600 dark:text-yellow-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold text-yellow-600 dark:text-yellow-400'>
-              {stats.pending}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              Awaiting review
-            </p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Pending'
+          subtitle='Awaiting review'
+          value={stats.pending}
+          icon={Clock}
+          iconColorClass='amber'
+        />
 
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-green-500 cursor-pointer'
-          onClick={() => {
-            setStatusFilter('APPROVED');
-            setPage(1);
-          }}
-        >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Approved</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center'>
-              <IconCheck className='h-5 w-5 text-green-600 dark:text-green-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold text-green-600 dark:text-green-400'>
-              {stats.approved}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              Approved requests
-            </p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Approved'
+          subtitle='Approved requests'
+          value={stats.approved}
+          icon={CheckCircle}
+          iconColorClass='green'
+        />
 
-        <Card
-          className='hover:shadow-md transition-shadow border-l-4 border-l-red-500 cursor-pointer'
-          onClick={() => {
-            setStatusFilter('REJECTED');
-            setPage(1);
-          }}
-        >
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Rejected</CardTitle>
-            <div className='h-10 w-10 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center'>
-              <IconX className='h-5 w-5 text-red-600 dark:text-red-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold text-red-600 dark:text-red-400'>
-              {stats.rejected}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              Rejected requests
-            </p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Rejected'
+          subtitle='Rejected requests'
+          value={stats.rejected}
+          icon={XCircle}
+          iconColorClass='red'
+        />
       </div>
 
       {/* Two Column Layout */}
@@ -444,7 +392,7 @@ export default function LocationRequestsPage() {
             ) : requests.length === 0 ? (
               <div className='flex items-center justify-center h-64 text-muted-foreground'>
                 <div className='text-center'>
-                  <IconMapPin className='h-12 w-12 mx-auto mb-2 opacity-50' />
+                  <MapPinOff className='h-12 w-12 mx-auto mb-2 opacity-50' />
                   <p>No requests found</p>
                 </div>
               </div>
@@ -786,7 +734,7 @@ export default function LocationRequestsPage() {
           ) : (
             <div className='h-full flex items-center justify-center text-muted-foreground'>
               <div className='text-center'>
-                <IconMapPin className='h-16 w-16 mx-auto mb-4 opacity-20' />
+                <MapPinOff className='h-16 w-16 mx-auto mb-4 opacity-20' />
                 <p className='text-lg font-medium'>Select a request</p>
                 <p className='text-sm mt-1'>
                   Choose a request from the list to view details

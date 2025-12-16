@@ -56,6 +56,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { formatShortDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
+import { PageContainer } from '@/components/shared';
+import StatisticCard from '@/components/admin/StatisticCard';
 
 export default function LocationDashboardPage() {
   const router = useRouter();
@@ -78,7 +80,7 @@ export default function LocationDashboardPage() {
   const [typeFilter, setTypeFilter] = useState<string>(
     searchParams.get('type') || 'all'
   );
-  const itemsPerPage = 8;
+  const itemsPerPage = 7;
 
   // Update URL when filters change
   useEffect(() => {
@@ -153,105 +155,66 @@ export default function LocationDashboardPage() {
   };
 
   return (
-    <div className='space-y-6'>
+    <PageContainer>
       {/* Statistics Cards */}
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-blue-500'>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>
-              Total Locations
-            </CardTitle>
-            <div className='h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center'>
-              <MapPin className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold'>
-              {locationStats.isLoading
-                ? '—'
-                : locationStats.total.toLocaleString()}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              {locations.length} on this page
-            </p>
-          </CardContent>
-        </Card>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10'>
+        <StatisticCard
+          title='Total Locations'
+          subtitle={`${locations.length} on this page`}
+          value={
+            locationStats.isLoading ? '—' : locationStats.total.toLocaleString()
+          }
+          icon={MapPin}
+          iconColorClass='blue'
+        />
 
-        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-orange-500'>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>
-              Business Locations
-            </CardTitle>
-            <div className='h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-950 flex items-center justify-center'>
-              <Building2 className='h-5 w-5 text-orange-600 dark:text-orange-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold'>
-              {locationStats.isLoading
-                ? '—'
-                : locationStats.business.toLocaleString()}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              {locationStats.total > 0
-                ? Math.round(
-                    (locationStats.business / locationStats.total) * 100
-                  )
-                : 0}
-              % of total
-            </p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Business Locations'
+          subtitle={`${
+            locationStats.total > 0
+              ? Math.round((locationStats.business / locationStats.total) * 100)
+              : 0
+          }% of total`}
+          value={
+            locationStats.isLoading
+              ? '—'
+              : locationStats.business.toLocaleString()
+          }
+          icon={Building2}
+          iconColorClass='amber'
+        />
 
-        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-purple-500'>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>
-              Public Locations
-            </CardTitle>
-            <div className='h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-950 flex items-center justify-center'>
-              <Globe className='h-5 w-5 text-purple-600 dark:text-purple-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold'>
-              {locationStats.isLoading
-                ? '—'
-                : locationStats.public.toLocaleString()}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              {locationStats.total > 0
-                ? Math.round((locationStats.public / locationStats.total) * 100)
-                : 0}
-              % of total
-            </p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Public Locations'
+          subtitle={`${
+            locationStats.total > 0
+              ? Math.round((locationStats.public / locationStats.total) * 100)
+              : 0
+          }% of total`}
+          value={
+            locationStats.isLoading
+              ? '—'
+              : locationStats.public.toLocaleString()
+          }
+          icon={Globe}
+          iconColorClass='purple'
+        />
 
-        <Card className='hover:shadow-md transition-shadow border-l-4 border-l-green-500'>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>
-              Visible on Map
-            </CardTitle>
-            <div className='h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center'>
-              <Eye className='h-5 w-5 text-green-600 dark:text-green-400' />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='text-3xl font-bold'>
-              {locationStats.isLoading
-                ? '—'
-                : locationStats.visible.toLocaleString()}
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              {locationStats.total > 0
-                ? Math.round(
-                    (locationStats.visible / locationStats.total) * 100
-                  )
-                : 0}
-              % of total
-            </p>
-          </CardContent>
-        </Card>
+        <StatisticCard
+          title='Visible on Map'
+          subtitle={`${
+            locationStats.total > 0
+              ? Math.round((locationStats.visible / locationStats.total) * 100)
+              : 0
+          }% of total`}
+          value={
+            locationStats.isLoading
+              ? '—'
+              : locationStats.visible.toLocaleString()
+          }
+          icon={Eye}
+          iconColorClass='green'
+        />
       </div>
 
       {/* Main Card */}
@@ -544,6 +507,6 @@ export default function LocationDashboardPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

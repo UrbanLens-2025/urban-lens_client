@@ -62,6 +62,8 @@ import {
 } from '@/hooks/admin/useDashboardAdmin';
 import { useReports } from '@/hooks/admin/useReports';
 import { cn } from '@/lib/utils';
+import { IconBuilding, IconBuildingPlus, IconFlag } from '@tabler/icons-react';
+import { useRouter } from 'next/navigation';
 
 // Mapping from API response title to card config
 const cardConfigMap: Record<
@@ -509,29 +511,33 @@ export default function AdminDashboardPage() {
     }));
   }, []);
 
+  const router = useRouter();
+
   return (
     <div className='space-y-8 p-2'>
       {/* Filter Section */}
-      <div className='flex items-end gap-4 flex-wrap'>
-        <div className='flex flex-col gap-2'>
-          <label className='text-xs font-medium text-muted-foreground'>
-            Filter Time
-          </label>
-          <Tabs
-            value={filterType}
-            onValueChange={(value) => setFilterType(value as 'year' | 'range')}
-          >
-            <TabsList>
-              <TabsTrigger value='year'>By Year</TabsTrigger>
-              <TabsTrigger value='range'>Date Range</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-        <div className='flex gap-3 items-end'>
-          {filterType === 'year' && (
-            <div>
+      <div className='flex items-center justify-between'>
+        <div className='flex items-end gap-4 flex-wrap'>
+          <div className='flex flex-col gap-2'>
+            <label className='text-xs font-medium text-muted-foreground'>
+              Filter Time
+            </label>
+            <Tabs
+              value={filterType}
+              onValueChange={(value) =>
+                setFilterType(value as 'year' | 'range')
+              }
+            >
+              <TabsList>
+                <TabsTrigger value='year'>By Year</TabsTrigger>
+                <TabsTrigger value='range'>Date Range</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <div className='flex gap-3 items-end'>
+            {filterType === 'year' && (
               <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className='h-9 w-36'>
+                <SelectTrigger className='w-36'>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -542,85 +548,98 @@ export default function AdminDashboardPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
-          {filterType === 'range' && (
-            <>
-              <div className='w-[180px]'>
-                <label className='text-xs font-medium mb-1.5 block text-muted-foreground'>
-                  From Date
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      className={cn(
-                        'w-full justify-start text-left font-normal h-9',
-                        !dateRange.from && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className='mr-2 h-3.5 w-3.5' />
-                      {dateRange.from ? (
-                        format(dateRange.from, 'dd/MM/yyyy', {
-                          locale: vi,
-                        })
-                      ) : (
-                        <span className='text-xs'>Start date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className='w-auto p-0' align='start'>
-                    <CalendarComponent
-                      mode='single'
-                      selected={dateRange.from}
-                      onSelect={(date: Date | undefined) =>
-                        setDateRange((prev) => ({ ...prev, from: date }))
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className='w-[180px]'>
-                <label className='text-xs font-medium mb-1.5 block text-muted-foreground'>
-                  To Date
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      className={cn(
-                        'w-full justify-start text-left font-normal h-9',
-                        !dateRange.to && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className='mr-2 h-3.5 w-3.5' />
-                      {dateRange.to ? (
-                        format(dateRange.to, 'dd/MM/yyyy', { locale: vi })
-                      ) : (
-                        <span className='text-xs'>End date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className='w-auto p-0' align='start'>
-                    <CalendarComponent
-                      mode='single'
-                      selected={dateRange.to}
-                      onSelect={(date: Date | undefined) =>
-                        setDateRange((prev) => ({ ...prev, to: date }))
-                      }
-                      disabled={(date: Date) =>
-                        dateRange.from ? date < dateRange.from : false
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </>
-          )}
+            )}
+            {filterType === 'range' && (
+              <>
+                <div className='w-[180px]'>
+                  <label className='text-xs font-medium mb-1.5 block text-muted-foreground'>
+                    From Date
+                  </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className={cn(
+                          'w-full justify-start text-left font-normal h-9',
+                          !dateRange.from && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className='mr-2 h-3.5 w-3.5' />
+                        {dateRange.from ? (
+                          format(dateRange.from, 'dd/MM/yyyy', {
+                            locale: vi,
+                          })
+                        ) : (
+                          <span className='text-xs'>Start date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className='w-auto p-0' align='start'>
+                      <CalendarComponent
+                        mode='single'
+                        selected={dateRange.from}
+                        onSelect={(date: Date | undefined) =>
+                          setDateRange((prev) => ({ ...prev, from: date }))
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className='w-[180px]'>
+                  <label className='text-xs font-medium mb-1.5 block text-muted-foreground'>
+                    To Date
+                  </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className={cn(
+                          'w-full justify-start text-left font-normal h-9',
+                          !dateRange.to && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className='mr-2 h-3.5 w-3.5' />
+                        {dateRange.to ? (
+                          format(dateRange.to, 'dd/MM/yyyy', { locale: vi })
+                        ) : (
+                          <span className='text-xs'>End date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className='w-auto p-0' align='start'>
+                      <CalendarComponent
+                        mode='single'
+                        selected={dateRange.to}
+                        onSelect={(date: Date | undefined) =>
+                          setDateRange((prev) => ({ ...prev, to: date }))
+                        }
+                        disabled={(date: Date) =>
+                          dateRange.from ? date < dateRange.from : false
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        <div className='flex items-center gap-2'>
+          <Button variant='outline' size='default'>
+            <IconFlag className='h-4 w-4' />
+            Reports
+          </Button>
+          <Button
+            size='default'
+            onClick={() => router.push('/admin/locations/create')}
+          >
+            <IconBuildingPlus className='h-4 w-4' />
+            New Location
+          </Button>
         </div>
       </div>
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
