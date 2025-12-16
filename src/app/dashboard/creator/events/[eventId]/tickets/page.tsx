@@ -309,8 +309,10 @@ export default function EventTicketsPage({
                           >
                             <div className="font-medium hover:underline">{ticket.displayName}</div>
                             {ticket.description && (
-                              <div className="text-sm text-muted-foreground line-clamp-1">
-                                {ticket.description}
+                              <div className="text-sm text-muted-foreground line-clamp-1 truncate">
+                                {ticket.description.length > 60 
+                                  ? `${ticket.description.substring(0, 60)}...` 
+                                  : ticket.description}
                               </div>
                             )}
                           </Link>

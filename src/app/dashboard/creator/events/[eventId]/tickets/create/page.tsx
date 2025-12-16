@@ -598,7 +598,7 @@ export default function CreateTicketPage({
                           }}
                           disabled={createTicket.isPending}
                           minDate={
-                            event.startDate ? new Date(event.startDate) : undefined
+                            new Date()
                           }
                           maxDate={
                             event.endDate ? new Date(event.endDate) : undefined
@@ -629,7 +629,7 @@ export default function CreateTicketPage({
                           }}
                           disabled={createTicket.isPending}
                           minDate={
-                            event.startDate ? new Date(event.startDate) : undefined
+                            new Date()
                           }
                           maxDate={
                             event.endDate ? new Date(event.endDate) : undefined
