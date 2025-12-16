@@ -1079,6 +1079,8 @@ export interface EventAttendance {
   updatedAt: string;
   orderId: string;
   status: string;
+  ticketSnapshot?: TicketSnapshot;
+  numberOfAttendees?: number;
   order: Order;
 }
 

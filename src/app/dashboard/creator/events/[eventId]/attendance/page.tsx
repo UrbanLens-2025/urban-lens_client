@@ -83,6 +83,12 @@ export default function EventAttendancePage({
     return "outline" as const;
   };
 
+  const getAttendanceStatusLabel = (status: string) => {
+    const s = status?.toUpperCase();
+    if (s === "CREATED") return "Not Checked In";
+    return status;
+  };
+
   if (isLoadingAttendance) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -280,18 +286,15 @@ export default function EventAttendancePage({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          {attendance.order.orderDetails.map((detail) => (
-                            <div key={detail.id} className="text-sm">
-                              <div className="font-medium">
-                                {detail.ticketSnapshot.displayName}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Qty: {detail.quantity} × {formatCurrency(detail.unitPrice, detail.currency)}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        {attendance.ticketSnapshot ? (
+                          <div className="text-sm font-medium">
+                            {attendance.ticketSnapshot.displayName}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground">
+                            No ticket information
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="font-semibold">
@@ -302,17 +305,12 @@ export default function EventAttendancePage({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <Badge variant={getOrderStatusVariant(attendance.order.status)} className="w-fit text-xs">
-                            {attendance.order.status}
-                          </Badge>
-                          <Badge
-                            variant={getAttendanceStatusVariant(attendance.status)}
-                            className="w-fit text-xs"
-                          >
-                            {attendance.status}
-                          </Badge>
-                        </div>
+                        <Badge
+                          variant={getAttendanceStatusVariant(attendance.status)}
+                          className="w-fit text-xs"
+                        >
+                          {getAttendanceStatusLabel(attendance.status)}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-muted-foreground">
