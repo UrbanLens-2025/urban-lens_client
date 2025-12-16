@@ -72,4 +72,138 @@ export const deleteReport = async (reportId: string): Promise<void> => {
   await axiosInstance.delete<ApiResponse<void>>(`/v1/admin/report/${reportId}`);
 };
 
+// Get highest reported posts
+export interface HighestReportedPost {
+  postId: string;
+  content: string;
+  imageUrls: string[];
+  type: string;
+  isVerified: boolean;
+  visibility: string;
+  createdAt: string;
+  updatedAt: string;
+  rating: number | null;
+  eventId: string | null;
+  reports: Report[];
+}
+
+export interface HighestReportedPostsResponse {
+  data: HighestReportedPost[];
+  count: number;
+  page: number;
+  limit: number;
+}
+
+export const getHighestReportedPosts = async (
+  page: number = 1,
+  limit: number = 10
+): Promise<HighestReportedPostsResponse> => {
+  const { data } = await axiosInstance.get<
+    ApiResponse<HighestReportedPostsResponse>
+  >('/v1/admin/report/highest-reported-posts', {
+    params: { page, limit },
+  });
+  return data.data;
+};
+
+// Get highest reported locations
+export interface HighestReportedLocation {
+  id: string;
+  type: string;
+  ownershipType: string;
+  name: string;
+  description: string | null;
+  latitude: string;
+  longitude: string;
+  addressLine: string;
+  addressLevel1: string;
+  addressLevel2: string;
+  radiusMeters: number;
+  imageUrl: string[];
+  createdAt: string;
+  updatedAt: string;
+  isVisibleOnMap: boolean;
+  businessId: string;
+  averageRating: number;
+  totalReviews: number;
+  totalCheckIns: number;
+  totalPosts: number;
+  reports: Report[];
+}
+
+export interface HighestReportedLocationsResponse {
+  data: HighestReportedLocation[];
+  count: number;
+  page: number;
+  limit: number;
+}
+
+export const getHighestReportedLocations = async (
+  page: number = 1,
+  limit: number = 10
+): Promise<HighestReportedLocationsResponse> => {
+  const { data } = await axiosInstance.get<
+    ApiResponse<HighestReportedLocationsResponse>
+  >('/v1/admin/report/highest-reported-locations', {
+    params: { page, limit },
+  });
+  return data.data;
+};
+
+// Get highest reported events
+export interface HighestReportedEvent {
+  id: string;
+  type: string;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  displayName: string;
+  description: string | null;
+  avatarUrl: string | null;
+  coverUrl: string | null;
+  status: string;
+  expectedNumberOfParticipants: number;
+  allowTickets: boolean;
+  startDate: string;
+  endDate: string;
+  cancellationReason: string | null;
+  locationId: string;
+  social: Array<{
+    platform: string;
+    url: string;
+    isMain: boolean;
+  }>;
+  eventValidationDocuments: Array<{
+    documentType: string;
+    documentImageUrls: string[];
+  }>;
+  refundPolicy: string | null;
+  termsAndConditions: string | null;
+  hasPaidOut: boolean;
+  paidOutAt: string | null;
+  scheduledJobId: string | null;
+  totalReviews: number;
+  avgRating: number;
+  reports: Report[];
+}
+
+export interface HighestReportedEventsResponse {
+  data: HighestReportedEvent[];
+  count: number;
+  page: number;
+  limit: number;
+}
+
+export const getHighestReportedEvents = async (
+  page: number = 1,
+  limit: number = 10
+): Promise<HighestReportedEventsResponse> => {
+  const { data } = await axiosInstance.get<
+    ApiResponse<HighestReportedEventsResponse>
+  >('/v1/admin/report/highest-reported-events', {
+    params: { page, limit },
+  });
+  return data.data;
+};
+
 

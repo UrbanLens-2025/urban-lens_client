@@ -69,14 +69,20 @@ import {
   LocationReportResolutionActions,
   EventReportResolutionActions,
 } from '@/types';
-import { useReports } from '@/hooks/admin/useReports';
 import { useReportById } from '@/hooks/admin/useReportById';
 import {
   useProcessReport,
   useDeleteReport,
 } from '@/hooks/admin/useProcessReport';
+import { useHighestReportedPosts } from '@/hooks/admin/useHighestReportedPosts';
+import { useHighestReportedLocations } from '@/hooks/admin/useHighestReportedLocations';
+import { useHighestReportedEvents } from '@/hooks/admin/useHighestReportedEvents';
+import type {
+  HighestReportedPost,
+  HighestReportedLocation,
+  HighestReportedEvent,
+} from '@/api/reports';
 import { useQueryClient } from '@tanstack/react-query';
-import { formatShortDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -148,11 +154,8 @@ export default function ReportsPage() {
     searchParams.get('search') || ''
   );
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-  const [statusFilter, setStatusFilter] = useState<ReportStatus | 'all'>(
-    (searchParams.get('status') as ReportStatus) || 'PENDING'
-  );
-  const [typeFilter, setTypeFilter] = useState<ReportTargetType | 'all'>(
-    (searchParams.get('type') as ReportTargetType) || 'all'
+  const [typeFilter, setTypeFilter] = useState<ReportTargetType>(
+    (searchParams.get('type') as ReportTargetType) || 'post'
   );
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
   const itemsPerPage = 10;
@@ -168,17 +171,7 @@ export default function ReportsPage() {
       params.delete('search');
     }
 
-    if (statusFilter !== 'PENDING') {
-      params.set('status', statusFilter);
-    } else {
-      params.delete('status');
-    }
-
-    if (typeFilter !== 'all') {
-      params.set('type', typeFilter);
-    } else {
-      params.delete('type');
-    }
+    params.set('type', typeFilter);
 
     if (page > 1) {
       params.set('page', page.toString());
@@ -189,7 +182,6 @@ export default function ReportsPage() {
     router.replace(`${pathname}?${params.toString()}`);
   }, [
     debouncedSearchTerm,
-    statusFilter,
     typeFilter,
     page,
     pathname,
@@ -197,22 +189,110 @@ export default function ReportsPage() {
     searchParams,
   ]);
 
-  // Data fetching
+  // Data fetching based on type
   const {
-    data: response,
-    isLoading,
-    isFetching,
-  } = useReports({
-    page,
-    limit: itemsPerPage,
-    search: debouncedSearchTerm.trim() || undefined,
-    status: statusFilter !== 'all' ? statusFilter : undefined,
-    targetType: typeFilter !== 'all' ? typeFilter : undefined,
-    sortBy: 'createdAt:DESC',
-  });
+    data: postsResponse,
+    isLoading: isLoadingPosts,
+    isFetching: isFetchingPosts,
+  } = useHighestReportedPosts(page, itemsPerPage);
 
-  const reports = response?.data || [];
-  const meta = response?.meta;
+  const {
+    data: locationsResponse,
+    isLoading: isLoadingLocations,
+    isFetching: isFetchingLocations,
+  } = useHighestReportedLocations(page, itemsPerPage);
+
+  const {
+    data: eventsResponse,
+    isLoading: isLoadingEvents,
+    isFetching: isFetchingEvents,
+  } = useHighestReportedEvents(page, itemsPerPage);
+
+  // Determine which data to use based on typeFilter
+  const isLoading =
+    typeFilter === 'post'
+      ? isLoadingPosts
+      : typeFilter === 'location'
+        ? isLoadingLocations
+        : isLoadingEvents;
+  const isFetching =
+    typeFilter === 'post'
+      ? isFetchingPosts
+      : typeFilter === 'location'
+        ? isFetchingLocations
+        : isFetchingEvents;
+
+  // Transform data to a common format for rendering
+  const reports = useMemo(() => {
+    if (typeFilter === 'post' && postsResponse?.data) {
+      return postsResponse.data.map((post: HighestReportedPost) => ({
+        id: post.postId,
+        targetType: 'post' as ReportTargetType,
+        targetId: post.postId,
+        title: `Post: ${post.content.substring(0, 50)}${post.content.length > 50 ? '...' : ''}`,
+        description: post.content,
+        reports: post.reports,
+        reportCount: post.reports.length,
+        createdAt: post.createdAt,
+        postData: post,
+      }));
+    }
+    if (typeFilter === 'location' && locationsResponse?.data) {
+      return locationsResponse.data.map((location: HighestReportedLocation) => ({
+        id: location.id,
+        targetType: 'location' as ReportTargetType,
+        targetId: location.id,
+        title: `Location: ${location.name}`,
+        description: location.description || '',
+        reports: location.reports,
+        reportCount: location.reports.length,
+        createdAt: location.reports[0]?.createdAt || new Date().toISOString(),
+        locationData: location,
+      }));
+    }
+    if (typeFilter === 'event' && eventsResponse?.data) {
+      return eventsResponse.data.map((event: HighestReportedEvent) => ({
+        id: event.id,
+        targetType: 'event' as ReportTargetType,
+        targetId: event.id,
+        title: `Event: ${event.displayName}`,
+        description: event.description || '',
+        reports: event.reports,
+        reportCount: event.reports.length,
+        createdAt: event.reports[0]?.createdAt || new Date().toISOString(),
+        eventData: event,
+      }));
+    }
+    return [];
+  }, [typeFilter, postsResponse, locationsResponse, eventsResponse]);
+
+  const meta = useMemo(() => {
+    if (typeFilter === 'post' && postsResponse) {
+      return {
+        totalItems: postsResponse.count,
+        totalPages: Math.ceil(postsResponse.count / itemsPerPage),
+        currentPage: postsResponse.page,
+        itemsPerPage: postsResponse.limit,
+      };
+    }
+    if (typeFilter === 'location' && locationsResponse) {
+      return {
+        totalItems: locationsResponse.count,
+        totalPages: Math.ceil(locationsResponse.count / itemsPerPage),
+        currentPage: locationsResponse.page,
+        itemsPerPage: locationsResponse.limit,
+      };
+    }
+    if (typeFilter === 'event' && eventsResponse) {
+      return {
+        totalItems: eventsResponse.count,
+        totalPages: Math.ceil(eventsResponse.count / itemsPerPage),
+        currentPage: eventsResponse.page,
+        itemsPerPage: eventsResponse.limit,
+      };
+    }
+    return undefined;
+  }, [typeFilter, postsResponse, locationsResponse, eventsResponse, itemsPerPage]);
 
   const { mutate: processReport, isPending: isProcessing } = useProcessReport();
   const { mutate: deleteReport, isPending: isDeleting } = useDeleteReport();
@@ -234,7 +314,9 @@ export default function ReportsPage() {
   const selectedReport = selectedReportData || null;
 
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['adminReports'] });
+    queryClient.invalidateQueries({ queryKey: ['highestReportedPosts'] });
+    queryClient.invalidateQueries({ queryKey: ['highestReportedLocations'] });
+    queryClient.invalidateQueries({ queryKey: ['highestReportedEvents'] });
   };
 
   const formatDateTime = (dateString?: string) => {
@@ -248,56 +330,17 @@ export default function ReportsPage() {
     });
   };
 
-  // Fetch statistics for all statuses
-  const { data: pendingResponse } = useReports({
-    page: 1,
-    limit: 1,
-    status: 'PENDING',
-    sortBy: 'createdAt:DESC',
-  });
-
-  const { data: inProgressResponse } = useReports({
-    page: 1,
-    limit: 1,
-    status: 'IN_PROGRESS',
-    sortBy: 'createdAt:DESC',
-  });
-
-  const { data: resolvedResponse } = useReports({
-    page: 1,
-    limit: 1,
-    status: 'RESOLVED',
-    sortBy: 'createdAt:DESC',
-  });
-
-  const { data: rejectedResponse } = useReports({
-    page: 1,
-    limit: 1,
-    status: 'REJECTED',
-    sortBy: 'createdAt:DESC',
-  });
-
-  // Calculate statistics from API data
+  // Calculate statistics from current data
   const stats = useMemo(() => {
-    const pending = pendingResponse?.meta?.totalItems || 0;
-    const inProgress = inProgressResponse?.meta?.totalItems || 0;
-    const resolved = resolvedResponse?.meta?.totalItems || 0;
-    const rejected = rejectedResponse?.meta?.totalItems || 0;
-    const total = pending + inProgress + resolved + rejected;
-
+    const total = meta?.totalItems || 0;
     return {
       total,
-      pending,
-      inProgress,
-      resolved,
-      rejected,
+      pending: total,
+      inProgress: 0,
+      resolved: 0,
+      rejected: 0,
     };
-  }, [
-    pendingResponse?.meta?.totalItems,
-    inProgressResponse?.meta?.totalItems,
-    resolvedResponse?.meta?.totalItems,
-    rejectedResponse?.meta?.totalItems,
-  ]);
+  }, [meta?.totalItems]);
 
   const getAvailableResolutionActions = (
     targetType?: ReportTargetType
@@ -397,13 +440,7 @@ export default function ReportsPage() {
     <PageContainer>
       {/* Statistics Cards */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10'>
-        <div
-          className='cursor-pointer'
-          onClick={() => {
-            setStatusFilter('all');
-            setPage(1);
-          }}
-        >
+        <div>
           <StatisticCard
             title='Total Reports'
             subtitle='All reports'
@@ -413,13 +450,7 @@ export default function ReportsPage() {
           />
         </div>
 
-        <div
-          className='cursor-pointer'
-          onClick={() => {
-            setStatusFilter('PENDING');
-            setPage(1);
-          }}
-        >
+        <div>
           <StatisticCard
             title='Pending'
             subtitle='Awaiting review'
@@ -429,13 +460,7 @@ export default function ReportsPage() {
           />
         </div>
 
-        <div
-          className='cursor-pointer'
-          onClick={() => {
-            setStatusFilter('RESOLVED');
-            setPage(1);
-          }}
-        >
+        <div>
           <StatisticCard
             title='Resolved'
             subtitle='Successfully resolved'
@@ -445,13 +470,7 @@ export default function ReportsPage() {
           />
         </div>
 
-        <div
-          className='cursor-pointer'
-          onClick={() => {
-            setStatusFilter('REJECTED');
-            setPage(1);
-          }}
-        >
+        <div>
           <StatisticCard
             title='Rejected'
             subtitle='Rejected reports'
@@ -497,30 +516,9 @@ export default function ReportsPage() {
             </div>
             <div className='flex item-center justify-between'>
               <Select
-                value={statusFilter}
-                onValueChange={(value) => {
-                  setStatusFilter(value as ReportStatus | 'all');
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <div className='flex items-center gap-2'>
-                    <IconFilter className='h-3 w-3' />
-                    <SelectValue placeholder='Filter by Status' />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='all'>All Status</SelectItem>
-                  <SelectItem value='PENDING'>Pending</SelectItem>
-                  <SelectItem value='IN_PROGRESS'>In Progress</SelectItem>
-                  <SelectItem value='RESOLVED'>Resolved</SelectItem>
-                  <SelectItem value='REJECTED'>Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
                 value={typeFilter}
                 onValueChange={(value) => {
-                  setTypeFilter(value as ReportTargetType | 'all');
+                  setTypeFilter(value as ReportTargetType);
                   setPage(1);
                 }}
               >
@@ -531,10 +529,9 @@ export default function ReportsPage() {
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='all'>All Types</SelectItem>
-                  <SelectItem value='post'>Post</SelectItem>
-                  <SelectItem value='location'>Location</SelectItem>
-                  <SelectItem value='event'>Event</SelectItem>
+                  <SelectItem value='post'>Posts</SelectItem>
+                  <SelectItem value='location'>Locations</SelectItem>
+                  <SelectItem value='event'>Events</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -558,42 +555,30 @@ export default function ReportsPage() {
               </div>
             ) : (
               <div className='divide-y'>
-                {reports.map((report: Report, index: number) => (
+                {reports.map((item: any) => (
                   <div
-                    key={report.id}
-                    onClick={() => {
-                      setSelectedReportId(report.id);
-                      setExpandedDescription(false);
-                    }}
-                    className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                      selectedReportId === report.id
-                        ? 'bg-muted border-l-4 border-l-primary'
-                        : ''
-                    }`}
+                    key={item.id}
+                    className='p-4 hover:bg-muted/50 transition-colors'
                   >
                     <div className='flex items-start justify-between mb-2'>
                       <h3 className='font-semibold text-base line-clamp-1'>
-                        {report.title}
+                        {item.title}
                       </h3>
-                      {getStatusBadge(report.status)}
+                      <Badge variant='outline' className='bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300'>
+                        {item.reportCount} {item.reportCount === 1 ? 'report' : 'reports'}
+                      </Badge>
                     </div>
                     <div className='flex items-center gap-2 mb-1'>
-                      {getTypeBadge(report.targetType)}
-                      {report.createdBy && (
-                        <span className='text-xs text-muted-foreground'>
-                          by {report.createdBy.firstName}{' '}
-                          {report.createdBy.lastName}
-                        </span>
-                      )}
+                      {getTypeBadge(item.targetType)}
                     </div>
-                    {report.description && (
+                    {item.description && (
                       <p className='text-sm text-muted-foreground line-clamp-2 mb-2'>
-                        {report.description}
+                        {item.description}
                       </p>
                     )}
                     <div className='flex items-center justify-between mt-2'>
                       <span className='text-xs text-muted-foreground'>
-                        {formatDateTime(report.createdAt)}
+                        {formatDateTime(item.createdAt)}
                       </span>
                     </div>
                   </div>
