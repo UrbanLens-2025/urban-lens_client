@@ -7413,7 +7413,7 @@ export default function LocationDetailsPage({
                 title='Total Check-ins'
                 value={totalCheckIns.toLocaleString()}
                 icon={Users}
-                color='primary'
+                color='red'
                 description='All time check-ins'
               />
 

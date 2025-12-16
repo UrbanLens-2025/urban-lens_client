@@ -339,7 +339,7 @@ export default function LocationBookingsPage() {
           title='Total Bookings'
           value={stats.totalBookings.toLocaleString()}
           icon={CalendarDays}
-          color='primary'
+          color='red'
           description='All location bookings'
         />
 

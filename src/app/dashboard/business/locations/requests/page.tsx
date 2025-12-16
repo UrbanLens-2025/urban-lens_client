@@ -203,7 +203,7 @@ export default function MyLocationRequestsPage() {
           title='Total Requests'
           value={requestStats.total.toLocaleString()}
           icon={FileText}
-          color='primary'
+          color='blue'
           description='Across all pages'
         />
 
