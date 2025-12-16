@@ -46,6 +46,13 @@ interface LocationTabContextType {
   };
   openAnnouncementCreateTab: () => void;
   closeAnnouncementCreateTab: () => void;
+  announcementEditTab: {
+    isOpen: boolean;
+    announcementId: string | null;
+    announcementName: string | null;
+  };
+  openAnnouncementEditTab: (announcementId: string, announcementName: string) => void;
+  closeAnnouncementEditTab: () => void;
   announcementDetailTab: {
     isOpen: boolean;
     announcementId: string | null;
@@ -114,6 +121,16 @@ export function LocationTabProvider({ children }: { children: ReactNode }) {
     isOpen: boolean;
   }>({
     isOpen: false,
+  });
+
+  const [announcementEditTab, setAnnouncementEditTab] = useState<{
+    isOpen: boolean;
+    announcementId: string | null;
+    announcementName: string | null;
+  }>({
+    isOpen: false,
+    announcementId: null,
+    announcementName: null,
   });
 
   const [announcementDetailTab, setAnnouncementDetailTab] = useState<{
@@ -226,6 +243,22 @@ export function LocationTabProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const openAnnouncementEditTab = useCallback((announcementId: string, announcementName: string) => {
+    setAnnouncementEditTab({
+      isOpen: true,
+      announcementId,
+      announcementName,
+    });
+  }, []);
+
+  const closeAnnouncementEditTab = useCallback(() => {
+    setAnnouncementEditTab({
+      isOpen: false,
+      announcementId: null,
+      announcementName: null,
+    });
+  }, []);
+
   const openAnnouncementDetailTab = useCallback((announcementId: string, announcementName: string) => {
     setAnnouncementDetailTab({
       isOpen: true,
@@ -266,6 +299,9 @@ export function LocationTabProvider({ children }: { children: ReactNode }) {
         announcementCreateTab,
         openAnnouncementCreateTab,
         closeAnnouncementCreateTab,
+        announcementEditTab,
+        openAnnouncementEditTab,
+        closeAnnouncementEditTab,
         announcementDetailTab,
         openAnnouncementDetailTab,
         closeAnnouncementDetailTab,

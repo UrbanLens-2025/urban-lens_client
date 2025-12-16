@@ -54,6 +54,7 @@ function LocationDetailLayoutContent({
     openVoucherEditTab,
     closeVoucherEditTab,
     voucherDetailTab,
+    openVoucherDetailTab,
     closeVoucherDetailTab,
     missionCreateTab,
     openMissionCreateTab,
@@ -62,20 +63,37 @@ function LocationDetailLayoutContent({
     openMissionEditTab,
     closeMissionEditTab,
     missionDetailTab,
+    openMissionDetailTab,
     closeMissionDetailTab,
     announcementCreateTab,
     openAnnouncementCreateTab,
     closeAnnouncementCreateTab,
+    announcementEditTab,
+    openAnnouncementEditTab,
+    closeAnnouncementEditTab,
     announcementDetailTab,
     openAnnouncementDetailTab,
     closeAnnouncementDetailTab,
   } = useLocationTabs();
 
-  const [preventAutoOpenVoucherId, setPreventAutoOpenVoucherId] = useState<string | null>(null);
-  const [preventAutoOpenMissionId, setPreventAutoOpenMissionId] = useState<string | null>(null);
-  const [preventAutoOpenAnnouncementId, setPreventAutoOpenAnnouncementId] = useState<string | null>(null);
-  
-  // Use refs to track if we've already opened tabs to prevent infinite loops
+  const [preventAutoOpenVoucherId, setPreventAutoOpenVoucherId] =
+    useState<string | null>(null);
+  const [preventAutoOpenMissionId, setPreventAutoOpenMissionId] =
+    useState<string | null>(null);
+  const [preventAutoOpenAnnouncementId, setPreventAutoOpenAnnouncementId] =
+    useState<string | null>(null);
+
+  // Use refs to track if we've already opened edit tabs to prevent infinite loops
+  const voucherEditTabOpenedRef = useRef(false);
+  const missionEditTabOpenedRef = useRef(false);
+  const announcementEditTabOpenedRef = useRef(false);
+
+  // Use refs to track if we've already opened detail tabs to prevent infinite loops
+  const voucherDetailTabOpenedRef = useRef(false);
+  const missionDetailTabOpenedRef = useRef(false);
+  const announcementDetailTabOpenedRef = useRef(false);
+
+  // Use refs to track if we've already opened create tabs to prevent infinite loops
   const voucherCreateTabOpenedRef = useRef(false);
   const missionCreateTabOpenedRef = useRef(false);
   const announcementCreateTabOpenedRef = useRef(false);
@@ -105,10 +123,13 @@ function LocationDetailLayoutContent({
   };
 
   const isActiveTab = (path: string) => {
-    // Check if voucher detail tab is open and active
+    // Check if voucher detail tab is open and active (but not on edit route)
     if (path === 'voucher-detail' && voucherDetailTab.isOpen) {
-      return pathname.includes('/vouchers/') && 
-        pathname !== `/dashboard/business/locations/${locationId}/vouchers`;
+      return (
+        pathname.includes('/vouchers/') &&
+        !pathname.includes('/edit') &&
+        pathname !== `/dashboard/business/locations/${locationId}/vouchers`
+      );
     }
     
     // Check if voucher create tab is open and active
@@ -121,10 +142,13 @@ function LocationDetailLayoutContent({
       return pathname.includes('/vouchers/') && pathname.includes('/edit');
     }
     
-    // Check if mission detail tab is open and active
+    // Check if mission detail tab is open and active (but not on edit route)
     if (path === 'mission-detail' && missionDetailTab.isOpen) {
-      return pathname.includes('/missions/') && 
-        pathname !== `/dashboard/business/locations/${locationId}/missions`;
+      return (
+        pathname.includes('/missions/') &&
+        !pathname.includes('/edit') &&
+        pathname !== `/dashboard/business/locations/${locationId}/missions`
+      );
     }
     
     // Check if mission create tab is open and active
@@ -137,15 +161,24 @@ function LocationDetailLayoutContent({
       return pathname.includes('/missions/') && pathname.includes('/edit');
     }
     
-    // Check if announcement detail tab is open and active
+    // Check if announcement detail tab is open and active (but not on edit route)
     if (path === 'announcement-detail' && announcementDetailTab.isOpen) {
-      return pathname.includes('/announcements/') && 
-        pathname !== `/dashboard/business/locations/${locationId}/announcements`;
+      return (
+        pathname.includes('/announcements/') &&
+        !pathname.includes('/edit') &&
+        pathname !==
+          `/dashboard/business/locations/${locationId}/announcements`
+      );
     }
     
     // Check if announcement create tab is open and active
     if (path === 'announcement-create' && announcementCreateTab.isOpen) {
       return pathname.includes('/announcements/new');
+    }
+    
+    // Check if announcement edit tab is open and active
+    if (path === 'announcement-edit' && announcementEditTab.isOpen) {
+      return pathname.includes('/announcements/') && pathname.includes('/edit');
     }
     
     if (path === `/dashboard/business/locations/${locationId}`) {
@@ -158,20 +191,26 @@ function LocationDetailLayoutContent({
       !(pathname.includes('/announcements/') && pathname !== `/dashboard/business/locations/${locationId}/announcements`);
   };
 
-  const isVoucherDetailsRoute = pathname.includes('/vouchers/') && 
+  const isVoucherDetailsRoute =
+    pathname.includes('/vouchers/') &&
     pathname !== `/dashboard/business/locations/${locationId}/vouchers` &&
     !pathname.includes('/vouchers/create') &&
     !pathname.includes('/edit');
   const isVoucherCreateRoute = pathname.includes('/vouchers/create');
   const isVoucherEditRoute = pathname.includes('/vouchers/') && pathname.includes('/edit');
-  const isMissionDetailsRoute = pathname.includes('/missions/') && 
+  const isMissionDetailsRoute =
+    pathname.includes('/missions/') &&
     pathname !== `/dashboard/business/locations/${locationId}/missions` &&
     !pathname.includes('/missions/create') &&
     !pathname.includes('/edit');
   const isMissionCreateRoute = pathname.includes('/missions/create');
   const isMissionEditRoute = pathname.includes('/missions/') && pathname.includes('/edit');
-  const isAnnouncementRoute = pathname.includes('/announcements/') && pathname !== `/dashboard/business/locations/${locationId}/announcements`;
+  const isAnnouncementRoute =
+    pathname.includes('/announcements/') &&
+    pathname !==
+      `/dashboard/business/locations/${locationId}/announcements`;
   const isAnnouncementCreateRoute = pathname.includes('/announcements/new');
+  const isAnnouncementEditRoute = pathname.includes('/announcements/') && pathname.includes('/edit');
   const isEditLocationRoute = pathname === `/dashboard/business/locations/${locationId}/edit`;
 
   // Memoize heroImage before conditional returns (Rules of Hooks)
@@ -220,6 +259,71 @@ function LocationDetailLayoutContent({
       announcementCreateTabOpenedRef.current = false;
     }
   }, [isAnnouncementCreateRoute, openAnnouncementCreateTab]);
+
+  // Auto-open announcement edit tab when on announcement edit route
+  useEffect(() => {
+    if (isAnnouncementEditRoute && !announcementEditTabOpenedRef.current) {
+      const announcementIdMatch = pathname.match(/\/announcements\/([^\/]+)\/edit/);
+      if (announcementIdMatch && announcementIdMatch[1]) {
+        announcementEditTabOpenedRef.current = true;
+        openAnnouncementEditTab(announcementIdMatch[1], 'Edit Announcement');
+      }
+    } else if (!isAnnouncementEditRoute) {
+      announcementEditTabOpenedRef.current = false;
+    }
+  }, [isAnnouncementEditRoute, pathname, openAnnouncementEditTab]);
+
+  // Auto-open voucher detail tab when on voucher detail route
+  useEffect(() => {
+    if (isVoucherDetailsRoute && !voucherDetailTabOpenedRef.current) {
+      const match = pathname.match(/\/vouchers\/([^\/]+)$/);
+      if (match && match[1]) {
+        voucherDetailTabOpenedRef.current = true;
+        openVoucherDetailTab(match[1], 'View Voucher');
+      }
+    } else if (!isVoucherDetailsRoute) {
+      voucherDetailTabOpenedRef.current = false;
+    }
+  }, [isVoucherDetailsRoute, pathname, openVoucherDetailTab]);
+
+  // Auto-open mission detail tab when on mission detail route
+  useEffect(() => {
+    if (isMissionDetailsRoute && !missionDetailTabOpenedRef.current) {
+      const match = pathname.match(/\/missions\/([^\/]+)$/);
+      if (match && match[1]) {
+        missionDetailTabOpenedRef.current = true;
+        openMissionDetailTab(match[1], 'View Mission');
+      }
+    } else if (!isMissionDetailsRoute) {
+      missionDetailTabOpenedRef.current = false;
+    }
+  }, [isMissionDetailsRoute, pathname, openMissionDetailTab]);
+
+  // Auto-open voucher edit tab when on voucher edit route
+  useEffect(() => {
+    if (isVoucherEditRoute && !voucherEditTabOpenedRef.current) {
+      const voucherIdMatch = pathname.match(/\/vouchers\/([^\/]+)\/edit/);
+      if (voucherIdMatch && voucherIdMatch[1]) {
+        voucherEditTabOpenedRef.current = true;
+        openVoucherEditTab(voucherIdMatch[1], 'Edit Voucher');
+      }
+    } else if (!isVoucherEditRoute) {
+      voucherEditTabOpenedRef.current = false;
+    }
+  }, [isVoucherEditRoute, pathname, openVoucherEditTab]);
+
+  // Auto-open mission edit tab when on mission edit route
+  useEffect(() => {
+    if (isMissionEditRoute && !missionEditTabOpenedRef.current) {
+      const missionIdMatch = pathname.match(/\/missions\/([^\/]+)\/edit/);
+      if (missionIdMatch && missionIdMatch[1]) {
+        missionEditTabOpenedRef.current = true;
+        openMissionEditTab(missionIdMatch[1], 'Edit Mission');
+      }
+    } else if (!isMissionEditRoute) {
+      missionEditTabOpenedRef.current = false;
+    }
+  }, [isMissionEditRoute, pathname, openMissionEditTab]);
 
   if (isLoading) {
     return (
@@ -537,6 +641,50 @@ function LocationDetailLayoutContent({
               </div>
             )}
 
+            {/* Dynamic Voucher Detail Tab */}
+            {voucherDetailTab.isOpen && (
+              <div className="relative flex items-center">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "rounded-b-none border-b-2 transition-colors pr-7",
+                    isActiveTab('voucher-detail')
+                      ? "border-primary bg-muted"
+                      : "border-transparent hover:border-muted-foreground/50"
+                  )}
+                  onClick={() => {
+                    if (voucherDetailTab.voucherId) {
+                      router.push(
+                        `/dashboard/business/locations/${locationId}/vouchers/${voucherDetailTab.voucherId}`
+                      );
+                    }
+                  }}
+                >
+                  {voucherDetailTab.voucherName || "View Voucher"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const wasOnDetailPage = isVoucherDetailsRoute;
+                    closeVoucherDetailTab();
+                    if (wasOnDetailPage) {
+                      requestAnimationFrame(() => {
+                        router.push(
+                          `/dashboard/business/locations/${locationId}/vouchers`
+                        );
+                      });
+                    }
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
             {/* Dynamic Mission Create Tab */}
             {missionCreateTab.isOpen && (
               <div className="relative flex items-center">
@@ -615,6 +763,50 @@ function LocationDetailLayoutContent({
               </div>
             )}
 
+            {/* Dynamic Mission Detail Tab */}
+            {missionDetailTab.isOpen && (
+              <div className="relative flex items-center">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "rounded-b-none border-b-2 transition-colors pr-7",
+                    isActiveTab('mission-detail')
+                      ? "border-primary bg-muted"
+                      : "border-transparent hover:border-muted-foreground/50"
+                  )}
+                  onClick={() => {
+                    if (missionDetailTab.missionId) {
+                      router.push(
+                        `/dashboard/business/locations/${locationId}/missions/${missionDetailTab.missionId}`
+                      );
+                    }
+                  }}
+                >
+                  {missionDetailTab.missionName || "View Mission"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const wasOnDetailPage = isMissionDetailsRoute;
+                    closeMissionDetailTab();
+                    if (wasOnDetailPage) {
+                      requestAnimationFrame(() => {
+                        router.push(
+                          `/dashboard/business/locations/${locationId}/missions`
+                        );
+                      });
+                    }
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
             {/* Dynamic Announcement Create Tab */}
             {announcementCreateTab.isOpen && (
               <div className="relative flex items-center">
@@ -642,6 +834,46 @@ function LocationDetailLayoutContent({
                     const wasOnCreatePage = isAnnouncementCreateRoute;
                     closeAnnouncementCreateTab();
                     if (wasOnCreatePage) {
+                      requestAnimationFrame(() => {
+                        router.push(`/dashboard/business/locations/${locationId}/announcements`);
+                      });
+                    }
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
+            {/* Dynamic Announcement Edit Tab */}
+            {announcementEditTab.isOpen && (
+              <div className="relative flex items-center">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "rounded-b-none border-b-2 transition-colors pr-7",
+                    isActiveTab('announcement-edit')
+                      ? "border-primary bg-muted"
+                      : "border-transparent hover:border-muted-foreground/50"
+                  )}
+                  onClick={() => {
+                    if (announcementEditTab.announcementId) {
+                      router.push(`/dashboard/business/locations/${locationId}/announcements/${announcementEditTab.announcementId}/edit`);
+                    }
+                  }}
+                >
+                  Edit Announcement
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const wasOnEditPage = isAnnouncementEditRoute;
+                    closeAnnouncementEditTab();
+                    if (wasOnEditPage) {
                       requestAnimationFrame(() => {
                         router.push(`/dashboard/business/locations/${locationId}/announcements`);
                       });

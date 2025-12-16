@@ -44,12 +44,10 @@ const missionSchema = z
     target: z.number().min(1, "Target must be at least 1"),
     reward: z.number().min(1, "Reward must be at least 1"),
     startDate: z.date({
-      required_error: "Start date is required.",
-      invalid_type_error: "Start date is required.",
+      error: "Start date is required.",
     }),
     endDate: z.date({
-      required_error: "End date is required.",
-      invalid_type_error: "End date is required.",
+      error: "End date is required.",
     }),
     imageUrls: z
       .array(z.string().url())
