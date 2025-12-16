@@ -129,3 +129,16 @@ export const createComment = async (payload: CreateCommentPayload): Promise<Comm
   return data.data;
 };
 
+export interface CreateOwnerCommentPayload {
+  content: string;
+  postId: string;
+}
+
+export const createOwnerComment = async (payload: CreateOwnerCommentPayload): Promise<Comment> => {
+  const { data } = await axiosInstance.post<ApiResponse<Comment>>(
+    `/v1/owner/comment`,
+    payload
+  );
+  return data.data;
+};
+

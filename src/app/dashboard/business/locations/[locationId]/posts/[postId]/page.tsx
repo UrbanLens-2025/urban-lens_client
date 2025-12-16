@@ -7,7 +7,7 @@ import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
 import { usePostById } from "@/hooks/posts/usePostById";
 import { usePostComments } from "@/hooks/posts/usePostComments";
-import { useCreateComment } from "@/hooks/posts/useCreateComment";
+import { useCreateOwnerComment } from "@/hooks/posts/useCreateOwnerComment";
 
 // --- Import UI Components ---
 import {
@@ -132,7 +132,7 @@ export default function PostDetailsPage({
         limit: 20,
     });
 
-    const createCommentMutation = useCreateComment();
+    const createCommentMutation = useCreateOwnerComment();
 
     const comments = commentsData?.data || [];
     const commentsMeta = commentsData?.meta;
