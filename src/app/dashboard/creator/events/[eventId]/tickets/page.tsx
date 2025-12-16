@@ -255,6 +255,7 @@ export default function EventTicketsPage({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>#</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                     <TableHead>Ticket</TableHead>
                     <TableHead>Price</TableHead>
@@ -265,7 +266,7 @@ export default function EventTicketsPage({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTickets.map((ticket) => {
+                  {filteredTickets.map((ticket, index) => {
                     const availableQuantity = ticket.totalQuantityAvailable - ticket.quantityReserved;
                     const availabilityPercentage = ticket.totalQuantityAvailable > 0 
                       ? (availableQuantity / ticket.totalQuantityAvailable) * 100 
@@ -275,6 +276,7 @@ export default function EventTicketsPage({
 
                     return (
                       <TableRow key={ticket.id} className="group">
+                        <TableCell className="font-medium">{index + 1}</TableCell>
                         <TableCell>
                           <div className="relative w-12 h-12 rounded-md overflow-hidden border bg-muted flex items-center justify-center">
                             {ticket.imageUrl ? (
@@ -322,13 +324,13 @@ export default function EventTicketsPage({
                             {formatCurrency(ticket.price, ticket.currency)}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {ticket.minQuantityPerOrder}-{ticket.maxQuantityPerOrder} per order
+                            {ticket.minQuantityPerOrder === ticket.maxQuantityPerOrder ? ticket.minQuantityPerOrder : `${ticket.minQuantityPerOrder}-${ticket.maxQuantityPerOrder}`} per order
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
                             <div className="text-sm font-medium">
-                              {availableQuantity} / {ticket.totalQuantityAvailable}
+                              {ticket.totalQuantityAvailable} / {ticket.totalQuantity}
                             </div>
                             <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
                               <div
@@ -348,10 +350,7 @@ export default function EventTicketsPage({
                           <div className="space-y-1 text-xs">
                             <div className="flex items-center gap-1 text-muted-foreground">
                               <Calendar className="h-3 w-3" />
-                              {formatDate(ticket.saleStartDate)}
-                            </div>
-                            <div className="text-muted-foreground">
-                              to {formatDate(ticket.saleEndDate)}
+                              <div className="text-muted-foreground text-sm">{new Date(ticket.saleStartDate).toLocaleDateString('vi-VN')} - {new Date(ticket.saleEndDate).toLocaleDateString('vi-VN')}</div>
                             </div>
                             {!isSaleActive && ticket.isActive && (
                               <Badge variant="outline" className="text-xs">

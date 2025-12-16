@@ -45,6 +45,7 @@ import {
   FileCheck,
   CreditCard,
   AlertCircle,
+  ShoppingCart,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -199,7 +200,7 @@ function EventDetailLayoutContent({
   const hasNameAndDescription = !!(event?.displayName && event?.description);
   const hasDates = !!(event?.startDate && event?.endDate);
   // Check if location has been booked (for checklist display)
-  // Shows as checked if there's any active (non-cancelled) location booking
+  // Shows as checked if there's an APPROVED location booking with matching locationId
   const hasLocationBooked = useMemo(() => {
     if (!event?.locationId) return false;
 
@@ -208,7 +209,7 @@ function EventDetailLayoutContent({
       return locationBookings.some((booking) => {
         const status = booking.status?.toUpperCase();
         return (
-          status !== 'CANCELLED' && booking.location?.id === event.locationId
+          status === 'APPROVED' && booking.location?.id === event.locationId
         );
       });
     }
@@ -218,7 +219,7 @@ function EventDetailLayoutContent({
       return event.locationBookings.some((booking) => {
         const status = booking.status?.toUpperCase();
         return (
-          status !== 'CANCELLED' && booking.location?.id === event.locationId
+          status === 'APPROVED' && booking.location?.id === event.locationId
         );
       });
     }
@@ -450,7 +451,7 @@ function EventDetailLayoutContent({
 
   const normalizedEventStatus = event?.status?.toUpperCase();
   const canAccessAttendanceTab = normalizedEventStatus
-    ? ['PUBLISHED', 'FINISHED', 'COMPLETED'].includes(normalizedEventStatus)
+    ? ['PUBLISHED', 'CANCELLED', 'FINISHED', 'COMPLETED'].includes(normalizedEventStatus)
     : false;
 
   const renderAttendanceTabButton = () => {
@@ -968,7 +969,7 @@ function EventDetailLayoutContent({
                 },
               },
               {
-                label: 'Select location',
+                label: 'Select Location and Wait for approval',
                 completed: hasLocationBooked,
                 action: () =>
                   router.push(`/dashboard/creator/events/${eventId}/location`),
@@ -1106,6 +1107,20 @@ function EventDetailLayoutContent({
             ) : (
               <span className='inline-flex'>{renderAttendanceTabButton()}</span>
             )}
+            <Link href={`/dashboard/creator/events/${eventId}/orders`}>
+              <Button
+                variant='ghost'
+                className={cn(
+                  'gap-2 rounded-b-none border-b-2 transition-colors',
+                  isActiveTab(`/dashboard/creator/events/${eventId}/orders`)
+                    ? 'border-primary bg-muted'
+                    : 'border-transparent hover:border-muted-foreground/50'
+                )}
+              >
+                <ShoppingCart className='h-4 w-4' />
+                Orders
+              </Button>
+            </Link>
             <Link href={`/dashboard/creator/events/${eventId}/announcements`}>
               <Button
                 variant='ghost'

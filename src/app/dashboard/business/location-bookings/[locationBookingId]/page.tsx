@@ -217,6 +217,8 @@ export default function LocationBookingDetailPage({
   const [pendingStatus, setPendingStatus] = useState<
     'APPROVED' | 'REJECTED' | null
   >(null);
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   const {
@@ -526,11 +528,23 @@ export default function LocationBookingDetailPage({
     <PageContainer maxWidth='2xl'>
       {/* Header */}
       <PageHeader
-        title='Chi tiết Booking'
+        title='Booking Details'
         icon={Calendar}
         actions={
           <div className='flex items-center gap-3'>
             {getStatusBadge(booking.status)}
+            {booking.status === 'AWAITING_BUSINESS_PROCESSING' && (
+              <>
+                <Button variant='default' className='bg-green-600 hover:bg-green-700 text-white' onClick={() => setIsApproveDialogOpen(true)}>
+                  <CheckCircle className='h-4 w-4 mr-2' />
+                  Approve
+                </Button>
+                <Button variant='destructive' onClick={() => setIsRejectDialogOpen(true)}>
+                  <X className='h-4 w-4 mr-2' />
+                  Reject
+                </Button>
+              </>
+            )}
             <Button variant='outline' size='icon' onClick={() => router.back()}>
               <ArrowLeft className='h-4 w-4' />
             </Button>
@@ -545,7 +559,7 @@ export default function LocationBookingDetailPage({
             <div className='flex items-center justify-between'>
               <div>
                 <p className='text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1'>
-                  Số tiền thanh toán
+                  Payment Amount
                 </p>
                 <CurrencyDisplay
                   amount={booking.amountToPay}
@@ -565,14 +579,14 @@ export default function LocationBookingDetailPage({
             <div className='flex items-center justify-between'>
               <div>
                 <p className='text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1'>
-                  Tổng số giờ
+                  Total Hours
                 </p>
                 <p className='text-2xl font-bold text-blue-600'>
-                  {totalHours} giờ
+                  {totalHours} hours
                 </p>
                 <p className='text-xs text-muted-foreground mt-1'>
                   {bookingTimeDetails.totalDays}{' '}
-                  {bookingTimeDetails.totalDays === 1 ? 'ngày' : 'ngày'}
+                  {bookingTimeDetails.totalDays === 1 ? 'day' : 'days'}
                 </p>
               </div>
               <div className='h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center'>
@@ -586,7 +600,7 @@ export default function LocationBookingDetailPage({
             <div className='flex items-center justify-between'>
               <div>
                 <p className='text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1'>
-                  Số slot đã đặt
+                  Time Slots Booked
                 </p>
                 <p className='text-2xl font-bold text-purple-600'>
                   {booking.dates?.length || 0}
@@ -668,7 +682,7 @@ export default function LocationBookingDetailPage({
                     {isLoadingEvent && (
                       <Badge variant='outline' className='text-xs'>
                         <Loader2 className='h-3 w-3 mr-1 animate-spin' />
-                        Đang tải...
+                        Loading...
                       </Badge>
                     )}
                   </div>
@@ -875,7 +889,7 @@ export default function LocationBookingDetailPage({
                   <div className='h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center'>
                     <Clock className='h-4 w-4 text-blue-600' />
                   </div>
-                  Chi tiết thời gian đặt chỗ
+                  Booking Time Details
                 </CardTitle>
               </CardHeader>
               <CardContent className='pt-4 pb-4'>
@@ -901,7 +915,7 @@ export default function LocationBookingDetailPage({
                           </div>
                         </div>
                         <Badge variant='outline' className='font-semibold'>
-                          {group.totalDuration} giờ
+                          {group.totalDuration} hours
                         </Badge>
                       </div>
                     </div>
@@ -909,15 +923,15 @@ export default function LocationBookingDetailPage({
                   <div className='pt-2 border-t border-border/40'>
                     <div className='flex items-center justify-between'>
                       <p className='text-sm font-semibold text-muted-foreground'>
-                        Tổng cộng
+                        Total
                       </p>
                       <div className='text-right'>
                         <p className='text-lg font-bold text-primary'>
-                          {totalHours} giờ
+                          {totalHours} hours
                         </p>
                         <p className='text-xs text-muted-foreground'>
                           {bookingTimeDetails.totalDays}{' '}
-                          {bookingTimeDetails.totalDays === 1 ? 'ngày' : 'ngày'}{' '}
+                          {bookingTimeDetails.totalDays === 1 ? 'day' : 'days'}{' '}
                           • {booking.dates.length}{' '}
                           {booking.dates.length === 1 ? 'slot' : 'slots'}
                         </p>
@@ -1082,7 +1096,7 @@ export default function LocationBookingDetailPage({
                 <div className='h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center'>
                   <MapPin className='h-4 w-4 text-primary' />
                 </div>
-                Địa điểm được đặt
+                Booked Location
               </CardTitle>
             </CardHeader>
             <CardContent className='pt-4 pb-4'>
@@ -1098,29 +1112,18 @@ export default function LocationBookingDetailPage({
                   </div>
                 )}
 
-                {/* Location Name */}
+                {/* Location Name and Address */}
                 <div>
-                  <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1'>
-                    Tên địa điểm
-                  </p>
-                  <h3 className='text-base font-bold text-foreground'>
+                  <h3 className='text-base font-bold text-foreground mb-2'>
                     {booking.location?.name || 'N/A'}
                   </h3>
-                </div>
-
-                {/* Address */}
-                <div>
-                  <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1'>
-                    Địa chỉ
-                  </p>
                   <div className='flex items-start gap-2'>
                     <MapPin className='h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5' />
-                    <div className='text-sm text-foreground'>
-                      <p className='font-medium'>
+                    <div className='text-sm text-muted-foreground'>
+                      <p>
                         {booking.location?.addressLine || 'N/A'}
-                      </p>
-                      <p className='text-muted-foreground'>
-                        {booking.location?.addressLevel1 || ''}
+                        {booking.location?.addressLevel1 &&
+                          `, ${booking.location.addressLevel1}`}
                         {booking.location?.addressLevel2 &&
                           `, ${booking.location.addressLevel2}`}
                       </p>
@@ -1132,7 +1135,7 @@ export default function LocationBookingDetailPage({
                 <div className='grid grid-cols-2 gap-3 pt-2 border-t border-border/40'>
                   <div>
                     <p className='text-xs text-muted-foreground mb-1'>
-                      Đánh giá
+                      Rating
                     </p>
                     <div className='flex items-center gap-1'>
                       <Star className='h-3.5 w-3.5 text-amber-500 fill-amber-500' />
@@ -1166,7 +1169,7 @@ export default function LocationBookingDetailPage({
                 >
                   <Button variant='outline' className='w-full' size='sm'>
                     <ExternalLink className='h-4 w-4 mr-2' />
-                    Xem chi tiết địa điểm
+                    View Location Details
                   </Button>
                 </Link>
               </div>
@@ -1290,7 +1293,7 @@ export default function LocationBookingDetailPage({
                           <div className='h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center'>
                             <Calendar className='h-3 w-3 text-primary' />
                           </div>
-                          Lịch đặt chỗ
+                          Booking Calendar
                         </CardTitle>
                         <div className='flex items-center gap-1'>
                           <Button
@@ -1424,13 +1427,13 @@ export default function LocationBookingDetailPage({
             <AlertDialogHeader className='flex-1 p-0'>
               <AlertDialogTitle className='text-xl font-bold text-foreground'>
                 {pendingStatus === 'APPROVED'
-                  ? 'Chấp nhận Booking'
-                  : 'Từ chối Booking'}
+                  ? 'Approve Booking'
+                  : 'Reject Booking'}
               </AlertDialogTitle>
               <AlertDialogDescription className='text-sm text-muted-foreground mt-1'>
                 {pendingStatus === 'APPROVED'
-                  ? 'Xác nhận chấp nhận yêu cầu đặt chỗ địa điểm này'
-                  : 'Xác nhận từ chối yêu cầu đặt chỗ địa điểm này'}
+                  ? 'Confirm approval of this location booking request'
+                  : 'Confirm rejection of this location booking request'}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <Button
@@ -1471,12 +1474,11 @@ export default function LocationBookingDetailPage({
                 <div className='flex-1'>
                   <p className='text-sm font-semibold text-foreground'>
                     {pendingStatus === 'APPROVED'
-                      ? 'Sẵn sàng chấp nhận booking này?'
-                      : 'Sẵn sàng từ chối booking này?'}
+                      ? 'Ready to approve this booking?'
+                      : 'Ready to reject this booking?'}
                   </p>
                   <p className='text-xs text-muted-foreground mt-1'>
-                    Vui lòng xem xét các chi tiết bên dưới trước khi xác nhận
-                    quyết định của bạn.
+                    Please review the details below before confirming your decision.
                   </p>
                 </div>
               </div>
@@ -1485,9 +1487,8 @@ export default function LocationBookingDetailPage({
               <div className='flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800'>
                 <AlertCircle className='h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5' />
                 <p className='text-sm text-amber-900 dark:text-amber-200'>
-                  <span className='font-semibold'>Quan trọng:</span> Hành động
-                  này không thể hoàn tác. Vui lòng xem xét các chi tiết booking
-                  bên dưới trước khi xác nhận.
+                  <span className='font-semibold'>Important:</span> This action
+                  cannot be undone. Please review the booking details below before confirming.
                 </p>
               </div>
 
@@ -1496,7 +1497,7 @@ export default function LocationBookingDetailPage({
                 <div className='flex items-center gap-2 pb-2 border-b'>
                   <Calendar className='h-5 w-5 text-primary' />
                   <h3 className='text-base font-semibold text-foreground'>
-                    Tóm tắt Booking
+                    Booking Summary
                   </h3>
                 </div>
 
@@ -1509,13 +1510,13 @@ export default function LocationBookingDetailPage({
                       </div>
                       <div className='flex-1 min-w-0'>
                         <p className='text-xs font-medium text-muted-foreground mb-1'>
-                          Sự kiện
+                          Event
                         </p>
                         <p className='text-sm font-semibold text-foreground break-words'>
                           {eventData.eventName || 'N/A'}
                         </p>
                         <p className='text-xs text-muted-foreground mt-1'>
-                          Loại: {formatBookingObject(booking?.bookingObject)}
+                          Type: {formatBookingObject(booking?.bookingObject)}
                         </p>
                       </div>
                     </div>
@@ -1531,7 +1532,7 @@ export default function LocationBookingDetailPage({
                       </div>
                       <div className='flex-1'>
                         <p className='text-xs font-medium text-muted-foreground mb-3'>
-                          Các khung giờ đặt chỗ
+                          Booking Time Slots
                         </p>
                       </div>
                     </div>
@@ -1539,7 +1540,7 @@ export default function LocationBookingDetailPage({
                       if (!booking?.dates || booking.dates.length === 0) {
                         return (
                           <div className='text-sm text-muted-foreground text-center py-4'>
-                            Không có khung giờ nào
+                            No time slots
                           </div>
                         );
                       }
@@ -1550,13 +1551,13 @@ export default function LocationBookingDetailPage({
                             <TableHeader>
                               <TableRow className='bg-muted/50'>
                                 <TableHead className='font-semibold text-xs'>
-                                  Ngày
+                                  Date
                                 </TableHead>
                                 <TableHead className='font-semibold text-xs'>
-                                  Khung giờ
+                                  Time Slot
                                 </TableHead>
                                 <TableHead className='font-semibold text-xs text-right'>
-                                  Thời lượng
+                                  Duration
                                 </TableHead>
                               </TableRow>
                             </TableHeader>
@@ -1585,13 +1586,13 @@ export default function LocationBookingDetailPage({
                               {/* Total Row */}
                               <TableRow className='bg-muted/30 border-t-2 border-border font-semibold'>
                                 <TableCell className='font-semibold text-sm'>
-                                  Tổng thời gian
+                                  Total Duration
                                 </TableCell>
                                 <TableCell className='text-muted-foreground text-sm italic'>
                                   {bookingTimeDetails.totalDays}{' '}
                                   {bookingTimeDetails.totalDays === 1
                                     ? 'ngày'
-                                    : 'ngày'}
+                                    : 'days'}
                                 </TableCell>
                                 <TableCell className='text-right font-bold text-sm text-primary'>
                                   {totalHours}h
@@ -1615,7 +1616,7 @@ export default function LocationBookingDetailPage({
                         </div>
                         <div>
                           <p className='text-xs font-medium text-muted-foreground'>
-                            Tổng số tiền
+                            Total Amount
                           </p>
                           <p className='text-lg font-bold text-emerald-700 dark:text-emerald-400'>
                             {formatCurrency(booking?.amountToPay || '0')}
@@ -1635,7 +1636,7 @@ export default function LocationBookingDetailPage({
               disabled={approveBooking.isPending || rejectBookings.isPending}
               className='min-w-[100px]'
             >
-              Hủy
+              Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleProcessConfirm}
@@ -1649,21 +1650,207 @@ export default function LocationBookingDetailPage({
               {approveBooking.isPending || rejectBookings.isPending ? (
                 <>
                   <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                  Đang xử lý...
+                  Processing...
                 </>
               ) : (
                 <>
                   {pendingStatus === 'APPROVED' ? (
                     <>
                       <CheckCircle className='h-4 w-4 mr-2' />
-                      Xác nhận chấp nhận
+                      Confirm Approve
                     </>
                   ) : (
                     <>
                       <X className='h-4 w-4 mr-2' />
-                      Xác nhận từ chối
+                      Confirm Reject
                     </>
                   )}
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Approve Booking Confirmation Dialog */}
+      <AlertDialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to approve this booking?
+              <div className="mt-4 space-y-2 text-sm">
+                {booking.location?.name && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Location:</span>
+                    <span>{booking.location.name}</span>
+                  </div>
+                )}
+                {booking.event?.displayName && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Event:</span>
+                    <span>{booking.event.displayName}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Amount:</span>
+                  <span>{formatCurrency(booking.amountToPay, booking.currency || 'VND')}</span>
+                </div>
+                {booking.dates && booking.dates.length > 0 && (() => {
+                  const sortedDates = [...booking.dates].sort(
+                    (a, b) =>
+                      new Date(a.startDateTime).getTime() -
+                      new Date(b.startDateTime).getTime()
+                  );
+                  const startDate = new Date(sortedDates[0].startDateTime);
+                  const endDate = new Date(
+                    sortedDates[sortedDates.length - 1].endDateTime
+                  );
+                  return (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Hours Booked:</span>
+                        <span>{totalHours} hours</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Start Date:</span>
+                        <span>{format(startDate, "MMM dd, yyyy 'at' h:mm a")}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">End Date:</span>
+                        <span>{format(endDate, "MMM dd, yyyy 'at' h:mm a")}</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                approveBooking.mutate(locationBookingId, {
+                  onSuccess: () => {
+                    setIsApproveDialogOpen(false);
+                  },
+                });
+              }}
+              disabled={approveBooking.isPending}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {approveBooking.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Approving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Confirm Approve
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject Booking Confirmation Dialog */}
+      <AlertDialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reject this booking? This action cannot be undone.
+              <div className="mt-4 space-y-2 text-sm">
+                {booking.location?.name && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Location:</span>
+                    <span>{booking.location.name}</span>
+                  </div>
+                )}
+                {booking.event?.displayName && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Event:</span>
+                    <span>{booking.event.displayName}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Amount:</span>
+                  <span>{formatCurrency(booking.amountToPay, booking.currency || 'VND')}</span>
+                </div>
+                {booking.dates && booking.dates.length > 0 && (() => {
+                  const sortedDates = [...booking.dates].sort(
+                    (a, b) =>
+                      new Date(a.startDateTime).getTime() -
+                      new Date(b.startDateTime).getTime()
+                  );
+                  const startDate = new Date(sortedDates[0].startDateTime);
+                  const endDate = new Date(
+                    sortedDates[sortedDates.length - 1].endDateTime
+                  );
+                  return (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Hours Booked:</span>
+                        <span>{totalHours} hours</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Start Date:</span>
+                        <span>{format(startDate, "MMM dd, yyyy 'at' h:mm a")}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">End Date:</span>
+                        <span>{format(endDate, "MMM dd, yyyy 'at' h:mm a")}</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-900 dark:text-red-200">
+                    <span className="font-semibold">Warning:</span> Rejecting this booking will notify the event creator and cannot be undone.
+                  </p>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                rejectBookings.mutate([locationBookingId], {
+                  onSuccess: () => {
+                    setIsRejectDialogOpen(false);
+                  },
+                });
+              }}
+              disabled={rejectBookings.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {rejectBookings.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Rejecting...
+                </>
+              ) : (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  Confirm Reject
                 </>
               )}
             </AlertDialogAction>

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axiosInstance from "./axios-config";
-import type { ApiResponse, PaginatedData, EventRequest, GetEventRequestsParams, CreateEventRequestPayload, GetBookableLocationsParams, BookableLocation, GetEventsParams, Event, UpdateEventPayload, AddEventTagsPayload, RemoveEventTagsPayload, EventTagResponse, CreateTicketPayload, UpdateTicketPayload, Ticket, EventAttendance, GetEventAttendanceParams, ConfirmAttendancePayload, LocationBooking, Order } from "@/types";
+import type { ApiResponse, PaginatedData, EventRequest, GetEventRequestsParams, CreateEventRequestPayload, GetBookableLocationsParams, BookableLocation, GetEventsParams, Event, UpdateEventPayload, AddEventTagsPayload, RemoveEventTagsPayload, EventTagResponse, CreateTicketPayload, UpdateTicketPayload, Ticket, EventAttendance, GetEventAttendanceParams, GetEventOrdersParams, ConfirmAttendancePayload, LocationBooking, Order } from "@/types";
 
 export const getEventRequests = async ({
   page = 1,
@@ -392,6 +392,34 @@ export const finishEvent = async (eventId: string): Promise<Event> => {
   const { data } = await axiosInstance.post<ApiResponse<Event>>(
     `/v1/creator/events/${eventId}/finish`,
     {}
+  );
+  return data.data;
+};
+
+export const getEventOrders = async (
+  eventId: string,
+  params?: GetEventOrdersParams
+): Promise<PaginatedData<Order>> => {
+  const queryParams: any = {
+    page: params?.page || 1,
+    limit: params?.limit || 20,
+    sortBy: params?.sortBy || 'createdAt:DESC',
+  };
+  
+  if (params?.search) {
+    queryParams.search = params.search;
+    if (params?.searchBy && params.searchBy.length > 0) {
+      queryParams.searchBy = params.searchBy;
+    }
+  }
+  
+  if (params?.status) {
+    queryParams['filter.status'] = `$eq:${params.status}`;
+  }
+
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Order>>>(
+    `/v1/creator/events/${eventId}/orders`,
+    { params: queryParams }
   );
   return data.data;
 };

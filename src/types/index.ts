@@ -977,6 +977,7 @@ export interface UpdateTicketPayload {
 }
 
 export interface Ticket {
+  totalQuantity: number;
   id: string;
   createdAt: string;
   updatedAt: string;
@@ -1047,10 +1048,13 @@ export interface Order {
   referencedTransactionId: string | null;
   refundedAt: string | null;
   refundReason: string | null;
+  refundedAmount?: number;
+  refundTransactionId?: string | null;
   eventId: string;
   createdBy: User;
   orderDetails: OrderDetail[];
   eventAttendances?: OrderEventAttendance[];
+  referencedTransaction?: any;
 }
 
 export interface OrderEventAttendance {
@@ -1082,6 +1086,15 @@ export interface GetEventAttendanceParams {
   page?: number;
   limit?: number;
   sortBy?: string;
+}
+
+export interface GetEventOrdersParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  search?: string;
+  searchBy?: string[];
+  status?: string;
 }
 
 export interface ConfirmAttendancePayload {

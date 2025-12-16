@@ -870,6 +870,8 @@ export default function EventLocationPage({
   const { openBookLocationTab } = useEventTabs();
 
   const isEventCancelled = event?.status?.toUpperCase() === "CANCELLED";
+  const isPublished = event?.status?.toUpperCase() === "PUBLISHED";
+  const isDraft = event?.status?.toUpperCase() === "DRAFT";
 
   // Handle Google Maps errors globally to prevent blocking
   useEffect(() => {
@@ -1182,21 +1184,42 @@ export default function EventLocationPage({
                       </div>
                       <div className={`${isPaymentReceived ? "pt-6 mt-6 border-t" : ""} mt-auto`}>
                         <CardHeader className={isPaymentReceived ? "pb-4" : ""}>
-                          <CardTitle className="text-lg text-destructive">Destructive Actions</CardTitle>
+                          <CardTitle className="text-lg">Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                          <p className="text-xs text-muted-foreground">
-                            This action cannot be undone. Cancelling will refund 100% of the booking fee if already paid.
-                          </p>
                           <Button
-                            variant="destructive"
+                            variant="outline"
                             size="default"
-                            onClick={() => setIsCancelDialogOpen(true)}
+                            onClick={() => {}}
                             className="w-full"
                           >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Cancel Booking
+                            <AlertCircle className="h-4 w-4 mr-2" />
+                            Report location
                           </Button>
+                          <div className="space-y-2">
+                            {!isDraft ? (
+                              <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription className="text-xs">
+                                  You're only allowed to cancel booking when your event is in DRAFT status.
+                                </AlertDescription>
+                              </Alert>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                This action cannot be undone. Cancelling will refund 100% of the booking fee if already paid.
+                              </p>
+                            )}
+                            <Button
+                              variant="destructive"
+                              size="default"
+                              onClick={() => setIsCancelDialogOpen(true)}
+                              className={`w-full ${!isDraft ? "opacity-50 cursor-not-allowed" : ""}`}
+                              disabled={!isDraft}
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Cancel Booking
+                            </Button>
+                          </div>
                         </CardContent>
                       </div>
                     </Card>
