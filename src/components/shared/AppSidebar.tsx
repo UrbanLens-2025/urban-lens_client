@@ -55,6 +55,7 @@ const adminNavGroups = [
     items: [
       { title: 'Locations', url: '/admin/locations', icon: IconMapPin },
       { title: 'Events', url: '/admin/events', icon: IconCalendar },
+      { title: 'Posts', url: '/admin/posts', icon: IconFileText },
       // { title: 'Tags', url: '/admin/tags', icon: IconTag },
     ],
   },

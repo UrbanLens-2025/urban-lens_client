@@ -400,6 +400,86 @@ export const getEventByIdForAdmin = async (id: string): Promise<any> => {
   return data.data;
 };
 
+// Admin Post APIs
+export interface GetAllPostsForAdminParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  type?: string;
+  visibility?: string;
+}
+
+export interface AdminPost {
+  postId: string;
+  content: string;
+  imageUrls: string[];
+  type: string;
+  isVerified: boolean;
+  visibility: string;
+  createdAt: string;
+  updatedAt: string;
+  author: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl: string | null;
+  };
+  rating: number | null;
+  eventId: string | null;
+  location?: {
+    id: string;
+    name: string;
+    addressLine: string;
+  };
+  analytics?: {
+    totalUpvotes: number;
+    totalDownvotes: number;
+    totalComments: number;
+  };
+}
+
+export const getAllPostsForAdmin = async ({
+  page = 1,
+  limit = 10,
+  search,
+  sortBy,
+  type,
+  visibility,
+}: GetAllPostsForAdminParams): Promise<PaginatedData<AdminPost>> => {
+  const params: any = { page, limit };
+
+  if (search) {
+    params.search = search;
+    params.searchBy = ['content'];
+  }
+
+  if (type) {
+    params['filter.type'] = `$eq:${type}`;
+  }
+
+  if (visibility) {
+    params['filter.visibility'] = `$eq:${visibility}`;
+  }
+
+  if (sortBy) {
+    params.sortBy = sortBy;
+  }
+
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<AdminPost>>>(
+    '/v1/admin/posts',
+    { params }
+  );
+  return data.data;
+};
+
+export const getPostByIdForAdmin = async (postId: string): Promise<AdminPost> => {
+  const { data } = await axiosInstance.get<ApiResponse<AdminPost>>(
+    `/v1/admin/posts/${postId}`
+  );
+  return data.data;
+};
+
 // Admin Account APIs
 interface GetAllAccountsParams {
   page?: number;
