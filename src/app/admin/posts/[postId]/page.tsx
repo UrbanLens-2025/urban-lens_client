@@ -39,6 +39,7 @@ import { ImageViewer } from "@/components/shared/ImageViewer";
 import { Separator } from "@/components/ui/separator";
 import { PageContainer } from "@/components/shared";
 import Image from "next/image";
+import { toast } from "sonner";
 
 // --- Helper Components ---
 function InfoRow({
@@ -158,7 +159,8 @@ export default function AdminPostDetailsPage({
   };
 
   const getTypeBadge = (type: string) => {
-    if (type === "REVIEW") {
+    const typeLower = type.toLowerCase();
+    if (typeLower === "review") {
       return (
         <Badge
           variant="outline"
@@ -169,14 +171,14 @@ export default function AdminPostDetailsPage({
         </Badge>
       );
     }
-    if (type === "CHECK_IN") {
+    if (typeLower === "blog") {
       return (
         <Badge
           variant="outline"
           className="flex items-center w-fit gap-1 bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800"
         >
-          <CheckCircle2 className="h-3 w-3" />
-          Check-in
+          <FileText className="h-3 w-3" />
+          Blog
         </Badge>
       );
     }
@@ -188,7 +190,8 @@ export default function AdminPostDetailsPage({
   };
 
   const getVisibilityBadge = (visibility: string) => {
-    if (visibility === "PUBLIC") {
+    const visibilityLower = visibility.toLowerCase();
+    if (visibilityLower === "public") {
       return (
         <Badge
           variant="outline"
@@ -436,6 +439,7 @@ export default function AdminPostDetailsPage({
                         className="h-6 px-2"
                         onClick={() => {
                           navigator.clipboard.writeText(post.postId);
+                          toast.success("Post ID copied to clipboard");
                         }}
                       >
                         Copy
@@ -491,25 +495,92 @@ export default function AdminPostDetailsPage({
                     Location Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  <InfoRow
-                    label="Location Name"
-                    value={
-                      <Link
-                        href={`/admin/locations/${post.location.id}`}
-                        className="text-primary hover:underline flex items-center gap-1"
-                      >
-                        {post.location.name}
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    }
-                    icon={MapPin}
-                  />
-                  <InfoRow
-                    label="Address"
-                    value={post.location.addressLine}
-                    icon={Building}
-                  />
+                <CardContent className="space-y-4">
+                  {/* Location Images */}
+                  {post.location.imageUrl && post.location.imageUrl.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Location Images
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {post.location.imageUrl.map((imageUrl, index) => (
+                          <div
+                            key={index}
+                            className="relative aspect-square overflow-hidden rounded-lg bg-muted cursor-pointer group"
+                            onClick={() => handleImageClick(imageUrl)}
+                          >
+                            <Image
+                              src={imageUrl}
+                              alt={`Location image ${index + 1}`}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              sizes="(max-width: 768px) 50vw, 25vw"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <InfoRow
+                      label="Location Name"
+                      value={
+                        <Link
+                          href={`/admin/locations/${post.location.id}`}
+                          className="text-primary hover:underline flex items-center gap-1"
+                        >
+                          {post.location.name}
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      }
+                      icon={MapPin}
+                    />
+                    <InfoRow
+                      label="Address"
+                      value={post.location.addressLine}
+                      icon={Building}
+                    />
+                    {post.location.latitude !== undefined && post.location.longitude !== undefined && (
+                      <>
+                        <InfoRow
+                          label="Coordinates"
+                          value={
+                            <div className="flex items-center gap-2">
+                              <code className="text-xs bg-muted px-2 py-1 rounded">
+                                {post.location.latitude.toFixed(6)}, {post.location.longitude.toFixed(6)}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2"
+                                onClick={() => {
+                                  const coords = `${post.location!.latitude}, ${post.location!.longitude}`;
+                                  navigator.clipboard.writeText(coords);
+                                  toast.success("Coordinates copied to clipboard");
+                                }}
+                              >
+                                Copy
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2"
+                                onClick={() => {
+                                  const url = `https://www.google.com/maps?q=${post.location!.latitude},${post.location!.longitude}`;
+                                  window.open(url, '_blank');
+                                }}
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Open Map
+                              </Button>
+                            </div>
+                          }
+                          icon={MapPin}
+                        />
+                      </>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}

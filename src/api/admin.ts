@@ -405,9 +405,11 @@ export interface GetAllPostsForAdminParams {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: string;
+  searchBy?: string[];
+  sortBy?: string | string[];
   type?: string;
   visibility?: string;
+  select?: string[];
 }
 
 export interface AdminPost {
@@ -424,6 +426,7 @@ export interface AdminPost {
     firstName: string;
     lastName: string;
     avatarUrl: string | null;
+    isFollow?: boolean;
   };
   rating: number | null;
   eventId: string | null;
@@ -431,27 +434,33 @@ export interface AdminPost {
     id: string;
     name: string;
     addressLine: string;
+    latitude?: number;
+    longitude?: number;
+    imageUrl?: string[];
   };
   analytics?: {
     totalUpvotes: number;
     totalDownvotes: number;
     totalComments: number;
   };
+  currentUserReaction?: string | null;
 }
 
 export const getAllPostsForAdmin = async ({
   page = 1,
   limit = 10,
   search,
+  searchBy,
   sortBy,
   type,
   visibility,
+  select,
 }: GetAllPostsForAdminParams): Promise<PaginatedData<AdminPost>> => {
   const params: any = { page, limit };
 
   if (search) {
     params.search = search;
-    params.searchBy = ['content'];
+    params.searchBy = searchBy || ['content'];
   }
 
   if (type) {
@@ -463,11 +472,20 @@ export const getAllPostsForAdmin = async ({
   }
 
   if (sortBy) {
-    params.sortBy = sortBy;
+    // Handle both string format "column:direction" and array format
+    if (typeof sortBy === 'string') {
+      params.sortBy = [sortBy];
+    } else {
+      params.sortBy = sortBy;
+    }
+  }
+
+  if (select) {
+    params.select = select;
   }
 
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<AdminPost>>>(
-    '/v1/admin/posts',
+    '/v1/post',
     { params }
   );
   return data.data;
@@ -475,7 +493,7 @@ export const getAllPostsForAdmin = async ({
 
 export const getPostByIdForAdmin = async (postId: string): Promise<AdminPost> => {
   const { data } = await axiosInstance.get<ApiResponse<AdminPost>>(
-    `/v1/admin/posts/${postId}`
+    `/v1/post/${postId}`
   );
   return data.data;
 };

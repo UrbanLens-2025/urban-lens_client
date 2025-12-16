@@ -161,7 +161,8 @@ export default function AdminPostsPage() {
   };
 
   const getTypeBadge = (type: string) => {
-    if (type === 'REVIEW') {
+    const typeLower = type.toLowerCase();
+    if (typeLower === 'review') {
       return (
         <Badge
           variant='outline'
@@ -172,14 +173,14 @@ export default function AdminPostsPage() {
         </Badge>
       );
     }
-    if (type === 'CHECK_IN') {
+    if (typeLower === 'blog') {
       return (
         <Badge
           variant='outline'
           className='flex items-center w-fit gap-1 bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800'
         >
-          <CheckCircle className='h-3 w-3' />
-          Check-in
+          <FileText className='h-3 w-3' />
+          Blog
         </Badge>
       );
     }
@@ -191,7 +192,8 @@ export default function AdminPostsPage() {
   };
 
   const getVisibilityBadge = (visibility: string) => {
-    if (visibility === 'PUBLIC') {
+    const visibilityLower = visibility.toLowerCase();
+    if (visibilityLower === 'public') {
       return (
         <Badge
           variant='outline'
@@ -244,7 +246,7 @@ export default function AdminPostsPage() {
         />
 
         <StatisticCard
-          title='Check-ins'
+          title='Blog Posts'
           subtitle={`${
             postStats.total > 0
               ? Math.round((postStats.checkIns / postStats.total) * 100)
@@ -255,7 +257,7 @@ export default function AdminPostsPage() {
               ? '—'
               : postStats.checkIns.toLocaleString()
           }
-          icon={CheckCircle}
+          icon={FileText}
           iconColorClass='purple'
         />
 
@@ -314,8 +316,8 @@ export default function AdminPostsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value='all'>All Types</SelectItem>
-                  <SelectItem value='REVIEW'>Review</SelectItem>
-                  <SelectItem value='CHECK_IN'>Check-in</SelectItem>
+                  <SelectItem value='review'>Review</SelectItem>
+                  <SelectItem value='blog'>Blog</SelectItem>
                 </SelectContent>
               </Select>
               <Select
@@ -333,8 +335,8 @@ export default function AdminPostsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value='all'>All Visibility</SelectItem>
-                  <SelectItem value='PUBLIC'>Public</SelectItem>
-                  <SelectItem value='PRIVATE'>Private</SelectItem>
+                  <SelectItem value='public'>Public</SelectItem>
+                  <SelectItem value='private'>Private</SelectItem>
                 </SelectContent>
               </Select>
             </div>
