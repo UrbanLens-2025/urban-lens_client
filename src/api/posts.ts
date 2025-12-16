@@ -95,6 +95,7 @@ export interface Comment {
   };
   totalUpvotes: number;
   totalDownvotes: number;
+  locationName?: string; // Location name for owner comments
 }
 
 export interface GetCommentsParams {

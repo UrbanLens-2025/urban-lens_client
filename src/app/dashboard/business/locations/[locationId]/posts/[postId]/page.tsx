@@ -455,35 +455,48 @@ export default function PostDetailsPage({
                                     </div>
                                 ) : (
                                     <>
-                                        {comments.map((comment) => (
-                                            <div key={comment.commentId} className="flex gap-3">
-                                                <Avatar className="h-8 w-8 border border-border">
-                                                    <AvatarImage
-                                                        src={comment.author.avatarUrl || undefined}
-                                                        alt={`${comment.author.firstName} ${comment.author.lastName}`}
-                                                    />
-                                                    <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
-                                                        {comment.author.firstName[0]}
-                                                        {comment.author.lastName[0]}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex-1 space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="font-semibold text-sm text-foreground">
-                                                            {comment.author.firstName} {comment.author.lastName}
+                                        {comments.map((comment) => {
+                                            // Check if this is an owner comment (has locationName from API)
+                                            const isOwnerComment = !!comment.locationName;
+                                            const displayName = isOwnerComment 
+                                                ? comment.locationName 
+                                                : `${comment.author.firstName} ${comment.author.lastName}`;
+                                            const avatarInitials = isOwnerComment 
+                                                ? comment.locationName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'LO'
+                                                : `${comment.author.firstName[0]}${comment.author.lastName[0]}`;
+                                            const avatarImage = isOwnerComment 
+                                                ? post.location?.imageUrl?.[0] 
+                                                : (comment.author.avatarUrl || undefined);
+                                            
+                                            return (
+                                                <div key={comment.commentId} className="flex gap-3">
+                                                    <Avatar className="h-8 w-8 border border-border">
+                                                        <AvatarImage
+                                                            src={avatarImage}
+                                                            alt={displayName}
+                                                        />
+                                                        <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
+                                                            {avatarInitials}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex-1 space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="font-semibold text-sm text-foreground">
+                                                                {displayName}
+                                                            </p>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {formatDistanceToNow(new Date(comment.createdAt), {
+                                                                    addSuffix: true,
+                                                                })}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
+                                                            {comment.content}
                                                         </p>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {formatDistanceToNow(new Date(comment.createdAt), {
-                                                                addSuffix: true,
-                                                            })}
-                                                        </span>
                                                     </div>
-                                                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
-                                                        {comment.content}
-                                                    </p>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                         {commentsMeta && commentsMeta.currentPage < commentsMeta.totalPages && (
                                             <div className="pt-4 border-t">
                                                 <Button
