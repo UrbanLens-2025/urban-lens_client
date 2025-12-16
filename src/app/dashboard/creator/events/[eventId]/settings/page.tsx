@@ -4,7 +4,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit, Ticket, Megaphone, Globe, AlertCircle, XCircle } from "lucide-react";
+import { Edit, Ticket, Megaphone, Globe, AlertCircle, XCircle, Scale } from "lucide-react";
 import Link from "next/link";
 import { useEventTabs } from "@/contexts/EventTabContext";
 import { useEventById } from "@/hooks/events/useEventById";
@@ -85,6 +85,24 @@ export default function EventSettingsPage({
                 <div className="text-left">
                   <p className="font-medium">Visibility Settings</p>
                   <p className="text-xs text-muted-foreground">Control who can see your event</p>
+                </div>
+              </div>
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="w-full justify-start h-auto py-4"
+              disabled={isEventCancelled}
+              onClick={(e) => {
+                e.preventDefault();
+                router.push(`/dashboard/creator/events/${eventId}/penalties`);
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <Scale className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div className="text-left">
+                  <p className="font-medium">Penalties</p>
+                  <p className="text-xs text-muted-foreground">Manage event penalties</p>
                 </div>
               </div>
             </Button>

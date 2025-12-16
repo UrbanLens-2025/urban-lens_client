@@ -46,6 +46,7 @@ import {
   CreditCard,
   AlertCircle,
   ShoppingCart,
+  Scale,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -1135,6 +1136,20 @@ function EventDetailLayoutContent({
               >
                 <Megaphone className='h-4 w-4' />
                 Announcements
+              </Button>
+            </Link>
+            <Link href={`/dashboard/creator/events/${eventId}/penalties`}>
+              <Button
+                variant='ghost'
+                className={cn(
+                  'gap-2 rounded-b-none border-b-2 transition-colors',
+                  isActiveTab(`/dashboard/creator/events/${eventId}/penalties`)
+                    ? 'border-primary bg-muted'
+                    : 'border-transparent hover:border-muted-foreground/50'
+                )}
+              >
+                <Scale className='h-4 w-4' />
+                Penalties
               </Button>
             </Link>
             <Link href={`/dashboard/creator/events/${eventId}/settings`}>

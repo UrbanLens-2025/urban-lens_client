@@ -1307,6 +1307,27 @@ export interface GetReportsParams {
   targetId?: string;
 }
 
+export type ReportEntityType = 'post' | 'location' | 'event';
+
+export type ReportPenaltyActions =
+  | 'WARN_USER'
+  | 'SUSPEND_ACCOUNT'
+  | 'BAN_ACCOUNT'
+  | 'SUSPEND_LOCATION_BOOKING'
+  | 'BAN_POST';
+
+export interface Penalty {
+  id: string;
+  targetId: string;
+  targetType: ReportEntityType;
+  penaltyAction: ReportPenaltyActions;
+  reason?: string | null;
+  createdById?: string | null;
+  createdBy?: User | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProcessReportPayload {
   status: 'RESOLVED' | 'REJECTED';
   resolutionAction: ReportResolutionActions; // Required: must be NO_ACTION_TAKEN, MALICIOUS_REPORT, or CANCEL_EVENT
