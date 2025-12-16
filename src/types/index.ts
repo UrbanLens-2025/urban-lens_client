@@ -362,7 +362,6 @@ export interface UpdateAvailabilityPayload {
 export interface CreateLocationMissionPayload {
   title: string;
   description: string;
-  metric: string;
   target: number;
   reward: number;
   startDate: string;
@@ -397,7 +396,6 @@ export interface GetLocationMissionsParams {
 export interface UpdateLocationMissionPayload {
   title: string;
   description: string;
-  metric: string;
   target: number;
   reward: number;
   startDate: string;

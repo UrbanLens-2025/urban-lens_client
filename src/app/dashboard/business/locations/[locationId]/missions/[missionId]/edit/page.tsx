@@ -40,7 +40,6 @@ const missionSchema = z
   .object({
     title: z.string().min(1, "Title is required"),
     description: z.string().min(1, "Description is required"),
-    metric: z.string().min(1, "Metric is required"),
     target: z.number().min(1, "Target must be at least 1"),
     reward: z.number().min(1, "Reward must be at least 1"),
     startDate: z.date({
@@ -103,7 +102,6 @@ export default function EditMissionPage({
     defaultValues: {
       title: "",
       description: "",
-      metric: "",
       target: 1,
       reward: 1,
       // default to today and tomorrow for usability; they will be reset when mission loads
@@ -120,7 +118,6 @@ export default function EditMissionPage({
       form.reset({
         title: mission.title ?? "",
         description: mission.description ?? "",
-        metric: mission.metric ?? "",
         target: mission.target ?? 1,
         reward: mission.reward ?? 1,
         startDate: mission.startDate ? new Date(mission.startDate) : new Date(),
@@ -190,13 +187,6 @@ export default function EditMissionPage({
     [mission]
   );
 
-  const metricLabel = useMemo(() => {
-    if (!mission?.metric) return "Metric";
-    return mission.metric
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
-  }, [mission?.metric]);
 
   const dateRangeLabel = useMemo(() => {
     if (!missionStatus.start || !missionStatus.end) return "No schedule";
@@ -298,20 +288,7 @@ export default function EditMissionPage({
                     )}
                   />
 
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <FormField
-                      name="metric"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Metric</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g. CHECK_INS, ORDERS" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField
                       name="target"
                       control={form.control}
@@ -472,10 +449,6 @@ export default function EditMissionPage({
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Status</span>
                       {missionStatus.badge}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Metric</span>
-                      <span className="font-medium">{metricLabel}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Target</span>

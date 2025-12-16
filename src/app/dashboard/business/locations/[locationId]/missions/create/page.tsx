@@ -42,7 +42,6 @@ const missionSchema = z
   .object({
     title: z.string().min(1, "Title is required"),
     description: z.string().min(1, "Description is required"),
-    metric: z.string().min(1, "Metric is required"),
     target: z.number().min(1, "Target must be at least 1"),
     reward: z.number().min(1, "Reward must be at least 1"),
     startDate: z.date({
@@ -104,7 +103,6 @@ export default function CreateMissionPage({
     defaultValues: {
       title: "",
       description: "",
-      metric: "order_count",
       target: 1,
       reward: 0,
       imageUrls: [],
@@ -116,7 +114,6 @@ export default function CreateMissionPage({
   function onSubmit(values: FormValues) {
     const payload = {
       ...values,
-      metric: values.metric || "order_count", // Ensure metric is always included
       startDate: values.startDate.toISOString(),
       endDate: values.endDate.toISOString(),
     };
@@ -183,19 +180,6 @@ export default function CreateMissionPage({
                       />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Hidden metric field - required for form validation */}
-              <FormField
-                name="metric"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem className="hidden">
-                    <FormControl>
-                      <Input type="hidden" {...field} value="order_count" />
-                    </FormControl>
                   </FormItem>
                 )}
               />
