@@ -798,6 +798,11 @@ export interface GetWalletTransactionsParams {
   sortBy?: string; // e.g., createdAt:DESC
 }
 
+// Admin: get internal wallet transactions for a specific wallet
+export interface GetAdminWalletTransactionsParams extends GetWalletTransactionsParams {
+  walletId: string;
+}
+
 export interface ReferencedEventRequest {
   id: string;
   createdAt: string;

@@ -47,11 +47,11 @@ import {
 } from 'lucide-react';
 import { useAdminWallets } from '@/hooks/admin/useAdminWallets';
 import { useAdminExternalTransactions } from '@/hooks/admin/useAdminExternalTransactions';
+import { useAdminInternalWalletTransactions } from '@/hooks/admin/useAdminInternalWalletTransactions';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import type { WalletExternalTransaction } from '@/types';
-import { PageHeader } from '@/components/shared/PageHeader';
+import type { WalletExternalTransaction, WalletTransaction } from '@/types';
 import { PageContainer } from '@/components/shared/PageContainer';
 import { StatCard } from '@/components/shared/StatCard';
 import LoadingCustom from '@/components/shared/LoadingCustom';
@@ -248,12 +248,22 @@ function WalletCard({
 }
 
 export default function AdminWalletPage() {
-  const [activeTab, setActiveTab] = useState('wallets');
+  const [activeTab, setActiveTab] = useState('system-wallet');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [directionFilter, setDirectionFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('createdAt:DESC');
+  const [systemInternalSearch, setSystemInternalSearch] = useState('');
+  const [systemInternalStatusFilter, setSystemInternalStatusFilter] =
+    useState<string>('all');
+  const [systemInternalSortBy, setSystemInternalSortBy] =
+    useState<string>('createdAt:DESC');
+  const [escrowInternalSearch, setEscrowInternalSearch] = useState('');
+  const [escrowInternalStatusFilter, setEscrowInternalStatusFilter] =
+    useState<string>('all');
+  const [escrowInternalSortBy, setEscrowInternalSortBy] =
+    useState<string>('createdAt:DESC');
   const itemsPerPage = 20;
 
   const { escrowWallet, systemWallet, isLoading, isError, error } =
@@ -272,10 +282,40 @@ export default function AdminWalletPage() {
   const totalPages = transactionsData?.meta.totalPages || 1;
   const totalItems = transactionsData?.meta.totalItems || 0;
 
-  const totalBalance = (
-    parseFloat(escrowWallet?.balance || '0') +
-    parseFloat(systemWallet?.balance || '0')
-  ).toFixed(2);
+  // Admin internal transactions per wallet (system & escrow)
+  const {
+    data: systemInternalData,
+    isLoading: isLoadingSystemInternal,
+  } = useAdminInternalWalletTransactions(
+    systemWallet
+      ? {
+          walletId: systemWallet.id,
+          page: 1,
+          limit: 5,
+          sortBy: 'createdAt:DESC',
+        }
+      : null
+  );
+
+  const systemInternalTransactions: WalletTransaction[] =
+    systemInternalData?.data || [];
+
+  const {
+    data: escrowInternalData,
+    isLoading: isLoadingEscrowInternal,
+  } = useAdminInternalWalletTransactions(
+    escrowWallet
+      ? {
+          walletId: escrowWallet.id,
+          page: 1,
+          limit: 5,
+          sortBy: 'createdAt:DESC',
+        }
+      : null
+  );
+
+  const escrowInternalTransactions: WalletTransaction[] =
+    escrowInternalData?.data || [];
 
   // Filter transactions client-side
   const filteredTransactions = useMemo(() => {
@@ -324,7 +364,7 @@ export default function AdminWalletPage() {
     });
   }, [transactions, statusFilter, directionFilter, searchQuery]);
 
-  // Calculate stats
+  // Calculate stats for external transactions tab
   const stats = useMemo(() => {
     return {
       totalDeposits: transactions
@@ -356,138 +396,503 @@ export default function AdminWalletPage() {
     };
   }, [transactions]);
 
+  // System internal transactions: filter + sort + search
+  const filteredSystemInternal = useMemo(() => {
+    let data = [...systemInternalTransactions];
+
+    if (systemInternalStatusFilter !== 'all') {
+      data = data.filter(
+        (t) =>
+          t.status.toUpperCase() === systemInternalStatusFilter.toUpperCase()
+      );
+    }
+
+    if (systemInternalSearch) {
+      const query = systemInternalSearch.toLowerCase();
+      data = data.filter((t) =>
+        [t.id, t.type, t.status]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(query)
+      );
+    }
+
+    if (systemInternalSortBy === 'createdAt:DESC') {
+      data.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    } else if (systemInternalSortBy === 'createdAt:ASC') {
+      data.sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+    } else if (systemInternalSortBy === 'amount:DESC') {
+      data.sort(
+        (a, b) => parseFloat(b.amount) - parseFloat(a.amount)
+      );
+    } else if (systemInternalSortBy === 'amount:ASC') {
+      data.sort(
+        (a, b) => parseFloat(a.amount) - parseFloat(b.amount)
+      );
+    }
+
+    return data;
+  }, [
+    systemInternalTransactions,
+    systemInternalStatusFilter,
+    systemInternalSearch,
+    systemInternalSortBy,
+  ]);
+
+  // Escrow internal transactions: filter + sort + search
+  const filteredEscrowInternal = useMemo(() => {
+    let data = [...escrowInternalTransactions];
+
+    if (escrowInternalStatusFilter !== 'all') {
+      data = data.filter(
+        (t) =>
+          t.status.toUpperCase() === escrowInternalStatusFilter.toUpperCase()
+      );
+    }
+
+    if (escrowInternalSearch) {
+      const query = escrowInternalSearch.toLowerCase();
+      data = data.filter((t) =>
+        [t.id, t.type, t.status]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(query)
+      );
+    }
+
+    if (escrowInternalSortBy === 'createdAt:DESC') {
+      data.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    } else if (escrowInternalSortBy === 'createdAt:ASC') {
+      data.sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+    } else if (escrowInternalSortBy === 'amount:DESC') {
+      data.sort(
+        (a, b) => parseFloat(b.amount) - parseFloat(a.amount)
+      );
+    } else if (escrowInternalSortBy === 'amount:ASC') {
+      data.sort(
+        (a, b) => parseFloat(a.amount) - parseFloat(b.amount)
+      );
+    }
+
+    return data;
+  }, [
+    escrowInternalTransactions,
+    escrowInternalStatusFilter,
+    escrowInternalSearch,
+    escrowInternalSortBy,
+  ]);
+
   return (
     <PageContainer>
-      {/* Total Balance Summary */}
-      {!isLoading && (escrowWallet || systemWallet) && (
-        <Card className='border-2  shadow-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800'>
-          <CardHeader>
-            <CardTitle className='flex items-center gap-2'>
-              <TrendingUp className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-              Total System Balance
-            </CardTitle>
-            <CardDescription>
-              Combined balance across all system wallets
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className='text-4xl font-bold text-blue-600 dark:text-blue-400'>
-              {formatCurrency(
-                totalBalance,
-                escrowWallet?.currency || systemWallet?.currency || 'VND'
-              )}
-            </div>
-            <div className='flex gap-4 mt-4 text-sm'>
-              <div>
-                <span className='text-muted-foreground'>Escrow: </span>
-                <span className='font-semibold'>
-                  {formatCurrency(
-                    escrowWallet?.balance || '0',
-                    escrowWallet?.currency || 'VND'
-                  )}
-                </span>
-              </div>
-              <div>
-                <span className='text-muted-foreground'>System: </span>
-                <span className='font-semibold'>
-                  {formatCurrency(
-                    systemWallet?.balance || '0',
-                    systemWallet?.currency || 'VND'
-                  )}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Tabs */}
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
         className='space-y-6'
       >
-        <TabsList className='grid w-full max-w-md grid-cols-2'>
-          <TabsTrigger value='wallets' className='flex items-center gap-2'>
+        <TabsList className='grid w-full max-w-md grid-cols-3'>
+          <TabsTrigger
+            value='system-wallet'
+            className='flex items-center gap-2'
+          >
             <Wallet className='h-4 w-4' />
-            Wallets
+            System wallet
           </TabsTrigger>
-          <TabsTrigger value='transactions' className='flex items-center gap-2'>
-            <CreditCard className='h-4 w-4' />
-            Transactions
+          <TabsTrigger
+            value='escrow-wallet'
+            className='flex items-center gap-2'
+          >
+            <Lock className='h-4 w-4' />
+            Escrow wallet
+          </TabsTrigger>
+          <TabsTrigger
+            value='external-transactions'
+            className='flex items-center gap-2'
+          >
+            External Transactions
           </TabsTrigger>
         </TabsList>
 
-        {/* Wallets Tab */}
-        <TabsContent value='wallets' className='space-y-6'>
-          <div className='grid gap-6 md:grid-cols-2'>
-            <WalletCard
-              title='Escrow Wallet'
-              wallet={escrowWallet}
-              isLoading={isLoading}
-              icon={Wallet}
-              color='text-green-600 dark:text-green-400'
-            />
-            <WalletCard
-              title='System Wallet'
-              wallet={systemWallet}
-              isLoading={isLoading}
-              icon={Wallet}
-              color='text-blue-600 dark:text-blue-400'
-            />
-          </div>
+        {/* System Wallet Tab */}
+        <TabsContent value='system-wallet' className='space-y-6'>
+          {isLoading ? (
+            <LoadingCustom />
+          ) : !systemWallet ? (
+            <ErrorCustom />
+          ) : (
+            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+              <StatCard
+                title='System wallet balance'
+                value={formatCurrency(systemWallet.balance, systemWallet.currency)}
+                icon={Wallet}
+                color='blue'
+                description='Available funds in the system wallet'
+              />
+              <StatCard
+                title='Total transactions'
+                value={
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (systemInternalData as any)?.meta?.totalItems ??
+                  systemWallet.totalTransactions
+                }
+                icon={TrendingUp}
+                color='emerald'
+                description='Internal movements for this wallet'
+              />
+              <StatCard
+                title='Status'
+                value={systemWallet.isLocked ? 'Locked' : 'Active'}
+                icon={systemWallet.isLocked ? Lock : Unlock}
+                color={systemWallet.isLocked ? 'red' : 'green'}
+                description={
+                  systemWallet.walletType === 'ESCROW'
+                    ? 'Escrow wallet for booking flows'
+                    : 'System wallet for platform operations'
+                }
+              />
+            </div>
+          )}
+
+          <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
+            <CardHeader className='pb-4 border-b border-primary/10'>
+              <div className='flex items-center justify-between gap-4'>
+                <div>
+                  <CardTitle className='flex items-center gap-2'>
+                    <CreditCard className='h-4 w-4 text-blue-600 dark:text-blue-400' />
+                    Internal transactions
+                  </CardTitle>
+                  <CardDescription>
+                    Recent internal movements for the system wallet
+                  </CardDescription>
+                </div>
+                <div className='flex flex-wrap gap-2 items-center'>
+                  <div className='relative w-full sm:w-48'>
+                    <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground' />
+                    <Input
+                      placeholder='Search...'
+                      value={systemInternalSearch}
+                      onChange={(e) => setSystemInternalSearch(e.target.value)}
+                      className='pl-8 h-12 text-sm'
+                    />
+                  </div>
+                  <Select
+                    value={systemInternalStatusFilter}
+                    onValueChange={setSystemInternalStatusFilter}
+                  >
+                    <SelectTrigger className='h-8 w-32 text-sm border-2 border-primary/20'>
+                      <SelectValue placeholder='Status' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='all'>All status</SelectItem>
+                      <SelectItem value='COMPLETED'>Completed</SelectItem>
+                      <SelectItem value='PENDING'>Pending</SelectItem>
+                      <SelectItem value='FAILED'>Failed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={systemInternalSortBy}
+                    onValueChange={setSystemInternalSortBy}
+                  >
+                    <SelectTrigger className='h-8 w-40 text-sm border-2 border-primary/20'>
+                      <SelectValue placeholder='Sort by' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='createdAt:DESC'>
+                        Newest first
+                      </SelectItem>
+                      <SelectItem value='createdAt:ASC'>Oldest first</SelectItem>
+                      <SelectItem value='amount:DESC'>
+                        Amount: high to low
+                      </SelectItem>
+                      <SelectItem value='amount:ASC'>
+                        Amount: low to high
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingSystemInternal ? (
+                <div className='flex items-center justify-center py-8'>
+                  <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+                </div>
+              ) : filteredSystemInternal.length === 0 ? (
+                <div className='text-sm text-muted-foreground py-4'>
+                  No internal transactions match your filters.
+                </div>
+              ) : (
+                <div className='rounded-md border-2 border-primary/10 overflow-hidden'>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className='bg-muted/50'>
+                        <TableHead className='font-semibold'>ID</TableHead>
+                        <TableHead className='font-semibold'>Type</TableHead>
+                        <TableHead className='font-semibold'>Amount</TableHead>
+                        <TableHead className='font-semibold'>Status</TableHead>
+                        <TableHead className='font-semibold'>Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSystemInternal.map((t) => (
+                        <TableRow key={t.id}>
+                          <TableCell>
+                            <div className='font-mono text-xs max-w-[140px] truncate'>
+                              {t.id}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Link
+                              href={`/admin/wallet/internal-transactions/${t.id}`}
+                              className='hover:underline'
+                            >
+                              {t.type}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            {formatCurrency(
+                              t.amount,
+                              systemWallet?.currency || 'VND'
+                            )}
+                          </TableCell>
+                          <TableCell>{t.status}</TableCell>
+                          <TableCell>{formatDateTime(t.createdAt)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* Transactions Tab */}
-        <TabsContent value='transactions' className='space-y-6'>
+        {/* Escrow Wallet Tab */}
+        <TabsContent value='escrow-wallet' className='space-y-6'>
+          {isLoading ? (
+            <LoadingCustom />
+          ) : !escrowWallet ? (
+            <ErrorCustom />
+          ) : (
+            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+              <StatCard
+                title='Escrow wallet balance'
+                value={formatCurrency(escrowWallet.balance, escrowWallet.currency)}
+                icon={Wallet}
+                color='green'
+                description='Funds held in escrow for bookings'
+              />
+              <StatCard
+                title='Total transactions'
+                value={
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (escrowInternalData as any)?.meta?.totalItems ??
+                  escrowWallet.totalTransactions
+                }
+                icon={TrendingUp}
+                color='emerald'
+                description='Internal movements for this wallet'
+              />
+              <StatCard
+                title='Status'
+                value={escrowWallet.isLocked ? 'Locked' : 'Active'}
+                icon={escrowWallet.isLocked ? Lock : Unlock}
+                color={escrowWallet.isLocked ? 'red' : 'green'}
+                description='Escrow wallet for location bookings'
+              />
+            </div>
+          )}
+
+          <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
+            <CardHeader className='pb-4 border-b border-primary/10'>
+              <div className='flex items-center justify-between gap-4'>
+                <div>
+                  <CardTitle className='flex items-center gap-2'>
+                    <CreditCard className='h-4 w-4 text-green-600 dark:text-green-400' />
+                    Internal transactions
+                  </CardTitle>
+                  <CardDescription>
+                    Recent internal movements for the escrow wallet
+                  </CardDescription>
+                </div>
+                <div className='flex flex-wrap gap-2 items-center'>
+                  <div className='relative w-full sm:w-48'>
+                    <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground' />
+                    <Input
+                      placeholder='Search...'
+                      value={escrowInternalSearch}
+                      onChange={(e) => setEscrowInternalSearch(e.target.value)}
+                      className='pl-8 h-12 text-sm'
+                    />
+                  </div>
+                  <Select
+                    value={escrowInternalStatusFilter}
+                    onValueChange={setEscrowInternalStatusFilter}
+                  >
+                    <SelectTrigger className='h-8 w-32 text-sm border-2 border-primary/20'>
+                      <SelectValue placeholder='Status' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='all'>All status</SelectItem>
+                      <SelectItem value='COMPLETED'>Completed</SelectItem>
+                      <SelectItem value='PENDING'>Pending</SelectItem>
+                      <SelectItem value='FAILED'>Failed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={escrowInternalSortBy}
+                    onValueChange={setEscrowInternalSortBy}
+                  >
+                    <SelectTrigger className='h-8 w-40 text-sm border-2 border-primary/20'>
+                      <SelectValue placeholder='Sort by' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='createdAt:DESC'>
+                        Newest first
+                      </SelectItem>
+                      <SelectItem value='createdAt:ASC'>Oldest first</SelectItem>
+                      <SelectItem value='amount:DESC'>
+                        Amount: high to low
+                      </SelectItem>
+                      <SelectItem value='amount:ASC'>
+                        Amount: low to high
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingEscrowInternal ? (
+                <div className='flex items-center justify-center py-8'>
+                  <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+                </div>
+              ) : filteredEscrowInternal.length === 0 ? (
+                <div className='text-sm text-muted-foreground py-4'>
+                  No internal transactions match your filters.
+                </div>
+              ) : (
+                <div className='rounded-md border-2 border-primary/10 overflow-hidden'>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className='bg-muted/50'>
+                        <TableHead className='font-semibold'>ID</TableHead>
+                        <TableHead className='font-semibold'>Type</TableHead>
+                        <TableHead className='font-semibold'>Amount</TableHead>
+                        <TableHead className='font-semibold'>Status</TableHead>
+                        <TableHead className='font-semibold'>Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredEscrowInternal.map((t) => (
+                        <TableRow key={t.id}>
+                          <TableCell>
+                            <div className='font-mono text-xs max-w-[140px] truncate'>
+                              {t.id}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Link
+                              href={`/admin/wallet/internal-transactions/${t.id}`}
+                              className='hover:underline'
+                            >
+                              {t.type}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            {formatCurrency(
+                              t.amount,
+                              escrowWallet?.currency || 'VND'
+                            )}
+                          </TableCell>
+                          <TableCell>{t.status}</TableCell>
+                          <TableCell>{formatDateTime(t.createdAt)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* External Transactions Tab */}
+        <TabsContent
+          value='external-transactions'
+          className='space-y-6'
+        >
           {/* Stats Cards */}
           <div className='grid gap-4 md:grid-cols-4'>
             <StatCard
               title='Total Deposits'
               value={formatCurrency(stats.totalDeposits.toString(), 'VND')}
               icon={Download}
-              iconColor='text-green-600 dark:text-green-400'
-              className='bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+              color='green'
+              description='Sum of all completed deposit transactions'
             />
             <StatCard
               title='Total Withdrawals'
               value={formatCurrency(stats.totalWithdrawals.toString(), 'VND')}
               icon={Upload}
-              iconColor='text-orange-600 dark:text-orange-400'
-              className='bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'
+              color='orange'
+              description='Sum of all completed withdrawal transactions'
             />
             <StatCard
               title='Pending'
               value={stats.pendingCount.toString()}
               icon={CreditCard}
-              iconColor='text-blue-600 dark:text-blue-400'
-              className='bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+              color='blue'
+              description='Transactions waiting for processing'
             />
             <StatCard
               title='Completed'
               value={stats.completedCount.toString()}
               icon={Calendar}
-              iconColor='text-purple-600 dark:text-purple-400'
-              className='bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800'
+              color='purple'
+              description='Total number of completed transactions'
             />
           </div>
 
           {/* Transactions Table */}
           <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
             <CardHeader className='pb-4 border-b border-primary/10'>
-              <div className='flex items-center justify-between'>
-                <div className='relative'>
-                  <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
-                  <Input
-                    placeholder='Search transactions...'
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className='pl-9 w-sm'
-                  />
+              <div className='flex items-center justify-between gap-4'>
+                <div>
+                  <CardTitle className='flex items-center gap-2'>
+                    <CreditCard className='h-4 w-4 text-blue-600 dark:text-blue-400' />
+                    External transactions
+                  </CardTitle>
+                  <CardDescription>
+                    All deposit and withdrawal transactions across wallets
+                  </CardDescription>
                 </div>
-                <div className='flex gap-2'>
+                <div className='flex flex-wrap gap-2 items-center'>
+                  <div className='relative w-full sm:w-52'>
+                    <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground' />
+                    <Input
+                      placeholder='Search transactions...'
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className='pl-8 h-12 text-sm'
+                    />
+                  </div>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className='border-2 border-primary/20 focus:border-primary/40 focus:ring-2 focus:ring-primary/20'>
+                    <SelectTrigger className='h-8 w-36 text-sm border-2 border-primary/20'>
                       <SelectValue placeholder='Status' />
                     </SelectTrigger>
                     <SelectContent>
@@ -510,7 +915,7 @@ export default function AdminWalletPage() {
                     value={directionFilter}
                     onValueChange={setDirectionFilter}
                   >
-                    <SelectTrigger className='border-2 border-primary/20 focus:border-primary/40 focus:ring-2 focus:ring-primary/20'>
+                    <SelectTrigger className='h-8 w-32 text-sm border-2 border-primary/20'>
                       <SelectValue placeholder='Direction' />
                     </SelectTrigger>
                     <SelectContent>
@@ -520,7 +925,7 @@ export default function AdminWalletPage() {
                     </SelectContent>
                   </Select>
                   <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className='border-2 border-primary/20 focus:border-primary/40 focus:ring-2 focus:ring-primary/20'>
+                    <SelectTrigger className='h-8 w-40 text-sm border-2 border-primary/20'>
                       <SelectValue placeholder='Sort By' />
                     </SelectTrigger>
                     <SelectContent>

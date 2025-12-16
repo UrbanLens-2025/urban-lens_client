@@ -20,8 +20,10 @@ import type {
   Wallet,
   WalletExternalTransaction,
   GetWalletExternalTransactionsParams,
+  GetAdminWalletTransactionsParams,
   GetEventsParams,
   User,
+  WalletTransaction,
 } from '@/types';
 
 export const getLocationRequestsForAdmin = async ({
@@ -255,6 +257,34 @@ export const getSystemWallet = async (): Promise<Wallet> => {
   const { data } = await axiosInstance.get<ApiResponse<Wallet>>(
     '/v1/admin/wallet/system'
   );
+  return data.data;
+};
+
+export const getAdminInternalWalletTransactions = async ({
+  walletId,
+  page = 1,
+  limit = 20,
+  sortBy = 'createdAt:DESC',
+}: GetAdminWalletTransactionsParams): Promise<
+  PaginatedData<WalletTransaction>
+> => {
+  const params: any = { page, limit, sortBy };
+
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<WalletTransaction>>
+  >(`/v1/admin/wallet/transactions/internal/${walletId}`, {
+    params,
+  });
+
+  return data.data;
+};
+
+export const getAdminInternalWalletTransactionById = async (
+  transactionId: string
+): Promise<WalletTransaction> => {
+  const { data } = await axiosInstance.get<
+    ApiResponse<WalletTransaction>
+  >(`/v1/admin/wallet/transactions/internal/get-by-id/${transactionId}`);
   return data.data;
 };
 
