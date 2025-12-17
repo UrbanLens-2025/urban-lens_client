@@ -8,6 +8,13 @@ import type {
   ProcessReportPayload,
 } from "@/types";
 
+// Mark reports as first seen
+export const markReportsFirstSeen = async (reportIds: string[]): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>("/v1/admin/report/first-seen", {
+    reportIds,
+  });
+};
+
 // Get all reports for admin
 export const getReports = async (
   params: GetReportsParams

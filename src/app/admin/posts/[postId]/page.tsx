@@ -15,7 +15,6 @@ import {
   Calendar,
   MapPin,
   Building,
-  ImageIcon,
   User,
   Star,
   MessageSquare,
@@ -23,13 +22,13 @@ import {
   ThumbsDown,
   Eye,
   CheckCircle2,
-  BarChart3,
   Clock,
   Globe,
   Lock,
   MessageCircle,
   ExternalLink,
   FileText,
+  Flag,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +37,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageViewer } from "@/components/shared/ImageViewer";
 import { Separator } from "@/components/ui/separator";
 import { PageContainer } from "@/components/shared";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ReportsPanel } from "@/components/admin/event/ReportsPanel";
 import Image from "next/image";
 import { toast } from "sonner";
 
@@ -240,7 +241,7 @@ export default function AdminPostDetailsPage({
                   Error loading post details
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  We couldn't load the post details. Please try refreshing the page or go back to the list.
+                  We could not load the post details. Please try refreshing the page or go back to the list.
                 </p>
               </div>
               <div className="flex gap-3 justify-center pt-2">
@@ -277,9 +278,6 @@ export default function AdminPostDetailsPage({
               </Button>
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Post Details</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Post ID: {post.postId}
-                </p>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -289,460 +287,420 @@ export default function AdminPostDetailsPage({
           </div>
         </div>
 
-        {/* --- Main Layout --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Post Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Main Post Card */}
-            <Card className="border-border/60 shadow-sm gap-0">
-              {/* Post Header */}
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <Avatar className="h-14 w-14 border-2 border-background shadow-sm">
-                      <AvatarImage
-                        src={post.author.avatarUrl || undefined}
-                        alt={`${post.author.firstName} ${post.author.lastName}`}
-                      />
-                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold text-lg">
-                        {post.author.firstName[0]}
-                        {post.author.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-lg text-foreground">
-                          {post.author.firstName} {post.author.lastName}
-                        </h3>
-                        {post.isVerified && (
-                          <Badge
-                            variant="secondary"
-                            className="bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 shadow-sm"
-                          >
-                            <CheckCircle2 className="h-3 w-3 mr-1.5" />
-                            Verified
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className="text-sm text-muted-foreground">
-                          {format(new Date(post.createdAt), "MMM dd, yyyy 'at' h:mm a")}
-                        </span>
-                        {post.updatedAt !== post.createdAt && (
-                          <>
-                            <span className="text-sm text-muted-foreground">•</span>
-                            <span className="text-sm text-muted-foreground">
-                              Updated {formatDistanceToNow(new Date(post.updatedAt), { addSuffix: true })}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Rating (if review) */}
-                  {isReview && (
-                    <div className="flex items-center gap-2 py-2">
-                      {renderStars(post.rating!)}
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-
-              {/* Post Content */}
-              <CardContent className="pt-0 space-y-4">
-                {post.content && (
-                  <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap break-words">
-                    {post.content}
-                  </p>
-                )}
-
-                {/* Images */}
-                {post.imageUrls && post.imageUrls.length > 0 && (
-                  <div
-                    className={`grid gap-2 rounded-lg overflow-hidden ${
-                      post.imageUrls.length === 1
-                        ? "grid-cols-1"
-                        : post.imageUrls.length === 2
-                          ? "grid-cols-2"
-                          : "grid-cols-2"
-                    }`}
-                  >
-                    {post.imageUrls.map((imageUrl, index) => (
-                      <div
-                        key={index}
-                        className={`relative overflow-hidden bg-muted/50 cursor-pointer group ${
-                          post.imageUrls.length === 1 ? "aspect-video" : "aspect-square"
-                        }`}
-                        onClick={() => handleImageClick(imageUrl)}
-                      >
-                        <Image
-                          src={imageUrl}
-                          alt={`Post image ${index + 1}`}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Analytics Stats */}
-            {post.analytics && (
-              <div className="grid grid-cols-3 gap-4">
-                <StatCard
-                  label="Upvotes"
-                  value={post.analytics.totalUpvotes}
-                  icon={ThumbsUp}
-                  color="text-emerald-600"
-                  bgColor="bg-emerald-500/10"
-                />
-                <StatCard
-                  label="Downvotes"
-                  value={post.analytics.totalDownvotes}
-                  icon={ThumbsDown}
-                  color="text-red-600"
-                  bgColor="bg-red-500/10"
-                />
-                <StatCard
-                  label="Comments"
-                  value={post.analytics.totalComments}
-                  icon={MessageCircle}
-                  color="text-blue-600"
-                  bgColor="bg-blue-500/10"
-                />
-              </div>
-            )}
-
-            {/* Post Information Card */}
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Post Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <InfoRow
-                  label="Post ID"
-                  value={
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs bg-muted px-2 py-1 rounded">
-                        {post.postId}
-                      </code>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2"
-                        onClick={() => {
-                          navigator.clipboard.writeText(post.postId);
-                          toast.success("Post ID copied to clipboard");
-                        }}
-                      >
-                        Copy
-                      </Button>
-                    </div>
-                  }
-                  icon={FileText}
-                />
-                <InfoRow
-                  label="Type"
-                  value={getTypeBadge(post.type)}
-                  icon={Star}
-                />
-                <InfoRow
-                  label="Visibility"
-                  value={getVisibilityBadge(post.visibility)}
-                  icon={Globe}
-                />
-                <InfoRow
-                  label="Created At"
-                  value={format(new Date(post.createdAt), "PPpp")}
-                  icon={Calendar}
-                />
-                <InfoRow
-                  label="Last Updated"
-                  value={format(new Date(post.updatedAt), "PPpp")}
-                  icon={Clock}
-                />
-                {post.eventId && (
-                  <InfoRow
-                    label="Event ID"
-                    value={
-                      <Link
-                        href={`/admin/events/${post.eventId}`}
-                        className="text-primary hover:underline flex items-center gap-1"
-                      >
-                        {post.eventId}
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    }
-                    icon={Calendar}
+        {/* Main Post Card */}
+        <Card className="border-border/60 shadow-sm gap-0">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <Avatar className="h-14 w-14 border-2 border-background shadow-sm">
+                  <AvatarImage
+                    src={post.author.avatarUrl || undefined}
+                    alt={`${post.author.firstName} ${post.author.lastName}`}
                   />
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Location Information Card */}
-            {post.location && (
-              <Card className="border-border/60 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    Location Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Location Images */}
-                  {post.location.imageUrl && post.location.imageUrl.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Location Images
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {post.location.imageUrl.map((imageUrl, index) => (
-                          <div
-                            key={index}
-                            className="relative aspect-square overflow-hidden rounded-lg bg-muted cursor-pointer group"
-                            onClick={() => handleImageClick(imageUrl)}
-                          >
-                            <Image
-                              src={imageUrl}
-                              alt={`Location image ${index + 1}`}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                              sizes="(max-width: 768px) 50vw, 25vw"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <InfoRow
-                      label="Location Name"
-                      value={
-                        <Link
-                          href={`/admin/locations/${post.location.id}`}
-                          className="text-primary hover:underline flex items-center gap-1"
-                        >
-                          {post.location.name}
-                          <ExternalLink className="h-3 w-3" />
-                        </Link>
-                      }
-                      icon={MapPin}
-                    />
-                    <InfoRow
-                      label="Address"
-                      value={post.location.addressLine}
-                      icon={Building}
-                    />
-                    {post.location.latitude !== undefined && post.location.longitude !== undefined && (
+                  <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold text-lg">
+                    {post.author.firstName[0]}
+                    {post.author.lastName[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-lg text-foreground">
+                      {post.author.firstName} {post.author.lastName}
+                    </h3>
+                    {post.isVerified && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 shadow-sm"
+                      >
+                        <CheckCircle2 className="h-3 w-3 mr-1.5" />
+                        Has checked in
+                      </Badge>
+                    )}
+                    {getVisibilityBadge(post.visibility)}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap text-sm text-muted-foreground">
+                    <span>{format(new Date(post.createdAt), "MMM dd, yyyy 'at' h:mm a")}</span>
+                    {post.updatedAt !== post.createdAt && (
                       <>
-                        <InfoRow
-                          label="Coordinates"
-                          value={
-                            <div className="flex items-center gap-2">
-                              <code className="text-xs bg-muted px-2 py-1 rounded">
-                                {post.location.latitude.toFixed(6)}, {post.location.longitude.toFixed(6)}
-                              </code>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2"
-                                onClick={() => {
-                                  const coords = `${post.location!.latitude}, ${post.location!.longitude}`;
-                                  navigator.clipboard.writeText(coords);
-                                  toast.success("Coordinates copied to clipboard");
-                                }}
-                              >
-                                Copy
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2"
-                                onClick={() => {
-                                  const url = `https://www.google.com/maps?q=${post.location!.latitude},${post.location!.longitude}`;
-                                  window.open(url, '_blank');
-                                }}
-                              >
-                                <ExternalLink className="h-3 w-3 mr-1" />
-                                Open Map
-                              </Button>
-                            </div>
-                          }
-                          icon={MapPin}
-                        />
+                        <span>•</span>
+                        <span>
+                          Updated {formatDistanceToNow(new Date(post.updatedAt), { addSuffix: true })}
+                        </span>
                       </>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+              {isReview && (
+                <div className="flex items-center gap-2 py-2">
+                  {renderStars(post.rating!)}
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-4">
+            {post.content && (
+              <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap break-words">
+                {post.content}
+              </p>
             )}
 
-            {/* Author Information Card */}
+            {post.imageUrls && post.imageUrls.length > 0 && (
+              <div
+                className={`grid gap-3 rounded-lg ${
+                  post.imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"
+                }`}
+              >
+                {post.imageUrls.map((imageUrl, index) => (
+                  <div
+                    key={index}
+                    className={`relative overflow-hidden bg-muted/50 cursor-pointer group border border-border/60 shadow-sm ${
+                      post.imageUrls.length === 1
+                        ? "h-64 md:h-72 rounded-xl"
+                        : "aspect-[4/3] rounded-lg"
+                    }`}
+                    onClick={() => handleImageClick(imageUrl)}
+                  >
+                    <Image
+                      src={imageUrl}
+                      alt={`Post image ${index + 1}`}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t">
+              <div className="flex items-center gap-1">
+                <ThumbsUp className="h-4 w-4 text-emerald-600" />
+                <span className="font-semibold text-foreground">
+                  {post.analytics?.totalUpvotes ?? 0}
+                </span>
+                <span>Likes</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <ThumbsDown className="h-4 w-4 text-red-500" />
+                <span className="font-semibold text-foreground">
+                  {post.analytics?.totalDownvotes ?? 0}
+                </span>
+                <span>Dislikes</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <MessageCircle className="h-4 w-4 text-blue-500" />
+                <span className="font-semibold text-foreground">
+                  {post.analytics?.totalComments ?? 0}
+                </span>
+                <span>Comments</span>
+              </div>
+              {post.type?.toLowerCase() === "review" && post.location?.name && (
+                <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span className="truncate">{post.location.name}</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* --- Main Layout --- */}
+        <Tabs defaultValue="details" className="flex flex-col gap-2 space-y-4">
+          <TabsList className="bg-transparent h-auto p-0 border-b border-border rounded-none flex gap-8">
+            <TabsTrigger
+              value="details"
+              className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2
+              data-[state=active]:text-foreground
+              after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent
+              data-[state=active]:after:bg-primary"
+            >
+              <FileText className="h-4 w-4" />
+              Details
+            </TabsTrigger>
+            <TabsTrigger
+              value="reports"
+              className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2
+              data-[state=active]:text-foreground
+              after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent
+              data-[state=active]:after:bg-primary"
+            >
+              <Flag className="h-4 w-4" />
+              Reports
+            </TabsTrigger>
+            <TabsTrigger
+              value="comments"
+              className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2
+              data-[state=active]:text-foreground
+              after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent
+              data-[state=active]:after:bg-primary"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Comments
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="details">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column - Post Content */}
+              <div className="lg:col-span-2 space-y-6">
+
+                {/* Post Information Card */}
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Post Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <InfoRow
+                      label="Post ID"
+                      value={
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs bg-muted px-2 py-1 rounded">
+                            {post.postId}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2"
+                            onClick={() => {
+                              navigator.clipboard.writeText(post.postId);
+                              toast.success("Post ID copied to clipboard");
+                            }}
+                          >
+                            Copy
+                          </Button>
+                        </div>
+                      }
+                      icon={FileText}
+                    />
+                    <InfoRow
+                      label="Type"
+                      value={getTypeBadge(post.type)}
+                      icon={Star}
+                    />
+                    <InfoRow
+                      label="Visibility"
+                      value={getVisibilityBadge(post.visibility)}
+                      icon={Globe}
+                    />
+                    <InfoRow
+                      label="Created At"
+                      value={format(new Date(post.createdAt), "PPpp")}
+                      icon={Calendar}
+                    />
+                    <InfoRow
+                      label="Last Updated"
+                      value={format(new Date(post.updatedAt), "PPpp")}
+                      icon={Clock}
+                    />
+                    {post.eventId && (
+                      <InfoRow
+                        label="Event ID"
+                        value={
+                          <Link
+                            href={`/admin/events/${post.eventId}`}
+                            className="text-primary hover:underline flex items-center gap-1"
+                          >
+                            {post.eventId}
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        }
+                        icon={Calendar}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Column - Side info */}
+              <div className="space-y-6">
+                {post.location && (
+                  <Card className="border-border/60 shadow-sm overflow-hidden pt-0">
+                    {post.location.imageUrl && post.location.imageUrl.length > 0 && (
+                      <div
+                        className="relative w-full aspect-video overflow-hidden bg-muted cursor-pointer group"
+                        onClick={() => handleImageClick(post.location.imageUrl[0])}
+                      >
+                        <Image
+                          src={post.location.imageUrl[0]}
+                          alt={post.location.name}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                        />
+                      </div>
+                    )}
+                    <CardHeader>
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-semibold text-lg text-foreground truncate">
+                          {post.location.name}
+                        </h3>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/admin/locations/${post.location.id}`} className="text-primary hover:underline flex items-center gap-1 shrink-0">
+                            View
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2 pt-0">
+                      {post.location?.['description'] && (
+                        <p className="text-sm text-muted-foreground line-clamp-1">
+                          {post.location?.['description']}
+                        </p>
+                      )}
+                      <p className="text-sm text-foreground truncate">
+                        {post.location.addressLine}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Author Information Card */}
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <User className="h-5 w-5" />
+                      Author Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <InfoRow
+                      label="Author"
+                      value={`${post.author.firstName} ${post.author.lastName}`}
+                      icon={User}
+                    />
+                    <InfoRow
+                      label="User ID"
+                      value={
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs bg-muted px-2 py-1 rounded">
+                            {post.author.id}
+                          </code>
+                          <Link
+                            href={`/admin/accounts/${post.author.id}`}
+                            className="text-primary hover:underline flex items-center gap-1 text-sm"
+                          >
+                            View Profile
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </div>
+                      }
+                      icon={User}
+                    />
+                    <InfoRow
+                      label="Verified"
+                      value={
+                        post.isVerified ? (
+                          <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Verified User
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">Not Verified</Badge>
+                        )
+                      }
+                      icon={CheckCircle2}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value="comments">
             <Card className="border-border/60 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Author Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <InfoRow
-                  label="Author"
-                  value={`${post.author.firstName} ${post.author.lastName}`}
-                  icon={User}
-                />
-                <InfoRow
-                  label="User ID"
-                  value={
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs bg-muted px-2 py-1 rounded">
-                        {post.author.id}
-                      </code>
-                      <Link
-                        href={`/admin/accounts/${post.author.id}`}
-                        className="text-primary hover:underline flex items-center gap-1 text-sm"
-                      >
-                        View Profile
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    </div>
-                  }
-                  icon={User}
-                />
-                <InfoRow
-                  label="Verified"
-                  value={
-                    post.isVerified ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Verified User
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline">Not Verified</Badge>
-                    )
-                  }
-                  icon={CheckCircle2}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Comments Section */}
-          <div className="lg:col-span-1">
-            <Card className="border-border/60 shadow-sm sticky top-6 gap-0">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Comments
-                  </div>
-                  {post.analytics && post.analytics.totalComments > 0 && (
-                    <Badge variant="secondary">
-                      {post.analytics.totalComments}
-                    </Badge>
-                  )}
+                  <MessageSquare className="h-5 w-5" />
+                  Comments
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Comments List */}
-                <Separator />
-                <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                  {isLoadingComments ? (
-                    <div className="space-y-4 py-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex gap-3">
-                          <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-                          <div className="flex-1 space-y-2">
-                            <div className="h-4 w-24 bg-muted rounded animate-pulse" />
-                            <div className="h-12 w-full bg-muted rounded animate-pulse" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : comments.length === 0 ? (
-                    <div className="text-center py-12 text-sm text-muted-foreground">
-                      <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                      <p className="font-medium">No comments yet</p>
-                      <p className="text-xs mt-1">This post has no comments</p>
-                    </div>
-                  ) : (
-                    <>
-                      {comments.map((comment) => {
-                        const isOwnerComment = !!comment.locationName;
-                        const displayName = isOwnerComment
-                          ? comment.locationName
-                          : `${comment.author.firstName} ${comment.author.lastName}`;
-                        const avatarInitials = isOwnerComment
-                          ? comment.locationName
-                              ?.split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .slice(0, 2)
-                              .toUpperCase() || "LO"
-                          : `${comment.author.firstName[0]}${comment.author.lastName[0]}`;
-                        const avatarImage = isOwnerComment
-                          ? post.location?.imageUrl?.[0]
-                          : comment.author.avatarUrl || undefined;
-
-                        return (
-                          <div key={comment.commentId} className="flex gap-3">
-                            <Avatar className="h-8 w-8 border border-border">
-                              <AvatarImage src={avatarImage} alt={displayName} />
-                              <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
-                                {avatarInitials}
+                {isLoadingComments ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading comments...
+                  </div>
+                ) : comments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No comments found.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {comments.map((comment) => {
+                      const authorFirstName = comment?.author?.firstName || comment?.createdBy?.firstName || "";
+                      const authorLastName = comment?.author?.lastName || comment?.createdBy?.lastName || "";
+                      const authorName = `${authorFirstName} ${authorLastName}`.trim() || "Unknown user";
+                      const avatarUrl = comment?.author?.avatarUrl || comment?.createdBy?.avatarUrl;
+                      return (
+                        <div
+                          key={comment.id || comment.commentId}
+                          className="rounded-lg border border-border/60 bg-card/50 p-3 shadow-sm space-y-2"
+                        >
+                          <div className="flex items-start gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage src={avatarUrl || undefined} alt={authorName} />
+                              <AvatarFallback>
+                                {authorFirstName?.[0]}
+                                {authorLastName?.[0]}
                               </AvatarFallback>
                             </Avatar>
-                            <div className="flex-1 space-y-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold text-sm text-foreground">
-                                  {displayName}
-                                </p>
-                                {isOwnerComment && (
-                                  <Badge variant="outline" className="text-xs">
-                                    Owner
-                                  </Badge>
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <div className="flex items-center gap-2 text-sm text-foreground">
+                                <span className="font-semibold truncate">{authorName}</span>
+                                {comment?.createdAt && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(new Date(comment.createdAt), "PP p")}
+                                  </span>
                                 )}
-                                <span className="text-xs text-muted-foreground">
-                                  {formatDistanceToNow(new Date(comment.createdAt), {
-                                    addSuffix: true,
-                                  })}
-                                </span>
                               </div>
-                              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
-                                {comment.content}
+                              <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+                                {comment?.content ?? ""}
                               </p>
                             </div>
                           </div>
-                        );
-                      })}
-                      {commentsMeta &&
-                        commentsMeta.currentPage < commentsMeta.totalPages && (
-                          <div className="pt-4 border-t">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full"
-                              onClick={() => setCommentPage((p) => p + 1)}
-                            >
-                              Load more comments
-                            </Button>
-                          </div>
-                        )}
-                    </>
-                  )}
-                </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {commentsMeta && commentsMeta.totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-2">
+                    <p className="text-xs text-muted-foreground">
+                      Page {commentsMeta.currentPage} of {commentsMeta.totalPages}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={commentsMeta.currentPage === 1}
+                        onClick={() => setCommentPage((prev) => Math.max(1, prev - 1))}
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={commentsMeta.currentPage === commentsMeta.totalPages}
+                        onClick={() =>
+                          setCommentPage((prev) =>
+                            commentsMeta ? Math.min(commentsMeta.totalPages, prev + 1) : prev + 1
+                          )
+                        }
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          </div>
-        </div>
+          </TabsContent>
+          <TabsContent value="reports">
+            <ReportsPanel targetId={post.postId} targetType="post" />
+          </TabsContent>
+        </Tabs>
 
         {/* --- Image Viewer Modal --- */}
         <ImageViewer

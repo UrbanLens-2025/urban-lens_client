@@ -1336,6 +1336,8 @@ export interface Report {
   createdById: string;
   createdBy: User;
   updatedAt: string;
+  firstSeenAt?: string | null;
+  firstSeenByAdminId?: string | null;
   reportedReasonEntity: ReportedReasonEntity;
   referencedTargetPost: ReferencedTargetPost | null;
   referencedTargetEvent: ReferencedTargetEvent | null;

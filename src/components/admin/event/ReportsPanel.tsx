@@ -40,14 +40,17 @@ import {
 } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useReports } from "@/hooks/admin/useReports";
-import { Report, ReportStatus } from "@/types";
+import { useMarkReportFirstSeen } from "@/hooks/admin/useMarkReportFirstSeen";
+import { useUser } from "@/hooks/user/useUser";
+import { Report, ReportStatus, ReportTargetType } from "@/types";
 import LoadingCustom from "@/components/shared/LoadingCustom";
 
 type ReportsPanelProps = {
-  eventId: string;
+  targetId: string;
+  targetType: ReportTargetType;
 };
 
-export function ReportsPanel({ eventId }: ReportsPanelProps) {
+export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [expandedReasons, setExpandedReasons] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -59,11 +62,14 @@ export function ReportsPanel({ eventId }: ReportsPanelProps) {
   const { data: reportsData, isLoading: isLoadingReports } = useReports({
     page: 1,
     limit: 100,
-    targetType: "event",
-    targetId: eventId,
+    targetType,
+    targetId,
     sortBy: "createdAt:DESC",
     status: statusFilter,
   });
+
+  const { mutate: markFirstSeen } = useMarkReportFirstSeen();
+  const { user: currentUser } = useUser();
 
   const groupedReports = useMemo(() => {
     if (!reportsData?.data) return {};
@@ -105,30 +111,33 @@ export function ReportsPanel({ eventId }: ReportsPanelProps) {
       day: "numeric",
     });
 
+
   const getInitials = (firstName?: string, lastName?: string) =>
     `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "??";
 
   return (
     <>
       {/* Action Bar */}
-      <div className="bg-card border rounded-lg px-3 py-2 flex items-center justify-between gap-3">
+      <div className="bg-card border rounded-lg px-3 py-2 flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
-            {selectedReportIds.size} {selectedReportIds.size === 1 ? "report" : "reports"} selected
+            {selectedReportIds.size === 0
+              ? "Select reports to process"
+              : `${selectedReportIds.size} ${selectedReportIds.size === 1 ? "report" : "reports"} selected`}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-3 text-xs"
-            onClick={() => setSelectedReportIds(new Set())}
-            disabled={selectedReportIds.size === 0}
-          >
-            Clear
-          </Button>
         </div>
         <div className="flex items-center gap-2">
+          {selectedReportIds.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedReportIds(new Set())}
+              className="text-xs text-muted-foreground hover:underline underline-offset-4"
+            >
+              × Clear
+            </button>
+          )}
           <Select value={resolutionAction} onValueChange={setResolutionAction}>
-            <SelectTrigger className="w-[130px] h-8 text-xs px-3" size="sm">
+            <SelectTrigger className="h-6 px-3 text-xs py-0" size="sm">
               <SelectValue placeholder="Select action" className="text-xs" />
             </SelectTrigger>
             <SelectContent>
@@ -143,8 +152,7 @@ export function ReportsPanel({ eventId }: ReportsPanelProps) {
               // Mock - do nothing for now
             }}
             disabled={selectedReportIds.size === 0 || !resolutionAction}
-            size="sm"
-            className="h-8 px-3 text-xs"
+            className="px-3 text-xs"
           >
             Apply
           </Button>
@@ -257,6 +265,18 @@ export function ReportsPanel({ eventId }: ReportsPanelProps) {
 
                                 const handleClick = () => {
                                   setSelectedReportId(report.id);
+                                  const needsMark =
+                                    !report.firstSeenAt || !report.firstSeenByAdminId;
+
+                                  if (needsMark) {
+                                    const optimisticFirstSeenAt = new Date().toISOString();
+                                    const firstSeenByAdminId = currentUser?.id ?? null;
+                                    markFirstSeen({
+                                      reportId: report.id,
+                                      firstSeenAt: optimisticFirstSeenAt,
+                                      firstSeenByAdminId,
+                                    });
+                                  }
                                 };
 
                                 const handleCheckboxChange = (checked: boolean | string) => {
@@ -271,6 +291,8 @@ export function ReportsPanel({ eventId }: ReportsPanelProps) {
                                     return newSet;
                                   });
                                 };
+
+                                const isUnseen = !report.firstSeenAt;
 
                                 return (
                                   <div
@@ -291,9 +313,16 @@ export function ReportsPanel({ eventId }: ReportsPanelProps) {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-start justify-between gap-2 mb-1">
-                                        <h4 className="font-medium text-sm line-clamp-1 overflow-hidden flex-1">
-                                          {report.title}
-                                        </h4>
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                          {isUnseen && (
+                                            <Badge className="shrink-0 bg-sky-500/15 text-sky-700 border-sky-500/30 text-[10px] px-1.5 py-0 h-5">
+                                              New
+                                            </Badge>
+                                          )}
+                                          <h4 className="font-medium text-sm line-clamp-1 overflow-hidden flex-1">
+                                            {report.title}
+                                          </h4>
+                                        </div>
                                         <Badge
                                           variant={
                                             report.status === "PENDING"
