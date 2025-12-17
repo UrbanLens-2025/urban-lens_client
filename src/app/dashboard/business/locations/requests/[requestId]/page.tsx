@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { cn, formatDocumentType } from '@/lib/utils';
 import { DisplayTags } from '@/components/shared/DisplayTags';
 import { ImageViewer } from '@/components/shared/ImageViewer';
+import { PageContainer, PageHeader } from '@/components/shared';
 
 function InfoRow({
   label,
@@ -85,15 +86,16 @@ export default function LocationRequestDetailsPage({
   } = useLocationRequestById(requestId);
 
   // If request is approved, try to find the corresponding location
-  const { data: locationsData } = useMyLocations(1, '', {
-    enabled: request?.status === 'APPROVED',
-  });
-  const approvedLocation = locationsData?.data?.find(
-    (loc) =>
-      loc.name === request?.name &&
-      Math.abs(loc.latitude - (request?.latitude || 0)) < 0.0001 &&
-      Math.abs(loc.longitude - (request?.longitude || 0)) < 0.0001
-  );
+  const { data: locationsData } = useMyLocations(1, '');
+  const approvedLocation =
+    request?.status === 'APPROVED'
+      ? locationsData?.data?.find(
+          (loc) =>
+            loc.name === request?.name &&
+            Math.abs(loc.latitude - (request?.latitude || 0)) < 0.0001 &&
+            Math.abs(loc.longitude - (request?.longitude || 0)) < 0.0001
+        )
+      : undefined;
 
   // Redirect to location detail if approved and location found
   useEffect(() => {
@@ -107,16 +109,24 @@ export default function LocationRequestDetailsPage({
 
   if (isLoadingRequest) {
     return (
-      <div className='flex h-screen items-center justify-center'>
-        <Loader2 className='animate-spin' />
-      </div>
+      <PageContainer>
+        <div className='flex h-screen items-center justify-center'>
+          <Loader2 className='animate-spin' />
+        </div>
+      </PageContainer>
     );
   }
   if (isError || !request) {
     return (
-      <div className='text-center py-20 text-red-500'>
-        Error loading request details.
-      </div>
+      <PageContainer>
+        <Card className='border-destructive/50'>
+          <CardContent className='pt-6'>
+            <div className='text-center py-20 text-red-500'>
+              Error loading request details.
+            </div>
+          </CardContent>
+        </Card>
+      </PageContainer>
     );
   }
 
@@ -125,12 +135,14 @@ export default function LocationRequestDetailsPage({
   // to avoid a flash before navigating to the location detail page.
   if (request.status === 'APPROVED' && approvedLocation) {
     return (
-      <div className='flex h-screen flex-col items-center justify-center gap-3'>
-        <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
-        <p className='text-sm text-muted-foreground'>
-          Opening your approved location details…
-        </p>
-      </div>
+      <PageContainer>
+        <div className='flex h-screen flex-col items-center justify-center gap-3'>
+          <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
+          <p className='text-sm text-muted-foreground'>
+            Opening your approved location details…
+          </p>
+        </div>
+      </PageContainer>
     );
   }
 
@@ -139,55 +151,42 @@ export default function LocationRequestDetailsPage({
     lng: request.longitude,
   };
 
+  const getStatusBadge = () => {
+    const statusConfig = {
+      'AWAITING_ADMIN_REVIEW': { label: 'Pending Review', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
+      'NEEDS_MORE_INFO': { label: 'Needs Info', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
+      'APPROVED': { label: 'Approved', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
+      'REJECTED': { label: 'Rejected', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
+      'CANCELLED_BY_BUSINESS': { label: 'Cancelled', className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' },
+      'AUTO_VALIDATING': { label: 'Validating', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
+    };
+
+    const config = statusConfig[request.status as keyof typeof statusConfig];
+    if (config) {
+      return (
+        <Badge className={config.className}>
+          {config.label}
+        </Badge>
+      );
+    }
+    return <Badge>{request.status}</Badge>;
+  };
+
   return (
-    <div className='space-y-8 p-6'>
+    <PageContainer>
       {/* Header */}
-      <div className='space-y-4'>
-        <div className='flex items-center gap-4'>
-          <Button
-            variant='outline'
-            size='icon'
-            onClick={() => router.push('/dashboard/business/location-requests')}
-          >
-            <ArrowLeft className='h-4 w-4' />
-          </Button>
-          <div className='flex-1'>
-            <h1 className='text-2xl font-bold tracking-tight sm:text-3xl mb-2'>
-              {request.name}
-            </h1>
-            <Badge
-              className={cn({
-                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400':
-                  request.status === 'AWAITING_ADMIN_REVIEW' ||
-                  request.status === 'NEEDS_MORE_INFO',
-                'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400':
-                  request.status === 'APPROVED',
-                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400':
-                  request.status === 'REJECTED',
-                'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400':
-                  request.status === 'CANCELLED_BY_BUSINESS',
-                'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400':
-                  request.status === 'AUTO_VALIDATING',
-              })}
-            >
-              {request.status === 'AWAITING_ADMIN_REVIEW' && 'Pending Review'}
-              {request.status === 'NEEDS_MORE_INFO' && 'Needs Info'}
-              {request.status === 'APPROVED' && 'Approved'}
-              {request.status === 'REJECTED' && 'Rejected'}
-              {request.status === 'CANCELLED_BY_BUSINESS' && 'Cancelled'}
-              {request.status === 'AUTO_VALIDATING' && 'Validating'}
-              {![
-                'AWAITING_ADMIN_REVIEW',
-                'NEEDS_MORE_INFO',
-                'APPROVED',
-                'REJECTED',
-                'CANCELLED_BY_BUSINESS',
-                'AUTO_VALIDATING',
-              ].includes(request.status) && request.status}
-            </Badge>
+      <PageHeader
+        title={request.name}
+        icon={MapPin}
+        actions={
+          <div className='flex items-center gap-3'>
+            {getStatusBadge()}
+            <Button variant='outline' size='icon' onClick={() => router.push('/dashboard/business/location-requests')}>
+              <ArrowLeft className='h-4 w-4' />
+            </Button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
         {/* Left Column */}
@@ -208,7 +207,6 @@ export default function LocationRequestDetailsPage({
                   label='Radius'
                   value={`${request.radiusMeters} meters`}
                 />
-                <InfoRow label='Request Type' value={request.type} />
               </div>
 
               {/* Divider */}
@@ -223,7 +221,6 @@ export default function LocationRequestDetailsPage({
                   <InfoRow
                     label='Address'
                     value={request.addressLine}
-                    icon={MapPin}
                   />
                   <div className='grid grid-cols-2 gap-4'>
                     <InfoRow label='District' value={request.addressLevel1} />
@@ -532,6 +529,6 @@ export default function LocationRequestDetailsPage({
         open={isImageViewerOpen}
         onOpenChange={setIsImageViewerOpen}
       />
-    </div>
+    </PageContainer>
   );
 }
