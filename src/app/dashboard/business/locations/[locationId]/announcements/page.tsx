@@ -51,6 +51,8 @@ import {
 import { useAnnouncements } from '@/hooks/announcements/useAnnouncements';
 import { useDeleteAnnouncement } from '@/hooks/announcements/useDeleteAnnouncement';
 import { useLocationById } from '@/hooks/locations/useLocationById';
+import { useLocationTabs } from '@/contexts/LocationTabContext';
+import { useRouter } from 'next/navigation';
 import type { Announcement } from '@/types';
 import { formatDateTime, formatShortDate } from '@/lib/utils';
 
@@ -60,6 +62,8 @@ export default function LocationAnnouncementsPage({
   params: Promise<{ locationId: string }>;
 }) {
   const { locationId } = use(params);
+  const router = useRouter();
+  const { openAnnouncementDetailTab } = useLocationTabs();
   const {
     data: location,
     isLoading: isLoadingLocation,
@@ -179,16 +183,6 @@ export default function LocationAnnouncementsPage({
             </div>
           </div>
 
-          {location && (
-            <div className='flex items-center gap-3 rounded-md border border-dashed bg-muted/40 px-4 py-3 text-xs text-muted-foreground'>
-              <Building2 className='h-4 w-4 text-muted-foreground' />
-              <div>
-                <p className='font-medium text-foreground'>{location.name}</p>
-                {location.addressLine && <p>{location.addressLine}</p>}
-              </div>
-            </div>
-          )}
-
           {activeFilters.length > 0 && (
             <div className='flex flex-wrap items-center gap-2 text-xs'>
               <span className='flex items-center gap-1 text-muted-foreground'>
@@ -248,21 +242,32 @@ export default function LocationAnnouncementsPage({
                       className='hover:bg-muted/20'
                     >
                       <TableCell>
-                        <div className='flex items-start gap-3 max-w-96'>
+                        <div
+                          className='flex items-start gap-3 max-w-96 hover:opacity-80 transition-opacity group cursor-pointer'
+                          onClick={() => {
+                            openAnnouncementDetailTab(
+                              announcement.id,
+                              announcement.title
+                            );
+                            router.push(
+                              `/dashboard/business/locations/${locationId}/announcements/${announcement.id}`
+                            );
+                          }}
+                        >
                           {announcement.imageUrl ? (
                             <img
                               src={announcement.imageUrl}
                               alt={announcement.title}
-                              className='h-14 w-20 rounded-md border object-cover'
+                              className='h-14 w-20 rounded-md border object-cover group-hover:ring-2 group-hover:ring-primary/20 transition-all'
                             />
                           ) : (
-                            <div className='flex h-14 w-20 flex-shrink-0 items-center justify-center rounded-md border border-dashed text-[11px] text-muted-foreground'>
+                            <div className='flex h-14 w-20 flex-shrink-0 items-center justify-center rounded-md border border-dashed text-[11px] text-muted-foreground group-hover:border-primary/40 transition-colors'>
                               No image
                             </div>
                           )}
                           <div className='flex-1 min-w-0 max-w-full'>
                             <div className='flex items-center gap-2 flex-1'>
-                              <span className='font-semibold text-sm leading-tight'>
+                              <span className='font-semibold text-sm leading-tight group-hover:text-primary transition-colors'>
                                 {announcement.title}
                               </span>
                             </div>

@@ -209,6 +209,12 @@ function LocationDetailLayoutContent({
     pathname.includes('/announcements/') &&
     pathname !==
       `/dashboard/business/locations/${locationId}/announcements`;
+  const isAnnouncementDetailsRoute =
+    pathname.includes('/announcements/') &&
+    pathname !==
+      `/dashboard/business/locations/${locationId}/announcements` &&
+    !pathname.includes('/announcements/new') &&
+    !pathname.includes('/edit');
   const isAnnouncementCreateRoute = pathname.includes('/announcements/new');
   const isAnnouncementEditRoute = pathname.includes('/announcements/') && pathname.includes('/edit');
   const isEditLocationRoute = pathname === `/dashboard/business/locations/${locationId}/edit`;
@@ -260,6 +266,24 @@ function LocationDetailLayoutContent({
     }
   }, [isAnnouncementCreateRoute, openAnnouncementCreateTab]);
 
+  // Auto-open announcement detail tab when on announcement detail route
+  useEffect(() => {
+    if (isAnnouncementDetailsRoute) {
+      const match = pathname.match(/\/announcements\/([^\/]+)$/);
+      if (match && match[1]) {
+        const announcementId = match[1];
+        // Always update tab if ID changed or tab not open yet
+        if (!announcementDetailTabOpenedRef.current || announcementDetailTab.announcementId !== announcementId) {
+          announcementDetailTabOpenedRef.current = true;
+          // Open with generic name - detail view will update it when data loads
+          openAnnouncementDetailTab(announcementId, 'View Announcement');
+        }
+      }
+    } else if (!isAnnouncementDetailsRoute) {
+      announcementDetailTabOpenedRef.current = false;
+    }
+  }, [isAnnouncementDetailsRoute, pathname, openAnnouncementDetailTab, announcementDetailTab.announcementId]);
+
   // Auto-open announcement edit tab when on announcement edit route
   useEffect(() => {
     if (isAnnouncementEditRoute && !announcementEditTabOpenedRef.current) {
@@ -275,29 +299,39 @@ function LocationDetailLayoutContent({
 
   // Auto-open voucher detail tab when on voucher detail route
   useEffect(() => {
-    if (isVoucherDetailsRoute && !voucherDetailTabOpenedRef.current) {
+    if (isVoucherDetailsRoute) {
       const match = pathname.match(/\/vouchers\/([^\/]+)$/);
       if (match && match[1]) {
-        voucherDetailTabOpenedRef.current = true;
-        openVoucherDetailTab(match[1], 'View Voucher');
+        const voucherId = match[1];
+        // Always update tab if ID changed or tab not open yet
+        if (!voucherDetailTabOpenedRef.current || voucherDetailTab.voucherId !== voucherId) {
+          voucherDetailTabOpenedRef.current = true;
+          // Open with generic name - detail view will update it when data loads
+          openVoucherDetailTab(voucherId, 'View Voucher');
+        }
       }
     } else if (!isVoucherDetailsRoute) {
       voucherDetailTabOpenedRef.current = false;
     }
-  }, [isVoucherDetailsRoute, pathname, openVoucherDetailTab]);
+  }, [isVoucherDetailsRoute, pathname, openVoucherDetailTab, voucherDetailTab.voucherId]);
 
   // Auto-open mission detail tab when on mission detail route
   useEffect(() => {
-    if (isMissionDetailsRoute && !missionDetailTabOpenedRef.current) {
+    if (isMissionDetailsRoute) {
       const match = pathname.match(/\/missions\/([^\/]+)$/);
       if (match && match[1]) {
-        missionDetailTabOpenedRef.current = true;
-        openMissionDetailTab(match[1], 'View Mission');
+        const missionId = match[1];
+        // Always update tab if ID changed or tab not open yet
+        if (!missionDetailTabOpenedRef.current || missionDetailTab.missionId !== missionId) {
+          missionDetailTabOpenedRef.current = true;
+          // Open with generic name - detail view will update it when data loads
+          openMissionDetailTab(missionId, 'View Mission');
+        }
       }
     } else if (!isMissionDetailsRoute) {
       missionDetailTabOpenedRef.current = false;
     }
-  }, [isMissionDetailsRoute, pathname, openMissionDetailTab]);
+  }, [isMissionDetailsRoute, pathname, openMissionDetailTab, missionDetailTab.missionId]);
 
   // Auto-open voucher edit tab when on voucher edit route
   useEffect(() => {
@@ -669,15 +703,14 @@ function LocationDetailLayoutContent({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    const wasOnDetailPage = isVoucherDetailsRoute;
+                    // Reset ref first to prevent auto-reopening
+                    voucherDetailTabOpenedRef.current = false;
+                    // Close tab immediately
                     closeVoucherDetailTab();
-                    if (wasOnDetailPage) {
-                      requestAnimationFrame(() => {
-                        router.push(
-                          `/dashboard/business/locations/${locationId}/vouchers`
-                        );
-                      });
-                    }
+                    // Navigate immediately after
+                    router.push(
+                      `/dashboard/business/locations/${locationId}/vouchers`
+                    );
                   }}
                 >
                   <X className="h-3 w-3" />
@@ -791,15 +824,14 @@ function LocationDetailLayoutContent({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    const wasOnDetailPage = isMissionDetailsRoute;
+                    // Reset ref first to prevent auto-reopening
+                    missionDetailTabOpenedRef.current = false;
+                    // Close tab immediately
                     closeMissionDetailTab();
-                    if (wasOnDetailPage) {
-                      requestAnimationFrame(() => {
-                        router.push(
-                          `/dashboard/business/locations/${locationId}/missions`
-                        );
-                      });
-                    }
+                    // Navigate immediately after
+                    router.push(
+                      `/dashboard/business/locations/${locationId}/missions`
+                    );
                   }}
                 >
                   <X className="h-3 w-3" />
@@ -838,6 +870,49 @@ function LocationDetailLayoutContent({
                         router.push(`/dashboard/business/locations/${locationId}/announcements`);
                       });
                     }
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
+            {/* Dynamic Announcement Detail Tab */}
+            {announcementDetailTab.isOpen && (
+              <div className="relative flex items-center">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "rounded-b-none border-b-2 transition-colors pr-7",
+                    isActiveTab('announcement-detail')
+                      ? "border-primary bg-muted"
+                      : "border-transparent hover:border-muted-foreground/50"
+                  )}
+                  onClick={() => {
+                    if (announcementDetailTab.announcementId) {
+                      router.push(
+                        `/dashboard/business/locations/${locationId}/announcements/${announcementDetailTab.announcementId}`
+                      );
+                    }
+                  }}
+                >
+                  {announcementDetailTab.announcementName || "View Announcement"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-destructive/10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Reset ref first to prevent auto-reopening
+                    announcementDetailTabOpenedRef.current = false;
+                    // Close tab immediately
+                    closeAnnouncementDetailTab();
+                    // Navigate immediately after
+                    router.push(
+                      `/dashboard/business/locations/${locationId}/announcements`
+                    );
                   }}
                 >
                   <X className="h-3 w-3" />

@@ -223,12 +223,13 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
             booking.createdBy?.email ||
             'Unknown';
 
-          // Get event name from real booking data only
+          // Get event name from real booking data only - use actual event name, not booking object type
+          // Type assertion needed because event property exists in API response but not in TypeScript type
+          const bookingWithEvent = booking as any;
           const eventName =
-            booking.event?.displayName ||
+            bookingWithEvent.event?.displayName ||
             booking.referencedEventRequest?.eventName ||
-            formatBookingObject(booking.bookingObject) ||
-            'Event';
+            'Unnamed Event';
 
           // Get consistent color for this booking
           const bookingColor = getBookingColor(booking.id);
@@ -449,62 +450,6 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
         </div>
       </CardHeader>
       <CardContent className='space-y-4'>
-        {/* Statistics Cards */}
-        <div className='grid grid-cols-2 md:grid-cols-5 gap-2'>
-          <div className='rounded-lg border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 p-2.5 shadow-sm'>
-            <div className='flex items-center justify-between mb-1'>
-              <span className='text-[10px] font-semibold text-muted-foreground uppercase'>
-                Total
-              </span>
-              <CalendarIcon className='h-3 w-3 text-primary' />
-            </div>
-            <p className='text-lg font-bold text-foreground'>{stats.total}</p>
-          </div>
-          <div className='rounded-lg border border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30 p-2.5 shadow-sm'>
-            <div className='flex items-center justify-between mb-1'>
-              <span className='text-[10px] font-semibold text-green-700 dark:text-green-300 uppercase'>
-                Approved
-              </span>
-              <CheckCircle2 className='h-3 w-3 text-green-600 dark:text-green-400' />
-            </div>
-            <p className='text-lg font-bold text-green-700 dark:text-green-300'>
-              {stats.approved}
-            </p>
-          </div>
-          <div className='rounded-lg border border-yellow-200 dark:border-yellow-800 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/30 p-2.5 shadow-sm'>
-            <div className='flex items-center justify-between mb-1'>
-              <span className='text-[10px] font-semibold text-yellow-700 dark:text-yellow-300 uppercase'>
-                Pending
-              </span>
-              <AlertCircle className='h-3 w-3 text-yellow-600 dark:text-yellow-400' />
-            </div>
-            <p className='text-lg font-bold text-yellow-700 dark:text-yellow-300'>
-              {stats.pending}
-            </p>
-          </div>
-          <div className='rounded-lg border border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 p-2.5 shadow-sm'>
-            <div className='flex items-center justify-between mb-1'>
-              <span className='text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase'>
-                Locked
-              </span>
-              <Lock className='h-3 w-3 text-blue-600 dark:text-blue-400' />
-            </div>
-            <p className='text-lg font-bold text-blue-700 dark:text-blue-300'>
-              {stats.locked}
-            </p>
-          </div>
-          <div className='rounded-lg border border-red-200 dark:border-red-800 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/30 p-2.5 shadow-sm'>
-            <div className='flex items-center justify-between mb-1'>
-              <span className='text-[10px] font-semibold text-red-700 dark:text-red-300 uppercase'>
-                Cancelled
-              </span>
-              <XCircle className='h-3 w-3 text-red-600 dark:text-red-400' />
-            </div>
-            <p className='text-lg font-bold text-red-700 dark:text-red-300'>
-              {stats.cancelled}
-            </p>
-          </div>
-        </div>
 
         {/* Week Navigation */}
         <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg border border-primary/10 bg-gradient-to-r from-primary/5 to-primary/10'>

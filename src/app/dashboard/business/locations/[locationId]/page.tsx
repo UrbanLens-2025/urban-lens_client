@@ -51,6 +51,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { DisplayTags } from '@/components/shared/DisplayTags';
 import React from 'react';
 import { ImageViewer } from '@/components/shared/ImageViewer';
+import { DetailViewLayout } from '@/components/shared/DetailViewLayout';
 import { useLocationVouchers } from '@/hooks/vouchers/useLocationVouchers';
 import { useLocationMissions } from '@/hooks/missions/useLocationMissions';
 import { useDeleteLocationVoucher } from '@/hooks/vouchers/useDeleteLocationVoucher';
@@ -183,6 +184,7 @@ import { cn } from '@/lib/utils';
 import { useAnnouncements } from '@/hooks/announcements/useAnnouncements';
 import { useDeleteAnnouncement } from '@/hooks/announcements/useDeleteAnnouncement';
 import { useCreateAnnouncement } from '@/hooks/announcements/useCreateAnnouncement';
+import { useAnnouncementById } from '@/hooks/announcements/useAnnouncementById';
 import { formatDateTime } from '@/lib/utils';
 import { useLocationTabs } from '@/contexts/LocationTabContext';
 import { X, CheckCircle } from 'lucide-react';
@@ -6540,6 +6542,7 @@ function EditMissionForm({
   );
 }
 
+
 // Voucher Detail View Component
 function VoucherDetailView({
   voucherId,
@@ -6555,7 +6558,7 @@ function VoucherDetailView({
     isLoading,
     isError,
   } = useLocationVoucherById(voucherId);
-  const { openVoucherEditTab } = useLocationTabs();
+  const { openVoucherEditTab, openVoucherDetailTab } = useLocationTabs();
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState('');
 
@@ -6563,6 +6566,13 @@ function VoucherDetailView({
     setCurrentImageSrc(src);
     setIsImageViewerOpen(true);
   };
+
+  // Update tab name when voucher data loads
+  useEffect(() => {
+    if (voucher && voucher.title) {
+      openVoucherDetailTab(voucherId, voucher.title);
+    }
+  }, [voucher?.title, voucherId, openVoucherDetailTab]);
 
   if (isLoading) {
     return (
@@ -6613,181 +6623,123 @@ function VoucherDetailView({
     );
   }
 
+  const badges = (
+    <>
+      <Badge variant='outline'>{voucher.voucherCode}</Badge>
+      {isActive && <Badge className='bg-green-600'>Active</Badge>}
+      {isScheduled && <Badge variant='outline'>Scheduled</Badge>}
+      {isExpired && <Badge variant='secondary'>Expired</Badge>}
+    </>
+  );
+
+  const mainContent = (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <Ticket /> Voucher Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='space-y-4'>
+          <InfoRow label='Description' value={voucher.description} />
+          <InfoRow
+            label='Type'
+            value={formatVoucherType(voucher.voucherType)}
+            icon={Layers}
+          />
+          <InfoRow
+            label='Price'
+            value={`${voucher.pricePoint} points`}
+            icon={Star}
+          />
+          <InfoRow
+            label='Max Quantity'
+            value={voucher.maxQuantity}
+            icon={Zap}
+          />
+          <InfoRow
+            label='Limit Per User'
+            value={voucher.userRedeemedLimit}
+            icon={User}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <CalendarDaysIcon /> Duration
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='grid grid-cols-2 gap-4'>
+          <InfoRow
+            label='Start Date'
+            value={format(new Date(voucher.startDate), 'PPP p')}
+          />
+          <InfoRow
+            label='End Date'
+            value={format(new Date(voucher.endDate), 'PPP p')}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <Clock /> Metadata
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='grid grid-cols-2 gap-4'>
+          <InfoRow
+            label='Created At'
+            value={format(new Date(voucher.createdAt), 'PPP p')}
+          />
+          <InfoRow
+            label='Updated At'
+            value={format(new Date(voucher.updatedAt), 'PPP p')}
+          />
+        </CardContent>
+      </Card>
+
+      {voucher.imageUrl && (
+        <Card>
+          <CardHeader>
+            <CardTitle className='flex items-center gap-2'>
+              <ImageIcon /> Voucher Image
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <img
+              src={voucher.imageUrl}
+              alt={voucher.title}
+              className='w-full max-w-md h-auto object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity'
+              onClick={() => handleImageClick(voucher.imageUrl)}
+            />
+          </CardContent>
+        </Card>
+      )}
+    </>
+  );
+
   return (
-    <div className='space-y-6'>
-      <div className='flex items-center justify-between flex-wrap gap-4'>
-        <div className='flex items-center gap-4 flex-wrap'>
-          <Button variant='outline' size='icon' onClick={onClose}>
-            <ArrowLeft className='h-4 w-4' />
-          </Button>
-          <Badge variant='outline'>{voucher.voucherCode}</Badge>
-          {isActive && <Badge className='bg-green-600'>Active</Badge>}
-          {isScheduled && <Badge variant='outline'>Scheduled</Badge>}
-          {isExpired && <Badge variant='secondary'>Expired</Badge>}
-        </div>
-        <Button onClick={() => openVoucherEditTab(voucher.id, voucher.title)}>
-          <Edit className='mr-2 h-4 w-4' /> Edit Voucher
-        </Button>
-      </div>
-
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-        <div className='lg:col-span-2 space-y-6'>
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <Ticket /> Voucher Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <InfoRow label='Description' value={voucher.description} />
-              <InfoRow
-                label='Type'
-                value={formatVoucherType(voucher.voucherType)}
-                icon={Layers}
-              />
-              <InfoRow
-                label='Price'
-                value={`${voucher.pricePoint} points`}
-                icon={Star}
-              />
-              <InfoRow
-                label='Max Quantity'
-                value={voucher.maxQuantity}
-                icon={Zap}
-              />
-              <InfoRow
-                label='Limit Per User'
-                value={voucher.userRedeemedLimit}
-                icon={User}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <CalendarDaysIcon /> Duration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='grid grid-cols-2 gap-4'>
-              <InfoRow
-                label='Start Date'
-                value={format(new Date(voucher.startDate), 'PPP p')}
-              />
-              <InfoRow
-                label='End Date'
-                value={format(new Date(voucher.endDate), 'PPP p')}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <Clock /> Metadata
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='grid grid-cols-2 gap-4'>
-              <InfoRow
-                label='Created At'
-                value={format(new Date(voucher.createdAt), 'PPP p')}
-              />
-              <InfoRow
-                label='Updated At'
-                value={format(new Date(voucher.updatedAt), 'PPP p')}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <ImageIcon /> Voucher Image
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <img
-                src={voucher.imageUrl}
-                alt={voucher.title}
-                className='w-full max-w-sm h-auto object-cover rounded-md border cursor-pointer'
-                onClick={() => handleImageClick(voucher.imageUrl)}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className='lg:col-span-1 space-y-6'>
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <Building /> Associated Location
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <InfoRow label='Location Name' value={voucher.location?.name} />
-              <InfoRow label='Address' value={voucher.location?.addressLine} />
-              <InfoRow
-                label='District/Ward'
-                value={voucher.location?.addressLevel1}
-              />
-              <InfoRow
-                label='Province/City'
-                value={voucher.location?.addressLevel2}
-              />
-              <InfoRow
-                label='Radius (m)'
-                value={voucher.location?.radiusMeters}
-                icon={Ruler}
-              />
-              <InfoRow
-                label='Visible on Map'
-                value={voucher.location?.isVisibleOnMap ? 'Yes' : 'No'}
-                icon={EyeIcon}
-              />
-              {voucher.location?.imageUrl?.length > 0 && (
-                <div className='mt-4 space-y-2'>
-                  <p className='text-sm font-semibold text-muted-foreground'>
-                    Location Images
-                  </p>
-                  <div className='flex flex-wrap gap-3'>
-                    {voucher.location?.imageUrl.map((url: string) => (
-                      <img
-                        key={url}
-                        src={url}
-                        alt='Location'
-                        onClick={() => handleImageClick(url)}
-                        className='w-24 h-24 rounded-md border object-cover cursor-pointer'
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className='sticky top-6'>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <MapPin /> Location Map
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='h-80 rounded-lg overflow-hidden'>
-              <GoogleMapsPicker
-                position={position}
-                onPositionChange={() => {}}
-              />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
+    <>
+      <DetailViewLayout
+        title={voucher.title}
+        badges={badges}
+        onClose={onClose}
+        onEdit={() => openVoucherEditTab(voucher.id, voucher.title)}
+        editLabel='Edit Voucher'
+        mainContent={mainContent}
+        location={voucher.location}
+        onImageClick={handleImageClick}
+      />
       <ImageViewer
         src={currentImageSrc}
         alt={voucher.title}
         open={isImageViewerOpen}
         onOpenChange={setIsImageViewerOpen}
       />
-    </div>
+    </>
   );
 }
 
@@ -6806,7 +6758,7 @@ function MissionDetailView({
     isLoading,
     isError,
   } = useLocationMissionById(missionId);
-  const { openMissionEditTab } = useLocationTabs();
+  const { openMissionEditTab, openMissionDetailTab } = useLocationTabs();
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState('');
   const [currentImageAlt, setCurrentImageAlt] = useState('');
@@ -6816,6 +6768,13 @@ function MissionDetailView({
     setCurrentImageAlt(alt);
     setIsImageViewerOpen(true);
   };
+
+  // Update tab name when mission data loads
+  useEffect(() => {
+    if (mission && mission.title) {
+      openMissionDetailTab(missionId, mission.title);
+    }
+  }, [mission?.title, missionId, openMissionDetailTab]);
 
   if (isLoading) {
     return (
@@ -6854,145 +6813,107 @@ function MissionDetailView({
   }) {
     if (!value) return null;
     return (
-      <div className='flex gap-3'>
+      <div className='flex gap-3 mb-4'>
         {Icon && (
           <Icon className='h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5' />
         )}
         <div className='flex-1'>
           <p className='text-sm font-semibold text-muted-foreground'>{label}</p>
-          <div className='text-base text-foreground'>{value}</div>
+          <div className='text-base text-foreground break-words'>{value}</div>
         </div>
       </div>
     );
   }
 
+  const badges = (
+    <>
+      {isActive && <Badge className='bg-green-600'>Active</Badge>}
+      {isScheduled && <Badge variant='outline'>Scheduled</Badge>}
+      {isExpired && <Badge variant='secondary'>Completed</Badge>}
+    </>
+  );
+
+  const mainContent = (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <Layers /> Mission Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='space-y-4'>
+          <InfoRow label='Description' value={mission.description} />
+          <InfoRow label='Target' value={mission.target} icon={Zap} />
+          <InfoRow
+            label='Reward'
+            value={`${mission.reward} points`}
+            icon={Star}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <CalendarDaysIcon /> Duration
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='grid grid-cols-2 gap-4'>
+          <InfoRow
+            label='Start Date'
+            value={format(new Date(mission.startDate), 'PPP p')}
+          />
+          <InfoRow
+            label='End Date'
+            value={format(new Date(mission.endDate), 'PPP p')}
+          />
+        </CardContent>
+      </Card>
+
+      {mission.imageUrls && mission.imageUrls.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className='flex items-center gap-2'>
+              <ImageIcon /> Mission Images
+            </CardTitle>
+          </CardHeader>
+          <CardContent className='flex flex-wrap gap-2'>
+            {mission.imageUrls.map((url, index) => (
+              <img
+                key={index}
+                src={url}
+                alt={`Mission image ${index + 1}`}
+                className='w-40 h-40 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity'
+                onClick={() =>
+                  handleImageClick(url, `Mission image ${index + 1}`)
+                }
+              />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </>
+  );
+
   return (
-    <div className='space-y-6'>
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-4'>
-          <Button variant='outline' size='icon' onClick={onClose}>
-            <ArrowLeft className='h-4 w-4' />
-          </Button>
-          {isActive && <Badge className='bg-green-600'>Active</Badge>}
-          {isScheduled && <Badge variant='outline'>Scheduled</Badge>}
-          {isExpired && <Badge variant='secondary'>Completed</Badge>}
-        </div>
-        <Button onClick={() => openMissionEditTab(mission.id, mission.title)}>
-          Edit Mission
-        </Button>
-      </div>
-
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-        <div className='lg:col-span-2 space-y-6'>
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <Layers /> Mission Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <InfoRow label='Description' value={mission.description} />
-              <InfoRow
-                label='Metric (How to complete)'
-                value={<Badge variant='outline'>{mission.metric}</Badge>}
-                icon={Zap}
-              />
-              <InfoRow label='Target' value={mission.target} icon={Zap} />
-              <InfoRow
-                label='Reward'
-                value={`${mission.reward} points`}
-                icon={Star}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <CalendarDaysIcon /> Duration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='grid grid-cols-2 gap-4'>
-              <InfoRow
-                label='Start Date'
-                value={format(new Date(mission.startDate), 'PPP p')}
-              />
-              <InfoRow
-                label='End Date'
-                value={format(new Date(mission.endDate), 'PPP p')}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <ImageIcon /> Mission Images
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='flex flex-wrap gap-2'>
-              {mission.imageUrls.map((url, index) => (
-                <img
-                  key={index}
-                  src={url}
-                  alt={`Mission image ${index + 1}`}
-                  className='w-40 h-40 object-cover rounded-md border cursor-pointer'
-                  onClick={() =>
-                    handleImageClick(url, `Mission image ${index + 1}`)
-                  }
-                />
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className='lg:col-span-1 space-y-6'>
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <Building /> Associated Location
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <InfoRow label='Address' value={mission.location?.addressLine} />
-              <InfoRow
-                label='District/Ward'
-                value={mission.location?.addressLevel1 || 'N/A'}
-              />
-              <InfoRow
-                label='Province/City'
-                value={mission.location?.addressLevel2 || 'N/A'}
-              />
-              <InfoRow
-                label='Service Radius'
-                value={`${mission.location?.radiusMeters} meters`}
-              />
-            </CardContent>
-          </Card>
-
-          <Card className='sticky top-6'>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <MapPin /> Location Map
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='h-80 rounded-lg overflow-hidden'>
-              <GoogleMapsPicker
-                position={position}
-                onPositionChange={() => {}}
-              />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
+    <>
+      <DetailViewLayout
+        title={mission.title}
+        badges={badges}
+        onClose={onClose}
+        onEdit={() => openMissionEditTab(mission.id, mission.title)}
+        editLabel='Edit Mission'
+        mainContent={mainContent}
+        location={mission.location}
+        onImageClick={(src) => handleImageClick(src, 'Mission image')}
+      />
       <ImageViewer
         src={currentImageSrc}
         alt={currentImageAlt}
         open={isImageViewerOpen}
         onOpenChange={setIsImageViewerOpen}
       />
-    </div>
+    </>
   );
 }
 
@@ -7006,14 +6927,14 @@ function AnnouncementDetailView({
   locationId: string;
   onClose: () => void;
 }) {
-  const { data: announcements } = useAnnouncements({
-    page: 1,
-    limit: 1000,
-    locationId,
-  });
-  const announcement = announcements?.data?.find(
-    (a) => a.id === announcementId
-  );
+  const {
+    data: announcement,
+    isLoading,
+    isError,
+  } = useAnnouncementById(announcementId);
+  const { data: location } = useLocationById(locationId);
+  const { openAnnouncementDetailTab } = useLocationTabs();
+  const router = useRouter();
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState('');
 
@@ -7022,147 +6943,191 @@ function AnnouncementDetailView({
     setIsImageViewerOpen(true);
   };
 
-  if (!announcement) {
+  // Update tab name when announcement data loads - use generic name
+  useEffect(() => {
+    if (announcement) {
+      openAnnouncementDetailTab(announcementId, 'View Announcement');
+    }
+  }, [announcement, announcementId, openAnnouncementDetailTab]);
+
+  if (isLoading) {
     return (
-      <div className='text-center py-12 text-red-500'>
-        <p className='font-medium'>Announcement not found</p>
+      <div className='flex items-center justify-center py-12 text-muted-foreground'>
+        <Loader2 className='h-6 w-6 animate-spin' />
       </div>
     );
   }
 
-  return (
-    <div className='space-y-6'>
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-4'>
-          <Button variant='outline' size='icon' onClick={onClose}>
-            <ArrowLeft className='h-4 w-4' />
-          </Button>
-          <Badge
-            variant='outline'
-            className={
-              announcement.isHidden
-                ? 'border-border bg-muted/40 text-muted-foreground'
-                : ''
-            }
-          >
-            {announcement.isHidden ? 'Hidden' : 'Visible'}
-          </Badge>
-        </div>
-        <Button asChild>
-          <Link
-            href={`/dashboard/business/locations/${locationId}/announcements/${announcement.id}/edit`}
-          >
-            <Edit className='mr-2 h-4 w-4' /> Edit Announcement
-          </Link>
+  if (isError || !announcement) {
+    return (
+      <div className='text-center py-12'>
+        <p className='text-sm font-medium text-destructive mb-4'>
+          Failed to load announcement
+        </p>
+        <Button variant='outline' onClick={onClose}>
+          <ArrowLeft className='mr-2 h-4 w-4' />
+          Back to announcements
         </Button>
       </div>
+    );
+  }
 
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-        <div className='lg:col-span-2 space-y-6'>
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <Megaphone /> Announcement Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div>
-                <p className='text-sm font-semibold text-muted-foreground mb-1'>
-                  Title
-                </p>
-                <p className='text-base text-foreground'>
-                  {announcement.title}
-                </p>
-              </div>
-              <div>
-                <p className='text-sm font-semibold text-muted-foreground mb-1'>
-                  Description
-                </p>
-                <p className='text-base text-foreground'>
-                  {announcement.description}
-                </p>
-              </div>
-              {announcement.imageUrl && (
-                <div>
-                  <p className='text-sm font-semibold text-muted-foreground mb-2'>
-                    Image
-                  </p>
-                  <img
-                    src={announcement.imageUrl}
-                    alt={announcement.title}
-                    className='w-full max-w-md h-auto object-cover rounded-md border cursor-pointer'
-                    onClick={() => handleImageClick(announcement.imageUrl!)}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+  const isActive =
+    announcement.startDate &&
+    announcement.endDate &&
+    new Date(announcement.startDate) <= new Date() &&
+    new Date(announcement.endDate) >= new Date();
 
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <CalendarDaysIcon /> Schedule
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='grid grid-cols-2 gap-4'>
-              <div>
-                <p className='text-sm font-semibold text-muted-foreground mb-1'>
-                  Start Date
-                </p>
-                <p className='text-base text-foreground'>
-                  {announcement.startDate
-                    ? formatDateTime(announcement.startDate)
-                    : '—'}
-                </p>
-              </div>
-              <div>
-                <p className='text-sm font-semibold text-muted-foreground mb-1'>
-                  End Date
-                </p>
-                <p className='text-base text-foreground'>
-                  {announcement.endDate
-                    ? formatDateTime(announcement.endDate)
-                    : '—'}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+  const isUpcoming =
+    announcement.startDate && new Date(announcement.startDate) > new Date();
 
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <Clock /> Metadata
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='grid grid-cols-2 gap-4'>
-              <div>
-                <p className='text-sm font-semibold text-muted-foreground mb-1'>
-                  Created
-                </p>
-                <p className='text-base text-foreground'>
-                  {formatDateTime(announcement.createdAt)}
-                </p>
-              </div>
-              <div>
-                <p className='text-sm font-semibold text-muted-foreground mb-1'>
-                  Updated
-                </p>
-                <p className='text-base text-foreground'>
-                  {formatDateTime(announcement.updatedAt)}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+  const isExpired =
+    announcement.endDate && new Date(announcement.endDate) < new Date();
+
+  function InfoRow({
+    label,
+    value,
+    icon: Icon,
+  }: {
+    label: string;
+    value: React.ReactNode;
+    icon?: React.ComponentType<{ className?: string }>;
+  }) {
+    if (value === undefined || value === null || value === '') return null;
+    return (
+      <div className='flex gap-3 mb-4'>
+        {Icon && (
+          <Icon className='h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5' />
+        )}
+        <div className='flex-1'>
+          <p className='text-sm font-semibold text-muted-foreground'>{label}</p>
+          <div className='text-base text-foreground break-words'>{value}</div>
         </div>
       </div>
+    );
+  }
 
+  const badges = (
+    <Badge
+      variant={
+        announcement.isHidden
+          ? 'secondary'
+          : isActive
+          ? 'default'
+          : isUpcoming
+          ? 'outline'
+          : 'destructive'
+      }
+      className='shrink-0'
+    >
+      {announcement.isHidden
+        ? 'Hidden'
+        : isActive
+        ? 'Active'
+        : isUpcoming
+        ? 'Upcoming'
+        : 'Expired'}
+    </Badge>
+  );
+
+  const mainContent = (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <Megaphone /> Announcement Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='space-y-4'>
+          <InfoRow label='Description' value={announcement.description} />
+          {announcement.imageUrl && (
+            <div>
+              <p className='text-sm font-semibold text-muted-foreground mb-2'>
+                Image
+              </p>
+              <img
+                src={announcement.imageUrl}
+                alt={announcement.title}
+                className='w-full max-w-md h-auto object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity'
+                onClick={() => handleImageClick(announcement.imageUrl!)}
+              />
+              <p className='text-xs text-muted-foreground mt-2 text-center'>
+                Click image to view larger
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <CalendarDaysIcon /> Schedule
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='grid grid-cols-2 gap-4'>
+          <InfoRow
+            label='Start Date'
+            value={
+              announcement.startDate
+                ? formatDateTime(announcement.startDate)
+                : '—'
+            }
+          />
+          <InfoRow
+            label='End Date'
+            value={
+              announcement.endDate
+                ? formatDateTime(announcement.endDate)
+                : '—'
+            }
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <Clock /> Metadata
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='grid grid-cols-2 gap-4'>
+          <InfoRow
+            label='Created'
+            value={formatDateTime(announcement.createdAt)}
+          />
+          <InfoRow
+            label='Updated'
+            value={formatDateTime(announcement.updatedAt)}
+          />
+        </CardContent>
+      </Card>
+    </>
+  );
+
+  return (
+    <>
+      <DetailViewLayout
+        title={announcement.title}
+        badges={badges}
+        onClose={onClose}
+        onEdit={() => {
+          router.push(
+            `/dashboard/business/locations/${locationId}/announcements/${announcement.id}/edit`
+          );
+        }}
+        editLabel='Edit Announcement'
+        mainContent={mainContent}
+        location={location}
+        onImageClick={handleImageClick}
+      />
       <ImageViewer
         src={currentImageSrc}
         alt={announcement.title}
         open={isImageViewerOpen}
         onOpenChange={setIsImageViewerOpen}
       />
-    </div>
+    </>
   );
 }
 
@@ -7176,6 +7141,8 @@ export default function LocationDetailsPage({
   const router = useRouter();
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState('overview');
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState<string>('');
 
   // Fetch all vouchers and missions for visualizations
   const { data: allVouchersResponse } = useLocationVouchers({
@@ -7469,8 +7436,11 @@ export default function LocationDetailsPage({
                             <img
                               src={url || '/placeholder.svg'}
                               alt={`Location image ${index + 1}`}
-                              // Image viewer is handled in layout
-                              className='w-full h-24 object-cover rounded-md border cursor-pointer'
+                              onClick={() => {
+                                setCurrentImageSrc(url || '/placeholder.svg');
+                                setIsImageViewerOpen(true);
+                              }}
+                              className='w-full h-24 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity'
                             />
                             <p className='text-[10px] text-muted-foreground text-center'>
                               Image {index + 1}
@@ -7478,7 +7448,7 @@ export default function LocationDetailsPage({
                           </div>
                         ))}
                       </div>
-                      {location.tags && location.tags.length > 0 && (
+                      {/* {location.tags && location.tags.length > 0 && (
                         <div className='border-t pt-3'>
                           <div className='pb-3 pt-4'>
                             <div className='flex items-center gap-2 text-sm font-semibold'>
@@ -7490,7 +7460,7 @@ export default function LocationDetailsPage({
                             <DisplayTags tags={location.tags} maxCount={12} />
                           </div>
                         </div>
-                      )}
+                      )} */}
                     </CardContent>
                   </Card>
                 )}
@@ -7598,6 +7568,14 @@ export default function LocationDetailsPage({
               </CardContent>
             </Card>
           </div>
+
+          {/* Image Viewer for Overview Tab */}
+          <ImageViewer
+            src={currentImageSrc}
+            alt='Location image'
+            open={isImageViewerOpen}
+            onOpenChange={setIsImageViewerOpen}
+          />
         </TabsContent>
         <TabsContent value='vouchers' className='mt-0'>
           {voucherCreateTab.isOpen ? (

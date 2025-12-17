@@ -83,7 +83,12 @@ export default function NewAnnouncementPage({
         locationId,
       },
       {
-        onSuccess: () => router.push(`/dashboard/business/locations/${locationId}/announcements`),
+        onSuccess: (data) => {
+          // Redirect to the detail view of the newly created announcement
+          router.push(
+            `/dashboard/business/locations/${locationId}/announcements/${data.id}`
+          );
+        },
       }
     );
   };

@@ -99,7 +99,10 @@ export default function EditAnnouncementPage({
         isHidden: values.isHidden,
       },
       {
-        onSuccess: () => router.push(`/dashboard/business/locations/${locationId}/announcements`),
+        onSuccess: () =>
+          router.push(
+            `/dashboard/business/locations/${locationId}/announcements/${announcementId}`
+          ),
       }
     );
   };

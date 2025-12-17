@@ -51,7 +51,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { WeeklyAvailabilityResponse } from '@/api/availability';
 import { Badge } from '@/components/ui/badge';
 import { BookingsCalendar } from './_components/BookingsCalendar';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useOwnerLocationBookingConfig } from '@/hooks/locations/useOwnerLocationBookingConfig';
@@ -207,6 +207,160 @@ const bookingConfigSchema = z
   );
 
 type BookingConfigForm = z.infer<typeof bookingConfigSchema>;
+
+// Refund Calculation Example Component
+interface RefundCalculationExampleProps {
+  baseBookingPrice: number;
+  refundCutoffHours: number;
+  refundPercentageBeforeCutoff: number;
+  refundPercentageAfterCutoff: number;
+  formatCurrency: (amount: number, currency: string) => string;
+}
+
+function RefundCalculationExample({
+  baseBookingPrice,
+  refundCutoffHours,
+  refundPercentageBeforeCutoff,
+  refundPercentageAfterCutoff,
+  formatCurrency,
+}: RefundCalculationExampleProps) {
+  // Calculate refund amounts
+  const refundBeforeCutoff =
+    baseBookingPrice * (refundPercentageBeforeCutoff || 0);
+  const refundAfterCutoff = baseBookingPrice * (refundPercentageAfterCutoff || 0);
+  const nonRefundBefore = baseBookingPrice - refundBeforeCutoff;
+  const nonRefundAfter = baseBookingPrice - refundAfterCutoff;
+
+  // Don't show if base price is 0 or invalid
+  if (!baseBookingPrice || baseBookingPrice <= 0) {
+    return (
+      <div className='rounded-lg border border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20 p-4'>
+        <div className='flex items-start gap-3'>
+          <Info className='h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0' />
+          <div className='flex-1'>
+            <p className='text-sm font-medium text-amber-900 dark:text-amber-100'>
+              Set a base booking price to see refund calculation examples
+            </p>
+            <p className='text-xs text-amber-700 dark:text-amber-300 mt-1'>
+              Refund examples will appear here once you enter a valid base booking price.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className='rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10/50 to-primary/5 dark:from-primary/10 dark:via-primary/5 dark:to-primary/10 p-5 space-y-4'>
+      <div className='flex items-center gap-2'>
+        <div className='p-1.5 rounded-md bg-primary/10'>
+          <Info className='h-4 w-4 text-primary' />
+        </div>
+        <h4 className='font-semibold text-sm text-foreground'>
+          Refund Calculation Examples
+        </h4>
+      </div>
+
+      <div className='space-y-3'>
+        {/* Base Price Display */}
+        <div className='flex items-center justify-between p-3 rounded-md bg-background/60 border border-primary/10'>
+          <div className='flex items-center gap-2'>
+            <DollarSign className='h-4 w-4 text-muted-foreground' />
+            <span className='text-sm font-medium text-muted-foreground'>
+              Sample Booking Price (1 hour)
+            </span>
+          </div>
+          <span className='text-base font-bold text-foreground'>
+            {formatCurrency(baseBookingPrice, 'VND')}
+          </span>
+        </div>
+
+        {/* Before Cutoff Example */}
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+          <div className='rounded-lg border border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 p-4 space-y-2'>
+            <div className='flex items-center gap-2'>
+              <div className='p-1 rounded bg-green-500/20'>
+                <Check className='h-3.5 w-3.5 text-green-600 dark:text-green-400' />
+              </div>
+              <div>
+                <p className='text-xs font-semibold text-green-900 dark:text-green-100'>
+                  Cancelled {refundCutoffHours}+ hours before
+                </p>
+                <p className='text-[10px] text-green-700 dark:text-green-300'>
+                  {(refundPercentageBeforeCutoff * 100).toFixed(0)}% refund
+                </p>
+              </div>
+            </div>
+            <div className='pt-2 space-y-1.5 border-t border-green-200 dark:border-green-800'>
+              <div className='flex items-center justify-between'>
+                <span className='text-xs text-green-700 dark:text-green-300'>
+                  Refund Amount
+                </span>
+                <span className='text-sm font-bold text-green-900 dark:text-green-100'>
+                  {formatCurrency(refundBeforeCutoff, 'VND')}
+                </span>
+              </div>
+              <div className='flex items-center justify-between'>
+                <span className='text-xs text-green-700 dark:text-green-300'>
+                  Retained Amount
+                </span>
+                <span className='text-xs font-medium text-green-800 dark:text-green-200'>
+                  {formatCurrency(nonRefundBefore, 'VND')}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* After Cutoff Example */}
+          <div className='rounded-lg border border-orange-200 dark:border-orange-800 bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20 p-4 space-y-2'>
+            <div className='flex items-center gap-2'>
+              <div className='p-1 rounded bg-orange-500/20'>
+                <Clock className='h-3.5 w-3.5 text-orange-600 dark:text-orange-400' />
+              </div>
+              <div>
+                <p className='text-xs font-semibold text-orange-900 dark:text-orange-100'>
+                  Cancelled &lt;{refundCutoffHours} hours before
+                </p>
+                <p className='text-[10px] text-orange-700 dark:text-orange-300'>
+                  {(refundPercentageAfterCutoff * 100).toFixed(0)}% refund
+                </p>
+              </div>
+            </div>
+            <div className='pt-2 space-y-1.5 border-t border-orange-200 dark:border-orange-800'>
+              <div className='flex items-center justify-between'>
+                <span className='text-xs text-orange-700 dark:text-orange-300'>
+                  Refund Amount
+                </span>
+                <span className='text-sm font-bold text-orange-900 dark:text-orange-100'>
+                  {formatCurrency(refundAfterCutoff, 'VND')}
+                </span>
+              </div>
+              <div className='flex items-center justify-between'>
+                <span className='text-xs text-orange-700 dark:text-orange-300'>
+                  Retained Amount
+                </span>
+                <span className='text-xs font-medium text-orange-800 dark:text-orange-200'>
+                  {formatCurrency(nonRefundAfter, 'VND')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Helpful Note */}
+        <div className='flex items-start gap-2 p-2.5 rounded-md bg-muted/50 border border-border/50'>
+          <HelpCircle className='h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0' />
+          <p className='text-[11px] text-muted-foreground leading-relaxed'>
+            These calculations are based on your current settings. The cutoff time is{' '}
+            <span className='font-semibold'>{refundCutoffHours} hours</span> before
+            the booking start time. Refund percentages are applied to the base booking
+            price per hour.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AvailabilityPage({
   params,
@@ -1380,65 +1534,6 @@ export default function AvailabilityPage({
                 )}
               >
                 <CardContent className='pt-4 space-y-4'>
-                  {/* Statistics Cards */}
-                  <div className='grid gap-2 sm:grid-cols-3'>
-                    <div className='rounded-lg border-2 border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 p-3 shadow-sm'>
-                      <div className='flex items-center justify-between mb-1.5'>
-                        <span className='text-[10px] font-semibold text-muted-foreground uppercase tracking-wide'>
-                          Total Weekly Hours
-                        </span>
-                        <div className='p-1 rounded-md bg-primary/10'>
-                          <Clock className='h-3 w-3 text-primary' />
-                        </div>
-                      </div>
-                      <p className='text-xl font-bold text-foreground'>
-                        {weeklyStats.totalHours}
-                        <span className='ml-1 text-xs font-normal text-muted-foreground'>
-                          hrs
-                        </span>
-                      </p>
-                    </div>
-                    <div className='rounded-lg border-2 border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 p-3 shadow-sm'>
-                      <div className='flex items-center justify-between mb-1.5'>
-                        <span className='text-[10px] font-semibold text-muted-foreground uppercase tracking-wide'>
-                          Active Days
-                        </span>
-                        <div className='p-1 rounded-md bg-primary/10'>
-                          <CalendarDays className='h-3 w-3 text-primary' />
-                        </div>
-                      </div>
-                      <p className='text-xl font-bold text-foreground'>
-                        {weeklyStats.activeDays}
-                        <span className='ml-1 text-xs font-normal text-muted-foreground'>
-                          days
-                        </span>
-                      </p>
-                    </div>
-                    <div className='rounded-lg border-2 border-primary/10 bg-gradient-to-br from-primary/5 to-primary/10 p-3 shadow-sm'>
-                      <div className='flex items-center justify-between mb-1.5'>
-                        <span className='text-[10px] font-semibold text-muted-foreground uppercase tracking-wide'>
-                          Max Revenue
-                        </span>
-                        <div className='p-1 rounded-md bg-primary/10'>
-                          <DollarSign className='h-3 w-3 text-primary' />
-                        </div>
-                      </div>
-                      <div className='flex items-baseline gap-2'>
-                        <p className='text-xl font-bold text-foreground'>
-                          {existingConfig && existingConfig.baseBookingPrice
-                            ? formatCurrency(
-                                parseFloat(existingConfig.baseBookingPrice) *
-                                  weeklyStats.totalHours,
-                                existingConfig.currency || 'VND'
-                              )
-                            : formatCurrency(0, 'VND')}
-                        </p>
-                        <span className='text-[10px] text-muted-foreground'>
-                          if all booked
-                        </span>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Legend and Actions */}
                   <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
@@ -2071,6 +2166,27 @@ export default function AvailabilityPage({
                                 )}
                               />
                             </div>
+
+                            {/* Refund Calculation Example */}
+                            <RefundCalculationExample
+                              baseBookingPrice={
+                                bookingForm.watch('baseBookingPrice') || 0
+                              }
+                              refundCutoffHours={
+                                bookingForm.watch('refundCutoffHours') || 24
+                              }
+                              refundPercentageBeforeCutoff={
+                                bookingForm.watch(
+                                  'refundPercentageBeforeCutoff'
+                                ) || 1
+                              }
+                              refundPercentageAfterCutoff={
+                                bookingForm.watch(
+                                  'refundPercentageAfterCutoff'
+                                ) || 0.8
+                              }
+                              formatCurrency={formatCurrency}
+                            />
                           </div>
 
                           {/* Submit Button */}
