@@ -239,7 +239,6 @@ export default function MissionDetailsPage({
               <TableHeader className='bg-muted/40'>
                 <TableRow>
                   <TableHead>Participant</TableHead>
-                  <TableHead>Contact</TableHead>
                   <TableHead>Progress</TableHead>
                   <TableHead>Completed</TableHead>
                   <TableHead>Started At</TableHead>
@@ -283,11 +282,6 @@ export default function MissionDetailsPage({
                         </TableCell>
                         <TableCell>
                           <div className='text-sm'>
-                            {user?.phoneNumber || ''}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className='text-sm'>
                             {p.progress || 0}/{mission.target || 0}
                           </div>
                         </TableCell>
@@ -300,9 +294,9 @@ export default function MissionDetailsPage({
                           </Badge>
                         </TableCell>
                         <TableCell className='text-sm text-muted-foreground'>
-                          {p.startedAt
-                            ? format(new Date(p.startedAt), 'PPP p')
-                            : ''}
+                          {p.createdAt
+                            ? format(new Date(p.createdAt), 'PPP p')
+                            : '—'}
                         </TableCell>
                         <TableCell className='text-sm text-muted-foreground'>
                           {p.completedAt
