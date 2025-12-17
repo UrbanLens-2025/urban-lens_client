@@ -1245,7 +1245,7 @@ export enum ScheduledJobStatus {
   FAILED = 'FAILED',
 }
 
-export type ReportStatus = 'PENDING' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED';
+export type ReportStatus = 'PENDING' | 'CLOSED';
 export type ReportTargetType = 'post' | 'event' | 'location';
 
 export enum PostReportResolutionActions {
