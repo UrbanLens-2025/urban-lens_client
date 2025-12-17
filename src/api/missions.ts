@@ -103,3 +103,57 @@ export const generateOneTimeQRCode = async ({
   );
   return data.data;
 };
+
+// ---- Mission Participants ----
+
+export interface GetMissionParticipantsParams {
+  missionId: string;
+  page?: number;
+  limit?: number;
+  // Raw filter string for completed, e.g. "$eq:true" or "$eq:false"
+  completedFilter?: string;
+  sortBy?: string[];
+  search?: string;
+  searchBy?: string[];
+}
+
+export const getMissionParticipants = async ({
+  missionId,
+  page = 1,
+  limit = 20,
+  completedFilter,
+  sortBy,
+  search,
+  searchBy,
+}: GetMissionParticipantsParams): Promise<PaginatedData<any>> => {
+  const params: any = {
+    page,
+    limit,
+    // Backend requires missionId filter in array form
+    'filter.missionId': [`$eq:${missionId}`],
+  };
+
+  if (completedFilter) {
+    params['filter.completed'] = [completedFilter];
+  }
+
+  if (sortBy && sortBy.length > 0) {
+    params.sortBy = sortBy;
+  } else {
+    // Default sort: highest progress first
+    params.sortBy = ['progress:DESC'];
+  }
+
+  if (search) {
+    params.search = search;
+    if (searchBy && searchBy.length > 0) {
+      params.searchBy = searchBy;
+    }
+  }
+
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<any>>
+  >('/v1/business/location-mission/mission/participants', { params });
+
+  return data.data;
+};
