@@ -114,6 +114,12 @@ export default function EventAttendancePage({
 
   const { data: attendances, meta } = attendanceData;
 
+  // Helper: determine if an attendance record is considered checked in
+  const isAttendanceCheckedIn = (status?: string) => {
+    const s = status?.toUpperCase();
+    return s === "ATTENDED" || s === "CHECKED_IN" || s === "CONFIRMED";
+  };
+
   // Filter at attendance level (per ticket/person)
   const filteredAttendances = attendances.filter((attendance) => {
     const fullName = `${attendance.order.createdBy.firstName} ${attendance.order.createdBy.lastName}`.toLowerCase();
@@ -127,8 +133,7 @@ export default function EventAttendancePage({
       email.includes(query) ||
       orderNumber.includes(query);
 
-    const status = attendance.status?.toUpperCase();
-    const isCheckedIn = status === "CHECKED_IN" || status === "CONFIRMED";
+    const isCheckedIn = isAttendanceCheckedIn(attendance.status);
 
     const matchesStatus =
       statusFilter === "all" ||
@@ -154,9 +159,7 @@ export default function EventAttendancePage({
   const totalOrders = new Set(attendances.map((a) => a.order.id)).size;
 
   const totalCheckedIn = attendances.reduce((sum, attendance) => {
-    const isCheckedIn =
-      attendance.status?.toUpperCase() === "CHECKED_IN" ||
-      attendance.status?.toUpperCase() === "CONFIRMED";
+    const isCheckedIn = isAttendanceCheckedIn(attendance.status);
     const count = attendance.numberOfAttendees ?? 1;
     return sum + (isCheckedIn ? count : 0);
   }, 0);
@@ -182,12 +185,6 @@ export default function EventAttendancePage({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <div className="text-xs text-muted-foreground text-right sm:text-left">
             <div>Total orders: <span className="font-medium text-foreground">{totalOrders}</span></div>
-            <div>
-              Checked in:{" "}
-              <span className="font-medium text-foreground">
-                {totalCheckedIn} ({totalOrders > 0 ? Math.round((totalCheckedIn / totalOrders) * 100) : 0}%)
-              </span>
-            </div>
             <div>
               Revenue (paid):{" "}
               <span className="font-semibold text-foreground">
@@ -283,10 +280,7 @@ export default function EventAttendancePage({
 
                     const checkedInUnits = groupedAttendances.reduce(
                       (sum: number, a: any) => {
-                        const s = a.status?.toUpperCase();
-                        const isChecked =
-                          s === "CHECKED_IN" ||
-                          s === "CONFIRMED";
+                        const isChecked = isAttendanceCheckedIn(a.status);
                         const count = a.numberOfAttendees ?? 1;
                         return sum + (isChecked ? count : 0);
                       },
@@ -314,7 +308,7 @@ export default function EventAttendancePage({
                           detail.ticketSnapshot?.displayName ||
                           detail.ticket?.displayName ||
                           "Unknown Ticket";
-                        return `${name} × ${detail.quantity}`;
+                        return `${name}`;
                       })
                       .join(", ");
 
@@ -323,7 +317,7 @@ export default function EventAttendancePage({
                       <TableCell>
                         <div className="space-y-1">
                           <div className="font-semibold text-sm">
-                            {order.orderNumber}
+                            {order.orderNumber.slice(0, 16)}...
                           </div>
                           {order.referencedTransactionId && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">

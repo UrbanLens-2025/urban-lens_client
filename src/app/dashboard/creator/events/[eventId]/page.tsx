@@ -397,7 +397,7 @@ export default function EventOverviewPage({
           </Card>
 
           {/* Policies */}
-          {(event.refundPolicy || event.termsAndConditions) && (
+          {(!!event.refundPolicy || !!event.termsAndConditions) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -423,7 +423,7 @@ export default function EventOverviewPage({
           )}
 
           {/* Location Details - Only show if location booking exists */}
-          {event.locationBookings && event.locationBookings.length > 0 && event.location && (
+          {Array.isArray(event.locationBookings) && event.locationBookings.length > 0 && event.location && (
             <Card className="overflow-hidden">
               {/* Featured Location Image */}
               {event.location?.imageUrl && event.location.imageUrl.length > 0 && (
@@ -480,28 +480,28 @@ export default function EventOverviewPage({
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium text-muted-foreground">Location Gallery</p>
                       <Badge variant="secondary" className="text-xs">
-                        {event.location.imageUrl.length} photo{event.location.imageUrl.length !== 1 ? 's' : ''}
+                        {event.location?.imageUrl?.length ?? 0} photo{(event.location?.imageUrl?.length ?? 0) !== 1 ? 's' : ''}
                       </Badge>
                     </div>
                     <div className={`grid gap-2 ${
-                      event.location.imageUrl.length === 2 ? 'grid-cols-2' :
-                      event.location.imageUrl.length === 3 ? 'grid-cols-3' :
+                      event.location?.imageUrl?.length === 2 ? 'grid-cols-2' :
+                      event.location?.imageUrl?.length === 3 ? 'grid-cols-3' :
                       'grid-cols-4'
                     }`}>
-                      {event.location.imageUrl.slice(1, 5).map((url: string, index: number) => (
+                      {event.location?.imageUrl?.slice(1, 5).map((url: string, index: number) => (
                         <div 
                           key={index} 
                           className="relative aspect-square overflow-hidden rounded-md border group cursor-pointer"
                         >
                           <img
                             src={url || "/placeholder.svg"}
-                            alt={`${event.location?.name} - View ${index + 2}`}
+                            alt={`${event.location?.name ?? "Location"} - View ${index + 2}`}
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                           />
-                          {index === 3 && event.location.imageUrl.length > 5 && (
+                          {index === 3 && (event.location?.imageUrl?.length ?? 0) > 5 && (
                             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                               <span className="text-white font-semibold text-lg">
-                                +{event.location.imageUrl.length - 5}
+                                +{(event.location?.imageUrl?.length ?? 0) - 5}
                               </span>
                             </div>
                           )}

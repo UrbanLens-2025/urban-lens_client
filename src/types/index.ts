@@ -909,6 +909,51 @@ export interface GetEventsParams {
   search?: string;
 }
 
+// Core Event entity used across creator & admin dashboards
+export interface Event {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+
+  // Basic info
+  displayName: string;
+  description: string | null;
+  expectedNumberOfParticipants?: number | null;
+  status: string;
+
+  // Media
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
+
+  // Timing
+  startDate?: string | null;
+  endDate?: string | null;
+
+  // Relations
+  locationId?: string | null;
+  location?: LocationForEvent | null;
+  tags?: Tag[];
+
+  // Social & documents
+  social?: {
+    platform: string;
+    url: string;
+    isMain: boolean;
+  }[];
+  eventValidationDocuments?: {
+    documentType: string;
+    documentImageUrls: string[];
+  }[];
+
+  // Policies
+  refundPolicy?: string | null;
+  termsAndConditions?: string | null;
+
+  // Misc / extensions (keep flexible for API evolution)
+  referencedEventRequestId?: string | null;
+  [key: string]: unknown;
+}
+
 export interface UpdateEventPayload {
   displayName?: string;
   description?: string;

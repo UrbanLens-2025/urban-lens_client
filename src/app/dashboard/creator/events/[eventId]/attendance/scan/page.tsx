@@ -37,10 +37,13 @@ import {
   Phone,
   ChevronDown,
   ChevronUp,
+  TicketCheck,
+  ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import type { Order, OrderEventAttendance } from "@/types";
+import Image from "next/image";
 
 // Format relative time
 const getRelativeTime = (dateString: string): string => {
@@ -90,9 +93,9 @@ const getAttendanceStatusInfo = (status: string, checkedInAt: string | null) => 
   const isCheckedIn = status.toUpperCase() === "ATTENDED" || checkedInAt !== null;
   return {
     isCheckedIn,
-    label: isCheckedIn ? "Checked In" : "Not Checked In",
-    className: isCheckedIn 
-      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+    label: isCheckedIn ? "Checked In" : "Take Attendance",
+    className: isCheckedIn
+      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
       : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   };
 };
@@ -115,7 +118,7 @@ const groupAttendancesByTicket = (
 
   // Create a map to group attendances
   const groupMap = new Map<string, OrderEventAttendance[]>();
-  
+
   attendances.forEach((attendance) => {
     const existing = groupMap.get(attendance.ticketId) || [];
     groupMap.set(attendance.ticketId, [...existing, attendance]);
@@ -123,12 +126,12 @@ const groupAttendancesByTicket = (
 
   // Convert to array and enrich with ticket info
   const groups: GroupedAttendance[] = [];
-  
+
   groupMap.forEach((attendanceList, ticketId) => {
     // Find ticket name from orderDetails
     const orderDetail = orderDetails.find((d) => d.ticketId === ticketId);
-    const ticketName = orderDetail?.ticketSnapshot?.displayName 
-      || orderDetail?.ticket?.displayName 
+    const ticketName = orderDetail?.ticketSnapshot?.displayName
+      || orderDetail?.ticket?.displayName
       || "Unknown Ticket";
 
     // Sort: not checked in first, then checked in
@@ -239,7 +242,7 @@ export default function QRScanPage({
     const uncheckedIds = group.attendances
       .filter((a) => a.status.toUpperCase() !== "ATTENDED" && !a.checkedInAt)
       .map((a) => a.id);
-    
+
     setSelectedAttendances((prev) => {
       const next = new Set(prev);
       uncheckedIds.forEach((id) => next.add(id));
@@ -305,7 +308,7 @@ export default function QRScanPage({
       updateDimensions();
       window.addEventListener("resize", updateDimensions);
       window.addEventListener("orientationchange", updateDimensions);
-      
+
       // Delay for orientation change to complete
       const orientationTimer = setTimeout(updateDimensions, 200);
 
@@ -321,12 +324,12 @@ export default function QRScanPage({
   useEffect(() => {
     if (containerDimensions && isScanning && html5QrCodeRef.current && !isStarting) {
       const lastDim = lastDimensionsRef.current;
-      
+
       // Only restart if dimensions changed significantly (more than 10% difference)
       if (lastDim) {
         const widthDiff = Math.abs(containerDimensions.width - lastDim.width) / lastDim.width;
         const heightDiff = Math.abs(containerDimensions.height - lastDim.height) / lastDim.height;
-        
+
         // If significant change (likely orientation change), restart scanner
         if (widthDiff > 0.1 || heightDiff > 0.1) {
           const restartTimer = setTimeout(() => {
@@ -390,7 +393,7 @@ export default function QRScanPage({
           .then(() => {
             html5QrCodeRef.current?.clear();
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     };
   }, []);
@@ -410,21 +413,21 @@ export default function QRScanPage({
       const rect = element.getBoundingClientRect();
       const width = rect.width;
       const height = rect.height;
-      
+
       // Use 70% of container size, but cap at reasonable limits
       // On mobile, use a larger percentage for better scanning
       const isMobile = window.innerWidth < 768;
       const sizePercentage = isMobile ? 0.85 : 0.70;
-      
+
       const qrSize = Math.min(width, height) * sizePercentage;
       // Ensure minimum and maximum sizes
       const minSize = 200;
       const maxSize = isMobile ? Math.min(width * 0.9, height * 0.9) : 350;
-      
+
       const finalSize = Math.max(minSize, Math.min(qrSize, maxSize));
       return { width: finalSize, height: finalSize };
     }
-    
+
     // Fallback dimensions
     const isMobile = window.innerWidth < 768;
     return { width: isMobile ? 280 : 300, height: isMobile ? 280 : 300 };
@@ -458,13 +461,13 @@ export default function QRScanPage({
 
       // Get available cameras first
       const devices = await Html5Qrcode.getCameras();
-      
+
       if (devices && devices.length) {
         // Store available cameras for switching
         setAvailableCameras(devices);
-        
+
         let selectedCameraId: string;
-        
+
         if (cameraIdToUse) {
           // Use the provided camera ID
           selectedCameraId = cameraIdToUse;
@@ -474,13 +477,13 @@ export default function QRScanPage({
         } else {
           // Try to use back camera first, fallback to first available
           const backCamera = devices.find(
-            (device) => device.label.toLowerCase().includes("back") || 
-                        device.label.toLowerCase().includes("rear") ||
-                        device.label.toLowerCase().includes("environment")
+            (device) => device.label.toLowerCase().includes("back") ||
+              device.label.toLowerCase().includes("rear") ||
+              device.label.toLowerCase().includes("environment")
           );
           selectedCameraId = backCamera?.id || devices[0].id;
         }
-        
+
         setCurrentCameraId(selectedCameraId);
 
         await html5QrCode.start(
@@ -521,7 +524,7 @@ export default function QRScanPage({
     } catch (error: any) {
       console.error("Error initializing scanner:", error);
       let errorMessage = "Failed to access camera. ";
-      
+
       if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
         errorMessage += "Please allow camera access and try again.";
       } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
@@ -533,7 +536,7 @@ export default function QRScanPage({
       } else {
         errorMessage += error.message || "Please check permissions and try again.";
       }
-      
+
       setCameraError(errorMessage);
       setIsScanning(false);
       setIsStarting(false);
@@ -556,7 +559,7 @@ export default function QRScanPage({
 
       // Find current camera index
       const currentIndex = availableCameras.findIndex(cam => cam.id === currentCameraId);
-      
+
       if (currentIndex === -1 || availableCameras.length <= 1) {
         // Try switching by facing mode if no camera ID or only one camera
         setFacingMode(prev => prev === "environment" ? "user" : "environment");
@@ -570,7 +573,7 @@ export default function QRScanPage({
       // Switch to next camera
       const nextIndex = (currentIndex + 1) % availableCameras.length;
       const nextCameraId = availableCameras[nextIndex].id;
-      
+
       setIsStarting(true);
       setTimeout(() => {
         initializeScanner(nextCameraId);
@@ -619,14 +622,14 @@ export default function QRScanPage({
   const parseQRCodeData = (qrText: string): string | null => {
     // Trim whitespace
     const trimmed = qrText.trim();
-    
+
     // UUID regex pattern
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    
+
     if (uuidPattern.test(trimmed)) {
       return trimmed;
     }
-    
+
     // Try to extract UUID from JSON
     try {
       const parsed = JSON.parse(trimmed);
@@ -639,7 +642,7 @@ export default function QRScanPage({
     } catch {
       // Not JSON, continue
     }
-    
+
     return null;
   };
 
@@ -721,7 +724,7 @@ export default function QRScanPage({
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">Order Details</h1>
+              <h1 className="text-3xl font-bold">Take attendances</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 {event.displayName}
               </p>
@@ -746,10 +749,10 @@ export default function QRScanPage({
                 <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400 flex-shrink-0" />
                 <div>
                   <p className="font-semibold text-green-900 dark:text-green-200">
-                    Valid Ticket Found!
+                    Scan Ticket Successfully!
                   </p>
                   <p className="text-sm text-green-700 dark:text-green-300">
-                    Order #{orderData.orderNumber}
+                    Order Number: #{orderData.orderNumber}
                   </p>
                 </div>
               </div>
@@ -781,7 +784,42 @@ export default function QRScanPage({
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Order Date</p>
-                    <p className="font-medium">{formatDate(orderData.createdAt)}</p>
+                    <p className="font-medium">{formatDateTime(orderData.createdAt)}</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {orderData.orderDetails.map((detail) => (
+                    <div
+                      key={detail.id}
+                      className="flex items-center justify-between py-2 border-b last:border-b-0"
+                    >
+                      {detail.ticketSnapshot.imageUrl ? (
+                        <Image
+                          src={detail.ticketSnapshot.imageUrl}
+                          alt={detail.ticketSnapshot.displayName}
+                          width={48}
+                          height={48}
+                          className="w-12 h-12 object-cover mr-2"
+                        />
+                      ) : (
+                        <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium">{detail.ticketSnapshot.displayName}</p>
+                      </div>
+                      <div className="text-right text-sm">
+                        <span className="text-muted-foreground">
+                          {detail.quantity} × {formatCurrency(Number(detail.unitPrice), detail.currency)}
+                        </span>
+                        <span className="ml-2 font-medium">
+                          = {formatCurrency(detail.subTotal, detail.currency)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-2 border-t font-semibold">
+                    <span>Total</span>
+                    <span>{formatCurrency(Number(orderData.totalPaymentAmount), orderData.currency)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -799,8 +837,8 @@ export default function QRScanPage({
                 <div className="flex items-center gap-3">
                   <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                     {orderData.createdBy.avatarUrl ? (
-                      <img 
-                        src={orderData.createdBy.avatarUrl} 
+                      <img
+                        src={orderData.createdBy.avatarUrl}
                         alt={`${orderData.createdBy.firstName} ${orderData.createdBy.lastName}`}
                         className="h-12 w-12 rounded-full object-cover"
                       />
@@ -865,7 +903,7 @@ export default function QRScanPage({
                     const isCollapsed = collapsedGroups.has(group.ticketId);
                     const selectedInGroup = getSelectedCountInGroup(group);
                     const uncheckedInGroup = getUncheckedCountInGroup(group);
-                    
+
                     return (
                       <div key={group.ticketId}>
                         {/* Ticket Group Header */}
@@ -922,9 +960,8 @@ export default function QRScanPage({
                               return (
                                 <div
                                   key={attendance.id}
-                                  className={`flex items-center gap-3 py-2 px-2 rounded-md transition-colors ${
-                                    isSelected ? "bg-green-50 dark:bg-green-950/20" : "hover:bg-muted/30"
-                                  }`}
+                                  className={`flex items-center gap-3 py-2 px-2 rounded-md transition-colors ${isSelected ? "bg-green-50 dark:bg-green-950/20" : "hover:bg-muted/30"
+                                    }`}
                                 >
                                   {/* Checkbox or status indicator */}
                                   {!statusInfo.isCheckedIn ? (
@@ -947,11 +984,10 @@ export default function QRScanPage({
                                   {/* Content */}
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 text-sm">
-                                      <span className={`font-medium ${
-                                        statusInfo.isCheckedIn 
-                                          ? "text-green-700 dark:text-green-400" 
-                                          : "text-foreground"
-                                      }`}>
+                                      <span className={`font-medium ${statusInfo.isCheckedIn
+                                        ? "text-green-700 dark:text-green-400"
+                                        : "text-foreground"
+                                        }`}>
                                         {statusInfo.label}
                                       </span>
                                       {statusInfo.isCheckedIn && attendance.checkedInAt && (
@@ -961,10 +997,10 @@ export default function QRScanPage({
                                       )}
                                     </div>
                                     <p className="text-xs text-muted-foreground">
-                                      Purchased {getRelativeTime(attendance.createdAt)}
+                                      Member {index + 1}
                                     </p>
                                   </div>
-                                  
+
                                   {/* Uncheck button placeholder for checked-in items */}
                                   {statusInfo.isCheckedIn && (
                                     <div className="flex-shrink-0">
@@ -983,53 +1019,17 @@ export default function QRScanPage({
               </Card>
             )}
 
-            {/* Order Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Ticket className="h-5 w-5" />
-                  Order Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {orderData.orderDetails.map((detail) => (
-                    <div 
-                      key={detail.id} 
-                      className="flex items-center justify-between py-2 border-b last:border-b-0"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium">{detail.ticketSnapshot.displayName}</p>
-                      </div>
-                      <div className="text-right text-sm">
-                        <span className="text-muted-foreground">
-                          {detail.quantity} × {formatCurrency(Number(detail.unitPrice), detail.currency)}
-                        </span>
-                        <span className="ml-2 font-medium">
-                          = {formatCurrency(detail.subTotal, detail.currency)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="flex items-center justify-between pt-2 border-t font-semibold">
-                    <span>Total</span>
-                    <span>{formatCurrency(Number(orderData.totalPaymentAmount), orderData.currency)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Actions */}
             <div className="flex gap-3">
-              <Button 
-                onClick={resetScan} 
-                variant="outline" 
+              <Button
+                onClick={resetScan}
+                variant="outline"
                 className="flex-1"
               >
                 <QrCode className="h-4 w-4 mr-2" />
                 Scan Another
               </Button>
-              <Button 
+              <Button
                 onClick={() => router.push(`/dashboard/creator/events/${eventId}/attendance`)}
                 variant="outline"
                 className="flex-1"
@@ -1159,8 +1159,8 @@ export default function QRScanPage({
               <p className="text-muted-foreground mb-4">
                 Ready to scan QR codes
               </p>
-              <Button 
-                onClick={startScanner} 
+              <Button
+                onClick={startScanner}
                 size="lg"
                 disabled={isStarting}
               >
@@ -1177,7 +1177,7 @@ export default function QRScanPage({
                 )}
               </Button>
               <p className="text-xs text-muted-foreground mt-4 text-center max-w-md">
-                Note: Camera access requires HTTPS or localhost. 
+                Note: Camera access requires HTTPS or localhost.
                 Make sure you allow camera permissions when prompted.
               </p>
             </div>
@@ -1209,12 +1209,12 @@ export default function QRScanPage({
                   <Camera className="h-4 w-4 mr-2" />
                   Try Again
                 </Button>
-                <Button 
+                <Button
                   onClick={() => {
                     setCameraError(null);
                     setIsScanning(false);
                     setIsStarting(false);
-                  }} 
+                  }}
                   variant="ghost"
                 >
                   Dismiss
@@ -1234,9 +1234,9 @@ export default function QRScanPage({
                 </div>
                 <div className="flex items-center gap-2">
                   {availableCameras.length > 1 && (
-                    <Button 
-                      onClick={switchCamera} 
-                      variant="outline" 
+                    <Button
+                      onClick={switchCamera}
+                      variant="outline"
                       size="sm"
                       disabled={isStarting}
                       title="Switch camera"
@@ -1253,11 +1253,11 @@ export default function QRScanPage({
               </div>
               {/* Scanner container - only rendered when scanning */}
               <div className="w-full">
-                <div 
+                <div
                   id="qr-reader"
                   ref={qrReaderRef}
                   className="w-full rounded-lg overflow-hidden border-2 border-primary/20"
-                  style={{ 
+                  style={{
                     minHeight: '400px',
                     width: '100%',
                     position: 'relative',
@@ -1267,7 +1267,8 @@ export default function QRScanPage({
                   }}
                 />
               </div>
-              <style dangerouslySetInnerHTML={{__html: `
+              <style dangerouslySetInnerHTML={{
+                __html: `
                 #qr-reader {
                   width: 100% !important;
                   min-height: 400px !important;
@@ -1311,12 +1312,12 @@ export default function QRScanPage({
                 </div>
               </div>
               <div className="mt-4">
-                <Button 
+                <Button
                   onClick={() => {
                     setScanError(null);
                     setLastScannedCode(null);
                     startScanner();
-                  }} 
+                  }}
                   size="sm"
                   variant="outline"
                 >
