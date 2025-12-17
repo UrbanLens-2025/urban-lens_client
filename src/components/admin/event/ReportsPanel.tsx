@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -57,9 +57,13 @@ import { useMarkReportFirstSeen } from "@/hooks/admin/useMarkReportFirstSeen";
 import { useUser } from "@/hooks/user/useUser";
 import { useProcessReportsNoAction } from "@/hooks/admin/useProcessReportsNoAction";
 import { useProcessReportsMalicious } from "@/hooks/admin/useProcessReportsMalicious";
+import { useBanPostPenalty } from "@/hooks/admin/useBanPostPenalty";
+import { useWarnUserPenalty } from "@/hooks/admin/useWarnUserPenalty";
+import { useProcessReportsTicketRefund } from "@/hooks/admin/useProcessReportsTicketRefund";
 import { Report, ReportStatus, ReportTargetType } from "@/types";
 import LoadingCustom from "@/components/shared/LoadingCustom";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 type ReportsPanelProps = {
   targetId: string;
@@ -77,8 +81,16 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isMaliciousModalOpen, setIsMaliciousModalOpen] = useState(false);
   const [isAddPenaltyModalOpen, setIsAddPenaltyModalOpen] = useState(false);
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [penaltyAction, setPenaltyAction] = useState<"ban_post" | "warn_user">(
+    targetType === "post" ? "ban_post" : "warn_user"
+  );
+  const [penaltyReason, setPenaltyReason] = useState("");
   const [noActionReason, setNoActionReason] = useState("");
   const [maliciousReason, setMaliciousReason] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [refundPercentage, setRefundPercentage] = useState<string>("0");
+  const [shouldCancelTickets, setShouldCancelTickets] = useState<boolean>(true);
 
   const {
     data: reportsData,
@@ -96,6 +108,9 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
   const { mutate: markFirstSeen } = useMarkReportFirstSeen();
   const { mutate: processNoAction, isPending: isProcessingNoAction } = useProcessReportsNoAction();
   const { mutate: processMalicious, isPending: isProcessingMalicious } = useProcessReportsMalicious();
+  const { mutate: banPostPenalty, isPending: isBanningPost } = useBanPostPenalty();
+  const { mutate: warnUserPenalty, isPending: isWarningUser } = useWarnUserPenalty();
+  const { mutate: processTicketRefund, isPending: isProcessingRefund } = useProcessReportsTicketRefund();
   const { user: currentUser } = useUser();
 
   const groupedReports = useMemo(() => {
@@ -191,6 +206,14 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
                   <span>Mark as malicious</span>
                 </div>
               </SelectItem>
+              {targetType === "event" && (
+                <SelectItem value="ticket_refund" className="text-xs py-1.5">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-sky-600" />
+                    <span>Refund ticket</span>
+                  </div>
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
           <Button
@@ -200,6 +223,8 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
                 setIsConfirmModalOpen(true);
               } else if (resolutionAction === "malicious_report") {
                 setIsMaliciousModalOpen(true);
+              } else if (resolutionAction === "ticket_refund" && targetType === "event") {
+                setIsRefundModalOpen(true);
               }
             }}
             disabled={selectedReportIds.size === 0 || !resolutionAction}
@@ -213,8 +238,7 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
           />
           <Button
             variant="destructive"
-            size="sm"
-            className="h-8 px-3 text-xs gap-2"
+            className="px-3 text-xs gap-2"
             onClick={() => setIsAddPenaltyModalOpen(true)}
           >
             <Gavel className="h-4 w-4" />
@@ -277,6 +301,39 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
         </DialogContent>
       </Dialog>
 
+      <TicketRefundDialog
+        open={isRefundModalOpen}
+        onOpenChange={setIsRefundModalOpen}
+        refundReason={refundReason}
+        refundPercentage={refundPercentage}
+        shouldCancelTickets={shouldCancelTickets}
+        onRefundReasonChange={setRefundReason}
+        onRefundPercentageChange={setRefundPercentage}
+        onShouldCancelTicketsChange={setShouldCancelTickets}
+        isProcessingRefund={isProcessingRefund}
+        selectedCount={selectedReportIds.size}
+        targetType={targetType}
+        onConfirm={(payload) =>
+          processTicketRefund(
+            {
+              reportIds: Array.from(selectedReportIds),
+              reason: payload.reason,
+              refundPercentage: payload.refundPercentage,
+              shouldCancelTickets: payload.shouldCancelTickets,
+            },
+            {
+              onSuccess: () => {
+                setIsRefundModalOpen(false);
+                setRefundReason("");
+                setRefundPercentage("0");
+                setShouldCancelTickets(true);
+                setSelectedReportIds(new Set());
+              },
+            }
+          )
+        }
+      />
+
       <Dialog open={isMaliciousModalOpen} onOpenChange={setIsMaliciousModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -331,20 +388,48 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isAddPenaltyModalOpen} onOpenChange={setIsAddPenaltyModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Penalty</DialogTitle>
-            <DialogDescription>Create a penalty for the selected reports.</DialogDescription>
-          </DialogHeader>
-          <div className="text-sm text-muted-foreground">Coming soon.</div>
-          <DialogFooter className="flex items-center justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsAddPenaltyModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddPenaltyDialog
+        open={isAddPenaltyModalOpen}
+        onOpenChange={setIsAddPenaltyModalOpen}
+        penaltyAction={penaltyAction}
+        onPenaltyActionChange={setPenaltyAction}
+        penaltyReason={penaltyReason}
+        onPenaltyReasonChange={setPenaltyReason}
+        isBanningPost={isBanningPost}
+        isWarningUser={isWarningUser}
+        targetType={targetType}
+        selectedCount={selectedReportIds.size}
+        onConfirm={(payload) => {
+          if (payload.type === "ban_post") {
+            banPostPenalty(
+              {
+                targetEntityId: targetId,
+                banReason: payload.reason,
+              },
+              {
+                onSuccess: () => {
+                  setPenaltyReason("");
+                  setIsAddPenaltyModalOpen(false);
+                },
+              }
+            );
+          } else if (payload.type === "warn_user") {
+            warnUserPenalty(
+              {
+                targetEntityId: targetId,
+                targetEntityType: targetType,
+                warningNote: payload.reason,
+              },
+              {
+                onSuccess: () => {
+                  setPenaltyReason("");
+                  setIsAddPenaltyModalOpen(false);
+                },
+              }
+            );
+          }
+        }}
+      />
 
       <Card className="pt-0">
         <CardContent className="p-0">
@@ -596,9 +681,28 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
                       {/* Header with Status */}
                       <div>
                         <div className="flex items-start justify-between gap-4 mb-1">
-                          <h2 className="text-xl font-bold leading-tight">
-                            {selectedReport.title}
-                          </h2>
+                          <div className="flex items-start gap-2 flex-1 min-w-0">
+                            {!selectedReport.resolutionAction && (
+                              <Checkbox
+                                className="mt-1"
+                                checked={selectedReportIds.has(selectedReport.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedReportIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (checked) {
+                                      next.add(selectedReport.id);
+                                    } else {
+                                      next.delete(selectedReport.id);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                              />
+                            )}
+                            <h2 className="text-xl font-bold leading-tight break-words">
+                              {selectedReport.title}
+                            </h2>
+                          </div>
                           <Badge
                             className={`shrink-0 ${selectedReport.status === "PENDING"
                               ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
@@ -779,4 +883,250 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
     </>
   );
 }
+
+type AddPenaltyDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  penaltyAction: "ban_post" | "warn_user";
+  onPenaltyActionChange: (action: "ban_post" | "warn_user") => void;
+  penaltyReason: string;
+  onPenaltyReasonChange: (reason: string) => void;
+  isBanningPost: boolean;
+  isWarningUser: boolean;
+  targetType: ReportTargetType;
+  selectedCount: number;
+  onConfirm: (payload: { type: "ban_post" | "warn_user"; reason: string }) => void;
+};
+
+const AddPenaltyDialog = memo(function AddPenaltyDialog({
+  open,
+  onOpenChange,
+  penaltyAction,
+  onPenaltyActionChange,
+  penaltyReason,
+  onPenaltyReasonChange,
+  isBanningPost,
+  isWarningUser,
+  targetType,
+  selectedCount,
+  onConfirm,
+}: AddPenaltyDialogProps) {
+  const isBanDisabled =
+    targetType !== "post" ||
+    penaltyAction !== "ban_post" ||
+    !penaltyReason.trim() ||
+    selectedCount === 0 ||
+    isBanningPost;
+
+  const isWarningDisabled =
+    penaltyAction !== "warn_user" ||
+    !penaltyReason.trim() ||
+    isWarningUser;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+              <Gavel className="h-5 w-5" />
+            </div>
+            <div className="space-y-1">
+              <DialogHeader className="p-0">
+                <DialogTitle className="text-lg">Add Penalty</DialogTitle>
+                <DialogDescription className="text-sm">
+                  Choose an action and add a short note for why this post is being penalized.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Select
+              value={penaltyAction}
+              onValueChange={(val) => onPenaltyActionChange(val as "ban_post" | "warn_user")}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Select a penalty action" />
+              </SelectTrigger>
+              <SelectContent>
+                {targetType === "post" && (
+                  <SelectItem value="ban_post" className="text-sm">
+                    Ban post
+                  </SelectItem>
+                )}
+                <SelectItem value="warn_user" className="text-sm">
+                  Send warning
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            {(penaltyAction === "ban_post" || penaltyAction === "warn_user") && (
+              <Textarea
+                value={penaltyReason}
+                onChange={(e) => onPenaltyReasonChange(e.target.value)}
+                placeholder={
+                  penaltyAction === "ban_post"
+                    ? "Add a brief ban reason for this post"
+                    : "Add a brief warning note for this post"
+                }
+                rows={4}
+              />
+            )}
+          </div>
+        </div>
+        <DialogFooter className="flex items-center justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+          <Button
+            size="sm"
+            disabled={penaltyAction === "ban_post" ? isBanDisabled : isWarningDisabled}
+            onClick={() => {
+              if (penaltyAction === "ban_post") {
+                if (isBanDisabled) return;
+                onConfirm({ type: "ban_post", reason: penaltyReason.trim() });
+                return;
+              }
+              if (penaltyAction === "warn_user") {
+                if (isWarningDisabled) return;
+                onConfirm({ type: "warn_user", reason: penaltyReason.trim() });
+              }
+            }}
+          >
+            {penaltyAction === "ban_post"
+              ? isBanningPost
+                ? "Saving..."
+                : "Confirm"
+              : isWarningUser
+                ? "Sending..."
+                : "Send warning"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+});
+
+type TicketRefundDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  refundReason: string;
+  refundPercentage: string;
+  shouldCancelTickets: boolean;
+  onRefundReasonChange: (value: string) => void;
+  onRefundPercentageChange: (value: string) => void;
+  onShouldCancelTicketsChange: (value: boolean) => void;
+  isProcessingRefund: boolean;
+  selectedCount: number;
+  targetType: ReportTargetType;
+  onConfirm: (payload: {
+    reason: string;
+    refundPercentage: number;
+    shouldCancelTickets: boolean;
+  }) => void;
+};
+
+const TicketRefundDialog = memo(function TicketRefundDialog({
+  open,
+  onOpenChange,
+  refundReason,
+  refundPercentage,
+  shouldCancelTickets,
+  onRefundReasonChange,
+  onRefundPercentageChange,
+  onShouldCancelTicketsChange,
+  isProcessingRefund,
+  selectedCount,
+  targetType,
+  onConfirm,
+}: TicketRefundDialogProps) {
+  const parsedPercentage = Number(refundPercentage);
+  const isInvalidPercentage =
+    Number.isNaN(parsedPercentage) || parsedPercentage < 0 || parsedPercentage > 100;
+  const disabled =
+    targetType !== "event" ||
+    selectedCount === 0 ||
+    isProcessingRefund ||
+    !refundReason.trim() ||
+    isInvalidPercentage;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Refund ticket(s)</DialogTitle>
+          <DialogDescription>
+            Submit a refund request for the selected reports. Available for events only.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Textarea
+            value={refundReason}
+            onChange={(e) => onRefundReasonChange(e.target.value)}
+            placeholder="Reason for refund (required)"
+            rows={4}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="refund-percentage" className="text-xs">
+                Refund percentage
+              </Label>
+              <Input
+                id="refund-percentage"
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={refundPercentage}
+                onChange={(e) => onRefundPercentageChange(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Enter a value between 0 and 100.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Cancel tickets</Label>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="cancel-tickets"
+                  checked={shouldCancelTickets}
+                  onCheckedChange={(checked) => onShouldCancelTicketsChange(Boolean(checked))}
+                />
+                <Label htmlFor="cancel-tickets" className="text-sm">
+                  Also cancel existing tickets
+                </Label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <DialogFooter className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            disabled={isProcessingRefund}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            disabled={disabled}
+            onClick={() => {
+              if (disabled) return;
+              onConfirm({
+                reason: refundReason.trim(),
+                refundPercentage: parsedPercentage,
+                shouldCancelTickets,
+              });
+            }}
+          >
+            {isProcessingRefund ? "Submitting..." : "Confirm refund"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+});
+
 

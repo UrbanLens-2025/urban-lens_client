@@ -37,6 +37,18 @@ export const processReportsMalicious = async (params: {
   );
 };
 
+export const processReportsTicketRefund = async (params: {
+  reportIds: string[];
+  reason: string;
+  refundPercentage: number;
+  shouldCancelTickets: boolean;
+}): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>(
+    "/v1/admin/report/process/ticket-refund",
+    params
+  );
+};
+
 // Get all reports for admin
 export const getReports = async (
   params: GetReportsParams

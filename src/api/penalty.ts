@@ -20,3 +20,20 @@ export const getPenaltiesByTarget = async (
   return data.data;
 };
 
+// Ban a post (penalty)
+export const banPostPenalty = async (params: {
+  targetEntityId: string;
+  targetEntityType: "post";
+  banReason: string;
+}): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>("/v1/admin/penalty/ban-post", params);
+};
+
+export const warnUserPenalty = async (params: {
+  targetEntityId: string;
+  targetEntityType: "post" | "event" | "location";
+  warningNote: string;
+}): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>("/v1/admin/penalty/warn-user", params);
+};
+
