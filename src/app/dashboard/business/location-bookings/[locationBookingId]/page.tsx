@@ -71,6 +71,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageContainer, PageHeader } from '@/components/shared';
+import { StatCard } from '@/components/shared/StatCard';
 import { Separator } from '@/components/ui/separator';
 import {
   Tooltip,
@@ -554,65 +555,28 @@ export default function LocationBookingDetailPage({
 
       {/* Summary Cards */}
       <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6'>
-        <Card className='border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 shadow-md'>
-          <CardContent className='pt-4 pb-4'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <p className='text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1'>
-                  Payment Amount
-                </p>
-                <CurrencyDisplay
-                  amount={booking.amountToPay}
-                  size='xl'
-                  variant='primary'
-                  className='text-2xl'
-                />
-              </div>
-              <div className='h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center'>
-                <DollarSign className='h-5 w-5 text-primary' />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className='border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-blue-500/10 shadow-md'>
-          <CardContent className='pt-4 pb-4'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <p className='text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1'>
-                  Total Hours
-                </p>
-                <p className='text-2xl font-bold text-blue-600'>
-                  {totalHours} hours
-                </p>
-                <p className='text-xs text-muted-foreground mt-1'>
-                  {bookingTimeDetails.totalDays}{' '}
-                  {bookingTimeDetails.totalDays === 1 ? 'day' : 'days'}
-                </p>
-              </div>
-              <div className='h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center'>
-                <Clock className='h-5 w-5 text-blue-600' />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className='border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-purple-500/10 shadow-md'>
-          <CardContent className='pt-4 pb-4'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <p className='text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1'>
-                  Time Slots Booked
-                </p>
-                <p className='text-2xl font-bold text-purple-600'>
-                  {booking.dates?.length || 0}
-                </p>
-                <p className='text-xs text-muted-foreground mt-1'>time slots</p>
-              </div>
-              <div className='h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center'>
-                <Calendar className='h-5 w-5 text-purple-600' />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title='Payment Amount'
+          value={formatCurrency(booking.amountToPay)}
+          icon={DollarSign}
+          color='orange'
+        />
+        <StatCard
+          title='Total Hours'
+          value={`${totalHours} hours`}
+          description={`${bookingTimeDetails.totalDays} ${
+            bookingTimeDetails.totalDays === 1 ? 'day' : 'days'
+          }`}
+          icon={Clock}
+          color='blue'
+        />
+        <StatCard
+          title='Time Slots Booked'
+          value={booking.dates?.length || 0}
+          description='time slots'
+          icon={Calendar}
+          color='purple'
+        />
       </div>
 
       {/* Grid Content */}

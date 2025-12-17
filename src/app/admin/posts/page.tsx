@@ -58,7 +58,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
 import { PageContainer } from '@/components/shared';
-import StatisticCard from '@/components/admin/StatisticCard';
+import { StatCard } from '@/components/shared/StatCard';
 
 export default function AdminPostsPage() {
   const router = useRouter();
@@ -219,19 +219,20 @@ export default function AdminPostsPage() {
     <PageContainer>
       {/* Statistics Cards */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10'>
-        <StatisticCard
+        <StatCard
           title='Total Posts'
-          subtitle={`${posts.length} on this page`}
+          description={`${posts.length} on this page`}
           value={
             postStats.isLoading ? '—' : postStats.total.toLocaleString()
           }
           icon={FileText}
-          iconColorClass='blue'
+          color='blue'
+          isLoading={postStats.isLoading}
         />
 
-        <StatisticCard
+        <StatCard
           title='Reviews'
-          subtitle={`${
+          description={`${
             postStats.total > 0
               ? Math.round((postStats.reviews / postStats.total) * 100)
               : 0
@@ -242,12 +243,13 @@ export default function AdminPostsPage() {
               : postStats.reviews.toLocaleString()
           }
           icon={Star}
-          iconColorClass='amber'
+          color='amber'
+          isLoading={postStats.isLoading}
         />
 
-        <StatisticCard
+        <StatCard
           title='Blog Posts'
-          subtitle={`${
+          description={`${
             postStats.total > 0
               ? Math.round((postStats.checkIns / postStats.total) * 100)
               : 0
@@ -258,12 +260,13 @@ export default function AdminPostsPage() {
               : postStats.checkIns.toLocaleString()
           }
           icon={FileText}
-          iconColorClass='purple'
+          color='purple'
+          isLoading={postStats.isLoading}
         />
 
-        <StatisticCard
+        <StatCard
           title='Public Posts'
-          subtitle={`${
+          description={`${
             postStats.total > 0
               ? Math.round((postStats.public / postStats.total) * 100)
               : 0
@@ -274,7 +277,8 @@ export default function AdminPostsPage() {
               : postStats.public.toLocaleString()
           }
           icon={Globe}
-          iconColorClass='green'
+          color='green'
+          isLoading={postStats.isLoading}
         />
       </div>
 
