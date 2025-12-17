@@ -15,6 +15,28 @@ export const markReportsFirstSeen = async (reportIds: string[]): Promise<void> =
   });
 };
 
+// Process reports with no action taken
+export const processReportsNoAction = async (params: {
+  reportIds: string[];
+  reason: string;
+}): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>(
+    "/v1/admin/report/process/no-action-taken",
+    params
+  );
+};
+
+// Process reports as malicious
+export const processReportsMalicious = async (params: {
+  reportIds: string[];
+  reason: string;
+}): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>(
+    "/v1/admin/report/process/malicious-report",
+    params
+  );
+};
+
 // Get all reports for admin
 export const getReports = async (
   params: GetReportsParams

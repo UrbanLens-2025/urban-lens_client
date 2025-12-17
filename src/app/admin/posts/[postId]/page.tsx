@@ -14,10 +14,10 @@ import {
   ArrowLeft,
   Calendar,
   MapPin,
-  Building,
   User,
   Star,
   MessageSquare,
+  Gavel,
   ThumbsUp,
   ThumbsDown,
   Eye,
@@ -35,12 +35,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageViewer } from "@/components/shared/ImageViewer";
-import { Separator } from "@/components/ui/separator";
 import { PageContainer } from "@/components/shared";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReportsPanel } from "@/components/admin/event/ReportsPanel";
 import Image from "next/image";
 import { toast } from "sonner";
+import { usePenaltiesByTarget } from "@/hooks/admin/usePenaltiesByTarget";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // --- Helper Components ---
 function InfoRow({
@@ -67,38 +75,6 @@ function InfoRow({
         </div>
       </div>
     </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  color = "text-primary",
-  bgColor = "bg-primary/10",
-}: {
-  label: string;
-  value: number | string;
-  icon: React.ComponentType<{ className?: string }>;
-  color?: string;
-  bgColor?: string;
-}) {
-  return (
-    <Card className="border-border/60 shadow-sm hover:shadow-md transition-shadow">
-      <CardContent>
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              {label}
-            </p>
-            <p className={`text-3xl font-bold ${color}`}>{value}</p>
-          </div>
-          <div className={`p-3 rounded-xl ${bgColor}`}>
-            <Icon className={`h-6 w-6 ${color}`} />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -132,6 +108,12 @@ export default function AdminPostDetailsPage({
 
   const comments = commentsData?.data || [];
   const commentsMeta = commentsData?.meta;
+
+  const {
+    data: penaltiesData,
+    isLoading: isLoadingPenalties,
+  } = usePenaltiesByTarget(post?.postId ?? "", "post");
+  const [isPenaltyModalOpen, setIsPenaltyModalOpen] = useState(false);
 
   const handleImageClick = (src: string) => {
     setCurrentImageSrc(src);
@@ -419,6 +401,16 @@ export default function AdminPostDetailsPage({
               Details
             </TabsTrigger>
             <TabsTrigger
+              value="comments"
+              className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2
+              data-[state=active]:text-foreground
+              after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent
+              data-[state=active]:after:bg-primary"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Comments
+            </TabsTrigger>
+            <TabsTrigger
               value="reports"
               className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2
               data-[state=active]:text-foreground
@@ -429,14 +421,14 @@ export default function AdminPostDetailsPage({
               Reports
             </TabsTrigger>
             <TabsTrigger
-              value="comments"
+              value="penalties"
               className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2
               data-[state=active]:text-foreground
               after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent
               data-[state=active]:after:bg-primary"
             >
-              <MessageSquare className="h-4 w-4" />
-              Comments
+              <Gavel className="h-4 w-4" />
+              Penalty History
             </TabsTrigger>
           </TabsList>
           <TabsContent value="details">
@@ -519,18 +511,24 @@ export default function AdminPostDetailsPage({
                 {post.location && (
                   <Card className="border-border/60 shadow-sm overflow-hidden pt-0">
                     {post.location.imageUrl && post.location.imageUrl.length > 0 && (
+                      (() => {
+                        const firstImage = post.location?.imageUrl?.[0];
+                        if (!firstImage) return null;
+                        return (
                       <div
                         className="relative w-full aspect-video overflow-hidden bg-muted cursor-pointer group"
-                        onClick={() => handleImageClick(post.location.imageUrl[0])}
+                        onClick={() => handleImageClick(firstImage)}
                       >
                         <Image
-                          src={post.location.imageUrl[0]}
+                          src={firstImage}
                           alt={post.location.name}
                           fill
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                           sizes="(max-width: 768px) 100vw, 33vw"
                         />
                       </div>
+                        );
+                      })()
                     )}
                     <CardHeader>
                       <div className="flex items-center justify-between gap-2">
@@ -546,9 +544,9 @@ export default function AdminPostDetailsPage({
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-2 pt-0">
-                      {post.location?.['description'] && (
+                      {((post.location as { description?: string })?.description) && (
                         <p className="text-sm text-muted-foreground line-clamp-1">
-                          {post.location?.['description']}
+                          {(post.location as { description?: string })?.description}
                         </p>
                       )}
                       <p className="text-sm text-foreground truncate">
@@ -627,14 +625,32 @@ export default function AdminPostDetailsPage({
                   <p className="text-sm text-muted-foreground">No comments found.</p>
                 ) : (
                   <div className="space-y-3">
-                    {comments.map((comment) => {
-                      const authorFirstName = comment?.author?.firstName || comment?.createdBy?.firstName || "";
-                      const authorLastName = comment?.author?.lastName || comment?.createdBy?.lastName || "";
+                    {comments.map((comment, index) => {
+                      type CommentWithCreatedBy = typeof comments[number] & {
+                        createdBy?: {
+                          firstName?: string;
+                          lastName?: string;
+                          avatarUrl?: string;
+                          id?: string;
+                        };
+                        commentId?: string;
+                      };
+
+                      const extendedComment = comment as CommentWithCreatedBy;
+                      const authorFirstName =
+                        extendedComment?.author?.firstName || extendedComment?.createdBy?.firstName || "";
+                      const authorLastName =
+                        extendedComment?.author?.lastName || extendedComment?.createdBy?.lastName || "";
                       const authorName = `${authorFirstName} ${authorLastName}`.trim() || "Unknown user";
-                      const avatarUrl = comment?.author?.avatarUrl || comment?.createdBy?.avatarUrl;
+                      const avatarUrl =
+                        extendedComment?.author?.avatarUrl || extendedComment?.createdBy?.avatarUrl;
+                      const commentId =
+                        (extendedComment as { id?: string }).id ||
+                        extendedComment?.commentId ||
+                        `comment-${index}`;
                       return (
                         <div
-                          key={comment.id || comment.commentId}
+                          key={commentId}
                           className="rounded-lg border border-border/60 bg-card/50 p-3 shadow-sm space-y-2"
                         >
                           <div className="flex items-start gap-3">
@@ -648,14 +664,14 @@ export default function AdminPostDetailsPage({
                             <div className="flex-1 min-w-0 space-y-1">
                               <div className="flex items-center gap-2 text-sm text-foreground">
                                 <span className="font-semibold truncate">{authorName}</span>
-                                {comment?.createdAt && (
+                                {extendedComment?.createdAt && (
                                   <span className="text-xs text-muted-foreground">
-                                    {format(new Date(comment.createdAt), "PP p")}
+                                    {format(new Date(extendedComment.createdAt as string), "PP p")}
                                   </span>
                                 )}
                               </div>
                               <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-                                {comment?.content ?? ""}
+                                {extendedComment?.content ?? ""}
                               </p>
                             </div>
                           </div>
@@ -700,7 +716,101 @@ export default function AdminPostDetailsPage({
           <TabsContent value="reports">
             <ReportsPanel targetId={post.postId} targetType="post" />
           </TabsContent>
+          <TabsContent value="penalties">
+            <Card className="border-border/60 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Gavel className="h-5 w-5" />
+                  Penalty History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingPenalties ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading penalties...
+                  </div>
+                ) : !penaltiesData || penaltiesData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No penalties found for this post.</p>
+                ) : (
+                  <div className="overflow-hidden rounded-lg border">
+                    <Table>
+                      <TableHeader className="bg-muted/40">
+                        <TableRow>
+                          <TableHead>Action</TableHead>
+                          <TableHead>Reason</TableHead>
+                          <TableHead>Issued By</TableHead>
+                          <TableHead>Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {penaltiesData.map((penalty) => (
+                          <TableRow key={penalty.id} className="hover:bg-muted/20">
+                            <TableCell>
+                              <Badge variant="outline" className="w-fit text-xs">
+                                {penalty.penaltyAction.replace(/_/g, " ")}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {penalty.reason || (
+                                <span className="text-muted-foreground italic">No reason provided</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {penalty.createdBy ? (
+                                <div className="flex items-center gap-2">
+                                  {penalty.createdBy.avatarUrl ? (
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarImage
+                                        src={penalty.createdBy.avatarUrl}
+                                        alt={`${penalty.createdBy.firstName} ${penalty.createdBy.lastName}`}
+                                      />
+                                      <AvatarFallback>
+                                        {penalty.createdBy.firstName[0]}
+                                        {penalty.createdBy.lastName[0]}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                                      <User className="h-4 w-4 text-primary" />
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <div className="font-medium truncate">
+                                      {penalty.createdBy.firstName} {penalty.createdBy.lastName}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground truncate">
+                                      {penalty.createdBy.email}
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground italic">Unknown</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {format(new Date(penalty.createdAt), "PPpp")}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
+
+        <Dialog open={isPenaltyModalOpen} onOpenChange={setIsPenaltyModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Penalty</DialogTitle>
+              <DialogDescription>Set up a penalty for this post.</DialogDescription>
+            </DialogHeader>
+            <div className="text-sm text-muted-foreground">Coming soon.</div>
+          </DialogContent>
+        </Dialog>
 
         {/* --- Image Viewer Modal --- */}
         <ImageViewer

@@ -1331,6 +1331,7 @@ export interface Report {
   resolutionAction: ResolutionAction;
   resolvedByType: string | null;
   resolvedById: string | null;
+  resolvedBy?: User | null;
   resolvedAt: string | null;
   createdAt: string;
   createdById: string;
