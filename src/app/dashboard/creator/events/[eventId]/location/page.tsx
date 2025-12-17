@@ -710,7 +710,7 @@ function LocationCard({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Left Column: Location Data Card */}
-      <Card className="h-[600px] flex flex-col p-0 overflow-hidden col-span-2">
+      <Card className="h-[520px] flex flex-col p-0 overflow-hidden col-span-2">
         {/* Hero Image */}
         {location.imageUrl && location.imageUrl.length > 0 && (
           <div className="relative w-full h-48 flex-shrink-0">
@@ -804,7 +804,7 @@ function LocationCard({
       </Card>
 
       {/* Right Column: Map */}
-      <div className="relative h-[600px] w-full rounded-lg overflow-hidden border">
+      <div className="relative h-[520px] w-full rounded-lg overflow-hidden border">
         {apiKey && hasValidCoords ? (
           <GoogleMapsErrorBoundary>
             <APIProvider apiKey={apiKey}>

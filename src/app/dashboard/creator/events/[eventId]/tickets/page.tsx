@@ -142,32 +142,6 @@ export default function EventTicketsPage({
 
   return (
     <div className="space-y-6">
-      {/* Header with Stats */}
-      <div className='grid gap-6 md:grid-cols-3'>
-        <StatCard
-          title='Total Tickets'
-          value={totalTickets}
-          icon={Ticket}
-          color='blue'
-          description='All ticket types'
-        />
-
-        <StatCard
-          title='Active Tickets'
-          value={activeTickets}
-          icon={CheckCircle}
-          color='emerald'
-          description={`${totalTickets - activeTickets} inactive`}
-        />
-
-        <StatCard
-          title='Revenue Potential'
-          value={formatCurrency(totalRevenuePotential.toString(), tickets?.[0]?.currency || "VND")}
-          icon={TrendingUp}
-          color='amber'
-          description='Maximum possible revenue'
-        />
-      </div>
 
       {/* Main Content Card */}
       <Card>
