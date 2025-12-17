@@ -14,6 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2,
   Users,
@@ -42,6 +44,8 @@ export default function EventAttendancePage({
   const { eventId } = use(params);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "checked_in" | "not_checked_in">("all");
   const limit = 20;
 
   const {
@@ -109,49 +113,146 @@ export default function EventAttendancePage({
   }
 
   const { data: attendances, meta } = attendanceData;
-  const totalAttendees = attendances.reduce(
+
+  // Filter at attendance level (per ticket/person)
+  const filteredAttendances = attendances.filter((attendance) => {
+    const fullName = `${attendance.order.createdBy.firstName} ${attendance.order.createdBy.lastName}`.toLowerCase();
+    const email = attendance.order.createdBy.email?.toLowerCase() || "";
+    const orderNumber = attendance.order.orderNumber?.toLowerCase() || "";
+    const query = searchQuery.toLowerCase().trim();
+
+    const matchesQuery =
+      !query ||
+      fullName.includes(query) ||
+      email.includes(query) ||
+      orderNumber.includes(query);
+
+    const status = attendance.status?.toUpperCase();
+    const isCheckedIn = status === "CHECKED_IN" || status === "CONFIRMED";
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "checked_in" && isCheckedIn) ||
+      (statusFilter === "not_checked_in" && !isCheckedIn);
+
+    return matchesQuery && matchesStatus;
+  });
+
+  // Group filtered attendances by order so one row represents one purchase
+  const groupedByOrder = Object.values(
+    filteredAttendances.reduce((acc: Record<string, { order: any; attendances: any[] }>, attendance) => {
+      const orderId = attendance.order.id;
+      if (!acc[orderId]) {
+        acc[orderId] = { order: attendance.order, attendances: [] };
+      }
+      acc[orderId].attendances.push(attendance);
+      return acc;
+    }, {})
+  );
+
+  // High-level stats (use all attendances, not just filtered)
+  const totalOrders = new Set(attendances.map((a) => a.order.id)).size;
+
+  const totalCheckedIn = attendances.reduce((sum, attendance) => {
+    const isCheckedIn =
+      attendance.status?.toUpperCase() === "CHECKED_IN" ||
+      attendance.status?.toUpperCase() === "CONFIRMED";
+    const count = attendance.numberOfAttendees ?? 1;
+    return sum + (isCheckedIn ? count : 0);
+  }, 0);
+
+  const totalRevenue = attendances.reduce(
     (sum, attendance) =>
-      sum +
-      attendance.order.orderDetails.reduce(
-        (detailSum, detail) => detailSum + detail.quantity,
-        0
-      ),
+      sum + (attendance.order.status?.toUpperCase() === "PAID"
+        ? parseFloat(attendance.order.totalPaymentAmount || "0")
+        : 0),
     0
   );
 
   return (
     <div className="space-y-6">
-      {/* Header with QR Scan Button */}
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Attendance Overview</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Attendance Overview</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            View all attendees and ticket purchases
+            Monitor check-ins, orders, and revenue for this event in real time.
           </p>
         </div>
-        <Link href={`/dashboard/creator/events/${eventId}/attendance/scan`}>
-          <Button variant="default" size="lg">
-            <QrCode className="h-4 w-4 mr-2" />
-            Scan QR Code
-          </Button>
-        </Link>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="text-xs text-muted-foreground text-right sm:text-left">
+            <div>Total orders: <span className="font-medium text-foreground">{totalOrders}</span></div>
+            <div>
+              Checked in:{" "}
+              <span className="font-medium text-foreground">
+                {totalCheckedIn} ({totalOrders > 0 ? Math.round((totalCheckedIn / totalOrders) * 100) : 0}%)
+              </span>
+            </div>
+            <div>
+              Revenue (paid):{" "}
+              <span className="font-semibold text-foreground">
+                {formatCurrency(totalRevenue, "VND")}
+              </span>
+            </div>
+          </div>
+          <Link href={`/dashboard/creator/events/${eventId}/attendance/scan`}>
+            <Button variant="default" size="lg" className="w-full sm:w-auto">
+              <QrCode className="h-4 w-4 mr-2" />
+              Scan QR Code
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Attendance List */}
+      {/* Filters & Table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Attendee List
-          </CardTitle>
+        <CardHeader className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Attendee List
+            </CardTitle>
+            <Badge variant="outline" className="text-xs px-2 py-1">
+              {groupedByOrder.length} shown
+            </Badge>
+          </div>
+
+          {/* Controls */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="relative flex-1">
+              <Input
+                placeholder="Search by name, email or order number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-3 pr-3"
+              />
+            </div>
+            <Select
+              value={statusFilter}
+              onValueChange={(value: "all" | "checked_in" | "not_checked_in") => setStatusFilter(value)}
+            >
+              <SelectTrigger className="w-full md:w-[220px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="checked_in">Checked in / confirmed</SelectItem>
+                <SelectItem value="not_checked_in">Not checked in yet</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
-          {attendances.length === 0 ? (
+          {groupedByOrder.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">No attendees yet</p>
+              <p className="text-lg font-medium">
+                {attendances.length === 0 ? "No attendees yet" : "No attendees match your filters"}
+              </p>
               <p className="text-sm mt-1">
-                Attendees will appear here once tickets are purchased
+                {attendances.length === 0
+                  ? "Attendees will appear here once tickets are purchased."
+                  : "Try clearing the search or changing the status filter."}
               </p>
             </div>
           ) : (
@@ -169,18 +270,66 @@ export default function EventAttendancePage({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {attendances.map((attendance) => (
-                    <TableRow key={attendance.id} className="hover:bg-muted/20">
+                  {groupedByOrder.map(({ order, attendances: groupedAttendances }) => {
+                    const totalTickets = order.orderDetails.reduce(
+                      (sum: number, detail: any) => sum + detail.quantity,
+                      0
+                    );
+
+                    const totalUnits = groupedAttendances.reduce(
+                      (sum: number, a: any) => sum + (a.numberOfAttendees ?? 1),
+                      0
+                    );
+
+                    const checkedInUnits = groupedAttendances.reduce(
+                      (sum: number, a: any) => {
+                        const s = a.status?.toUpperCase();
+                        const isChecked =
+                          s === "CHECKED_IN" ||
+                          s === "CONFIRMED";
+                        const count = a.numberOfAttendees ?? 1;
+                        return sum + (isChecked ? count : 0);
+                      },
+                      0
+                    );
+
+                    const orderStatusLabel =
+                      totalUnits === 0
+                        ? "No attendees"
+                        : checkedInUnits === 0
+                        ? "Not Checked In"
+                        : checkedInUnits === totalUnits
+                        ? "All Checked In"
+                        : `${checkedInUnits} / ${totalUnits} Checked In`;
+
+                    const statusVariant = (() => {
+                      if (checkedInUnits === 0) return "secondary" as const;
+                      if (checkedInUnits === totalUnits) return "default" as const;
+                      return "outline" as const;
+                    })();
+
+                    const ticketsSummary = order.orderDetails
+                      .map((detail: any) => {
+                        const name =
+                          detail.ticketSnapshot?.displayName ||
+                          detail.ticket?.displayName ||
+                          "Unknown Ticket";
+                        return `${name} × ${detail.quantity}`;
+                      })
+                      .join(", ");
+
+                    return (
+                    <TableRow key={order.id} className="hover:bg-muted/20">
                       <TableCell>
                         <div className="space-y-1">
                           <div className="font-semibold text-sm">
-                            {attendance.order.orderNumber}
+                            {order.orderNumber}
                           </div>
-                          {attendance.order.referencedTransactionId && (
+                          {order.referencedTransactionId && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <CreditCard className="h-3 w-3" />
                               <span className="font-mono">
-                                {attendance.order.referencedTransactionId.slice(0, 8)}...
+                                {order.referencedTransactionId.slice(0, 8)}...
                               </span>
                             </div>
                           )}
@@ -188,10 +337,10 @@ export default function EventAttendancePage({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {attendance.order.createdBy.avatarUrl ? (
+                          {order.createdBy.avatarUrl ? (
                             <Image
-                              src={attendance.order.createdBy.avatarUrl}
-                              alt={attendance.order.createdBy.firstName}
+                              src={order.createdBy.avatarUrl}
+                              alt={order.createdBy.firstName}
                               width={32}
                               height={32}
                               className="rounded-full border"
@@ -203,8 +352,8 @@ export default function EventAttendancePage({
                           )}
                           <div>
                             <div className="font-medium text-sm">
-                              {attendance.order.createdBy.firstName}{" "}
-                              {attendance.order.createdBy.lastName}
+                              {order.createdBy.firstName}{" "}
+                              {order.createdBy.lastName}
                             </div>
                           </div>
                         </div>
@@ -213,50 +362,48 @@ export default function EventAttendancePage({
                         <div className="space-y-1 text-sm">
                           <div className="flex items-center gap-1 text-muted-foreground">
                             <Mail className="h-3 w-3" />
-                            <span className="text-xs">{attendance.order.createdBy.email}</span>
+                            <span className="text-xs">{order.createdBy.email}</span>
                           </div>
-                          {attendance.order.createdBy.phoneNumber && (
+                          {order.createdBy.phoneNumber && (
                             <div className="flex items-center gap-1 text-muted-foreground">
                               <Phone className="h-3 w-3" />
-                              <span className="text-xs">{attendance.order.createdBy.phoneNumber}</span>
+                              <span className="text-xs">{order.createdBy.phoneNumber}</span>
                             </div>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        {attendance.ticketSnapshot ? (
-                          <div className="text-sm font-medium">
-                            {attendance.ticketSnapshot.displayName}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground">
-                            No ticket information
-                          </div>
-                        )}
+                        <div className="text-sm font-medium">
+                          {ticketsSummary}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {totalTickets} ticket{totalTickets !== 1 ? "s" : ""}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="font-semibold">
                           {formatCurrency(
-                            attendance.order.totalPaymentAmount,
-                            attendance.order.currency
+                            order.totalPaymentAmount,
+                            order.currency
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={getAttendanceStatusVariant(attendance.status)}
+                          variant={statusVariant}
                           className="w-fit text-xs"
                         >
-                          {getAttendanceStatusLabel(attendance.status)}
+                          {orderStatusLabel}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-muted-foreground">
-                          {formatDateTime(attendance.order.createdAt)}
+                          {formatDateTime(order.createdAt)}
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

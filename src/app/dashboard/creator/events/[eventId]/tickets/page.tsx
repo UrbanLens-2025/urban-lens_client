@@ -233,7 +233,7 @@ export default function EventTicketsPage({
                     <TableHead className="w-[50px]"></TableHead>
                     <TableHead>Ticket</TableHead>
                     <TableHead>Price</TableHead>
-                    <TableHead>Availability</TableHead>
+                    <TableHead>Sales</TableHead>
                     <TableHead>Sale Period</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
@@ -241,9 +241,11 @@ export default function EventTicketsPage({
                 </TableHeader>
                 <TableBody>
                   {filteredTickets.map((ticket, index) => {
-                    const availableQuantity = ticket.totalQuantityAvailable - ticket.quantityReserved;
-                    const availabilityPercentage = ticket.totalQuantityAvailable > 0 
-                      ? (availableQuantity / ticket.totalQuantityAvailable) * 100 
+                    const totalCapacity = ticket.totalQuantity;
+                    const soldQuantity = totalCapacity - ticket.totalQuantityAvailable;
+                    const remainingQuantity = ticket.totalQuantityAvailable;
+                    const soldPercentage = totalCapacity > 0 
+                      ? (soldQuantity / totalCapacity) * 100 
                       : 0;
                     const isSaleActive = new Date(ticket.saleStartDate) <= new Date() && 
                                         new Date(ticket.saleEndDate) >= new Date();
@@ -304,18 +306,21 @@ export default function EventTicketsPage({
                         <TableCell>
                           <div className="space-y-1">
                             <div className="text-sm font-medium">
-                              {ticket.totalQuantityAvailable} / {ticket.totalQuantity}
+                              {soldQuantity} / {totalCapacity} sold
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {remainingQuantity} remaining
                             </div>
                             <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
                               <div
                                 className={`h-full transition-all ${
-                                  availabilityPercentage > 50
+                                  soldPercentage < 70
                                     ? "bg-green-500"
-                                    : availabilityPercentage > 20
+                                    : soldPercentage < 90
                                     ? "bg-yellow-500"
                                     : "bg-red-500"
                                 }`}
-                                style={{ width: `${availabilityPercentage}%` }}
+                                style={{ width: `${soldPercentage}%` }}
                               />
                             </div>
                           </div>

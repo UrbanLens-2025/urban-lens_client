@@ -99,32 +99,31 @@ export default function EventOverviewPage({
 
   // Calculate statistics
   const attendances = attendanceData?.data || [];
-  const totalTicketsSold = attendances.reduce(
-    (sum, attendance) =>
-      sum +
-      attendance.order.orderDetails.reduce(
-        (detailSum, detail) => detailSum + detail.quantity,
-        0
-      ),
-    0
+
+  // Only count paid orders when calculating revenue & order count
+  const paidAttendances = attendances.filter(
+    (a) => a.order.status?.toUpperCase() === "PAID"
   );
 
-  const totalRevenue = attendances.reduce(
+  const totalRevenue = paidAttendances.reduce(
     (sum, attendance) => sum + parseFloat(attendance.order.totalPaymentAmount || "0"),
     0
   );
 
-  const paidOrders = attendances.filter(
-    (a) => a.order.status?.toUpperCase() === "PAID"
-  ).length;
+  const paidOrders = paidAttendances.length;
 
-  const totalTicketsAvailable = tickets?.reduce(
-    (sum, ticket) => sum + ticket.totalQuantityAvailable,
-    0
-  ) || 0;
+  // Tickets sold should be based on ticket inventory, not attendance records
+  const totalTicketsCapacity =
+    tickets?.reduce((sum, ticket) => sum + ticket.totalQuantity, 0) || 0;
 
-  const ticketsSoldPercentage = totalTicketsAvailable > 0 
-    ? (totalTicketsSold / totalTicketsAvailable) * 100 
+  const totalTicketsSold =
+    tickets?.reduce(
+      (sum, ticket) => sum + (ticket.totalQuantity - ticket.totalQuantityAvailable),
+      0
+    ) || 0;
+
+  const ticketsSoldPercentage = totalTicketsCapacity > 0 
+    ? (totalTicketsSold / totalTicketsCapacity) * 100 
     : 0;
 
   const isEventPast = event.endDate ? new Date(event.endDate) < new Date() : false;
@@ -159,7 +158,7 @@ export default function EventOverviewPage({
         {/* Tickets Sold */}
         <StatCard
           title='Tickets Sold'
-          value={`${totalTicketsSold} / ${totalTicketsAvailable}`}
+        value={`${totalTicketsSold} / ${totalTicketsCapacity}`}
           icon={Ticket}
           color='blue'
           description={`${ticketsSoldPercentage.toFixed(1)}% sold`}
@@ -207,7 +206,7 @@ export default function EventOverviewPage({
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {event.social.map((social, index) => (
+                  {event.social.map((social: any, index: number) => (
                     <a
                       key={index}
                       href={social.url}
@@ -242,13 +241,15 @@ export default function EventOverviewPage({
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {event.eventValidationDocuments.map((document, index) => (
+                {event.eventValidationDocuments.map((document: any, index: number) => (
                   <div key={index} className="space-y-3 p-4 border rounded-lg bg-muted/30">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-primary" />
                         <span className="font-semibold text-sm">
-                          {document.documentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          {document.documentType
+                            .replace(/_/g, ' ')
+                            .replace(/\b\w/g, (l: string) => l.toUpperCase())}
                         </span>
                       </div>
                       <Badge variant="secondary" className="text-xs">
@@ -256,7 +257,7 @@ export default function EventOverviewPage({
                       </Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      {document.documentImageUrls.map((imageUrl, imgIndex) => (
+                          {document.documentImageUrls.map((imageUrl: string, imgIndex: number) => (
                         <div
                           key={imgIndex}
                           className="relative group aspect-video rounded-md overflow-hidden border bg-muted cursor-pointer"
@@ -363,7 +364,7 @@ export default function EventOverviewPage({
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground mb-3">Tags</p>
                   <div className="flex flex-wrap gap-2">
-                    {visibleTags.map((tag) => (
+                    {visibleTags.map((tag: any) => (
                       <Badge 
                         key={tag.id} 
                         variant="secondary"
@@ -487,7 +488,7 @@ export default function EventOverviewPage({
                       event.location.imageUrl.length === 3 ? 'grid-cols-3' :
                       'grid-cols-4'
                     }`}>
-                      {event.location.imageUrl.slice(1, 5).map((url, index) => (
+                      {event.location.imageUrl.slice(1, 5).map((url: string, index: number) => (
                         <div 
                           key={index} 
                           className="relative aspect-square overflow-hidden rounded-md border group cursor-pointer"
