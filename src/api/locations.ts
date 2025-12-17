@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axiosInstance from "./axios-config";
+import axiosInstance from './axios-config';
 import type {
   ApiResponse,
   CreateLocationPayload,
   CreateLocationBookingConfigPayload,
   GetRequestsParams,
   GetOwnerLocationBookingsParams,
-  Location,
   LocationBooking,
   LocationBookingDetail,
   LocationBookingConfig,
@@ -16,7 +15,7 @@ import type {
   TagCategory,
   UpdateLocationBookingConfigPayload,
   UpdateLocationPayload,
-} from "@/types";
+} from '@/types';
 
 export const getMyLocations = async ({
   page = 1,
@@ -25,7 +24,7 @@ export const getMyLocations = async ({
   searchBy,
   sortBy,
   filterVisibleOnMap,
-}: GetRequestsParams): Promise<PaginatedData<Location>> => {
+}: GetRequestsParams): Promise<PaginatedData<any>> => {
   const params: any = {
     page,
     limit,
@@ -38,7 +37,7 @@ export const getMyLocations = async ({
   if (searchBy?.length) {
     params.searchBy = searchBy;
   } else if (search) {
-    params.searchBy = ["name", "addressLine"];
+    params.searchBy = ['name', 'addressLine'];
   }
 
   if (sortBy) {
@@ -46,12 +45,12 @@ export const getMyLocations = async ({
   }
 
   if (filterVisibleOnMap) {
-    params["filter.isVisibleOnMap"] = filterVisibleOnMap;
+    params['filter.isVisibleOnMap'] = filterVisibleOnMap;
   }
 
   const response = await axiosInstance.get<
     ApiResponse<PaginatedData<Location>>
-  >("/v1/owner/locations", {
+  >('/v1/owner/locations', {
     params: params,
   });
   return response.data.data;
@@ -72,7 +71,7 @@ export const getLocationRequests = async ({
 
   if (status) {
     // Use $eq: for direct status filtering (matching admin API pattern)
-    params["filter.status"] = `$eq:${status}`;
+    params['filter.status'] = `$eq:${status}`;
   }
 
   if (sortBy) {
@@ -86,12 +85,12 @@ export const getLocationRequests = async ({
   if (searchBy?.length) {
     params.searchBy = searchBy;
   } else if (search) {
-    params.searchBy = ["name", "description", "addressLine"];
+    params.searchBy = ['name', 'description', 'addressLine'];
   }
 
   const { data } = await axiosInstance.get<
     ApiResponse<PaginatedData<LocationRequest>>
-  >("/v1/business/location-request", {
+  >('/v1/business/location-request', {
     params: params,
   });
   return data.data;
@@ -101,7 +100,7 @@ export const createLocationRequest = async (
   payload: CreateLocationPayload
 ): Promise<any> => {
   const { data } = await axiosInstance.post(
-    "/v1/business/location-request",
+    '/v1/business/location-request',
     payload
   );
   return data;
@@ -178,17 +177,22 @@ export const removeTagsFromLocationRequest = async (
   return data;
 };
 
-export const getAllTags = async (params?: { page?: number; limit?: number }): Promise<PaginatedData<Tag>> => {
+export const getAllTags = async (params?: {
+  page?: number;
+  limit?: number;
+}): Promise<PaginatedData<Tag>> => {
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Tag>>>(
-    "/v1/public/tag",
+    '/v1/public/tag',
     { params: params || { page: 1, limit: 1000 } } // Use high limit to get all tags
   );
   return data.data;
 };
 
-export const getTagCategories = async (type: "LOCATION" | "EVENT"): Promise<TagCategory[]> => {
+export const getTagCategories = async (
+  type: 'LOCATION' | 'EVENT'
+): Promise<TagCategory[]> => {
   const { data } = await axiosInstance.get<ApiResponse<TagCategory[]>>(
-    "/v1/public/tag-categories",
+    '/v1/public/tag-categories',
     { params: { type } }
   );
   return data.data;
@@ -221,7 +225,7 @@ export const cancelLocationRequest = async (
 export const getOwnerLocationBookings = async ({
   page = 1,
   limit = 20,
-  sortBy = "createdAt:ASC",
+  sortBy = 'createdAt:ASC',
   search,
   status,
 }: GetOwnerLocationBookingsParams): Promise<PaginatedData<LocationBooking>> => {
@@ -229,13 +233,13 @@ export const getOwnerLocationBookings = async ({
   if (search) {
     params.search = search;
   }
-  if (status && status !== "ALL") {
-    params["filter.status"] = status;
+  if (status && status !== 'ALL') {
+    params['filter.status'] = status;
   }
 
   const { data } = await axiosInstance.get<
     ApiResponse<PaginatedData<LocationBooking>>
-  >("/v1/owner/location-bookings/search", { params });
+  >('/v1/owner/location-bookings/search', { params });
   return data.data;
 };
 
@@ -273,7 +277,10 @@ export const getAllBookingsAtLocation = async ({
 
   const { data } = await axiosInstance.get<
     ApiResponse<PaginatedData<LocationBooking>>
-  >(`/v1/owner/location-bookings/all-bookings-at-location-paged/${locationId}`, { params });
+  >(
+    `/v1/owner/location-bookings/all-bookings-at-location-paged/${locationId}`,
+    { params }
+  );
   return data.data;
 };
 

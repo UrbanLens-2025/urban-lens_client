@@ -50,6 +50,8 @@ import { useDebounce } from 'use-debounce';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { StatCard } from '@/components/shared/StatCard';
 import { TrendingUp } from 'lucide-react';
+import LoadingCustom from '@/components/shared/LoadingCustom';
+import ErrorCustom from '@/components/shared/ErrorCustom';
 
 export default function LocationPostsPage({
   params,
@@ -179,94 +181,11 @@ export default function LocationPostsPage({
   };
 
   if (isLoading) {
-    return (
-      <div className='space-y-6'>
-        {/* Skeleton Statistics */}
-        <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className='border-border/60'>
-              <CardContent className='pt-4 pb-4'>
-                <div className='flex items-center justify-between'>
-                  <div className='space-y-2'>
-                    <div className='h-3 w-16 bg-muted rounded animate-pulse' />
-                    <div className='h-7 w-12 bg-muted rounded animate-pulse' />
-                  </div>
-                  <div className='h-10 w-10 rounded-full bg-muted animate-pulse' />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        {/* Skeleton Table */}
-        <Card className='border-border/60 shadow-sm'>
-          <CardContent className='p-0'>
-            <div className='overflow-hidden rounded-lg border border-border/60'>
-              <Table>
-                <TableHeader className='bg-muted/40'>
-                  <TableRow>
-                    <TableHead>Author</TableHead>
-                    <TableHead>Is checked in</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Content</TableHead>
-                    <TableHead>Images</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <TableRow key={i}>
-                      <TableCell>
-                        <div className='flex items-center gap-3'>
-                          <div className='h-8 w-8 rounded-full bg-muted animate-pulse' />
-                          <div className='space-y-1.5'>
-                            <div className='h-4 w-24 bg-muted rounded animate-pulse' />
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className='h-5 w-16 bg-muted rounded animate-pulse' />
-                      </TableCell>
-                      <TableCell>
-                        <div className='h-4 w-20 bg-muted rounded animate-pulse' />
-                      </TableCell>
-                      <TableCell>
-                        <div className='space-y-1.5'>
-                          <div className='h-4 w-full bg-muted rounded animate-pulse' />
-                          <div className='h-4 w-3/4 bg-muted rounded animate-pulse' />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className='flex gap-1'>
-                          <div className='h-10 w-10 bg-muted rounded animate-pulse' />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className='h-4 w-24 bg-muted rounded animate-pulse' />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <LoadingCustom />;
   }
 
   if (isError) {
-    return (
-      <div className='space-y-6 p-6'>
-        <Card>
-          <CardContent className='py-20 text-center'>
-            <p className='text-red-500 font-medium'>Error loading posts</p>
-            <p className='text-sm text-muted-foreground mt-2'>
-              Please try refreshing the page
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <ErrorCustom />;
   }
 
   return (
@@ -283,7 +202,7 @@ export default function LocationPostsPage({
 
           {/* Statistics Cards */}
           {stats.total > 0 && (
-            <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
+            <div className='grid gap-10 md:grid-cols-2 lg:grid-cols-3'>
               <StatCard
                 title='Total'
                 value={stats.total}
@@ -296,13 +215,6 @@ export default function LocationPostsPage({
                 value={stats.reviews}
                 icon={Star}
                 color='amber'
-              />
-
-              <StatCard
-                title='Posts'
-                value={stats.posts}
-                icon={ImageIcon}
-                color='blue'
               />
 
               {stats.reviews > 0 && (

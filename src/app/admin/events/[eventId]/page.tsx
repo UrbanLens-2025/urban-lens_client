@@ -461,10 +461,6 @@ export default function AdminEventDetailsPage({
                           label='Total check-ins'
                           value={event.location.totalCheckIns || 0}
                         />
-                        <InfoRow
-                          label='Total posts'
-                          value={event.location.totalPosts || 0}
-                        />
                       </div>
 
                       {/* Stats */}

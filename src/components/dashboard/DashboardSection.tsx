@@ -43,33 +43,39 @@ export function DashboardSection({
   return (
     <Card className={cn('shadow-lg border-2', className)}>
       <CardHeader className={cn('border-b bg-muted/20', headerClassName)}>
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            {Icon && <Icon className="h-5 w-5 text-primary" />}
+        <div className='flex justify-between items-center'>
+          <CardTitle className='text-lg font-semibold flex items-center'>
+            {Icon && <Icon className='h-5 w-5 text-primary' />}
             {title}
           </CardTitle>
           {action && (
             <Link href={action.href}>
-              <Button variant={action.variant || 'ghost'} size="sm" className="h-8 w-8 p-0">
-                <ArrowUpRight className="h-4 w-4" />
+              <Button
+                variant={action.variant || 'ghost'}
+                size='sm'
+                className='h-8 w-8 p-0'
+              >
+                <ArrowUpRight className='h-4 w-4' />
               </Button>
             </Link>
           )}
         </div>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent>
         {isEmpty && emptyState ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className='flex flex-col items-center justify-center py-12 text-center'>
             {emptyState.icon && (
-              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
-                <emptyState.icon className="h-6 w-6 text-muted-foreground" />
+              <div className='h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3'>
+                <emptyState.icon className='h-6 w-6 text-muted-foreground' />
               </div>
             )}
-            <p className="text-sm font-semibold mb-1">{emptyState.title}</p>
-            <p className="text-xs text-muted-foreground mb-4">{emptyState.description}</p>
+            <p className='text-sm font-semibold mb-1'>{emptyState.title}</p>
+            <p className='text-xs text-muted-foreground mb-4'>
+              {emptyState.description}
+            </p>
             {emptyState.action && (
               <Link href={emptyState.action.href}>
-                <Button variant="outline" size="sm">
+                <Button variant='outline' size='sm'>
                   {emptyState.action.label}
                 </Button>
               </Link>
@@ -82,4 +88,3 @@ export function DashboardSection({
     </Card>
   );
 }
-

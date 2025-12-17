@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { getLocationRequests, getMyLocations } from "@/api/locations";
-import { useQuery } from "@tanstack/react-query";
-import { LocationStatus } from "@/types";
+import { getLocationRequests, getMyLocations } from '@/api/locations';
+import { useQuery } from '@tanstack/react-query';
+import { LocationStatus } from '@/types';
 
 interface UseMyLocationsOptions {
   searchBy?: string[];
   sortBy?: string | string[];
-  filterVisibleOnMap?: "true" | "false";
+  filterVisibleOnMap?: 'true' | 'false';
   limit?: number;
 }
 
@@ -18,7 +18,7 @@ export function useMyLocations(
 ) {
   return useQuery({
     queryKey: [
-      "myLocations",
+      'myLocations',
       page,
       search,
       options?.sortBy,
@@ -44,16 +44,25 @@ export function useLocationRequests(
   sortBy: string,
   options?: {
     search?: string;
-    status?: LocationStatus | "all";
+    status?: LocationStatus | 'all';
     searchBy?: string[];
   }
 ) {
   return useQuery({
-    queryKey: ["locationRequests", page, sortBy, options?.search, options?.status],
+    queryKey: [
+      'locationRequests',
+      page,
+      sortBy,
+      options?.search,
+      options?.status,
+    ],
     queryFn: () =>
       getLocationRequests({
         page,
-        status: options?.status && options.status !== "all" ? options.status : undefined,
+        status:
+          options?.status && options.status !== 'all'
+            ? options.status
+            : undefined,
         sortBy,
         search: options?.search,
         searchBy: options?.searchBy,

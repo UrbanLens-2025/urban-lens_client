@@ -3,7 +3,14 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Edit, Building, Ruler, Eye as EyeIcon, MapPin } from 'lucide-react';
+import {
+  ArrowLeft,
+  Edit,
+  Building,
+  Ruler,
+  Eye as EyeIcon,
+  MapPin,
+} from 'lucide-react';
 import { GoogleMapsPicker } from './GoogleMapsPicker';
 
 export interface DetailViewLayoutProps {
@@ -13,17 +20,7 @@ export interface DetailViewLayoutProps {
   onEdit: () => void;
   editLabel: string;
   mainContent: React.ReactNode;
-  location?: {
-    name?: string;
-    addressLine?: string;
-    addressLevel1?: string;
-    addressLevel2?: string;
-    radiusMeters?: number;
-    isVisibleOnMap?: boolean;
-    imageUrl?: string[];
-    latitude?: string | number;
-    longitude?: string | number;
-  };
+  location?: any;
   onImageClick?: (src: string) => void;
 }
 
@@ -109,14 +106,8 @@ export function DetailViewLayout({
               <CardContent>
                 <InfoRow label='Location Name' value={location.name} />
                 <InfoRow label='Address' value={location.addressLine} />
-                <InfoRow
-                  label='District/Ward'
-                  value={location.addressLevel1}
-                />
-                <InfoRow
-                  label='Province/City'
-                  value={location.addressLevel2}
-                />
+                <InfoRow label='District/Ward' value={location.addressLevel1} />
+                <InfoRow label='Province/City' value={location.addressLevel2} />
                 <InfoRow
                   label='Radius (m)'
                   value={location.radiusMeters}
@@ -147,26 +138,9 @@ export function DetailViewLayout({
                 )}
               </CardContent>
             </Card>
-
-            {position && (
-              <Card className='sticky top-6'>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                    <MapPin /> Location Map
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className='h-80 rounded-lg overflow-hidden'>
-                  <GoogleMapsPicker
-                    position={position}
-                    onPositionChange={() => {}}
-                  />
-                </CardContent>
-              </Card>
-            )}
           </div>
         )}
       </div>
     </div>
   );
 }
-

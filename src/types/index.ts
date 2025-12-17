@@ -192,27 +192,6 @@ export interface CreateTagPayload {
   list: TagCreationItem[];
 }
 
-export interface Location {
-  id: string;
-  ownershipType: string;
-  name: string;
-  description: string;
-  latitude: number;
-  longitude: number;
-  addressLine: string;
-  addressLevel1: string;
-  addressLevel2: string;
-  radiusMeters: number;
-  imageUrl: string[];
-  totalCheckIns: string;
-  createdAt: string;
-  updatedAt: string;
-  isVisibleOnMap: boolean;
-  businessId: string | null;
-  business: BusinessInLocation | null;
-  tags: Tag[];
-}
-
 interface ProcessedByAdmin {
   id: string;
   firstName: string;
@@ -799,7 +778,8 @@ export interface GetWalletTransactionsParams {
 }
 
 // Admin: get internal wallet transactions for a specific wallet
-export interface GetAdminWalletTransactionsParams extends GetWalletTransactionsParams {
+export interface GetAdminWalletTransactionsParams
+  extends GetWalletTransactionsParams {
   walletId: string;
 }
 

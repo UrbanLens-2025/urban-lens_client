@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axiosInstance from "./axios-config";
+import axiosInstance from './axios-config';
 
 import {
   ApiResponse,
@@ -8,20 +8,20 @@ import {
   LocationVoucher,
   PaginatedData,
   UpdateLocationVoucherPayload,
-} from "@/types";
+} from '@/types';
 
 export const getLocationVouchers = async ({
   locationId,
   page = 1,
   limit = 10,
-  sortBy = "createdAt:DESC",
+  sortBy = 'createdAt:DESC',
   search,
 }: GetLocationVouchersParams): Promise<PaginatedData<LocationVoucher>> => {
   const params: any = { page, limit, sortBy };
 
   if (search) {
     params.search = search;
-    params.searchBy = ["title", "voucherCode"];
+    params.searchBy = ['title', 'voucherCode'];
   }
 
   const { data } = await axiosInstance.get<
@@ -44,7 +44,9 @@ export const createLocationVoucher = async ({
   return data.data;
 };
 
-export const getLocationVoucherById = async (voucherId: string): Promise<LocationVoucher> => {
+export const getLocationVoucherById = async (
+  voucherId: string
+): Promise<LocationVoucher> => {
   const { data } = await axiosInstance.get<ApiResponse<LocationVoucher>>(
     `/v1/business/location-voucher/voucher/${voucherId}`
   );
@@ -54,7 +56,7 @@ export const getLocationVoucherById = async (voucherId: string): Promise<Locatio
 export const updateLocationVoucher = async ({
   locationId,
   voucherId,
-  payload
+  payload,
 }: {
   locationId: string;
   voucherId: string;
@@ -69,7 +71,7 @@ export const updateLocationVoucher = async ({
 
 export const deleteLocationVoucher = async ({
   locationId,
-  voucherId
+  voucherId,
 }: {
   locationId: string;
   voucherId: string;
@@ -93,9 +95,16 @@ export interface VerifyVoucherCodeResponse {
 export const verifyVoucherCode = async (
   payload: VerifyVoucherCodePayload
 ): Promise<VerifyVoucherCodeResponse> => {
-  const { data } = await axiosInstance.post<ApiResponse<VerifyVoucherCodeResponse>>(
-    `/v1/business/location-voucher/verify-code`,
-    payload
+  const { data } = await axiosInstance.post<
+    ApiResponse<VerifyVoucherCodeResponse>
+  >(`/v1/business/location-voucher/verify-code`, payload);
+  return data.data;
+};
+
+export const getLocationVoucherExchangeHistory = async (params: any) => {
+  const { data } = await axiosInstance.get<ApiResponse<any>>(
+    `/v1/business/location-voucher/voucher/users`,
+    { params }
   );
   return data.data;
 };

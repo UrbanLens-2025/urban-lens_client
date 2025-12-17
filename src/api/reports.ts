@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axiosInstance from "./axios-config";
+import axiosInstance from './axios-config';
 import type {
   ApiResponse,
   PaginatedData,
   Report,
   GetReportsParams,
   ProcessReportPayload,
-} from "@/types";
+} from '@/types';
 
 // Mark reports as first seen
 export const markReportsFirstSeen = async (reportIds: string[]): Promise<void> => {
@@ -44,32 +44,32 @@ export const getReports = async (
   const queryParams: any = {
     page: params.page ?? 1,
     limit: params.limit ?? 10,
-    sortBy: params.sortBy ?? "createdAt:DESC",
+    sortBy: params.sortBy ?? 'createdAt:DESC',
   };
 
   if (params.search) {
     queryParams.search = params.search;
-    queryParams.searchBy = ["title", "description"];
+    queryParams.searchBy = ['title', 'description'];
   }
 
   if (params.status) {
-    queryParams["filter.status"] = `$eq:${params.status}`;
+    queryParams['filter.status'] = `$eq:${params.status}`;
   }
 
   // According to Swagger docs: targetType and targetid are query parameters
   // filter.targetType and filter.targetid are filter parameters
   // We'll use filter parameters for flexibility
   if (params.targetType) {
-    queryParams["filter.targetType"] = `$eq:${params.targetType}`;
+    queryParams['filter.targetType'] = `$eq:${params.targetType}`;
   }
 
   if (params.targetId) {
     // API uses lowercase 'targetid' in filter
-    queryParams["filter.targetid"] = `$eq:${params.targetId}`;
+    queryParams['filter.targetid'] = `$eq:${params.targetId}`;
   }
 
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Report>>>(
-    "/v1/admin/report",
+    '/v1/admin/report',
     { params: queryParams }
   );
 
@@ -156,7 +156,6 @@ export interface HighestReportedLocation {
   averageRating: number;
   totalReviews: number;
   totalCheckIns: number;
-  totalPosts: number;
   reports: Report[];
 }
 
@@ -234,5 +233,3 @@ export const getHighestReportedEvents = async (
   });
   return data.data;
 };
-
-

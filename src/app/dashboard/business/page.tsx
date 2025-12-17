@@ -60,33 +60,32 @@ import {
   YAxis,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  Line,
-  LineChart,
 } from 'recharts';
 import {
   ChartContainer,
   ChartTooltipContent,
   ChartConfig,
 } from '@/components/ui/chart';
+import { formatCurrency } from '@/lib/utils';
+import LoadingCustom from '@/components/shared/LoadingCustom';
+import { IconFile, IconLocation, IconStar } from '@tabler/icons-react';
 
 export default function BusinessDashboardPage() {
   const router = useRouter();
 
-  // Fetch locations - increase limit to get all for accurate stats
   const { data: locationsData, isLoading: isLoadingLocations } = useMyLocations(
     1,
     '',
     {
-      limit: 100, // Increased to get all locations for accurate statistics
+      limit: 100,
       sortBy: 'createdAt:DESC',
     }
   );
 
-  // Fetch bookings for statistics - increase limit for better accuracy
   const { data: bookingsData, isLoading: isLoadingBookings } =
     useOwnerLocationBookings({
       page: 1,
-      limit: 500, // Increased to get more bookings for accurate revenue/trend calculations
+      limit: 500,
       sortBy: 'createdAt:DESC',
     });
 
@@ -95,18 +94,14 @@ export default function BusinessDashboardPage() {
   const bookings = bookingsData?.data || [];
   const bookingsMeta = bookingsData?.meta;
 
-  // Format currency helper
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
+  const isLoading = isLoadingLocations || isLoadingBookings;
 
-  // Calculate statistics from real data
   const stats = useMemo(() => {
     const totalLocations = locationsMeta?.totalItems || 0;
+    const totalReviews = locations.reduce(
+      (sum, loc) => sum + parseInt(loc.totalReviews || '0'),
+      0
+    );
     const totalCheckIns = locations.reduce(
       (sum, loc) => sum + parseInt(loc.totalCheckIns || '0'),
       0
@@ -117,17 +112,12 @@ export default function BusinessDashboardPage() {
       return loc.isVisibleOnMap;
     }).length;
 
-    // If we have pagination info and fetched all locations, use accurate count
-    // Otherwise, estimate based on fetched data
-    // Handle edge cases to prevent NaN
     let visibleLocationsCount: number;
     if (locations.length === 0 || totalLocations === 0) {
       visibleLocationsCount = 0;
     } else if (locationsMeta && locationsMeta.totalItems <= locations.length) {
-      // We've fetched all locations, use exact count
       visibleLocationsCount = approvedLocations;
     } else {
-      // Estimate based on ratio
       const ratio = approvedLocations / locations.length;
       visibleLocationsCount = Math.round(ratio * totalLocations);
     }
@@ -205,6 +195,7 @@ export default function BusinessDashboardPage() {
 
     return {
       totalLocations,
+      totalReviews,
       totalCheckIns,
       totalBookings,
       approvedLocations: visibleLocationsCount,
@@ -215,21 +206,12 @@ export default function BusinessDashboardPage() {
       revenueChange,
       pendingBookings,
       activeBookings,
-      // Add warning flags if data might be incomplete
       hasMoreBookings:
         bookingsMeta && bookingsMeta.totalItems > bookings.length,
       hasMoreLocations:
         locationsMeta && locationsMeta.totalItems > locations.length,
     };
   }, [locations, locationsMeta, bookings, bookingsMeta]);
-
-  // Get recent locations for the table
-  const recentLocations = locations.slice(0, 5);
-
-  // Get recent bookings
-  const recentBookingsList = bookings.slice(0, 3);
-
-  const isLoading = isLoadingLocations || isLoadingBookings;
 
   const topLocationsForChart = useMemo(() => {
     return locations
@@ -241,6 +223,13 @@ export default function BusinessDashboardPage() {
       .slice(0, 5);
   }, [locations]);
 
+  const recentLocations = locations.slice(0, 5);
+  const recentBookingsList = bookings.slice(0, 3);
+
+  if (isLoading) {
+    return <LoadingCustom />;
+  }
+
   const locationChartConfig: ChartConfig = {
     checkIns: {
       label: 'Check-ins',
@@ -248,7 +237,6 @@ export default function BusinessDashboardPage() {
     },
   };
 
-  // Chart gradient ID for unified styling
   const chartGradientId = 'checkInsGradient';
 
   return (
@@ -296,7 +284,7 @@ export default function BusinessDashboardPage() {
 
         <StatCard
           title='Total Bookings'
-          value={stats.totalBookings.toLocaleString()}
+          value={stats.totalBookings}
           icon={Calendar}
           color='purple'
           description={`${stats.recentBookings} in last 30 days`}
@@ -305,7 +293,7 @@ export default function BusinessDashboardPage() {
 
         <StatCard
           title='Total Check-ins'
-          value={stats.totalCheckIns.toLocaleString()}
+          value={stats.totalCheckIns}
           icon={Users}
           color='emerald'
           description='Across all locations'
@@ -314,7 +302,7 @@ export default function BusinessDashboardPage() {
 
         <StatCard
           title='Total Reivews'
-          value={stats.totalRevenue.toLocaleString()}
+          value={stats.totalReviews}
           icon={MessageCircle}
           color='amber'
           description={`${stats.recentBookings} in last 30 days`}
@@ -505,7 +493,7 @@ export default function BusinessDashboardPage() {
       </div>
 
       {/* Main Content Grid */}
-      <div className='grid grid-cols-1 lg:grid-cols-5 gap-6'>
+      <div className='grid grid-cols-1 lg:grid-cols-5 gap-10'>
         <DashboardSection
           title='My Locations'
           icon={Building2}
@@ -525,95 +513,101 @@ export default function BusinessDashboardPage() {
             },
           }}
         >
-          {isLoadingLocations ? (
-            <div className='flex items-center justify-center'>
-              <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className='hover:bg-transparent border-b'>
-                  <TableHead className='font-semibold w-[40%]'>Name</TableHead>
-                  <TableHead className='font-semibold w-[30%]'>
-                    Status
-                  </TableHead>
-                  <TableHead className='font-semibold w-[30%]'>
-                    Check-ins
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentLocations.map((location) => (
-                  <TableRow
-                    key={location.id}
-                    className='hover:bg-muted/50 cursor-pointer transition-colors'
-                    onClick={() =>
-                      router.push(
-                        `/dashboard/business/locations/${location.id}`
-                      )
-                    }
-                  >
-                    <TableCell className='font-medium'>
-                      <div className='flex items-start gap-2 min-w-0 max-w-96'>
-                        {location.imageUrl && location.imageUrl.length > 0 ? (
-                          <img
-                            src={location.imageUrl[0]}
-                            alt={location.name}
-                            className='h-8 w-8 rounded object-cover shrink-0 mt-0.5'
-                          />
-                        ) : (
-                          <div className='h-8 w-8 rounded bg-muted shrink-0 flex items-center justify-center mt-0.5'>
-                            <Building2 className='h-4 w-4 text-muted-foreground' />
+          <Table>
+            <TableHeader>
+              <TableRow className='hover:bg-transparent border-b'>
+                <TableHead className='font-semibold w-[50%]'>Name</TableHead>
+                <TableHead className='font-semibold w-[10%] '>Radius</TableHead>
+                <TableHead className='font-semibold w-[20%] '>
+                  Interaction
+                </TableHead>
+                <TableHead className='font-semibold w-[20%] '>
+                  Visible on map
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentLocations.map((location) => (
+                <TableRow
+                  key={location.id}
+                  className='hover:bg-muted/50 cursor-pointer transition-colors'
+                  onClick={() =>
+                    router.push(`/dashboard/business/locations/${location.id}`)
+                  }
+                >
+                  <TableCell className='font-medium'>
+                    <div className='flex items-start gap-2 min-w-0 max-w-96'>
+                      {location.imageUrl && location.imageUrl.length > 0 ? (
+                        <img
+                          src={location.imageUrl[0]}
+                          alt={location.name}
+                          className='h-10 w-10 rounded object-cover shrink-0 mt-0.5'
+                        />
+                      ) : (
+                        <div className='h-8 w-8 rounded bg-muted shrink-0 flex items-center justify-center mt-0.5'>
+                          <Building2 className='h-4 w-4 text-muted-foreground' />
+                        </div>
+                      )}
+                      <div className='flex flex-col gap-1 min-w-0 flex-1'>
+                        <span className='truncate font-medium'>
+                          {location.name}
+                        </span>
+                        {location.addressLine && (
+                          <div className='flex items-center gap-1 min-w-0 max-w-[300px]'>
+                            <MapPin className='h-3 w-3 shrink-0 text-muted-foreground' />
+                            <span className='text-xs text-muted-foreground truncate'>
+                              {location.addressLine}
+                              {location.addressLevel2 &&
+                                `, ${location.addressLevel2}`}
+                            </span>
                           </div>
                         )}
-                        <div className='flex flex-col gap-1 min-w-0 flex-1'>
-                          <span className='truncate font-medium'>
-                            {location.name}
-                          </span>
-                          {location.addressLine && (
-                            <div className='flex items-center gap-1 min-w-0'>
-                              <MapPin className='h-3 w-3 shrink-0 text-muted-foreground' />
-                              <span className='text-xs text-muted-foreground truncate'>
-                                {location.addressLine}
-                                {location.addressLevel2 &&
-                                  `, ${location.addressLevel2}`}
-                              </span>
-                            </div>
-                          )}
-                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {location.isVisibleOnMap ? (
-                        <Badge
-                          variant='default'
-                          className='bg-emerald-500 hover:bg-emerald-600'
-                        >
-                          <CheckCircle2 className='h-3 w-3 mr-1' />
-                          Visible
-                        </Badge>
-                      ) : (
-                        <Badge variant='secondary' className='font-medium'>
-                          <Eye className='h-3 w-3 mr-1' />
-                          Hidden
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className='font-medium'>
+                    </div>
+                  </TableCell>
+                  <TableCell className='font-medium'>
+                    <div className='flex items-center gap-1'>
+                      <IconLocation className='h-3 w-3' />
+                      {location.radiusMeters || 0} m
+                    </div>
+                  </TableCell>
+                  <TableCell className='font-medium'>
+                    <div className='flex items-center gap-3'>
                       <div className='flex items-center gap-1'>
-                        <Users className='h-3 w-3 text-muted-foreground' />
-                        {parseInt(
-                          location.totalCheckIns || '0'
-                        ).toLocaleString()}
+                        <Users className='h-3 w-3' />
+                        {location.totalCheckIns || 0}
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+                      <div className='flex items-center gap-1'>
+                        <IconStar className='h-3 w-3' />
+                        {location.totalReviews || 0}
+                      </div>
+                      <div className='flex items-center gap-1'>
+                        <IconFile className='h-3 w-3' />
+                        {location.averageRating || 0}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {location.isVisibleOnMap ? (
+                      <Badge
+                        variant='default'
+                        className='bg-emerald-500 hover:bg-emerald-600'
+                      >
+                        <CheckCircle2 className='h-3 w-3 mr-1' />
+                        Visible
+                      </Badge>
+                    ) : (
+                      <Badge variant='secondary' className='font-medium'>
+                        <Eye className='h-3 w-3 mr-1' />
+                        Hidden
+                      </Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </DashboardSection>
-
         <DashboardSection
           title='Recent Bookings'
           icon={Calendar}

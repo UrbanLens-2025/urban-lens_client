@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axiosInstance from "./axios-config";
+import axiosInstance from './axios-config';
 import type {
   ApiResponse,
   LocationMission,
@@ -7,7 +7,7 @@ import type {
   GetLocationMissionsParams,
   PaginatedData,
   UpdateLocationMissionPayload,
-} from "@/types";
+} from '@/types';
 
 export const createLocationMission = async ({
   locationId,
@@ -38,7 +38,7 @@ export const getLocationMissions = async ({
 
   if (search) {
     params.search = search;
-    params.searchBy = ["title"];
+    params.searchBy = ['title'];
   }
 
   const { data } = await axiosInstance.get<
@@ -47,7 +47,9 @@ export const getLocationMissions = async ({
   return data.data;
 };
 
-export const getLocationMissionById = async (missionId: string): Promise<LocationMission> => {
+export const getLocationMissionById = async (
+  missionId: string
+): Promise<LocationMission> => {
   const { data } = await axiosInstance.get<ApiResponse<LocationMission>>(
     `/v1/business/location-mission/mission/${missionId}`
   );
@@ -56,7 +58,7 @@ export const getLocationMissionById = async (missionId: string): Promise<Locatio
 
 export const updateLocationMission = async ({
   missionId,
-  payload
+  payload,
 }: {
   missionId: string;
   payload: UpdateLocationMissionPayload;
@@ -68,7 +70,9 @@ export const updateLocationMission = async ({
   return data.data;
 };
 
-export const deleteLocationMission = async (missionId: string): Promise<any> => {
+export const deleteLocationMission = async (
+  missionId: string
+): Promise<any> => {
   const { data } = await axiosInstance.delete(
     `/v1/business/location-mission/mission/${missionId}`
   );
@@ -97,7 +101,9 @@ export const generateOneTimeQRCode = async ({
   locationId: string;
   payload?: GenerateOneTimeQRCodePayload;
 }): Promise<GenerateOneTimeQRCodeResponse> => {
-  const { data } = await axiosInstance.post<ApiResponse<GenerateOneTimeQRCodeResponse>>(
+  const { data } = await axiosInstance.post<
+    ApiResponse<GenerateOneTimeQRCodeResponse>
+  >(
     `/v1/business/location-mission/${locationId}/generate-one-time-qr`,
     payload || {}
   );
@@ -129,31 +135,28 @@ export const getMissionParticipants = async ({
   const params: any = {
     page,
     limit,
-    // Backend requires missionId filter in array form
-    'filter.missionId': [`$eq:${missionId}`],
+    // Backend filter format: filter.missionId=$eq:missionId
+    'filter.missionId': `$eq:${missionId}`,
   };
-
   if (completedFilter) {
-    params['filter.completed'] = [completedFilter];
+    // completedFilter should already be in raw form, e.g. "$eq:true"
+    params['filter.completed'] = completedFilter;
   }
-
   if (sortBy && sortBy.length > 0) {
     params.sortBy = sortBy;
   } else {
-    // Default sort: highest progress first
     params.sortBy = ['progress:DESC'];
   }
-
   if (search) {
     params.search = search;
     if (searchBy && searchBy.length > 0) {
       params.searchBy = searchBy;
     }
   }
-
-  const { data } = await axiosInstance.get<
-    ApiResponse<PaginatedData<any>>
-  >('/v1/business/location-mission/mission/participants', { params });
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<any>>>(
+    '/v1/business/location-mission/mission/participants',
+    { params }
+  );
 
   return data.data;
 };

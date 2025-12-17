@@ -49,7 +49,6 @@ import {
   AlertTriangle,
   Plus,
 } from 'lucide-react';
-import { Location } from '@/types';
 import { useAllLocations } from '@/hooks/admin/useAllLocations';
 import { useLocationStats } from '@/hooks/admin/useLocationStats';
 import { useQueryClient } from '@tanstack/react-query';
@@ -425,7 +424,7 @@ export default function LocationDashboardPage() {
                               </div>
                               <div className='flex items-center justify-center gap-1'>
                                 <FileText className='h-3 w-3 text-blue-600' />
-                                <span>{loc.totalPosts || 0}</span>
+                                <span>{loc.totalReviews || 0}</span>
                               </div>
                             </div>
                           </TableCell>
