@@ -11,8 +11,14 @@ import {
   Ticket,
   MapPin,
   Eye,
+  TrendingUp,
+  Users,
+  Wallet,
+  FileText,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useMyEvents } from '@/hooks/events/useMyEvents';
 import { format, subDays, subMonths, subYears } from 'date-fns';
 import {
@@ -24,6 +30,19 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { PageContainer } from '@/components/shared/PageContainer';
+import { StatCard } from '@/components/shared/StatCard';
+import { DashboardSection } from '@/components/dashboard';
+import LoadingCustom from '@/components/shared/LoadingCustom';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Bar,
   BarChart,
@@ -38,19 +57,6 @@ import {
   ChartTooltipContent,
   ChartConfig,
 } from '@/components/ui/chart';
-import { PageHeader } from '@/components/shared/PageHeader';
-import { PageContainer } from '@/components/shared/PageContainer';
-import { StatCard } from '@/components/shared/StatCard';
-import { DashboardSection } from '@/components/dashboard';
-import LoadingCustom from '@/components/shared/LoadingCustom';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
 
 type PeriodType = 'day' | 'month' | 'year';
@@ -58,7 +64,6 @@ type PeriodType = 'day' | 'month' | 'year';
 export default function CreatorDashboardPage() {
   const router = useRouter();
   const [revenuePeriod, setRevenuePeriod] = useState<PeriodType>('month');
-  const [eventPeriod, setEventPeriod] = useState<PeriodType>('month');
 
   // Fetch events data
   const { data: eventsData, isLoading } = useMyEvents({
@@ -89,9 +94,15 @@ export default function CreatorDashboardPage() {
     });
 
     // Placeholder real metrics until attendance/revenue APIs are available
+    // TODO: Replace with actual API data when available
     const totalRevenue = 0;
     const thisMonthRevenue = 0;
     const revenueChange = 0;
+
+    // Mock revenue metrics - TODO: Replace with actual API data
+    const totalWithdrawals = 0; // Mock data - replace with wallet withdrawal transactions
+    const availableRevenue = totalRevenue - totalWithdrawals;
+    const pendingRevenue = 0; // Mock data - pending ticket sales revenue
 
     const thirtyDaysAgo = subDays(new Date(), 30);
     const recentEvents = events.filter((e) => {
@@ -118,6 +129,9 @@ export default function CreatorDashboardPage() {
       draftEvents: draftEvents.length,
       completedEvents: completedEvents.length,
       totalRevenue,
+      availableRevenue,
+      pendingRevenue,
+      totalWithdrawals,
       thisMonthRevenue,
       revenueChange,
       recentEvents,
@@ -125,19 +139,63 @@ export default function CreatorDashboardPage() {
     };
   }, [events, meta]);
 
-  // Get upcoming events (events with future dates)
+  // Mock upcoming events data - TODO: Replace with actual API data when available
   const upcomingEvents = useMemo(() => {
     const now = new Date();
-    return events
+    const mockEvents = events.slice(0, 5).map((event) => {
+      // Generate mock future dates if event doesn't have a startDate
+      let startDate = event.startDate ? new Date(event.startDate) : null;
+      let endDate = event.endDate ? new Date(event.endDate) : null;
+
+      if (!startDate) {
+        // Create a mock future date (1-30 days from now)
+        const hash = event.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+        const daysFromNow = (hash % 30) + 1;
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() + daysFromNow);
+      }
+
+      if (!endDate && startDate) {
+        // Create end date 1-3 days after start date
+        const hash = event.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + ((hash % 3) + 1));
+      }
+
+      // Generate mock ticket sales and revenue
+      const hash = event.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+      const baseTickets = (hash % 500) + 50;
+      const baseRevenue = baseTickets * ((hash % 200) + 50);
+      
+      const isPublished = event.status?.toUpperCase() === 'PUBLISHED' || event.status?.toUpperCase() === 'ACTIVE';
+      let ticketsSold = baseTickets;
+      let revenue = baseRevenue;
+      
+      if (isPublished) {
+        ticketsSold = Math.floor(baseTickets * 0.7);
+        revenue = Math.floor(baseRevenue * 0.75);
+      } else {
+        ticketsSold = 0;
+        revenue = 0;
+      }
+
+      return {
+        ...event,
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString(),
+        ticketsSold,
+        revenue,
+      };
+    });
+
+    // Filter to only future events and sort by start date
+    return mockEvents
       .filter((e) => {
         if (e.startDate) {
-          const startDate = new Date(e.startDate);
-          return startDate >= now;
+          const eventStartDate = new Date(e.startDate);
+          return eventStartDate >= now;
         }
-        return (
-          e.status?.toUpperCase() === 'PUBLISHED' ||
-          e.status?.toUpperCase() === 'ACTIVE'
-        );
+        return true; // Include events without dates (already have mock dates)
       })
       .sort((a, b) => {
         const dateA = a.startDate
@@ -148,7 +206,7 @@ export default function CreatorDashboardPage() {
           : new Date(b.createdAt).getTime();
         return dateA - dateB;
       })
-      .slice(0, 5);
+      .slice(0, 3);
   }, [events]);
 
   const recentEventsList = useMemo(
@@ -226,181 +284,68 @@ export default function CreatorDashboardPage() {
     return data;
   }, [revenuePeriod]);
 
-  // Mock event performance timeline data based on selected period
-  const eventPerformanceData = useMemo(() => {
-    const now = new Date();
-    const data: Array<{
-      period: string;
-      created: number;
-      published: number;
-      completed: number;
-    }> = [];
-
-    const baseDayData = [
-      { created: 3, published: 2, completed: 1 },
-      { created: 4, published: 3, completed: 2 },
-      { created: 2, published: 2, completed: 1 },
-      { created: 5, published: 4, completed: 2 },
-      { created: 3, published: 3, completed: 3 },
-      { created: 6, published: 5, completed: 4 },
-      { created: 2, published: 2, completed: 2 },
-      { created: 4, published: 3, completed: 3 },
-      { created: 5, published: 4, completed: 2 },
-      { created: 3, published: 3, completed: 4 },
-      { created: 4, published: 3, completed: 2 },
-      { created: 5, published: 4, completed: 3 },
-      { created: 6, published: 5, completed: 4 },
-      { created: 3, published: 2, completed: 2 },
-      { created: 7, published: 6, completed: 5 },
-      { created: 4, published: 4, completed: 3 },
-      { created: 5, published: 4, completed: 4 },
-      { created: 6, published: 5, completed: 3 },
-      { created: 4, published: 3, completed: 2 },
-      { created: 5, published: 4, completed: 5 },
-      { created: 3, published: 3, completed: 2 },
-      { created: 6, published: 5, completed: 4 },
-      { created: 5, published: 4, completed: 3 },
-      { created: 3, published: 2, completed: 2 },
-      { created: 7, published: 6, completed: 5 },
-      { created: 4, published: 4, completed: 3 },
-      { created: 5, published: 4, completed: 4 },
-      { created: 6, published: 5, completed: 3 },
-      { created: 4, published: 3, completed: 2 },
-      { created: 8, published: 7, completed: 6 },
-    ];
-
-    const baseMonthData = [
-      { created: 85, published: 72, completed: 58 },
-      { created: 92, published: 78, completed: 65 },
-      { created: 88, published: 75, completed: 62 },
-      { created: 95, published: 82, completed: 68 },
-      { created: 102, published: 88, completed: 74 },
-      { created: 98, published: 85, completed: 71 },
-      { created: 105, published: 92, completed: 78 },
-      { created: 112, published: 98, completed: 84 },
-      { created: 108, published: 95, completed: 81 },
-      { created: 115, published: 102, completed: 88 },
-      { created: 120, published: 108, completed: 94 },
-      { created: 125, published: 112, completed: 98 },
-    ];
-
-    const baseYearData = [
-      { created: 980, published: 850, completed: 720 },
-      { created: 1150, published: 1020, completed: 880 },
-      { created: 1320, published: 1180, completed: 1020 },
-      { created: 1480, published: 1330, completed: 1160 },
-      { created: 1650, published: 1500, completed: 1320 },
-    ];
-
-    if (eventPeriod === 'day') {
-      for (let i = 29; i >= 0; i--) {
-        const dayDate = subDays(now, i);
-        const dayOfWeek = dayDate.getDay();
-        const baseIndex = 29 - i;
-        let { created, published, completed } =
-          baseDayData[baseIndex % baseDayData.length];
-
-        if (dayOfWeek === 0 || dayOfWeek === 6) {
-          created = Math.max(1, Math.floor(created * 0.6));
-          published = Math.max(1, Math.floor(published * 0.6));
-          completed = Math.max(0, Math.floor(completed * 0.7));
+  // Calculate top events with mock performance data
+  // TODO: Replace with actual API data when available
+  const topEvents = useMemo(() => {
+    return events
+      .map((event) => {
+        // Generate mock ticket sales and revenue based on event properties
+        // This creates consistent mock data per event
+        const hash = event.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const baseTickets = (hash % 500) + 50; // 50-550 tickets
+        const baseRevenue = baseTickets * ((hash % 200) + 50); // Varying price per ticket
+        
+        // Adjust based on status and date
+        let ticketsSold = baseTickets;
+        let revenue = baseRevenue;
+        
+        const isPublished = event.status?.toUpperCase() === 'PUBLISHED' || event.status?.toUpperCase() === 'ACTIVE';
+        const isCompleted = event.status?.toUpperCase() === 'COMPLETED';
+        const isDraft = event.status?.toUpperCase() === 'DRAFT';
+        
+        if (isCompleted) {
+          ticketsSold = Math.floor(baseTickets * 0.9); // Completed events have more sales
+          revenue = Math.floor(baseRevenue * 0.95);
+        } else if (isPublished) {
+          ticketsSold = Math.floor(baseTickets * 0.7); // Active events have partial sales
+          revenue = Math.floor(baseRevenue * 0.75);
+        } else if (isDraft) {
+          ticketsSold = 0;
+          revenue = 0;
         }
 
-        created = Math.max(0, created + Math.floor((Math.random() - 0.5) * 2));
-        published = Math.max(
-          0,
-          Math.min(published + Math.floor((Math.random() - 0.5) * 2), created)
-        );
-        completed = Math.max(
-          0,
-          Math.min(completed + Math.floor((Math.random() - 0.5) * 2), published)
-        );
+        return {
+          ...event,
+          ticketsSold,
+          revenue,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue) // Sort by revenue descending
+      .slice(0, 5) // Top 5 events
+      .map((event) => ({
+        name: event.displayName || 'Untitled event',
+        revenue: event.revenue,
+      }));
+  }, [events]);
 
-        data.push({
-          period: format(dayDate, 'MMM dd'),
-          created,
-          published,
-          completed,
-        });
-      }
-    } else if (eventPeriod === 'month') {
-      for (let i = 11; i >= 0; i--) {
-        const monthDate = subMonths(now, i);
-        const baseIndex = 11 - i;
-        let { created, published, completed } =
-          baseMonthData[baseIndex % baseMonthData.length];
+  // Mock report list data - TODO: Replace with actual API data when available
+  const reportList = useMemo(() => {
+    return events.slice(0, 3).map((event, index) => {
+      const hash = event.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+      return {
+        id: event.id,
+        eventName: event.displayName || 'Untitled event',
+        reportType: ['Event Summary', 'Revenue Report', 'Attendance Report', 'Performance Report'][hash % 4],
+        generatedDate: subDays(new Date(), hash % 30),
+        status: ['completed', 'pending', 'generating'][hash % 3] as 'completed' | 'pending' | 'generating',
+      };
+    });
+  }, [events]);
 
-        const growthFactor = 1 + (11 - i) * 0.02;
-        created = Math.floor(created * growthFactor);
-        published = Math.floor(published * growthFactor);
-        completed = Math.floor(completed * growthFactor);
-
-        created = Math.max(0, created + Math.floor((Math.random() - 0.5) * 10));
-        published = Math.max(
-          0,
-          Math.min(published + Math.floor((Math.random() - 0.5) * 8), created)
-        );
-        completed = Math.max(
-          0,
-          Math.min(completed + Math.floor((Math.random() - 0.5) * 6), published)
-        );
-
-        data.push({
-          period: format(monthDate, 'MMM yyyy'),
-          created,
-          published,
-          completed,
-        });
-      }
-    } else {
-      for (let i = 4; i >= 0; i--) {
-        const yearDate = subYears(now, i);
-        const baseIndex = 4 - i;
-        let { created, published, completed } = baseYearData[baseIndex];
-
-        created = Math.max(0, created + Math.floor((Math.random() - 0.5) * 50));
-        published = Math.max(
-          0,
-          Math.min(published + Math.floor((Math.random() - 0.5) * 40), created)
-        );
-        completed = Math.max(
-          0,
-          Math.min(
-            completed + Math.floor((Math.random() - 0.5) * 30),
-            published
-          )
-        );
-
-        data.push({
-          period: format(yearDate, 'yyyy'),
-          created,
-          published,
-          completed,
-        });
-      }
-    }
-    return data;
-  }, [eventPeriod]);
-
-  const revenueChartConfig: ChartConfig = {
+  const eventChartConfig: ChartConfig = {
     revenue: {
       label: 'Revenue',
       color: 'lab(58.8635% 31.6645 115.942)',
-    },
-  };
-
-  const eventPerformanceChartConfig: ChartConfig = {
-    created: {
-      label: 'Created',
-      color: 'hsl(221.2 83.2% 53.3%)',
-    },
-    published: {
-      label: 'Published',
-      color: 'hsl(142.1 76.2% 36.3%)',
-    },
-    completed: {
-      label: 'Completed',
-      color: 'hsl(47.9 95.8% 53.1%)',
     },
   };
 
@@ -501,123 +446,27 @@ export default function CreatorDashboardPage() {
           <CardHeader>
             <div className='flex items-center justify-between'>
               <div>
-                <CardTitle className='text-base flex items-center gap-2'>
-                  <DollarSign className='h-4 w-4 text-primary' />
-                  Revenue Overview
-                </CardTitle>
-                <CardDescription className='mt-1'>
-                  Revenue trends over time
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className='space-y-4'>
-              <div className='grid grid-cols-2 gap-4'>
-                <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
-                  <p className='text-xs text-muted-foreground mb-1'>
-                    This Month
-                  </p>
-                  <p className='text-2xl font-bold text-emerald-600'>
-                    {formatCurrency(stats.thisMonthRevenue)}
-                  </p>
-                </div>
-                <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
-                  <p className='text-xs text-muted-foreground mb-1'>Total</p>
-                  <p className='text-2xl font-bold text-amber-600'>
-                    {formatCurrency(stats.totalRevenue)}
-                  </p>
-                </div>
-              </div>
-              {stats.revenueChange !== 0 && (
-                <div
-                  className={`flex items-center gap-2 p-3 rounded-lg ${
-                    stats.revenueChange > 0
-                      ? 'bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800'
-                      : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800'
-                  }`}
-                >
-                  {stats.revenueChange > 0 ? (
-                    <Activity className='h-4 w-4 text-emerald-600' />
-                  ) : (
-                    <Activity className='h-4 w-4 text-red-600' />
-                  )}
-                  <div>
-                    <p
-                      className={`text-sm font-medium ${
-                        stats.revenueChange > 0
-                          ? 'text-emerald-600'
-                          : 'text-red-600'
-                      }`}
-                    >
-                      {stats.revenueChange > 0 ? '+' : ''}
-                      {stats.revenueChange.toFixed(1)}% from last month
-                    </p>
-                    <p className='text-xs text-muted-foreground'>
-                      Revenue {stats.revenueChange > 0 ? 'increased' : 'decreased'}
-                    </p>
-                  </div>
-                </div>
-              )}
-              <Button
-                variant='outline'
-                className='w-full'
-                onClick={() => router.push('/dashboard/creator/wallet')}
-              >
-                <ArrowRight className='mr-2 h-4 w-4' />
-                View Wallet Details
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
-          <CardHeader>
-            <div className='flex items-center justify-between'>
-              <div>
                 <CardTitle className='text-lg font-bold flex items-center gap-2'>
                   <div className='p-1.5 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10'>
-                    <Activity className='h-4 w-4 text-primary' />
+                    <TrendingUp className='h-4 w-4 text-primary' />
                   </div>
-                  Event Performance Timeline
+                  Top Performing Events
                 </CardTitle>
                 <CardDescription className='mt-1 text-sm'>
-                  Event lifecycle over time
+                  Your best events by revenue performance
                 </CardDescription>
-              </div>
-              <div className='flex gap-1'>
-                <Button
-                  variant={eventPeriod === 'day' ? 'default' : 'outline'}
-                  size='sm'
-                  onClick={() => setEventPeriod('day')}
-                  className='h-8 px-3 text-xs'
-                >
-                  Day
-                </Button>
-                <Button
-                  variant={eventPeriod === 'month' ? 'default' : 'outline'}
-                  size='sm'
-                  onClick={() => setEventPeriod('month')}
-                  className='h-8 px-3 text-xs'
-                >
-                  Month
-                </Button>
-                <Button
-                  variant={eventPeriod === 'year' ? 'default' : 'outline'}
-                  size='sm'
-                  onClick={() => setEventPeriod('year')}
-                  className='h-8 px-3 text-xs'
-                >
-                  Year
-                </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className='h-64'>
-              {eventPerformanceData.length === 0 ? (
+            <div className='h-48'>
+              {isLoading ? (
+                <div className='flex items-center justify-center h-full'>
+                  <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+                </div>
+              ) : topEvents.length === 0 ? (
                 <div className='flex flex-col items-center justify-center h-full text-center'>
-                  <Activity className='h-12 w-12 text-muted-foreground/50 mb-3' />
+                  <TrendingUp className='h-12 w-12 text-muted-foreground/50 mb-3' />
                   <p className='text-sm text-muted-foreground font-medium'>
                     No event data yet
                   </p>
@@ -627,45 +476,46 @@ export default function CreatorDashboardPage() {
                 </div>
               ) : (
                 <ChartContainer
-                  config={eventPerformanceChartConfig}
+                  config={eventChartConfig}
                   className='h-full w-full'
                 >
                   <ResponsiveContainer width='100%' height='100%'>
-                    <BarChart data={eventPerformanceData}>
+                    <BarChart data={topEvents}>
                       <CartesianGrid
                         strokeDasharray='3 3'
                         vertical={false}
                         className='stroke-muted'
                       />
                       <XAxis
-                        dataKey='period'
+                        dataKey='name'
                         tickLine={false}
                         axisLine={false}
-                        tickMargin={10}
                         tick={{ fontSize: 11 }}
+                        tickFormatter={(value: string) => {
+                          const maxLength = 15;
+                          return value.length > maxLength
+                            ? `${value.substring(0, maxLength)}...`
+                            : value;
+                        }}
                       />
                       <YAxis
                         tickLine={false}
                         axisLine={false}
                         tick={{ fontSize: 11 }}
+                        tickFormatter={(value: number) =>
+                          value.toLocaleString('en-US')
+                        }
                       />
                       <RechartsTooltip
-                        cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
+                        cursor={{
+                          fill: 'hsl(var(--muted))',
+                          opacity: 0.4,
+                        }}
                         content={<ChartTooltipContent />}
                       />
                       <Bar
-                        dataKey='created'
-                        fill='hsl(221.2 83.2% 53.3%)'
-                        radius={[4, 4, 0, 0]}
-                      />
-                      <Bar
-                        dataKey='published'
-                        fill='hsl(142.1 76.2% 36.3%)'
-                        radius={[4, 4, 0, 0]}
-                      />
-                      <Bar
-                        dataKey='completed'
-                        fill='hsl(47.9 95.8% 53.1%)'
+                        dataKey='revenue'
+                        fill={eventChartConfig.revenue.color}
                         radius={[4, 4, 0, 0]}
                       />
                     </BarChart>
@@ -675,80 +525,72 @@ export default function CreatorDashboardPage() {
             </div>
           </CardContent>
         </Card>
+        <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
+          <CardHeader>
+            <div className='flex items-center justify-between'>
+              <div>
+                <CardTitle className='text-lg font-bold flex items-center gap-2'>
+                  <div className='p-1.5 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10'>
+                    <TrendingUp className='h-4 w-4 text-primary' />
+                  </div>
+                  Revenue Overview
+                </CardTitle>
+                <CardDescription className='mt-1 text-sm'>
+                  Revenue from ticket sales
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className='space-y-4'>
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
+                  <p className='text-xs text-muted-foreground mb-1'>
+                    Total Revenue
+                  </p>
+                  <p className='text-2xl font-bold text-emerald-600'>
+                    {formatCurrency(stats.totalRevenue)}
+                  </p>
+                </div>
+                <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
+                  <p className='text-xs text-muted-foreground mb-1'>
+                    Available Revenue
+                  </p>
+                  <p className='text-2xl font-bold text-blue-600'>
+                    {formatCurrency(stats.availableRevenue)}
+                  </p>
+                </div>
+                <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
+                  <p className='text-xs text-muted-foreground mb-1'>
+                    Pending Revenue
+                  </p>
+                  <p className='text-2xl font-bold text-amber-600'>
+                    {formatCurrency(stats.pendingRevenue)}
+                  </p>
+                </div>
+                <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
+                  <p className='text-xs text-muted-foreground mb-1'>
+                    Total Withdraw
+                  </p>
+                  <p className='text-2xl font-bold text-purple-600'>
+                    {formatCurrency(stats.totalWithdrawals)}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant='outline'
+                className='w-full'
+                onClick={() => router.push('/dashboard/creator/wallet')}
+              >
+                <Wallet className='mr-2 h-4 w-4' />
+                View Wallet Details
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className='grid grid-cols-1 lg:grid-cols-5 gap-10'>
-        <DashboardSection
-          title='My Events'
-          icon={CalendarDays}
-          action={{
-            label: 'View all',
-            href: '/dashboard/creator/events',
-          }}
-          className='lg:col-span-3'
-          isEmpty={!isLoading && events.length === 0}
-          emptyState={{
-            icon: CalendarDays,
-            title: 'No events yet',
-            description: 'Get started by creating your first event',
-            action: {
-              label: 'Create Your First Event',
-              href: '/dashboard/creator/request/create',
-            },
-          }}
-        >
-          <Table>
-            <TableHeader>
-              <TableRow className='hover:bg-transparent border-b'>
-                <TableHead className='font-semibold w-[50%]'>Name</TableHead>
-                <TableHead className='font-semibold w-[25%]'>
-                  Start Date
-                </TableHead>
-                <TableHead className='font-semibold w-[25%]'>
-                  Status
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {events.slice(0, 5).map((event) => (
-                <TableRow
-                  key={event.id}
-                  className='hover:bg-muted/50 cursor-pointer transition-colors'
-                  onClick={() =>
-                    router.push(`/dashboard/creator/events/${event.id}`)
-                  }
-                >
-                  <TableCell className='font-medium'>
-                    <div className='flex flex-col gap-1 min-w-0 flex-1'>
-                      <span className='truncate font-medium'>
-                        {event.displayName || 'Untitled event'}
-                      </span>
-                      {event.location?.name && (
-                        <div className='flex items-center gap-1 min-w-0 max-w-[300px]'>
-                          <MapPin className='h-3 w-3 shrink-0 text-muted-foreground' />
-                          <span className='text-xs text-muted-foreground truncate'>
-                            {event.location.name}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className='text-sm text-muted-foreground'>
-                    {event.startDate
-                      ? format(new Date(event.startDate), 'MMM dd, yyyy')
-                      : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant='secondary' className='font-medium'>
-                      {event.status || 'DRAFT'}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </DashboardSection>
-
+      <div className='grid grid-cols-1 lg:grid-cols-6 gap-10'>
         <DashboardSection
           title='Upcoming Events'
           icon={Ticket}
@@ -756,7 +598,7 @@ export default function CreatorDashboardPage() {
             label: 'View all',
             href: '/dashboard/creator/events',
           }}
-          className='lg:col-span-2'
+          className='lg:col-span-3'
           isEmpty={!isLoading && upcomingEvents.length === 0}
           emptyState={{
             icon: Ticket,
@@ -765,52 +607,206 @@ export default function CreatorDashboardPage() {
           }}
         >
           {upcomingEvents.length === 0 ? (
-            <div className='flex items-center justify-center py-8'>
-              <p className='text-sm text-muted-foreground'>
-                No upcoming events.
+            <div className='flex flex-col items-center justify-center py-8 text-center'>
+              <Ticket className='h-10 w-10 text-muted-foreground/50 mb-2' />
+              <p className='text-sm text-muted-foreground font-medium'>
+                No upcoming events
+              </p>
+              <p className='text-xs text-muted-foreground mt-1'>
+                Schedule events to see them here
               </p>
             </div>
           ) : (
-            <div className='space-y-3'>
-              {upcomingEvents.map((event) => {
-                const startDate = event.startDate
-                  ? new Date(event.startDate)
-                  : new Date(event.createdAt);
+            <div className='space-y-0'>
+              <Table>
+                <TableHeader>
+                  <TableRow className='hover:bg-transparent border-b'>
+                    <TableHead className='w-12 font-semibold'>#</TableHead>
+                    <TableHead className='font-semibold min-w-[200px]'>
+                      Event
+                    </TableHead>
+                    <TableHead className='font-semibold text-right'>
+                      Tickets Sold
+                    </TableHead>
+                    <TableHead className='font-semibold text-right'>
+                      Revenue
+                    </TableHead>
+                    <TableHead className='font-semibold'>Start Date</TableHead>
+                    <TableHead className='font-semibold'>End Date</TableHead>
+                    <TableHead className='font-semibold'>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {upcomingEvents.map((event, index) => {
+                    const eventImage = event.coverUrl || event.avatarUrl;
+                    const startDate = event.startDate
+                      ? new Date(event.startDate)
+                      : null;
 
-                return (
-                  <Link
-                    key={event.id}
-                    href={`/dashboard/creator/events/${event.id}`}
-                    className='block'
-                  >
-                    <div className='flex flex-col p-4 border-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all shadow-sm cursor-pointer hover:shadow-md'>
-                      <div className='flex items-start justify-between mb-2'>
-                        <div className='flex-1 min-w-0'>
-                          <p className='font-semibold text-sm truncate'>
-                            {event.displayName || 'Untitled event'}
-                          </p>
-                          {event.location?.name && (
-                            <p className='text-xs text-muted-foreground mt-0.5 truncate'>
-                              {event.location.name}
-                            </p>
+                    return (
+                      <TableRow
+                        key={event.id}
+                        className='hover:bg-muted/50 cursor-pointer transition-colors'
+                        onClick={() =>
+                          router.push(`/dashboard/creator/events/${event.id}`)
+                        }
+                      >
+                        <TableCell className='font-medium text-muted-foreground py-2'>
+                          <div className='flex items-center justify-center w-7 h-7 rounded-full bg-muted font-bold text-xs'>
+                            {index + 1}
+                          </div>
+                        </TableCell>
+                        <TableCell className='py-2'>
+                          <div className='flex items-center gap-2 min-w-0'>
+                              {eventImage ? (
+                                <div className='relative w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0'>
+                                <Image
+                                  src={eventImage}
+                                  alt={event.displayName}
+                                  fill
+                                  className='object-cover'
+                                  sizes='48px'
+                                />
+                              </div>
+                              ) : (
+                                <div className='w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0'>
+                                  <CalendarDays className='h-4 w-4 text-primary/60' />
+                                </div>
+                              )}
+                            <div className='flex flex-col gap-1 min-w-0 flex-1'>
+                              <span className='font-semibold text-sm truncate'>
+                                {event.displayName || 'Untitled event'}
+                              </span>
+                              {event.location?.name && (
+                                <div className='flex items-center gap-1 min-w-0'>
+                                  <MapPin className='h-3 w-3 shrink-0 text-muted-foreground' />
+                                  <span className='text-xs text-muted-foreground truncate'>
+                                    {event.location.name}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className='text-right py-2'>
+                          <div className='flex items-center justify-end gap-1.5'>
+                            <Users className='h-3.5 w-3.5 text-muted-foreground' />
+                            <span className='font-semibold text-sm'>
+                              {event.ticketsSold?.toLocaleString() || '0'}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className='text-right py-2'>
+                          <div className='flex items-center justify-end gap-1.5'>
+                            <DollarSign className='h-3.5 w-3.5 text-emerald-600' />
+                            <span className='font-bold text-sm text-emerald-600'>
+                              {formatCurrency(event.revenue || 0)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className='py-2'>
+                          {startDate ? (
+                            <span className='text-xs font-medium'>
+                              {format(startDate, 'MMM dd, yyyy')}
+                            </span>
+                          ) : (
+                            <span className='text-xs text-muted-foreground'>
+                              Not scheduled
+                            </span>
                           )}
-                        </div>
-                        <Badge variant='secondary' className='text-xs'>
-                          {event.status || 'DRAFT'}
-                        </Badge>
-                      </div>
-                      <div className='flex items-center justify-between'>
-                        <p className='text-xs text-muted-foreground flex items-center gap-1'>
-                          <CalendarDays className='h-3 w-3' />
-                          {format(startDate, 'MMM dd, yyyy')}
-                        </p>
-                        <ArrowRight className='h-4 w-4 text-muted-foreground' />
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+                        </TableCell>
+                        <TableCell className='py-2'>
+                          {event.endDate ? (
+                            <span className='text-xs font-medium'>
+                              {format(new Date(event.endDate), 'MMM dd, yyyy')}
+                            </span>
+                          ) : (
+                            <span className='text-xs text-muted-foreground'>
+                              Not set
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className='py-2'>
+                          <Badge
+                            variant='secondary'
+                            className='font-medium capitalize text-xs'
+                          >
+                            {event.status || 'DRAFT'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
+          )}
+        </DashboardSection>
+
+        <DashboardSection
+          title='Report List'
+          icon={FileText}
+          action={{
+            label: 'View all',
+            href: '/dashboard/creator/reports',
+          }}
+          className='lg:col-span-3'
+          isEmpty={!isLoading && reportList.length === 0}
+          emptyState={{
+            icon: FileText,
+            title: 'No reports yet',
+            description: 'Reports will appear here once generated',
+          }}
+        >
+          {reportList.length === 0 ? (
+            <div className='flex items-center justify-center py-6'>
+              <p className='text-sm text-muted-foreground'>
+                No reports available.
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className='hover:bg-transparent border-b'>
+                  <TableHead className='font-semibold'>Event Name</TableHead>
+                  <TableHead className='font-semibold'>Report Type</TableHead>
+                  <TableHead className='font-semibold'>Generated Date</TableHead>
+                  <TableHead className='font-semibold'>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reportList.map((report) => (
+                  <TableRow
+                    key={report.id}
+                    className='hover:bg-muted/50 cursor-pointer transition-colors'
+                  >
+                    <TableCell className='font-medium text-sm py-2'>
+                      {report.eventName}
+                    </TableCell>
+                    <TableCell className='text-xs text-muted-foreground py-2'>
+                      {report.reportType}
+                    </TableCell>
+                    <TableCell className='text-xs text-muted-foreground py-2'>
+                      {format(report.generatedDate, 'MMM dd, yyyy')}
+                    </TableCell>
+                    <TableCell className='py-2'>
+                      <Badge
+                        variant={
+                          report.status === 'completed'
+                            ? 'default'
+                            : report.status === 'pending'
+                            ? 'secondary'
+                            : 'outline'
+                        }
+                        className='font-medium capitalize text-xs'
+                      >
+                        {report.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </DashboardSection>
       </div>
