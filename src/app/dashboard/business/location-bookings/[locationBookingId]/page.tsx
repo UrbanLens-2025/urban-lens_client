@@ -586,31 +586,6 @@ export default function LocationBookingDetailPage({
         }
       />
 
-      {/* Summary Cards */}
-      <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6'>
-        <StatCard
-          title='Payment Amount'
-          value={formatCurrency(booking.amountToPay)}
-          icon={DollarSign}
-          color='orange'
-        />
-        <StatCard
-          title='Total Hours'
-          value={`${totalHours} hours`}
-          description={`${bookingTimeDetails.totalDays} ${bookingTimeDetails.totalDays === 1 ? 'day' : 'days'
-            }`}
-          icon={Clock}
-          color='blue'
-        />
-        <StatCard
-          title='Time Slots Booked'
-          value={booking.dates?.length || 0}
-          description='time slots'
-          icon={Calendar}
-          color='purple'
-        />
-      </div>
-
       {/* Grid Content */}
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
         {/* Left Column */}
