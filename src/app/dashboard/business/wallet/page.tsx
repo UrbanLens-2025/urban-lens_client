@@ -985,7 +985,7 @@ export default function BusinessWalletPage() {
                           const statusText = mapStatus(t.status);
                           const amountNumber = parseFloat(t.amount);
                           return (
-                            <TableRow key={t.id} className='hover:bg-muted/50'>
+                            <TableRow key={t.id} className='hover:bg-muted/50 cursor-pointer' onClick={() => router.push(`/dashboard/business/wallet/${t.id}?type=internal`)}>
                               <TableCell>
                                 <span className='text-sm font-mono text-muted-foreground'>
                                   {t.id.slice(0, 8).toUpperCase()}
