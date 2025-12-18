@@ -943,6 +943,7 @@ export default function BusinessWalletPage() {
                       <TableHead>ID</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Description</TableHead>
+                      <TableHead>Reference</TableHead>
                       <TableHead>Date & Time</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className='text-right'>Amount</TableHead>
@@ -1006,6 +1007,11 @@ export default function BusinessWalletPage() {
                               </TableCell>
                               <TableCell>
                                 <span className='text-sm text-muted-foreground whitespace-nowrap'>
+                                  {t.note.slice(0, 20)}...
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className='text-sm text-muted-foreground whitespace-nowrap'>
                                   {formatDateTime(t.createdAt)}
                                 </span>
                               </TableCell>
@@ -1023,8 +1029,8 @@ export default function BusinessWalletPage() {
                               <TableCell className='text-right'>
                                 <span
                                   className={`text-sm font-bold whitespace-nowrap ${mappedType === 'transfer_out'
-                                      ? 'text-orange-600'
-                                      : 'text-green-600'
+                                    ? 'text-orange-600'
+                                    : 'text-green-600'
                                     }`}
                                 >
                                   {getTransactionSign(mappedType)}
@@ -1252,8 +1258,8 @@ export default function BusinessWalletPage() {
                             <TableCell className='text-right'>
                               <span
                                 className={`text-sm font-bold whitespace-nowrap ${mappedTransaction.type === 'withdrawal'
-                                    ? 'text-orange-600'
-                                    : 'text-green-600'
+                                  ? 'text-orange-600'
+                                  : 'text-green-600'
                                   }`}
                               >
                                 {getTransactionSign(mappedTransaction.type)}

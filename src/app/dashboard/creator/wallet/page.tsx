@@ -943,6 +943,7 @@ export default function BusinessWalletPage() {
                       <TableHead>ID</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Description</TableHead>
+                      <TableHead>Reference</TableHead>
                       <TableHead>Date & Time</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className='text-right'>Amount</TableHead>
@@ -1002,6 +1003,11 @@ export default function BusinessWalletPage() {
                               <TableCell className='max-w-[200px]'>
                                 <span className='text-sm truncate block'>
                                   {description}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className='text-sm text-muted-foreground whitespace-nowrap'>
+                                  {t.note.slice(0, 20)}...
                                 </span>
                               </TableCell>
                               <TableCell>

@@ -793,6 +793,7 @@ export default function AdminWalletPage() {
                         <TableHead className='font-semibold'>ID</TableHead>
                         <TableHead className='font-semibold'>Type</TableHead>
                         <TableHead className='font-semibold'>Amount</TableHead>
+                        <TableHead className='font-semibold'>Reference</TableHead>
                         <TableHead className='font-semibold'>Status</TableHead>
                         <TableHead className='font-semibold'>Date</TableHead>
                       </TableRow>
@@ -819,6 +820,7 @@ export default function AdminWalletPage() {
                               escrowWallet?.currency || 'VND'
                             )}
                           </TableCell>
+                          <TableCell>{t.note ? `${t.note.slice(0, 20)}...` : "-"}</TableCell>
                           <TableCell>{t.status}</TableCell>
                           <TableCell>{formatDateTime(t.createdAt)}</TableCell>
                         </TableRow>
