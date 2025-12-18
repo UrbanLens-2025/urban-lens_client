@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axiosInstance from './axios-config';
 import type {
   ApiResponse,
@@ -348,4 +349,15 @@ export const updateLocationBookingConfig = async (
     `/v1/owner/location-booking-config/${configId}`,
     payload
   );
+};
+
+export const forceCancelLocationBooking = async (
+  bookingId: string,
+  payload: { cancellationReason: string }
+): Promise<any> => {
+  const { data } = await axiosInstance.delete(
+    `/v1/owner/location-bookings/force-cancel/${bookingId}`,
+    { data: payload }
+  );
+  return data;
 };
