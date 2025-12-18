@@ -4,35 +4,17 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CalendarDays,
-  Users,
-  TrendingUp,
-  TrendingDown,
   DollarSign,
-  Loader2,
   PlusCircle,
   ArrowRight,
-  Clock,
-  CheckCircle2,
   Activity,
-  Wallet,
   Ticket,
   MapPin,
   Eye,
-  BarChart3,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useMyEvents } from '@/hooks/events/useMyEvents';
-import {
-  format,
-  subDays,
-  subMonths,
-  subYears,
-  isSameMonth,
-  isSameYear,
-  isSameDay,
-  startOfDay,
-  startOfMonth,
-  startOfYear,
-} from 'date-fns';
+import { format, subDays, subMonths, subYears } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -50,18 +32,26 @@ import {
   YAxis,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  Line,
-  LineChart,
 } from 'recharts';
 import {
   ChartContainer,
   ChartTooltipContent,
   ChartConfig,
 } from '@/components/ui/chart';
-import Link from 'next/link';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { PageContainer } from '@/components/shared/PageContainer';
 import { StatCard } from '@/components/shared/StatCard';
+import { DashboardSection } from '@/components/dashboard';
+import LoadingCustom from '@/components/shared/LoadingCustom';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { formatCurrency } from '@/lib/utils';
 
 type PeriodType = 'day' | 'month' | 'year';
 
@@ -79,15 +69,6 @@ export default function CreatorDashboardPage() {
 
   const events = eventsData?.data || [];
   const meta = eventsData?.meta;
-
-  // Format currency helper
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const stats = useMemo(() => {
     const totalEvents = meta?.totalItems ?? 0;
@@ -108,7 +89,6 @@ export default function CreatorDashboardPage() {
     });
 
     // Placeholder real metrics until attendance/revenue APIs are available
-    const totalAttendees = 0;
     const totalRevenue = 0;
     const thisMonthRevenue = 0;
     const revenueChange = 0;
@@ -134,7 +114,6 @@ export default function CreatorDashboardPage() {
 
     return {
       totalEvents,
-      totalAttendees,
       activeEvents: activeEvents.length,
       draftEvents: draftEvents.length,
       completedEvents: completedEvents.length,
@@ -151,12 +130,10 @@ export default function CreatorDashboardPage() {
     const now = new Date();
     return events
       .filter((e) => {
-        // Check if event has future dates
         if (e.startDate) {
           const startDate = new Date(e.startDate);
           return startDate >= now;
         }
-        // If no startDate, consider published/active events as upcoming
         return (
           e.status?.toUpperCase() === 'PUBLISHED' ||
           e.status?.toUpperCase() === 'ACTIVE'
@@ -174,12 +151,16 @@ export default function CreatorDashboardPage() {
       .slice(0, 5);
   }, [events]);
 
-  // Mock revenue performance data based on selected period
+  const recentEventsList = useMemo(
+    () => events.slice(0, 3),
+    [events]
+  );
+
+  // Mock revenue performance data based on selected period (structure matches business dashboard)
   const revenueData = useMemo(() => {
     const now = new Date();
     const data: Array<{ period: string; revenue: number }> = [];
 
-    // Mock data with realistic variations and trends
     const baseRevenue = {
       day: [
         850000, 920000, 1100000, 780000, 1300000, 1450000, 980000, 1200000,
@@ -195,19 +176,16 @@ export default function CreatorDashboardPage() {
     };
 
     if (revenuePeriod === 'day') {
-      // Last 30 days with realistic daily variations
       for (let i = 29; i >= 0; i--) {
         const dayDate = subDays(now, i);
         const dayOfWeek = dayDate.getDay();
         const baseIndex = 29 - i;
 
-        // Lower revenue on weekends (Saturday=6, Sunday=0)
         let revenue = baseRevenue.day[baseIndex % baseRevenue.day.length];
         if (dayOfWeek === 0 || dayOfWeek === 6) {
           revenue = Math.floor(revenue * 0.7);
         }
 
-        // Add some randomness
         revenue = Math.floor(revenue * (0.85 + Math.random() * 0.3));
 
         data.push({
@@ -216,17 +194,14 @@ export default function CreatorDashboardPage() {
         });
       }
     } else if (revenuePeriod === 'month') {
-      // Last 12 months with growth trend
       for (let i = 11; i >= 0; i--) {
         const monthDate = subMonths(now, i);
         const baseIndex = 11 - i;
         let revenue = baseRevenue.month[baseIndex % baseRevenue.month.length];
 
-        // Add upward trend
         const growthFactor = 1 + (11 - i) * 0.03;
         revenue = Math.floor(revenue * growthFactor);
 
-        // Add some variation
         revenue = Math.floor(revenue * (0.9 + Math.random() * 0.2));
 
         data.push({
@@ -235,13 +210,11 @@ export default function CreatorDashboardPage() {
         });
       }
     } else {
-      // Last 5 years with strong growth trend
       for (let i = 4; i >= 0; i--) {
         const yearDate = subYears(now, i);
         const baseIndex = 4 - i;
         let revenue = baseRevenue.year[baseIndex];
 
-        // Add some variation
         revenue = Math.floor(revenue * (0.95 + Math.random() * 0.1));
 
         data.push({
@@ -263,7 +236,6 @@ export default function CreatorDashboardPage() {
       completed: number;
     }> = [];
 
-    // Mock data with realistic event lifecycle patterns
     const baseDayData = [
       { created: 3, published: 2, completed: 1 },
       { created: 4, published: 3, completed: 2 },
@@ -321,7 +293,6 @@ export default function CreatorDashboardPage() {
     ];
 
     if (eventPeriod === 'day') {
-      // Last 30 days
       for (let i = 29; i >= 0; i--) {
         const dayDate = subDays(now, i);
         const dayOfWeek = dayDate.getDay();
@@ -329,14 +300,12 @@ export default function CreatorDashboardPage() {
         let { created, published, completed } =
           baseDayData[baseIndex % baseDayData.length];
 
-        // Fewer events on weekends
         if (dayOfWeek === 0 || dayOfWeek === 6) {
           created = Math.max(1, Math.floor(created * 0.6));
           published = Math.max(1, Math.floor(published * 0.6));
           completed = Math.max(0, Math.floor(completed * 0.7));
         }
 
-        // Add slight variation
         created = Math.max(0, created + Math.floor((Math.random() - 0.5) * 2));
         published = Math.max(
           0,
@@ -355,20 +324,17 @@ export default function CreatorDashboardPage() {
         });
       }
     } else if (eventPeriod === 'month') {
-      // Last 12 months with growth trend
       for (let i = 11; i >= 0; i--) {
         const monthDate = subMonths(now, i);
         const baseIndex = 11 - i;
         let { created, published, completed } =
           baseMonthData[baseIndex % baseMonthData.length];
 
-        // Add upward trend
         const growthFactor = 1 + (11 - i) * 0.02;
         created = Math.floor(created * growthFactor);
         published = Math.floor(published * growthFactor);
         completed = Math.floor(completed * growthFactor);
 
-        // Add variation
         created = Math.max(0, created + Math.floor((Math.random() - 0.5) * 10));
         published = Math.max(
           0,
@@ -387,13 +353,11 @@ export default function CreatorDashboardPage() {
         });
       }
     } else {
-      // Last 5 years with strong growth
       for (let i = 4; i >= 0; i--) {
         const yearDate = subYears(now, i);
         const baseIndex = 4 - i;
         let { created, published, completed } = baseYearData[baseIndex];
 
-        // Add variation
         created = Math.max(0, created + Math.floor((Math.random() - 0.5) * 50));
         published = Math.max(
           0,
@@ -428,21 +392,24 @@ export default function CreatorDashboardPage() {
   const eventPerformanceChartConfig: ChartConfig = {
     created: {
       label: 'Created',
-      color: 'hsl(221.2 83.2% 53.3%)', // primary/blue
+      color: 'hsl(221.2 83.2% 53.3%)',
     },
     published: {
       label: 'Published',
-      color: 'hsl(142.1 76.2% 36.3%)', // green
+      color: 'hsl(142.1 76.2% 36.3%)',
     },
     completed: {
       label: 'Completed',
-      color: 'hsl(47.9 95.8% 53.1%)', // amber/yellow
+      color: 'hsl(47.9 95.8% 53.1%)',
     },
   };
 
+  if (isLoading) {
+    return <LoadingCustom />;
+  }
+
   return (
     <PageContainer>
-      {/* Professional Header */}
       <PageHeader
         title='Creator Dashboard'
         description='Overview of your events, attendees, and revenue'
@@ -468,7 +435,6 @@ export default function CreatorDashboardPage() {
         }
       />
 
-      {/* Enhanced Statistics Cards */}
       <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
         <StatCard
           title='Total Events'
@@ -530,139 +496,81 @@ export default function CreatorDashboardPage() {
         />
       </div>
 
-      {/* Charts Section */}
       <div className='grid gap-6 md:grid-cols-2'>
-        {/* Revenue Performance Chart */}
         <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
           <CardHeader>
             <div className='flex items-center justify-between'>
               <div>
                 <CardTitle className='text-base flex items-center gap-2'>
                   <DollarSign className='h-4 w-4 text-primary' />
-                  Revenue Performance
+                  Revenue Overview
                 </CardTitle>
                 <CardDescription className='mt-1'>
                   Revenue trends over time
                 </CardDescription>
               </div>
-              <div className='flex gap-1'>
-                <Button
-                  variant={revenuePeriod === 'day' ? 'default' : 'outline'}
-                  size='sm'
-                  onClick={() => setRevenuePeriod('day')}
-                  className='h-8 px-3 text-xs'
-                >
-                  Day
-                </Button>
-                <Button
-                  variant={revenuePeriod === 'month' ? 'default' : 'outline'}
-                  size='sm'
-                  onClick={() => setRevenuePeriod('month')}
-                  className='h-8 px-3 text-xs'
-                >
-                  Month
-                </Button>
-                <Button
-                  variant={revenuePeriod === 'year' ? 'default' : 'outline'}
-                  size='sm'
-                  onClick={() => setRevenuePeriod('year')}
-                  className='h-8 px-3 text-xs'
-                >
-                  Year
-                </Button>
-              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className='h-64'>
-              {revenueData.length === 0 ? (
-                <div className='flex flex-col items-center justify-center h-full text-center'>
-                  <DollarSign className='h-12 w-12 text-muted-foreground/50 mb-3' />
-                  <p className='text-sm text-muted-foreground font-medium'>
-                    No revenue data yet
+            <div className='space-y-4'>
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
+                  <p className='text-xs text-muted-foreground mb-1'>
+                    This Month
                   </p>
-                  <p className='text-xs text-muted-foreground mt-1'>
-                    Revenue will appear when events are completed
+                  <p className='text-2xl font-bold text-emerald-600'>
+                    {formatCurrency(stats.thisMonthRevenue)}
                   </p>
                 </div>
-              ) : (
-                <ChartContainer
-                  config={revenueChartConfig}
-                  className='h-full w-full'
+                <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
+                  <p className='text-xs text-muted-foreground mb-1'>Total</p>
+                  <p className='text-2xl font-bold text-amber-600'>
+                    {formatCurrency(stats.totalRevenue)}
+                  </p>
+                </div>
+              </div>
+              {stats.revenueChange !== 0 && (
+                <div
+                  className={`flex items-center gap-2 p-3 rounded-lg ${
+                    stats.revenueChange > 0
+                      ? 'bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800'
+                      : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800'
+                  }`}
                 >
-                  <ResponsiveContainer width='100%' height='100%'>
-                    <BarChart data={revenueData}>
-                      <CartesianGrid
-                        strokeDasharray='3 3'
-                        vertical={false}
-                        className='stroke-muted'
-                      />
-                      <XAxis
-                        dataKey='period'
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={10}
-                        tick={{ fontSize: 11 }}
-                        angle={revenuePeriod === 'day' ? -45 : 0}
-                        textAnchor={revenuePeriod === 'day' ? 'end' : 'middle'}
-                        height={revenuePeriod === 'day' ? 80 : 40}
-                      />
-                      <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        tick={{ fontSize: 11 }}
-                        tickFormatter={(value) => {
-                          if (value >= 1000000)
-                            return `${(value / 1000000).toFixed(1)}M`;
-                          if (value >= 1000)
-                            return `${(value / 1000).toFixed(0)}K`;
-                          return value.toString();
-                        }}
-                      />
-                      <RechartsTooltip
-                        cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
-                        content={({ active, payload, label }) => {
-                          if (!active || !payload || payload.length === 0)
-                            return null;
-                          const value = payload[0].value as number;
-                          return (
-                            <div className='rounded-lg border bg-background px-3 py-2 shadow-sm'>
-                              <p className='mb-1 text-[11px] font-medium text-muted-foreground'>
-                                {label}
-                              </p>
-                              <div className='flex items-center gap-2'>
-                                <span
-                                  className='h-2 w-2 rounded-full'
-                                  style={{
-                                    backgroundColor:
-                                      'lab(58.8635% 31.6645 115.942)',
-                                  }}
-                                />
-                                <span className='text-[11px] font-medium'>
-                                  Revenue
-                                </span>
-                                <span className='ml-auto text-[11px] font-semibold'>
-                                  {formatCurrency(value)}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        }}
-                      />
-                      <Bar
-                        dataKey='revenue'
-                        fill='lab(58.8635% 31.6645 115.942)'
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                  {stats.revenueChange > 0 ? (
+                    <Activity className='h-4 w-4 text-emerald-600' />
+                  ) : (
+                    <Activity className='h-4 w-4 text-red-600' />
+                  )}
+                  <div>
+                    <p
+                      className={`text-sm font-medium ${
+                        stats.revenueChange > 0
+                          ? 'text-emerald-600'
+                          : 'text-red-600'
+                      }`}
+                    >
+                      {stats.revenueChange > 0 ? '+' : ''}
+                      {stats.revenueChange.toFixed(1)}% from last month
+                    </p>
+                    <p className='text-xs text-muted-foreground'>
+                      Revenue {stats.revenueChange > 0 ? 'increased' : 'decreased'}
+                    </p>
+                  </div>
+                </div>
               )}
+              <Button
+                variant='outline'
+                className='w-full'
+                onClick={() => router.push('/dashboard/creator/wallet')}
+              >
+                <ArrowRight className='mr-2 h-4 w-4' />
+                View Wallet Details
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Event Performance Timeline Chart */}
         <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
           <CardHeader>
             <div className='flex items-center justify-between'>
@@ -735,9 +643,6 @@ export default function CreatorDashboardPage() {
                         axisLine={false}
                         tickMargin={10}
                         tick={{ fontSize: 11 }}
-                        angle={eventPeriod === 'day' ? -45 : 0}
-                        textAnchor={eventPeriod === 'day' ? 'end' : 'middle'}
-                        height={eventPeriod === 'day' ? 80 : 40}
                       />
                       <YAxis
                         tickLine={false}
@@ -746,43 +651,7 @@ export default function CreatorDashboardPage() {
                       />
                       <RechartsTooltip
                         cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
-                        content={({ active, payload, label }) => {
-                          if (!active || !payload || payload.length === 0)
-                            return null;
-                          return (
-                            <div className='rounded-lg border bg-background px-3 py-2 shadow-sm'>
-                              <p className='mb-2 text-[11px] font-medium text-muted-foreground'>
-                                {label}
-                              </p>
-                              <div className='space-y-1.5'>
-                                {payload.map((entry: any, index: number) => {
-                                  const config =
-                                    eventPerformanceChartConfig[
-                                      entry.dataKey as keyof typeof eventPerformanceChartConfig
-                                    ];
-                                  return (
-                                    <div
-                                      key={index}
-                                      className='flex items-center gap-2'
-                                    >
-                                      <span
-                                        className='h-2 w-2 rounded-full'
-                                        style={{ backgroundColor: entry.color }}
-                                      />
-                                      <span className='text-[11px] font-medium'>
-                                        {config?.label || entry.dataKey}
-                                      </span>
-                                      <span className='ml-auto text-[11px] font-semibold'>
-                                        {entry.value?.toLocaleString() ??
-                                          entry.value}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        }}
+                        content={<ChartTooltipContent />}
                       />
                       <Bar
                         dataKey='created'
@@ -806,6 +675,144 @@ export default function CreatorDashboardPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className='grid grid-cols-1 lg:grid-cols-5 gap-10'>
+        <DashboardSection
+          title='My Events'
+          icon={CalendarDays}
+          action={{
+            label: 'View all',
+            href: '/dashboard/creator/events',
+          }}
+          className='lg:col-span-3'
+          isEmpty={!isLoading && events.length === 0}
+          emptyState={{
+            icon: CalendarDays,
+            title: 'No events yet',
+            description: 'Get started by creating your first event',
+            action: {
+              label: 'Create Your First Event',
+              href: '/dashboard/creator/request/create',
+            },
+          }}
+        >
+          <Table>
+            <TableHeader>
+              <TableRow className='hover:bg-transparent border-b'>
+                <TableHead className='font-semibold w-[50%]'>Name</TableHead>
+                <TableHead className='font-semibold w-[25%]'>
+                  Start Date
+                </TableHead>
+                <TableHead className='font-semibold w-[25%]'>
+                  Status
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {events.slice(0, 5).map((event) => (
+                <TableRow
+                  key={event.id}
+                  className='hover:bg-muted/50 cursor-pointer transition-colors'
+                  onClick={() =>
+                    router.push(`/dashboard/creator/events/${event.id}`)
+                  }
+                >
+                  <TableCell className='font-medium'>
+                    <div className='flex flex-col gap-1 min-w-0 flex-1'>
+                      <span className='truncate font-medium'>
+                        {event.displayName || 'Untitled event'}
+                      </span>
+                      {event.location?.name && (
+                        <div className='flex items-center gap-1 min-w-0 max-w-[300px]'>
+                          <MapPin className='h-3 w-3 shrink-0 text-muted-foreground' />
+                          <span className='text-xs text-muted-foreground truncate'>
+                            {event.location.name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className='text-sm text-muted-foreground'>
+                    {event.startDate
+                      ? format(new Date(event.startDate), 'MMM dd, yyyy')
+                      : '-'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant='secondary' className='font-medium'>
+                      {event.status || 'DRAFT'}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DashboardSection>
+
+        <DashboardSection
+          title='Upcoming Events'
+          icon={Ticket}
+          action={{
+            label: 'View all',
+            href: '/dashboard/creator/events',
+          }}
+          className='lg:col-span-2'
+          isEmpty={!isLoading && upcomingEvents.length === 0}
+          emptyState={{
+            icon: Ticket,
+            title: 'No upcoming events',
+            description: 'Schedule events to see them here',
+          }}
+        >
+          {upcomingEvents.length === 0 ? (
+            <div className='flex items-center justify-center py-8'>
+              <p className='text-sm text-muted-foreground'>
+                No upcoming events.
+              </p>
+            </div>
+          ) : (
+            <div className='space-y-3'>
+              {upcomingEvents.map((event) => {
+                const startDate = event.startDate
+                  ? new Date(event.startDate)
+                  : new Date(event.createdAt);
+
+                return (
+                  <Link
+                    key={event.id}
+                    href={`/dashboard/creator/events/${event.id}`}
+                    className='block'
+                  >
+                    <div className='flex flex-col p-4 border-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all shadow-sm cursor-pointer hover:shadow-md'>
+                      <div className='flex items-start justify-between mb-2'>
+                        <div className='flex-1 min-w-0'>
+                          <p className='font-semibold text-sm truncate'>
+                            {event.displayName || 'Untitled event'}
+                          </p>
+                          {event.location?.name && (
+                            <p className='text-xs text-muted-foreground mt-0.5 truncate'>
+                              {event.location.name}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant='secondary' className='text-xs'>
+                          {event.status || 'DRAFT'}
+                        </Badge>
+                      </div>
+                      <div className='flex items-center justify-between'>
+                        <p className='text-xs text-muted-foreground flex items-center gap-1'>
+                          <CalendarDays className='h-3 w-3' />
+                          {format(startDate, 'MMM dd, yyyy')}
+                        </p>
+                        <ArrowRight className='h-4 w-4 text-muted-foreground' />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </DashboardSection>
       </div>
     </PageContainer>
   );
