@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Table,
@@ -70,8 +70,12 @@ import { formatCurrency } from '@/lib/utils';
 import LoadingCustom from '@/components/shared/LoadingCustom';
 import { IconFile, IconLocation, IconStar } from '@tabler/icons-react';
 
+type RevenuePeriod = 'day' | 'month' | 'year';
+
 export default function BusinessDashboardPage() {
   const router = useRouter();
+  const [locationRevenuePeriod, setLocationRevenuePeriod] =
+    useState<RevenuePeriod>('month');
 
   const { data: locationsData, isLoading: isLoadingLocations } = useMyLocations(
     1,
@@ -161,8 +165,27 @@ export default function BusinessDashboardPage() {
       return isSameMonth(bookingDate, subMonths(now, 1));
     });
 
+    // Revenue calculations
     const totalRevenue = bookings
       .filter((b) => b.status?.toUpperCase() === 'PAYMENT_RECEIVED')
+      .reduce((sum, b) => sum + parseFloat(b.amountToPay || '0'), 0);
+
+    // Available revenue (total revenue minus withdrawals)
+    // TODO: Replace with actual wallet balance when API is available
+    const totalWithdrawals = 0; // Mock data - replace with wallet withdrawal transactions
+    const availableRevenue = totalRevenue - totalWithdrawals;
+
+    // Pending revenue (bookings awaiting payment - not yet received)
+    const pendingRevenue = bookings
+      .filter(
+        (b) => {
+          const status = b.status?.toUpperCase();
+          return (
+            status === 'AWAITING_BUSINESS_PROCESSING' ||
+            status === 'APPROVED'
+          );
+        }
+      )
       .reduce((sum, b) => sum + parseFloat(b.amountToPay || '0'), 0);
 
     const thisMonthRevenue = thisMonthBookings
@@ -202,6 +225,9 @@ export default function BusinessDashboardPage() {
       recentBookings,
       bookingsChange,
       totalRevenue,
+      availableRevenue,
+      pendingRevenue,
+      totalWithdrawals,
       thisMonthRevenue,
       revenueChange,
       pendingBookings,
@@ -213,15 +239,37 @@ export default function BusinessDashboardPage() {
     };
   }, [locations, locationsMeta, bookings, bookingsMeta]);
 
-  const topLocationsForChart = useMemo(() => {
+  // Mock revenue data for top locations by period
+  // TODO: Replace with actual API data when available
+  const topRevenueLocations = useMemo(() => {
+    if (locations.length === 0) return [];
+
     return locations
-      .map((loc) => ({
-        name: loc.name || 'Location',
-        checkIns: parseInt(loc.totalCheckIns || '0'),
-      }))
-      .sort((a, b) => b.checkIns - a.checkIns)
+      .map((location) => {
+        // Generate consistent mock revenue based on location ID hash
+        const hash = location.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+        
+        // Base revenue ranges per period
+        const baseRevenuePerDay = {
+          day: (hash % 500000) + 50000, // 50k-550k per day
+          month: (hash % 15000000) + 1500000, // 1.5M-16.5M per month
+          year: (hash % 200000000) + 20000000, // 20M-220M per year
+        };
+
+        let revenue = baseRevenuePerDay[locationRevenuePeriod] || baseRevenuePerDay.month;
+        
+        // Add some variation for more realistic data
+        const variation = 0.85 + (hash % 30) / 100; // 0.85 to 1.15 multiplier
+        revenue = Math.floor(revenue * variation);
+
+        return {
+          name: location.name || 'Unnamed Location',
+          revenue,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
-  }, [locations]);
+  }, [locations, locationRevenuePeriod]);
 
   const recentLocations = locations.slice(0, 5);
   const recentBookingsList = bookings.slice(0, 3);
@@ -232,12 +280,11 @@ export default function BusinessDashboardPage() {
 
   const locationChartConfig: ChartConfig = {
     checkIns: {
-      label: 'Check-ins',
+      label: 'Revenue',
+      // Brand accent color for revenue bars (no gradient)
       color: 'lab(58.8635% 31.6645 115.942)',
     },
   };
-
-  const chartGradientId = 'checkInsGradient';
 
   return (
     <PageContainer>
@@ -318,20 +365,38 @@ export default function BusinessDashboardPage() {
               <div>
                 <CardTitle className='text-base flex items-center gap-2'>
                   <Activity className='h-4 w-4 text-primary' />
-                  Top Locations by Check-ins
+                  Top Locations by Revenue
                 </CardTitle>
                 <CardDescription className='mt-1'>
-                  Most popular locations this month
+                  Locations generating the most revenue
                 </CardDescription>
               </div>
-              <Button
-                variant='ghost'
-                size='sm'
-                onClick={() => router.push('/dashboard/business/locations')}
-              >
-                View All
-                <ArrowRight className='h-4 w-4 ml-2' />
-              </Button>
+              <div className='flex gap-1'>
+                <Button
+                  variant={locationRevenuePeriod === 'day' ? 'default' : 'outline'}
+                  size='sm'
+                  onClick={() => setLocationRevenuePeriod('day')}
+                  className='h-8 px-3 text-xs'
+                >
+                  Day
+                </Button>
+                <Button
+                  variant={locationRevenuePeriod === 'month' ? 'default' : 'outline'}
+                  size='sm'
+                  onClick={() => setLocationRevenuePeriod('month')}
+                  className='h-8 px-3 text-xs'
+                >
+                  Month
+                </Button>
+                <Button
+                  variant={locationRevenuePeriod === 'year' ? 'default' : 'outline'}
+                  size='sm'
+                  onClick={() => setLocationRevenuePeriod('year')}
+                  className='h-8 px-3 text-xs'
+                >
+                  Year
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -340,15 +405,14 @@ export default function BusinessDashboardPage() {
                 <div className='flex items-center justify-center h-full'>
                   <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
                 </div>
-              ) : topLocationsForChart.length === 0 ? (
+              ) : topRevenueLocations.length === 0 ? (
                 <div className='flex flex-col items-center justify-center h-full text-center'>
                   <Building2 className='h-12 w-12 text-muted-foreground/50 mb-3' />
                   <p className='text-sm text-muted-foreground font-medium'>
-                    No check-ins data yet
+                    No revenue data yet
                   </p>
                   <p className='text-xs text-muted-foreground mt-1'>
-                    Check-ins will appear here once customers visit your
-                    locations
+                    Revenue will appear once customers book your locations
                   </p>
                 </div>
               ) : (
@@ -357,27 +421,7 @@ export default function BusinessDashboardPage() {
                   className='h-full w-full'
                 >
                   <ResponsiveContainer width='100%' height='100%'>
-                    <BarChart data={topLocationsForChart}>
-                      <defs>
-                        <linearGradient
-                          id={chartGradientId}
-                          x1='0'
-                          y1='0'
-                          x2='0'
-                          y2='1'
-                        >
-                          <stop
-                            offset='0%'
-                            stopColor='lab(58.8635% 31.6645 115.942)'
-                            stopOpacity={1}
-                          />
-                          <stop
-                            offset='100%'
-                            stopColor='lab(58.8635% 31.6645 115.942)'
-                            stopOpacity={0.7}
-                          />
-                        </linearGradient>
-                      </defs>
+                    <BarChart data={topRevenueLocations}>
                       <CartesianGrid
                         strokeDasharray='3 3'
                         vertical={false}
@@ -387,12 +431,21 @@ export default function BusinessDashboardPage() {
                         dataKey='name'
                         tickLine={false}
                         axisLine={false}
-                        hide={true}
+                        tick={{ fontSize: 11 }}
+                        tickFormatter={(value: string) => {
+                          const maxLength = 15;
+                          return value.length > maxLength
+                            ? `${value.substring(0, maxLength)}...`
+                            : value;
+                        }}
                       />
                       <YAxis
                         tickLine={false}
                         axisLine={false}
                         tick={{ fontSize: 11 }}
+                        tickFormatter={(value: number) =>
+                          value.toLocaleString('en-US')
+                        }
                       />
                       <RechartsTooltip
                         cursor={{
@@ -402,8 +455,8 @@ export default function BusinessDashboardPage() {
                         content={<ChartTooltipContent />}
                       />
                       <Bar
-                        dataKey='checkIns'
-                        fill={`url(#${chartGradientId})`}
+                        dataKey='revenue'
+                        fill={locationChartConfig.checkIns.color}
                         radius={[4, 4, 0, 0]}
                       />
                     </BarChart>
@@ -435,50 +488,37 @@ export default function BusinessDashboardPage() {
               <div className='grid grid-cols-2 gap-4'>
                 <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
                   <p className='text-xs text-muted-foreground mb-1'>
-                    This Month
+                    Total Revenue
                   </p>
                   <p className='text-2xl font-bold text-emerald-600'>
-                    {formatCurrency(stats.thisMonthRevenue)}
-                  </p>
-                </div>
-                <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
-                  <p className='text-xs text-muted-foreground mb-1'>Total</p>
-                  <p className='text-2xl font-bold text-amber-600'>
                     {formatCurrency(stats.totalRevenue)}
                   </p>
                 </div>
-              </div>
-              {stats.revenueChange !== 0 && (
-                <div
-                  className={`flex items-center gap-2 p-3 rounded-lg ${
-                    stats.revenueChange > 0
-                      ? 'bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800'
-                      : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800'
-                  }`}
-                >
-                  {stats.revenueChange > 0 ? (
-                    <TrendingUp className='h-4 w-4 text-emerald-600' />
-                  ) : (
-                    <TrendingDown className='h-4 w-4 text-red-600' />
-                  )}
-                  <div>
-                    <p
-                      className={`text-sm font-medium ${
-                        stats.revenueChange > 0
-                          ? 'text-emerald-600'
-                          : 'text-red-600'
-                      }`}
-                    >
-                      {stats.revenueChange > 0 ? '+' : ''}
-                      {stats.revenueChange.toFixed(1)}% from last month
-                    </p>
-                    <p className='text-xs text-muted-foreground'>
-                      Revenue{' '}
-                      {stats.revenueChange > 0 ? 'increased' : 'decreased'}
-                    </p>
-                  </div>
+                <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
+                  <p className='text-xs text-muted-foreground mb-1'>
+                    Available Revenue
+                  </p>
+                  <p className='text-2xl font-bold text-blue-600'>
+                    {formatCurrency(stats.availableRevenue)}
+                  </p>
                 </div>
-              )}
+                <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
+                  <p className='text-xs text-muted-foreground mb-1'>
+                    Pending Revenue
+                  </p>
+                  <p className='text-2xl font-bold text-amber-600'>
+                    {formatCurrency(stats.pendingRevenue)}
+                  </p>
+                </div>
+                <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
+                  <p className='text-xs text-muted-foreground mb-1'>
+                    Total Withdraw
+                  </p>
+                  <p className='text-2xl font-bold text-purple-600'>
+                    {formatCurrency(stats.totalWithdrawals)}
+                  </p>
+                </div>
+              </div>
               <Button
                 variant='outline'
                 className='w-full'
@@ -495,7 +535,7 @@ export default function BusinessDashboardPage() {
       {/* Main Content Grid */}
       <div className='grid grid-cols-1 lg:grid-cols-5 gap-10'>
         <DashboardSection
-          title='My Locations'
+          title='Recent Locations'
           icon={Building2}
           action={{
             label: 'View all',
