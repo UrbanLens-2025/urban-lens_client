@@ -223,7 +223,6 @@ export default function VoucherDetailsPage({
                   <TableHeader className='bg-muted/40'>
                     <TableRow>
                       <TableHead>User</TableHead>
-                      <TableHead>Contact</TableHead>
                       <TableHead>Code</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Redeemed At</TableHead>
@@ -255,13 +254,6 @@ export default function VoucherDetailsPage({
                                 <div className='text-xs text-muted-foreground'>
                                   @{item.user.username}
                                 </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className='text-sm'>
-                              {item.user?.email || item.user?.phoneNumber || (
-                                <span className='text-muted-foreground'>—</span>
                               )}
                             </div>
                           </TableCell>
