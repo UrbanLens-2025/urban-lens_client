@@ -283,7 +283,7 @@ export default function BusinessWalletPage() {
   const lockedBalance = walletData
     ? parseFloat(walletData.lockedBalance || '0')
     : 0;
-  const availableBalance = totalBalance - lockedBalance;
+  const availableBalance = totalBalance;
   const currency = walletData?.currency || 'VND';
 
   // External
@@ -427,8 +427,8 @@ export default function BusinessWalletPage() {
       lastMonthDeposits > 0
         ? ((thisMonthDeposits - lastMonthDeposits) / lastMonthDeposits) * 100
         : thisMonthDeposits > 0
-        ? 100
-        : 0;
+          ? 100
+          : 0;
 
     const thisMonthEarnings = 0;
     const lastMonthEarnings = 0;
@@ -436,8 +436,8 @@ export default function BusinessWalletPage() {
       lastMonthEarnings > 0
         ? ((thisMonthEarnings - lastMonthEarnings) / lastMonthEarnings) * 100
         : thisMonthEarnings > 0
-        ? 100
-        : 0;
+          ? 100
+          : 0;
 
     return {
       totalDeposits,
@@ -741,10 +741,10 @@ export default function BusinessWalletPage() {
           <div className='flex items-center justify-between'>
             <div>
               <CardTitle className='text-base font-semibold text-muted-foreground mb-1'>
-                Total Balance
+                Available Balance
               </CardTitle>
               <div className='text-5xl font-bold text-foreground tracking-tight mt-2'>
-                {formatCurrency(totalBalance)}
+                {formatCurrency(availableBalance)}
               </div>
             </div>
             <div className='h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shadow-lg'>
@@ -755,17 +755,6 @@ export default function BusinessWalletPage() {
         <CardContent className='relative z-10 space-y-6'>
           {lockedBalance > 0 && (
             <div className='space-y-3 pt-4 border-t border-border/50'>
-              <div className='flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30'>
-                <div className='flex items-center gap-2'>
-                  <div className='h-2 w-2 rounded-full bg-green-500' />
-                  <span className='text-sm font-medium text-muted-foreground'>
-                    Available Balance
-                  </span>
-                </div>
-                <span className='font-bold text-lg text-foreground'>
-                  {formatCurrency(availableBalance)}
-                </span>
-              </div>
               <div className='flex items-center justify-between py-2 px-3 rounded-lg bg-amber-500/5 border border-amber-500/20'>
                 <div className='flex items-center gap-2'>
                   <div className='h-2 w-2 rounded-full bg-amber-500' />
@@ -975,8 +964,8 @@ export default function BusinessWalletPage() {
                           </p>
                           <p className='text-sm text-muted-foreground mt-1'>
                             {internalSearch ||
-                            internalTypeFilter !== 'all' ||
-                            internalStatusFilter !== 'all'
+                              internalTypeFilter !== 'all' ||
+                              internalStatusFilter !== 'all'
                               ? 'Try adjusting your filters'
                               : 'Your internal transactions will appear here'}
                           </p>
@@ -991,8 +980,8 @@ export default function BusinessWalletPage() {
                             mappedType === 'transfer_out'
                               ? 'Transfer to escrow'
                               : mappedType === 'transfer_in'
-                              ? 'Transfer from escrow'
-                              : 'Transfer';
+                                ? 'Transfer from escrow'
+                                : 'Transfer';
                           const statusText = mapStatus(t.status);
                           const amountNumber = parseFloat(t.amount);
                           return (
@@ -1033,11 +1022,10 @@ export default function BusinessWalletPage() {
                               </TableCell>
                               <TableCell className='text-right'>
                                 <span
-                                  className={`text-sm font-bold whitespace-nowrap ${
-                                    mappedType === 'transfer_out'
+                                  className={`text-sm font-bold whitespace-nowrap ${mappedType === 'transfer_out'
                                       ? 'text-orange-600'
                                       : 'text-green-600'
-                                  }`}
+                                    }`}
                                 >
                                   {getTransactionSign(mappedType)}
                                   {formatCurrency(amountNumber)}
@@ -1085,12 +1073,12 @@ export default function BusinessWalletPage() {
                             style={
                               isActive
                                 ? {
-                                    backgroundColor:
-                                      'lab(58.8635% 31.6645 115.942)',
-                                    borderColor:
-                                      'lab(58.8635% 31.6645 115.942)',
-                                    color: 'white',
-                                  }
+                                  backgroundColor:
+                                    'lab(58.8635% 31.6645 115.942)',
+                                  borderColor:
+                                    'lab(58.8635% 31.6645 115.942)',
+                                  color: 'white',
+                                }
                                 : {}
                             }
                           >
@@ -1210,8 +1198,8 @@ export default function BusinessWalletPage() {
                           </p>
                           <p className='text-sm text-muted-foreground mt-1'>
                             {externalSearch ||
-                            externalTypeFilter !== 'all' ||
-                            externalStatusFilter !== 'all'
+                              externalTypeFilter !== 'all' ||
+                              externalStatusFilter !== 'all'
                               ? 'Try adjusting your filters'
                               : 'Your external transactions will appear here'}
                           </p>
@@ -1224,7 +1212,7 @@ export default function BusinessWalletPage() {
                         const canCancel =
                           transaction.status.toUpperCase() === 'PENDING' ||
                           transaction.status.toUpperCase() ===
-                            'READY_FOR_PAYMENT';
+                          'READY_FOR_PAYMENT';
                         return (
                           <TableRow
                             key={transaction.id}
@@ -1263,11 +1251,10 @@ export default function BusinessWalletPage() {
                             </TableCell>
                             <TableCell className='text-right'>
                               <span
-                                className={`text-sm font-bold whitespace-nowrap ${
-                                  mappedTransaction.type === 'withdrawal'
+                                className={`text-sm font-bold whitespace-nowrap ${mappedTransaction.type === 'withdrawal'
                                     ? 'text-orange-600'
                                     : 'text-green-600'
-                                }`}
+                                  }`}
                               >
                                 {getTransactionSign(mappedTransaction.type)}
                                 {formatCurrency(mappedTransaction.amount)}
@@ -1309,7 +1296,7 @@ export default function BusinessWalletPage() {
                                       className='cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10'
                                     >
                                       {cancelWithdraw.isPending &&
-                                      transactionToCancel === transaction.id ? (
+                                        transactionToCancel === transaction.id ? (
                                         <>
                                           <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                                           Cancelling...
@@ -1366,12 +1353,12 @@ export default function BusinessWalletPage() {
                             style={
                               isActive
                                 ? {
-                                    backgroundColor:
-                                      'lab(58.8635% 31.6645 115.942)',
-                                    borderColor:
-                                      'lab(58.8635% 31.6645 115.942)',
-                                    color: 'white',
-                                  }
+                                  backgroundColor:
+                                    'lab(58.8635% 31.6645 115.942)',
+                                  borderColor:
+                                    'lab(58.8635% 31.6645 115.942)',
+                                  color: 'white',
+                                }
                                 : {}
                             }
                           >
