@@ -1226,7 +1226,7 @@ export enum ScheduledJobStatus {
 }
 
 export type ReportStatus = 'PENDING' | 'CLOSED';
-export type ReportTargetType = 'post' | 'event' | 'location';
+export type ReportTargetType = 'post' | 'event' | 'location' | 'booking';
 
 export enum PostReportResolutionActions {
   NO_ACTION_TAKEN = 'NO_ACTION_TAKEN',
@@ -1333,6 +1333,7 @@ export interface GetReportsParams {
   status?: ReportStatus;
   targetType?: ReportTargetType;
   targetId?: string;
+  denormSecondaryTargetId?: string;
 }
 
 export type ReportEntityType = 'post' | 'location' | 'event';

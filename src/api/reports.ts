@@ -49,6 +49,28 @@ export const processReportsTicketRefund = async (params: {
   );
 };
 
+export const processReportsIssueApology = async (params: {
+  reportIds: string[];
+  reason: string;
+}): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>(
+    "/v1/admin/report/process/issue-apology",
+    params
+  );
+};
+
+export const processReportBookingRefund = async (params: {
+  reportId: string;
+  reason: string;
+  refundPercentage: number;
+  shouldCancelBooking: boolean;
+}): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>(
+    "/v1/admin/report/process/booking-refund",
+    params
+  );
+};
+
 // Get all reports for admin
 export const getReports = async (
   params: GetReportsParams
@@ -78,6 +100,10 @@ export const getReports = async (
   if (params.targetId) {
     // API uses lowercase 'targetid' in filter
     queryParams['filter.targetid'] = `$eq:${params.targetId}`;
+  }
+
+  if (params.denormSecondaryTargetId) {
+    queryParams['filter.denormSecondaryTargetId'] = `$eq:${params.denormSecondaryTargetId}`;
   }
 
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<Report>>>(

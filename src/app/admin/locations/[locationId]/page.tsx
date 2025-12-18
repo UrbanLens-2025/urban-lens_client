@@ -1,12 +1,13 @@
 'use client';
 
-import { use, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { use, useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useLocationByIdForAdmin } from '@/hooks/admin/useLocationByIdForAdmin';
+import { ReportsPanel } from '@/components/admin/event/ReportsPanel';
+import { usePenaltiesByTarget } from '@/hooks/admin/usePenaltiesByTarget';
 import {
   ArrowLeft,
   Calendar,
-  CalendarDays,
   ImageIcon,
   Layers,
   Loader2,
@@ -20,12 +21,16 @@ import {
   ExternalLink,
   FileText,
   CheckCircle2,
+  Flag,
+  Gavel,
+  Receipt,
+  User,
   Users,
   Ruler,
-  AlertCircle,
   Eye,
   EyeOff,
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GoogleMapsPicker } from '@/components/shared/GoogleMapsPicker';
 import { Badge } from '@/components/ui/badge';
@@ -34,13 +39,22 @@ import { DisplayTags } from '@/components/shared/DisplayTags';
 import Link from 'next/link';
 import type React from 'react';
 import { ImageViewer } from '@/components/shared/ImageViewer';
-import { formatDate, formatShortDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LoadingCustom from '@/components/shared/LoadingCustom';
 import ErrorCustom from '@/components/shared/ErrorCustom';
 import Image from 'next/image';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 function InfoRow({
   label,
@@ -72,9 +86,49 @@ export default function AdminLocationDetailsPage({
 }) {
   const { locationId } = use(params);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState('');
   const [currentImageAlt, setCurrentImageAlt] = useState('');
+
+  type LocationDetailsTab =
+    | 'overview'
+    | 'media'
+    | 'reports'
+    | 'booking-reports'
+    | 'penalties';
+  const coerceTab = (tab: string | null): LocationDetailsTab => {
+    if (
+      tab === 'overview' ||
+      tab === 'media' ||
+      tab === 'reports' ||
+      tab === 'booking-reports' ||
+      tab === 'penalties'
+    ) {
+      return tab;
+    }
+    return 'overview';
+  };
+
+  const [activeTab, setActiveTab] = useState<LocationDetailsTab>(() =>
+    coerceTab(searchParams.get('tab'))
+  );
+
+  useEffect(() => {
+    setActiveTab(coerceTab(searchParams.get('tab')));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const handleTabChange = (nextTab: string) => {
+    const coerced = coerceTab(nextTab);
+    setActiveTab(coerced);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', coerced);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
 
   const handleImageClick = (src: string, alt: string) => {
     setCurrentImageSrc(src);
@@ -88,6 +142,9 @@ export default function AdminLocationDetailsPage({
     isError,
   } = useLocationByIdForAdmin(locationId);
   console.log('🚀 ~ AdminLocationDetailsPage ~ location:', location);
+
+  const { data: penaltiesData, isLoading: isLoadingPenalties } =
+    usePenaltiesByTarget(locationId, 'location');
 
   if (isLoading) {
     return <LoadingCustom />;
@@ -253,12 +310,48 @@ export default function AdminLocationDetailsPage({
         </Card>
       </div>
 
-      {/* Tabs for layout similar to admin event details */}
-      <Tabs defaultValue='overview' className='space-y-6'>
-        <TabsList>
-          <TabsTrigger value='overview'>Overview</TabsTrigger>
-          <TabsTrigger value='media'>Media</TabsTrigger>
-          <TabsTrigger value='reports'>Reports</TabsTrigger>
+      {/* Tabs for layout similar to admin event/post details */}
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className='flex flex-col gap-2 space-y-4'
+      >
+        <TabsList className='bg-transparent h-auto p-0 border-b border-border rounded-none flex gap-8'>
+          <TabsTrigger
+            value='overview'
+            className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2 data-[state=active]:text-foreground after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent data-[state=active]:after:bg-primary"
+          >
+            <FileText className='h-4 w-4' />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger
+            value='media'
+            className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2 data-[state=active]:text-foreground after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent data-[state=active]:after:bg-primary"
+          >
+            <ImageIcon className='h-4 w-4' />
+            Media
+          </TabsTrigger>
+          <TabsTrigger
+            value='reports'
+            className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2 data-[state=active]:text-foreground after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent data-[state=active]:after:bg-primary"
+          >
+            <Flag className='h-4 w-4' />
+            Location Reports
+          </TabsTrigger>
+          <TabsTrigger
+            value='booking-reports'
+            className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2 data-[state=active]:text-foreground after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent data-[state=active]:after:bg-primary"
+          >
+            <Receipt className='h-4 w-4' />
+            Booking Reports
+          </TabsTrigger>
+          <TabsTrigger
+            value='penalties'
+            className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2 data-[state=active]:text-foreground after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent data-[state=active]:after:bg-primary"
+          >
+            <Gavel className='h-4 w-4' />
+            Penalty History
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value='overview' className='space-y-6'>
@@ -341,9 +434,11 @@ export default function AdminLocationDetailsPage({
                   <CardContent className='space-y-4'>
                     <div className='flex items-start gap-4'>
                       {location.business.avatar && (
-                        <img
+                        <Image
                           src={location.business.avatar}
                           alt={location.business.name}
+                          width={64}
+                          height={64}
                           className='w-16 h-16 rounded-lg object-cover'
                         />
                       )}
@@ -604,7 +699,7 @@ export default function AdminLocationDetailsPage({
                   </CardHeader>
                   <CardContent>
                     <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
-                      {location.imageUrl.map((url, index) => (
+                      {location.imageUrl.map((url: string, index: number) => (
                         <div
                           key={index}
                           className='relative aspect-video rounded-lg overflow-hidden border cursor-pointer group hover:border-primary transition-all'
@@ -612,10 +707,12 @@ export default function AdminLocationDetailsPage({
                             handleImageClick(url, `Location Image ${index + 1}`)
                           }
                         >
-                          <img
+                          <Image
                             src={url || '/placeholder.svg'}
                             alt={`Location image ${index + 1}`}
-                            className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-200'
+                            fill
+                            className='object-cover group-hover:scale-105 transition-transform duration-200'
+                            sizes='(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw'
                           />
                           <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center'>
                             <ImageIcon className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity' />
@@ -631,6 +728,112 @@ export default function AdminLocationDetailsPage({
               )}
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value='reports'>
+          <ReportsPanel targetId={locationId} targetType='location' />
+        </TabsContent>
+
+        <TabsContent value='booking-reports'>
+          <ReportsPanel
+            targetId={locationId}
+            targetType='location'
+            reportQueryTargetType='booking'
+            reportQueryTargetId={null}
+            denormSecondaryTargetId={locationId}
+          />
+        </TabsContent>
+
+        <TabsContent value='penalties'>
+          <Card>
+            <CardHeader>
+              <CardTitle className='flex items-center gap-2'>
+                <Gavel className='h-5 w-5' />
+                Penalty History
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingPenalties ? (
+                <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                  Loading penalties...
+                </div>
+              ) : !penaltiesData || penaltiesData.length === 0 ? (
+                <p className='text-sm text-muted-foreground'>
+                  No penalties found for this location.
+                </p>
+              ) : (
+                <div className='overflow-hidden rounded-lg border'>
+                  <Table>
+                    <TableHeader className='bg-muted/40'>
+                      <TableRow>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead>Issued By</TableHead>
+                        <TableHead>Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {penaltiesData.map((penalty) => (
+                        <TableRow key={penalty.id} className='hover:bg-muted/20'>
+                          <TableCell>
+                            <Badge variant='outline' className='w-fit text-xs'>
+                              {penalty.penaltyAction.replace(/_/g, ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className='text-sm'>
+                            {penalty.reason || (
+                              <span className='text-muted-foreground italic'>
+                                No reason provided
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className='text-sm'>
+                            {penalty.createdBy ? (
+                              <div className='flex items-center gap-2'>
+                                {penalty.createdBy.avatarUrl ? (
+                                  <Avatar className='h-8 w-8'>
+                                    <AvatarImage
+                                      src={penalty.createdBy.avatarUrl}
+                                      alt={`${penalty.createdBy.firstName} ${penalty.createdBy.lastName}`}
+                                    />
+                                    <AvatarFallback>
+                                      {penalty.createdBy.firstName[0]}
+                                      {penalty.createdBy.lastName[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                ) : (
+                                  <div className='w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20'>
+                                    <User className='h-4 w-4 text-primary' />
+                                  </div>
+                                )}
+                                <div className='min-w-0'>
+                                  <div className='font-medium truncate'>
+                                    {penalty.createdBy.firstName}{' '}
+                                    {penalty.createdBy.lastName}
+                                  </div>
+                                  <div className='text-xs text-muted-foreground truncate'>
+                                    {penalty.createdBy.email}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className='text-muted-foreground italic'>
+                                Unknown
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className='text-sm text-muted-foreground'>
+                            {format(new Date(penalty.createdAt), 'PPpp')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -8,6 +8,8 @@ import {
   ChevronDown,
   CheckCircle2,
   Clock,
+  MessageSquare,
+  Receipt,
   Filter,
   Flag,
   ImageIcon,
@@ -60,17 +62,34 @@ import { useProcessReportsMalicious } from "@/hooks/admin/useProcessReportsMalic
 import { useBanPostPenalty } from "@/hooks/admin/useBanPostPenalty";
 import { useWarnUserPenalty } from "@/hooks/admin/useWarnUserPenalty";
 import { useProcessReportsTicketRefund } from "@/hooks/admin/useProcessReportsTicketRefund";
-import { Report, ReportStatus, ReportTargetType } from "@/types";
+import { useProcessReportsIssueApology } from "@/hooks/admin/useProcessReportsIssueApology";
+import { useProcessReportBookingRefund } from "@/hooks/admin/useProcessReportBookingRefund";
+import { Report, ReportEntityType, ReportStatus, ReportTargetType } from "@/types";
 import LoadingCustom from "@/components/shared/LoadingCustom";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useSuspendAccountPenalty } from "@/hooks/admin/useSuspendAccountPenalty";
+import { useBanAccountPenalty } from "@/hooks/admin/useBanAccountPenalty";
+import { useSuspendEventCreationPenalty } from "@/hooks/admin/useSuspendEventCreationPenalty";
+import { useForceCancelEventPenalty } from "@/hooks/admin/useForceCancelEventPenalty";
+import { useSuspendLocationBookingPenalty } from "@/hooks/admin/useSuspendLocationBookingPenalty";
+import { useSuspendLocationPenalty } from "@/hooks/admin/useSuspendLocationPenalty";
 
 type ReportsPanelProps = {
   targetId: string;
-  targetType: ReportTargetType;
+  targetType: ReportEntityType;
+  reportQueryTargetType?: ReportTargetType;
+  reportQueryTargetId?: string | null;
+  denormSecondaryTargetId?: string;
 };
 
-export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
+export function ReportsPanel({
+  targetId,
+  targetType,
+  reportQueryTargetType,
+  reportQueryTargetId,
+  denormSecondaryTargetId,
+}: ReportsPanelProps) {
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [expandedReasons, setExpandedReasons] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -82,15 +101,34 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
   const [isMaliciousModalOpen, setIsMaliciousModalOpen] = useState(false);
   const [isAddPenaltyModalOpen, setIsAddPenaltyModalOpen] = useState(false);
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
-  const [penaltyAction, setPenaltyAction] = useState<"ban_post" | "warn_user">(
+  const [isApologyModalOpen, setIsApologyModalOpen] = useState(false);
+  const [isBookingRefundModalOpen, setIsBookingRefundModalOpen] = useState(false);
+  const [penaltyAction, setPenaltyAction] = useState<
+    | "ban_post"
+    | "warn_user"
+    | "suspend_account"
+    | "ban_account"
+    | "suspend_event_creation"
+    | "force_cancel_event"
+    | "suspend_location_booking"
+    | "suspend_location"
+  >(
     targetType === "post" ? "ban_post" : "warn_user"
   );
   const [penaltyReason, setPenaltyReason] = useState("");
+  const [banAccountReason, setBanAccountReason] = useState("");
+  const [forceCancelEventReason, setForceCancelEventReason] = useState("");
+  const [suspensionReason, setSuspensionReason] = useState("");
+  const [suspendUntil, setSuspendUntil] = useState("");
   const [noActionReason, setNoActionReason] = useState("");
   const [maliciousReason, setMaliciousReason] = useState("");
+  const [apologyReason, setApologyReason] = useState("");
   const [refundReason, setRefundReason] = useState("");
   const [refundPercentage, setRefundPercentage] = useState<string>("0");
   const [shouldCancelTickets, setShouldCancelTickets] = useState<boolean>(true);
+  const [bookingRefundReason, setBookingRefundReason] = useState("");
+  const [bookingRefundPercentage, setBookingRefundPercentage] = useState<string>("0");
+  const [shouldCancelBooking, setShouldCancelBooking] = useState<boolean>(true);
 
   const {
     data: reportsData,
@@ -99,8 +137,9 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
   } = useReports({
     page: 1,
     limit: 100,
-    targetType,
-    targetId,
+    targetType: (reportQueryTargetType ?? targetType) as ReportTargetType,
+    targetId: reportQueryTargetId === undefined ? targetId : reportQueryTargetId ?? undefined,
+    denormSecondaryTargetId,
     sortBy: "createdAt:DESC",
     status: statusFilter,
   });
@@ -108,8 +147,27 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
   const { mutate: markFirstSeen } = useMarkReportFirstSeen();
   const { mutate: processNoAction, isPending: isProcessingNoAction } = useProcessReportsNoAction();
   const { mutate: processMalicious, isPending: isProcessingMalicious } = useProcessReportsMalicious();
+  const { mutate: processIssueApology, isPending: isProcessingApology } =
+    useProcessReportsIssueApology();
+  const { mutate: processBookingRefund, isPending: isProcessingBookingRefund } =
+    useProcessReportBookingRefund();
   const { mutate: banPostPenalty, isPending: isBanningPost } = useBanPostPenalty();
   const { mutate: warnUserPenalty, isPending: isWarningUser } = useWarnUserPenalty();
+  const { mutate: suspendAccountPenalty, isPending: isSuspendingAccount } =
+    useSuspendAccountPenalty();
+  const { mutate: banAccountPenalty, isPending: isBanningAccount } = useBanAccountPenalty();
+  const {
+    mutate: suspendEventCreationPenalty,
+    isPending: isSuspendingEventCreation,
+  } = useSuspendEventCreationPenalty();
+  const { mutate: forceCancelEventPenalty, isPending: isForceCancelingEvent } =
+    useForceCancelEventPenalty();
+  const {
+    mutate: suspendLocationBookingPenalty,
+    isPending: isSuspendingLocationBooking,
+  } = useSuspendLocationBookingPenalty();
+  const { mutate: suspendLocationPenalty, isPending: isSuspendingLocation } =
+    useSuspendLocationPenalty();
   const { mutate: processTicketRefund, isPending: isProcessingRefund } = useProcessReportsTicketRefund();
   const { user: currentUser } = useUser();
 
@@ -206,11 +264,25 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
                   <span>Mark as malicious</span>
                 </div>
               </SelectItem>
+              <SelectItem value="issue_apology" className="text-xs py-1.5">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-indigo-600" />
+                  <span>Send apology</span>
+                </div>
+              </SelectItem>
               {targetType === "event" && (
                 <SelectItem value="ticket_refund" className="text-xs py-1.5">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-sky-600" />
                     <span>Refund ticket</span>
+                  </div>
+                </SelectItem>
+              )}
+              {targetType === "location" && (
+                <SelectItem value="booking_refund" className="text-xs py-1.5">
+                  <div className="flex items-center gap-2">
+                    <Receipt className="h-4 w-4 text-sky-600" />
+                    <span>Refund booking</span>
                   </div>
                 </SelectItem>
               )}
@@ -223,8 +295,12 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
                 setIsConfirmModalOpen(true);
               } else if (resolutionAction === "malicious_report") {
                 setIsMaliciousModalOpen(true);
+              } else if (resolutionAction === "issue_apology") {
+                setIsApologyModalOpen(true);
               } else if (resolutionAction === "ticket_refund" && targetType === "event") {
                 setIsRefundModalOpen(true);
+              } else if (resolutionAction === "booking_refund" && targetType === "location") {
+                setIsBookingRefundModalOpen(true);
               }
             }}
             disabled={selectedReportIds.size === 0 || !resolutionAction}
@@ -334,6 +410,41 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
         }
       />
 
+      <BookingRefundDialog
+        open={isBookingRefundModalOpen}
+        onOpenChange={setIsBookingRefundModalOpen}
+        refundReason={bookingRefundReason}
+        refundPercentage={bookingRefundPercentage}
+        shouldCancelBooking={shouldCancelBooking}
+        onRefundReasonChange={setBookingRefundReason}
+        onRefundPercentageChange={setBookingRefundPercentage}
+        onShouldCancelBookingChange={setShouldCancelBooking}
+        isProcessingRefund={isProcessingBookingRefund}
+        selectedCount={selectedReportIds.size}
+        targetType={targetType}
+        onConfirm={(payload) => {
+          const reportId = Array.from(selectedReportIds)[0];
+          if (!reportId) return;
+          processBookingRefund(
+            {
+              reportId,
+              reason: payload.reason,
+              refundPercentage: payload.refundPercentage,
+              shouldCancelBooking: payload.shouldCancelBooking,
+            },
+            {
+              onSuccess: () => {
+                setIsBookingRefundModalOpen(false);
+                setBookingRefundReason("");
+                setBookingRefundPercentage("0");
+                setShouldCancelBooking(true);
+                setSelectedReportIds(new Set());
+              },
+            }
+          );
+        }}
+      />
+
       <Dialog open={isMaliciousModalOpen} onOpenChange={setIsMaliciousModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -388,6 +499,62 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isApologyModalOpen} onOpenChange={setIsApologyModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send apology</DialogTitle>
+            <DialogDescription>
+              Provide a reason to include with the apology for the selected reports.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Textarea
+              value={apologyReason}
+              onChange={(e) => setApologyReason(e.target.value)}
+              placeholder="Reason (required)"
+              rows={4}
+            />
+          </div>
+          <DialogFooter className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsApologyModalOpen(false)}
+              disabled={isProcessingApology}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                if (selectedReportIds.size === 0) {
+                  setIsApologyModalOpen(false);
+                  return;
+                }
+                const trimmedReason = apologyReason.trim();
+                if (!trimmedReason) return;
+                processIssueApology(
+                  {
+                    reportIds: Array.from(selectedReportIds),
+                    reason: trimmedReason,
+                  },
+                  {
+                    onSuccess: () => {
+                      setIsApologyModalOpen(false);
+                      setApologyReason("");
+                      setSelectedReportIds(new Set());
+                    },
+                  }
+                );
+              }}
+              disabled={isProcessingApology || !apologyReason.trim()}
+            >
+              {isProcessingApology ? "Sending..." : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AddPenaltyDialog
         open={isAddPenaltyModalOpen}
         onOpenChange={setIsAddPenaltyModalOpen}
@@ -395,8 +562,22 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
         onPenaltyActionChange={setPenaltyAction}
         penaltyReason={penaltyReason}
         onPenaltyReasonChange={setPenaltyReason}
+        banAccountReason={banAccountReason}
+        onBanAccountReasonChange={setBanAccountReason}
+        forceCancelEventReason={forceCancelEventReason}
+        onForceCancelEventReasonChange={setForceCancelEventReason}
+        suspensionReason={suspensionReason}
+        onSuspensionReasonChange={setSuspensionReason}
+        suspendUntil={suspendUntil}
+        onSuspendUntilChange={setSuspendUntil}
         isBanningPost={isBanningPost}
         isWarningUser={isWarningUser}
+        isSuspendingAccount={isSuspendingAccount}
+        isBanningAccount={isBanningAccount}
+        isSuspendingEventCreation={isSuspendingEventCreation}
+        isForceCancelingEvent={isForceCancelingEvent}
+        isSuspendingLocationBooking={isSuspendingLocationBooking}
+        isSuspendingLocation={isSuspendingLocation}
         targetType={targetType}
         selectedCount={selectedReportIds.size}
         onConfirm={(payload) => {
@@ -423,6 +604,92 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
               {
                 onSuccess: () => {
                   setPenaltyReason("");
+                  setIsAddPenaltyModalOpen(false);
+                },
+              }
+            );
+          } else if (payload.type === "suspend_account") {
+            suspendAccountPenalty(
+              {
+                targetEntityId: targetId,
+                suspendUntil: new Date(payload.suspendUntil).toISOString(),
+                suspensionReason: payload.suspensionReason,
+              },
+              {
+                onSuccess: () => {
+                  setSuspensionReason("");
+                  setSuspendUntil("");
+                  setIsAddPenaltyModalOpen(false);
+                },
+              }
+            );
+          } else if (payload.type === "ban_account") {
+            banAccountPenalty(
+              {
+                targetEntityId: targetId,
+                suspensionReason: payload.reason,
+              },
+              {
+                onSuccess: () => {
+                  setBanAccountReason("");
+                  setIsAddPenaltyModalOpen(false);
+                },
+              }
+            );
+          } else if (payload.type === "suspend_event_creation") {
+            suspendEventCreationPenalty(
+              {
+                targetEntityId: targetId,
+                suspendUntil: new Date(payload.suspendUntil).toISOString(),
+                suspensionReason: payload.suspensionReason,
+              },
+              {
+                onSuccess: () => {
+                  setSuspensionReason("");
+                  setSuspendUntil("");
+                  setIsAddPenaltyModalOpen(false);
+                },
+              }
+            );
+          } else if (payload.type === "force_cancel_event") {
+            forceCancelEventPenalty(
+              {
+                targetEntityId: targetId,
+                reason: payload.reason,
+              },
+              {
+                onSuccess: () => {
+                  setForceCancelEventReason("");
+                  setIsAddPenaltyModalOpen(false);
+                },
+              }
+            );
+          } else if (payload.type === "suspend_location_booking") {
+            suspendLocationBookingPenalty(
+              {
+                targetEntityId: targetId,
+                suspensionReason: payload.suspensionReason,
+                suspendedUntil: new Date(payload.suspendedUntil).toISOString(),
+              },
+              {
+                onSuccess: () => {
+                  setSuspensionReason("");
+                  setSuspendUntil("");
+                  setIsAddPenaltyModalOpen(false);
+                },
+              }
+            );
+          } else if (payload.type === "suspend_location") {
+            suspendLocationPenalty(
+              {
+                targetEntityId: targetId,
+                suspensionReason: payload.suspensionReason,
+                suspendedUntil: new Date(payload.suspendedUntil).toISOString(),
+              },
+              {
+                onSuccess: () => {
+                  setSuspensionReason("");
+                  setSuspendUntil("");
                   setIsAddPenaltyModalOpen(false);
                 },
               }
@@ -887,15 +1154,65 @@ export function ReportsPanel({ targetId, targetType }: ReportsPanelProps) {
 type AddPenaltyDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  penaltyAction: "ban_post" | "warn_user";
-  onPenaltyActionChange: (action: "ban_post" | "warn_user") => void;
+  penaltyAction:
+    | "ban_post"
+    | "warn_user"
+    | "suspend_account"
+    | "ban_account"
+    | "suspend_event_creation"
+    | "force_cancel_event"
+    | "suspend_location_booking"
+    | "suspend_location";
+  onPenaltyActionChange: (
+    action:
+      | "ban_post"
+      | "warn_user"
+      | "suspend_account"
+      | "ban_account"
+      | "suspend_event_creation"
+      | "force_cancel_event"
+      | "suspend_location_booking"
+      | "suspend_location"
+  ) => void;
   penaltyReason: string;
   onPenaltyReasonChange: (reason: string) => void;
+  banAccountReason: string;
+  onBanAccountReasonChange: (reason: string) => void;
+  forceCancelEventReason: string;
+  onForceCancelEventReasonChange: (reason: string) => void;
+  suspensionReason: string;
+  onSuspensionReasonChange: (reason: string) => void;
+  suspendUntil: string;
+  onSuspendUntilChange: (value: string) => void;
   isBanningPost: boolean;
   isWarningUser: boolean;
+  isSuspendingAccount: boolean;
+  isBanningAccount: boolean;
+  isSuspendingEventCreation: boolean;
+  isForceCancelingEvent: boolean;
+  isSuspendingLocationBooking: boolean;
+  isSuspendingLocation: boolean;
   targetType: ReportTargetType;
   selectedCount: number;
-  onConfirm: (payload: { type: "ban_post" | "warn_user"; reason: string }) => void;
+  onConfirm: (
+    payload:
+      | { type: "ban_post"; reason: string }
+      | { type: "warn_user"; reason: string }
+      | { type: "suspend_account"; suspendUntil: string; suspensionReason: string }
+      | { type: "ban_account"; reason: string }
+      | { type: "suspend_event_creation"; suspendUntil: string; suspensionReason: string }
+      | { type: "force_cancel_event"; reason: string }
+      | {
+          type: "suspend_location_booking";
+          suspendedUntil: string;
+          suspensionReason: string;
+        }
+      | {
+          type: "suspend_location";
+          suspendedUntil: string;
+          suspensionReason: string;
+        }
+  ) => void;
 };
 
 const AddPenaltyDialog = memo(function AddPenaltyDialog({
@@ -905,12 +1222,64 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
   onPenaltyActionChange,
   penaltyReason,
   onPenaltyReasonChange,
+  banAccountReason,
+  onBanAccountReasonChange,
+  forceCancelEventReason,
+  onForceCancelEventReasonChange,
+  suspensionReason,
+  onSuspensionReasonChange,
+  suspendUntil,
+  onSuspendUntilChange,
   isBanningPost,
   isWarningUser,
+  isSuspendingAccount,
+  isBanningAccount,
+  isSuspendingEventCreation,
+  isForceCancelingEvent,
+  isSuspendingLocationBooking,
+  isSuspendingLocation,
   targetType,
   selectedCount,
   onConfirm,
 }: AddPenaltyDialogProps) {
+  const suspendUntilInputRef = useRef<HTMLInputElement | null>(null);
+  const [suspendUntilMode, setSuspendUntilMode] = useState<"preset" | "custom">(
+    "preset"
+  );
+  const [selectedSuspendPreset, setSelectedSuspendPreset] = useState<
+    "3d" | "1w" | "1m" | "3m" | "custom" | null
+  >(null);
+
+  const formatToDateTimeLocal = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hour = String(date.getHours()).padStart(2, "0");
+    const minute = String(date.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hour}:${minute}`;
+  };
+
+  const applySuspendPreset = (preset: "3d" | "1w" | "1m" | "3m" | "custom") => {
+    setSelectedSuspendPreset(preset);
+    if (preset === "custom") {
+      setSuspendUntilMode("custom");
+      onSuspendUntilChange("");
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => suspendUntilInputRef.current?.focus())
+      );
+      return;
+    }
+
+    setSuspendUntilMode("preset");
+    const d = new Date();
+    if (preset === "3d") d.setDate(d.getDate() + 3);
+    if (preset === "1w") d.setDate(d.getDate() + 7);
+    if (preset === "1m") d.setMonth(d.getMonth() + 1);
+    if (preset === "3m") d.setMonth(d.getMonth() + 3);
+
+    onSuspendUntilChange(formatToDateTimeLocal(d));
+  };
+
   const isBanDisabled =
     targetType !== "post" ||
     penaltyAction !== "ban_post" ||
@@ -922,6 +1291,56 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
     penaltyAction !== "warn_user" ||
     !penaltyReason.trim() ||
     isWarningUser;
+
+  const suspendUntilMs = suspendUntil ? new Date(suspendUntil).getTime() : Number.NaN;
+  const isSuspendUntilInFuture =
+    Number.isFinite(suspendUntilMs) && suspendUntilMs > Date.now();
+
+  const isSuspendDisabled =
+    targetType !== "post" ||
+    penaltyAction !== "suspend_account" ||
+    !suspensionReason.trim() ||
+    !suspendUntil.trim() ||
+    !isSuspendUntilInFuture ||
+    isSuspendingAccount;
+
+  const isSuspendEventCreationDisabled =
+    targetType !== "event" ||
+    penaltyAction !== "suspend_event_creation" ||
+    !suspensionReason.trim() ||
+    !suspendUntil.trim() ||
+    !isSuspendUntilInFuture ||
+    isSuspendingEventCreation;
+
+  const isForceCancelEventDisabled =
+    targetType !== "event" ||
+    penaltyAction !== "force_cancel_event" ||
+    selectedCount === 0 ||
+    !forceCancelEventReason.trim() ||
+    isForceCancelingEvent;
+
+  const isSuspendLocationBookingDisabled =
+    targetType !== "location" ||
+    penaltyAction !== "suspend_location_booking" ||
+    !suspensionReason.trim() ||
+    !suspendUntil.trim() ||
+    !isSuspendUntilInFuture ||
+    isSuspendingLocationBooking;
+
+  const isSuspendLocationDisabled =
+    targetType !== "location" ||
+    penaltyAction !== "suspend_location" ||
+    !suspensionReason.trim() ||
+    !suspendUntil.trim() ||
+    !isSuspendUntilInFuture ||
+    isSuspendingLocation;
+
+  const isBanAccountDisabled =
+    targetType !== "post" ||
+    penaltyAction !== "ban_account" ||
+    !banAccountReason.trim() ||
+    selectedCount === 0 ||
+    isBanningAccount;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -944,7 +1363,19 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
           <div className="space-y-3">
             <Select
               value={penaltyAction}
-              onValueChange={(val) => onPenaltyActionChange(val as "ban_post" | "warn_user")}
+              onValueChange={(val) =>
+                onPenaltyActionChange(
+                  val as
+                    | "ban_post"
+                    | "warn_user"
+                    | "suspend_account"
+                    | "ban_account"
+                    | "suspend_event_creation"
+                    | "force_cancel_event"
+                    | "suspend_location_booking"
+                    | "suspend_location"
+                )
+              }
             >
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder="Select a penalty action" />
@@ -958,6 +1389,36 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
                 <SelectItem value="warn_user" className="text-sm">
                   Send warning
                 </SelectItem>
+                {targetType === "post" && (
+                  <SelectItem value="suspend_account" className="text-sm">
+                    Suspend account
+                  </SelectItem>
+                )}
+                {targetType === "post" && (
+                  <SelectItem value="ban_account" className="text-sm">
+                    Ban account
+                  </SelectItem>
+                )}
+                {targetType === "event" && (
+                  <SelectItem value="suspend_event_creation" className="text-sm">
+                    Suspend event creation
+                  </SelectItem>
+                )}
+                {targetType === "event" && (
+                  <SelectItem value="force_cancel_event" className="text-sm">
+                    Force cancel event
+                  </SelectItem>
+                )}
+                {targetType === "location" && (
+                  <SelectItem value="suspend_location_booking" className="text-sm">
+                    Suspend booking ability
+                  </SelectItem>
+                )}
+                {targetType === "location" && (
+                  <SelectItem value="suspend_location" className="text-sm">
+                    Suspend location
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
 
@@ -973,6 +1434,363 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
                 rows={4}
               />
             )}
+
+            {penaltyAction === "suspend_account" && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="suspension-reason" className="text-xs">
+                    Suspension reason
+                  </Label>
+                  <Textarea
+                    id="suspension-reason"
+                    value={suspensionReason}
+                    onChange={(e) => onSuspensionReasonChange(e.target.value)}
+                    placeholder="Enter the reason for suspension..."
+                    rows={4}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Suspend for</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "3d" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("3d")}
+                    >
+                      3 days
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "1w" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("1w")}
+                    >
+                      1 week
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "1m" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("1m")}
+                    >
+                      1 month
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "3m" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("3m")}
+                    >
+                      3 months
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "custom" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("custom")}
+                    >
+                      Custom
+                    </Button>
+                  </div>
+
+                  {suspendUntilMode === "custom" && (
+                    <div className="space-y-1 pt-1">
+                      <Label htmlFor="suspend-until" className="text-xs">
+                        Suspend until
+                      </Label>
+                      <Input
+                        id="suspend-until"
+                        type="datetime-local"
+                        value={suspendUntil}
+                        onChange={(e) => onSuspendUntilChange(e.target.value)}
+                        min={formatToDateTimeLocal(new Date())}
+                        className="h-11"
+                        ref={suspendUntilInputRef}
+                      />
+                      {Boolean(suspendUntil.trim()) && !isSuspendUntilInFuture && (
+                        <p className="text-[11px] text-destructive">
+                          Suspend until must be in the future.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {penaltyAction === "suspend_event_creation" && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="event-creation-suspension-reason" className="text-xs">
+                    Suspension reason
+                  </Label>
+                  <Textarea
+                    id="event-creation-suspension-reason"
+                    value={suspensionReason}
+                    onChange={(e) => onSuspensionReasonChange(e.target.value)}
+                    placeholder="Enter the reason for suspension..."
+                    rows={4}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Suspend for</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "3d" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("3d")}
+                    >
+                      3 days
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "1w" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("1w")}
+                    >
+                      1 week
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "1m" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("1m")}
+                    >
+                      1 month
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "3m" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("3m")}
+                    >
+                      3 months
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "custom" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("custom")}
+                    >
+                      Custom
+                    </Button>
+                  </div>
+
+                  {suspendUntilMode === "custom" && (
+                    <div className="space-y-1 pt-1">
+                      <Label
+                        htmlFor="event-creation-suspend-until"
+                        className="text-xs"
+                      >
+                        Suspend until
+                      </Label>
+                      <Input
+                        id="event-creation-suspend-until"
+                        type="datetime-local"
+                        value={suspendUntil}
+                        onChange={(e) => onSuspendUntilChange(e.target.value)}
+                        min={formatToDateTimeLocal(new Date())}
+                        className="h-11"
+                        ref={suspendUntilInputRef}
+                      />
+                      {Boolean(suspendUntil.trim()) && !isSuspendUntilInFuture && (
+                        <p className="text-[11px] text-destructive">
+                          Suspend until must be in the future.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {penaltyAction === "suspend_location_booking" && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="location-booking-suspension-reason" className="text-xs">
+                    Suspension reason
+                  </Label>
+                  <Textarea
+                    id="location-booking-suspension-reason"
+                    value={suspensionReason}
+                    onChange={(e) => onSuspensionReasonChange(e.target.value)}
+                    placeholder="Enter the reason for suspension..."
+                    rows={4}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Suspend for</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "3d" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("3d")}
+                    >
+                      3 days
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "1w" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("1w")}
+                    >
+                      1 week
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "1m" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("1m")}
+                    >
+                      1 month
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "3m" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("3m")}
+                    >
+                      3 months
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "custom" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("custom")}
+                    >
+                      Custom
+                    </Button>
+                  </div>
+
+                  {suspendUntilMode === "custom" && (
+                    <div className="space-y-1 pt-1">
+                      <Label htmlFor="location-booking-suspend-until" className="text-xs">
+                        Suspend until
+                      </Label>
+                      <Input
+                        id="location-booking-suspend-until"
+                        type="datetime-local"
+                        value={suspendUntil}
+                        onChange={(e) => onSuspendUntilChange(e.target.value)}
+                        min={formatToDateTimeLocal(new Date())}
+                        className="h-11"
+                        ref={suspendUntilInputRef}
+                      />
+                      {Boolean(suspendUntil.trim()) && !isSuspendUntilInFuture && (
+                        <p className="text-[11px] text-destructive">
+                          Suspend until must be in the future.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {penaltyAction === "suspend_location" && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="location-suspension-reason" className="text-xs">
+                    Suspension reason
+                  </Label>
+                  <Textarea
+                    id="location-suspension-reason"
+                    value={suspensionReason}
+                    onChange={(e) => onSuspensionReasonChange(e.target.value)}
+                    placeholder="Enter the reason for suspension..."
+                    rows={4}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Suspend for</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "3d" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("3d")}
+                    >
+                      3 days
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "1w" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("1w")}
+                    >
+                      1 week
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "1m" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("1m")}
+                    >
+                      1 month
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "3m" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("3m")}
+                    >
+                      3 months
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedSuspendPreset === "custom" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => applySuspendPreset("custom")}
+                    >
+                      Custom
+                    </Button>
+                  </div>
+
+                  {suspendUntilMode === "custom" && (
+                    <div className="space-y-1 pt-1">
+                      <Label htmlFor="location-suspend-until" className="text-xs">
+                        Suspend until
+                      </Label>
+                      <Input
+                        id="location-suspend-until"
+                        type="datetime-local"
+                        value={suspendUntil}
+                        onChange={(e) => onSuspendUntilChange(e.target.value)}
+                        min={formatToDateTimeLocal(new Date())}
+                        className="h-11"
+                        ref={suspendUntilInputRef}
+                      />
+                      {Boolean(suspendUntil.trim()) && !isSuspendUntilInFuture && (
+                        <p className="text-[11px] text-destructive">
+                          Suspend until must be in the future.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {penaltyAction === "ban_account" && (
+              <Textarea
+                value={banAccountReason}
+                onChange={(e) => onBanAccountReasonChange(e.target.value)}
+                placeholder="Add a brief ban reason for this account"
+                rows={4}
+              />
+            )}
+
+            {penaltyAction === "force_cancel_event" && (
+              <Textarea
+                value={forceCancelEventReason}
+                onChange={(e) => onForceCancelEventReasonChange(e.target.value)}
+                placeholder="Add a brief reason for cancelling this event"
+                rows={4}
+              />
+            )}
           </div>
         </div>
         <DialogFooter className="flex items-center justify-end gap-2">
@@ -981,7 +1799,23 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
           </Button>
           <Button
             size="sm"
-            disabled={penaltyAction === "ban_post" ? isBanDisabled : isWarningDisabled}
+            disabled={
+              penaltyAction === "ban_post"
+                ? isBanDisabled
+                : penaltyAction === "warn_user"
+                  ? isWarningDisabled
+                  : penaltyAction === "suspend_account"
+                    ? isSuspendDisabled
+                    : penaltyAction === "ban_account"
+                      ? isBanAccountDisabled
+                      : penaltyAction === "suspend_event_creation"
+                        ? isSuspendEventCreationDisabled
+                        : penaltyAction === "force_cancel_event"
+                          ? isForceCancelEventDisabled
+                          : penaltyAction === "suspend_location_booking"
+                            ? isSuspendLocationBookingDisabled
+                            : isSuspendLocationDisabled
+            }
             onClick={() => {
               if (penaltyAction === "ban_post") {
                 if (isBanDisabled) return;
@@ -991,6 +1825,52 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
               if (penaltyAction === "warn_user") {
                 if (isWarningDisabled) return;
                 onConfirm({ type: "warn_user", reason: penaltyReason.trim() });
+                return;
+              }
+              if (penaltyAction === "suspend_account") {
+                if (isSuspendDisabled) return;
+                onConfirm({
+                  type: "suspend_account",
+                  suspendUntil: suspendUntil.trim(),
+                  suspensionReason: suspensionReason.trim(),
+                });
+                return;
+              }
+              if (penaltyAction === "ban_account") {
+                if (isBanAccountDisabled) return;
+                onConfirm({ type: "ban_account", reason: banAccountReason.trim() });
+                return;
+              }
+              if (penaltyAction === "suspend_event_creation") {
+                if (isSuspendEventCreationDisabled) return;
+                onConfirm({
+                  type: "suspend_event_creation",
+                  suspendUntil: suspendUntil.trim(),
+                  suspensionReason: suspensionReason.trim(),
+                });
+                return;
+              }
+              if (penaltyAction === "force_cancel_event") {
+                if (isForceCancelEventDisabled) return;
+                onConfirm({ type: "force_cancel_event", reason: forceCancelEventReason.trim() });
+                return;
+              }
+              if (penaltyAction === "suspend_location_booking") {
+                if (isSuspendLocationBookingDisabled) return;
+                onConfirm({
+                  type: "suspend_location_booking",
+                  suspendedUntil: suspendUntil.trim(),
+                  suspensionReason: suspensionReason.trim(),
+                });
+                return;
+              }
+              if (penaltyAction === "suspend_location") {
+                if (isSuspendLocationDisabled) return;
+                onConfirm({
+                  type: "suspend_location",
+                  suspendedUntil: suspendUntil.trim(),
+                  suspensionReason: suspensionReason.trim(),
+                });
               }
             }}
           >
@@ -998,9 +1878,33 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
               ? isBanningPost
                 ? "Saving..."
                 : "Confirm"
-              : isWarningUser
-                ? "Sending..."
-                : "Send warning"}
+              : penaltyAction === "warn_user"
+                ? isWarningUser
+                  ? "Sending..."
+                  : "Send warning"
+                : penaltyAction === "suspend_account"
+                  ? isSuspendingAccount
+                    ? "Suspending..."
+                    : "Suspend account"
+                  : penaltyAction === "ban_account"
+                    ? isBanningAccount
+                      ? "Banning..."
+                      : "Ban account"
+                  : penaltyAction === "suspend_event_creation"
+                    ? isSuspendingEventCreation
+                      ? "Suspending..."
+                      : "Suspend event creation"
+                    : penaltyAction === "force_cancel_event"
+                      ? isForceCancelingEvent
+                        ? "Cancelling..."
+                        : "Force cancel event"
+                      : penaltyAction === "suspend_location_booking"
+                        ? isSuspendingLocationBooking
+                          ? "Suspending..."
+                          : "Suspend booking ability"
+                        : isSuspendingLocation
+                          ? "Suspending..."
+                          : "Suspend location"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1118,6 +2022,133 @@ const TicketRefundDialog = memo(function TicketRefundDialog({
                 reason: refundReason.trim(),
                 refundPercentage: parsedPercentage,
                 shouldCancelTickets,
+              });
+            }}
+          >
+            {isProcessingRefund ? "Submitting..." : "Confirm refund"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+});
+
+type BookingRefundDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  refundReason: string;
+  refundPercentage: string;
+  shouldCancelBooking: boolean;
+  onRefundReasonChange: (value: string) => void;
+  onRefundPercentageChange: (value: string) => void;
+  onShouldCancelBookingChange: (value: boolean) => void;
+  isProcessingRefund: boolean;
+  selectedCount: number;
+  targetType: ReportTargetType;
+  onConfirm: (payload: {
+    reason: string;
+    refundPercentage: number;
+    shouldCancelBooking: boolean;
+  }) => void;
+};
+
+const BookingRefundDialog = memo(function BookingRefundDialog({
+  open,
+  onOpenChange,
+  refundReason,
+  refundPercentage,
+  shouldCancelBooking,
+  onRefundReasonChange,
+  onRefundPercentageChange,
+  onShouldCancelBookingChange,
+  isProcessingRefund,
+  selectedCount,
+  targetType,
+  onConfirm,
+}: BookingRefundDialogProps) {
+  const parsedPercentage = Number(refundPercentage);
+  const isInvalidPercentage =
+    Number.isNaN(parsedPercentage) || parsedPercentage < 0 || parsedPercentage > 100;
+
+  const disabled =
+    targetType !== "location" ||
+    selectedCount !== 1 ||
+    isProcessingRefund ||
+    !refundReason.trim() ||
+    isInvalidPercentage;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Refund booking</DialogTitle>
+          <DialogDescription>
+            Submit a booking refund request for the selected report. Available for locations only.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Textarea
+            value={refundReason}
+            onChange={(e) => onRefundReasonChange(e.target.value)}
+            placeholder="Reason for refund (required)"
+            rows={4}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="booking-refund-percentage" className="text-xs">
+                Refund percentage
+              </Label>
+              <Input
+                id="booking-refund-percentage"
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={refundPercentage}
+                onChange={(e) => onRefundPercentageChange(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Enter a value between 0 and 100.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Cancel booking</Label>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="cancel-booking"
+                  checked={shouldCancelBooking}
+                  onCheckedChange={(checked) => onShouldCancelBookingChange(Boolean(checked))}
+                />
+                <Label htmlFor="cancel-booking" className="text-sm">
+                  Also cancel booking
+                </Label>
+              </div>
+            </div>
+          </div>
+          {targetType === "location" && selectedCount !== 1 && (
+            <p className="text-[11px] text-muted-foreground">
+              Select exactly 1 report to refund a booking.
+            </p>
+          )}
+        </div>
+        <DialogFooter className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            disabled={isProcessingRefund}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            disabled={disabled}
+            onClick={() => {
+              if (disabled) return;
+              onConfirm({
+                reason: refundReason.trim(),
+                refundPercentage: parsedPercentage,
+                shouldCancelBooking,
               });
             }}
           >
