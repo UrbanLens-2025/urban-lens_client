@@ -82,17 +82,11 @@ export function LocationTagsSelector({
       {helperText && (
         <p className='text-xs text-muted-foreground'>{helperText}</p>
       )}
-      <div
-        className={cn(
-          'space-y-3 rounded-lg border border-border/60 bg-muted/20 p-4',
-          error && 'border-destructive/60 bg-destructive/5'
-        )}
-      >
+      <div className='space-y-3'>
         <div className='flex items-center justify-between gap-2'>
-          <div className='flex flex-1 items-center gap-2 text-sm font-semibold'>
-            Location Categories
-            <span className='text-xs font-normal text-muted-foreground'>
-              ({filteredTags.length})
+          <div className='flex flex-1 items-center gap-2 text-sm text-muted-foreground'>
+            <span>
+              {filteredTags.length} categor{filteredTags.length === 1 ? 'y' : 'ies'} available
             </span>
           </div>
 
@@ -103,7 +97,12 @@ export function LocationTagsSelector({
               placeholder='Search tags...'
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              className='h-8 pl-7 text-xs'
+              className={cn(
+                'h-8 pl-7 text-xs border-2 transition-all',
+                error
+                  ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20'
+                  : 'border-primary/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+              )}
             />
             {searchTerm.length > 0 && (
               <button

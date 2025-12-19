@@ -129,89 +129,96 @@ export default function VoucherDetailsPage({
 
   const mainContent = (
     <>
-      <Card>
-        <CardContent>
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-8'>
-            {/* Col 1: Voucher Details */}
-            <section className='space-y-4 md:col-span-1'>
-              <h3 className='flex items-center gap-2 text-lg font-semibold'>
-                <Ticket className='h-5 w-5' />
-                <span>Voucher Details</span>
-              </h3>
-              <InfoRow label='Description' value={voucher.description} />
-              <div className='flex items-center gap-10 mt-6'>
-                <div className='flex flex-col'>
-                  <InfoRow
-                    label='Type'
-                    value={formatVoucherType(voucher.voucherType)}
-                    icon={Layers}
-                  />
-                  <InfoRow
-                    label='Quantity'
-                    value={voucher.maxQuantity}
-                    icon={Zap}
-                  />
-                </div>
-                <div className='flex flex-col'>
-                  <InfoRow
-                    label='Price'
-                    value={`${voucher.pricePoint} pts`}
-                    icon={Star}
-                  />
-                  <InfoRow
-                    label='Limit Redeem'
-                    value={voucher.userRedeemedLimit}
-                    icon={User}
-                  />
-                </div>
+      <Card className='border-primary/20 shadow-sm p-0 overflow-hidden'>
+        <div className='flex flex-col lg:flex-row'>
+          {/* Left: Voucher Image - Edge to Edge */}
+          <div className='flex-shrink-0 w-full lg:w-80'>
+            {voucher.imageUrl ? (
+              <img
+                src={voucher.imageUrl}
+                alt={voucher.title}
+                className='w-full h-full min-h-[400px] lg:min-h-full object-cover cursor-pointer hover:opacity-90 transition-opacity'
+                onClick={() => handleImageClick(voucher.imageUrl)}
+              />
+            ) : (
+              <div className='w-full h-full min-h-[400px] lg:min-h-full bg-muted flex items-center justify-center'>
+                <ImageIcon className='h-16 w-16 text-muted-foreground/50' />
               </div>
-            </section>
-
-            {/* Col 2: Duration */}
-            <section className='space-y-4 md:col-span-1'>
-              <h3 className='flex items-center gap-2 text-lg font-semibold'>
-                <CalendarDaysIcon className='h-5 w-5' />
-                <span>Duration</span>
-              </h3>
-              <div className='space-y-4'>
-                <InfoRow
-                  label='Start Date'
-                  value={formatDate(voucher.startDate)}
-                />
-                <InfoRow label='End Date' value={formatDate(voucher.endDate)} />
-              </div>
-            </section>
-
-            {/* Col 3: Voucher Image */}
-            {voucher.imageUrl && (
-              <section className='space-y-4 md:col-span-1'>
-                <h3 className='flex items-center gap-2 text-lg font-semibold'>
-                  <ImageIcon className='h-5 w-5' />
-                  <span>Voucher Image</span>
-                </h3>
-                <div>
-                  <img
-                    src={voucher.imageUrl}
-                    alt={voucher.title}
-                    className='w-full max-w-xs md:max-w-full h-auto object-cover rounded-md border p-2'
-                    onClick={() => handleImageClick(voucher.imageUrl)}
-                  />
-                </div>
-              </section>
             )}
           </div>
-        </CardContent>
+
+          {/* Right: Voucher Details */}
+          <div className='flex-1 p-6 space-y-6'>
+              {/* Voucher Name */}
+              <div>
+                <h2 className='text-2xl font-bold text-foreground mb-4'>{voucher.title}</h2>
+              </div>
+
+              {/* Description */}
+              <div>
+                <p className='text-base text-foreground leading-relaxed'>{voucher.description || 'No description provided'}</p>
+              </div>
+
+              {/* Voucher Config */}
+              <div className='pt-4 border-t border-primary/10'>
+                <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+                  <div className='space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/10'>
+                    <div className='flex items-center gap-2'>
+                      <Layers className='h-4 w-4 text-primary' />
+                      <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Type</span>
+                    </div>
+                    <p className='text-base font-semibold text-foreground'>{formatVoucherType(voucher.voucherType)}</p>
+                  </div>
+                  <div className='space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/10'>
+                    <div className='flex items-center gap-2'>
+                      <Zap className='h-4 w-4 text-primary' />
+                      <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Quantity</span>
+                    </div>
+                    <p className='text-base font-semibold text-foreground'>{voucher.maxQuantity}</p>
+                  </div>
+                  <div className='space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/10'>
+                    <div className='flex items-center gap-2'>
+                      <Star className='h-4 w-4 text-primary' />
+                      <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Price</span>
+                    </div>
+                    <p className='text-base font-semibold text-foreground'>{voucher.pricePoint} pts</p>
+                  </div>
+                  <div className='space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/10'>
+                    <div className='flex items-center gap-2'>
+                      <User className='h-4 w-4 text-primary' />
+                      <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Limit per Person</span>
+                    </div>
+                    <p className='text-base font-semibold text-foreground'>{voucher.userRedeemedLimit}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div className='pt-4 border-t border-primary/10'>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div className='p-3 rounded-lg bg-primary/5 border border-primary/10'>
+                    <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2'>Start Date</p>
+                    <p className='text-base font-semibold text-foreground'>{formatDate(voucher.startDate)}</p>
+                  </div>
+                  <div className='p-3 rounded-lg bg-primary/5 border border-primary/10'>
+                    <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2'>End Date</p>
+                    <p className='text-base font-semibold text-foreground'>{formatDate(voucher.endDate)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
+      <Card className='border-primary/20 shadow-sm p-0'>
+        <CardHeader className='border-b border-primary/10 px-6 pt-6 pb-4'>
+          <CardTitle className='flex items-center gap-2 text-primary'>
             <Clock className='h-5 w-5' />
             <span className='text-lg font-semibold'>Exchange History</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className='overflow-hidden rounded-lg border border-border/60'>
+        <CardContent className='px-6 pb-6'>
+          <div className='overflow-hidden rounded-lg border border-primary/20'>
             {isLoadingExchangeHistory ? (
               <div className='flex items-center justify-center py-8 text-muted-foreground gap-2'>
                 <Loader2 className='h-4 w-4 animate-spin' />

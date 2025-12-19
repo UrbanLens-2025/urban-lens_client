@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -163,7 +163,7 @@ const steps = [
     title: 'Basic Information',
     description: 'Tell us about your location',
     icon: CheckCircle2,
-    fields: ['name', 'description', 'tagIds'] as const,
+    fields: ['name', 'description', 'tagIds', 'locationImageUrls'] as const,
   },
   {
     id: 2,
@@ -177,7 +177,7 @@ const steps = [
     title: 'Documents',
     description: 'Upload photos and validation documents',
     icon: Image,
-    fields: ['locationImageUrls', 'locationValidationDocuments'] as const,
+    fields: ['locationValidationDocuments'] as const,
   },
   {
     id: 4,
@@ -195,6 +195,8 @@ export default function LocationForm({
   const [currentStep, setCurrentStep] = useState(0);
   const [addressFieldsEditable, setAddressFieldsEditable] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [isPhotosUploading, setIsPhotosUploading] = useState(false);
+  const [uploadingDocumentIndices, setUploadingDocumentIndices] = useState<Set<number>>(new Set());
   const { user, isLoading: isUserLoading } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -302,6 +304,98 @@ export default function LocationForm({
 
     return mapped;
   }, [tagCategories, selectedTagIds]);
+
+  // Check if step 1 is valid
+  const nameValue = watchedValues.name;
+  const descriptionValueForValidation = watchedValues.description;
+  const tagIdsValue = watchedValues.tagIds;
+  const locationImageUrlsValue = watchedValues.locationImageUrls;
+  const formErrors = form.formState.errors;
+
+  const isStep1Valid = useMemo(() => {
+    if (currentStep !== 0) return true;
+    
+    // Check name
+    if (!nameValue || nameValue.trim() === '') return false;
+    if (formErrors.name) return false;
+
+    // Check description
+    if (!descriptionValueForValidation || descriptionValueForValidation.trim() === '') return false;
+    if (formErrors.description) return false;
+
+    // Check tagIds (categories)
+    if (!tagIdsValue || tagIdsValue.length === 0) return false;
+    if (formErrors.tagIds) return false;
+
+    // Check locationImageUrls (photos)
+    if (!locationImageUrlsValue || locationImageUrlsValue.length === 0) return false;
+    if (formErrors.locationImageUrls) return false;
+
+    return true;
+  }, [currentStep, nameValue, descriptionValueForValidation, tagIdsValue, locationImageUrlsValue, formErrors]);
+
+  // Check if step 2 is valid
+  const addressLineValue = watchedValues.addressLine;
+  const latitudeValue = watchedValues.latitude;
+  const longitudeValue = watchedValues.longitude;
+
+  const isStep2Valid = useMemo(() => {
+    if (currentStep !== 1) return true;
+    
+    // Check addressLine
+    if (!addressLineValue || addressLineValue.trim() === '') return false;
+    if (formErrors.addressLine) return false;
+
+    // Check latitude - must be set and not 0
+    if (latitudeValue === undefined || latitudeValue === null || latitudeValue === 0) return false;
+    if (formErrors.latitude) return false;
+
+    // Check longitude - must be set and not 0
+    if (longitudeValue === undefined || longitudeValue === null || longitudeValue === 0) return false;
+    if (formErrors.longitude) return false;
+
+    return true;
+  }, [currentStep, addressLineValue, latitudeValue, longitudeValue, formErrors]);
+
+  // Check if step 3 is valid
+  const locationValidationDocumentsValue = watchedValues.locationValidationDocuments;
+  const isDocumentsUploading = uploadingDocumentIndices.size > 0;
+
+  const isStep3Valid = useMemo(() => {
+    if (currentStep !== 2) return true;
+    
+    // Check if at least one validation document has been added
+    if (!locationValidationDocumentsValue || locationValidationDocumentsValue.length === 0) return false;
+    
+    // Check if ALL documents have at least one image (no empty documents)
+    const allDocumentsHaveImages = locationValidationDocumentsValue.every(
+      (doc) => doc.documentImageUrls && doc.documentImageUrls.length > 0
+    );
+    if (!allDocumentsHaveImages) return false;
+    
+    if (formErrors.locationValidationDocuments) return false;
+
+    return true;
+  }, [currentStep, locationValidationDocumentsValue, formErrors]);
+
+  // Memoized callback factory for document upload tracking
+  const createDocumentUploadHandler = useCallback((index: number) => {
+    return (isUploading: boolean) => {
+      setUploadingDocumentIndices((prev) => {
+        const next = new Set(prev);
+        if (isUploading) {
+          next.add(index);
+        } else {
+          next.delete(index);
+        }
+        // Only update if the set actually changed
+        if (next.size === prev.size && Array.from(next).every((i) => prev.has(i))) {
+          return prev;
+        }
+        return next;
+      });
+    };
+  }, []);
 
   const handleNextStep = async () => {
     const fields = steps[currentStep].fields;
@@ -659,6 +753,27 @@ export default function LocationForm({
                     control={form.control}
                     render={({ field, fieldState }) => (
                       <FormItem>
+                        <div className='flex items-center gap-2 mb-2'>
+                          <FormLabel className='flex items-center gap-2 text-base font-semibold'>
+                            <div className='p-1 rounded-md bg-primary/10'>
+                              <TagIcon className='h-4 w-4 text-primary' />
+                            </div>
+                            Location Categories
+                            <span className='text-destructive'>*</span>
+                          </FormLabel>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className='h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors' />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className='max-w-xs'>
+                                Select one or more categories that best describe
+                                your location type. This helps event creators
+                                find your location more easily.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <FormControl>
                           <LocationTagsSelector
                             value={field.value}
@@ -686,8 +801,9 @@ export default function LocationForm({
                     <Image className='h-5 w-5 text-primary' />
                   </div>
                   <div>
-                    <CardTitle className='text-xl font-bold'>
+                    <CardTitle className='text-xl font-bold flex items-center gap-2'>
                       Location Photos
+                      <span className='text-destructive'>*</span>
                     </CardTitle>
                     <CardDescription className='text-sm mt-1'>
                       Showcase your location with high-quality images
@@ -705,6 +821,7 @@ export default function LocationForm({
                         <FileUpload
                           value={field.value}
                           onChange={field.onChange}
+                          onUploadingChange={setIsPhotosUploading}
                         />
                       </FormControl>
                       <div className='flex justify-between items-center mt-2'>
@@ -977,6 +1094,7 @@ export default function LocationForm({
                                                   onChange={
                                                     imagesField.onChange
                                                   }
+                                                  onUploadingChange={createDocumentUploadHandler(index)}
                                                 />
                                               </FormControl>
                                               <FormMessage />
@@ -1417,8 +1535,15 @@ export default function LocationForm({
                 <Button
                   type='button'
                   onClick={handleNextStep}
-                  disabled={isPending}
-                  className='h-12 px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg transition-all'
+                  disabled={
+                    isPending ||
+                    isPhotosUploading ||
+                    isDocumentsUploading ||
+                    (currentStep === 0 && !isStep1Valid) ||
+                    (currentStep === 1 && !isStep2Valid) ||
+                    (currentStep === 2 && !isStep3Valid)
+                  }
+                  className='h-12 px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed'
                 >
                   Next Step
                   <ArrowRight className='ml-2 h-4 w-4' />

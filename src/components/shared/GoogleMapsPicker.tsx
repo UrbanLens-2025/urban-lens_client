@@ -8,6 +8,8 @@ interface GoogleMapsPickerProps {
   position: { lat: string | number; lng: string | number } | null;
   radiusMeters?: number;
   center?: { lat: number; lng: number } | null;
+  readOnly?: boolean;
+  label?: string;
 }
 
 function MapController({ center, zoom, radiusMeters }: { center: { lat: number; lng: number } | null; zoom?: number; radiusMeters?: number }) {
@@ -45,6 +47,8 @@ export function GoogleMapsPicker({
   position,
   radiusMeters,
   center,
+  readOnly = false,
+  label,
 }: GoogleMapsPickerProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -94,15 +98,23 @@ export function GoogleMapsPicker({
     <Map
       defaultCenter={mapCenter}
       defaultZoom={15}
-      gestureHandling={"greedy"}
-      disableDefaultUI={false}
+      gestureHandling={readOnly ? "none" : "greedy"}
+      disableDefaultUI={readOnly}
       streetViewControl={false}
+      mapTypeControl={false}
+      fullscreenControl={false}
+      zoomControl={!readOnly}
+      panControl={false}
+      rotateControl={false}
+      scaleControl={false}
+      keyboardShortcuts={!readOnly}
+      draggable={!readOnly}
       mapId="your-map-id"
       restriction={{
         latLngBounds: vietnamBounds,
         strictBounds: false, // Allow slight panning outside bounds
       }}
-      onClick={(e) => {
+      onClick={readOnly ? undefined : (e) => {
         if (e.detail.latLng) {
           const { lat, lng } = e.detail.latLng;
           // Validate that clicked location is within Vietnam bounds
@@ -118,7 +130,20 @@ export function GoogleMapsPicker({
       }}
     >
       <MapController center={shouldCenter} zoom={zoomLevel} radiusMeters={radiusMeters} />
-      {numericPosition && <AdvancedMarker position={numericPosition} />}
+      {numericPosition && (
+        <AdvancedMarker position={numericPosition}>
+          <div className="flex flex-col items-center">
+            {label && (
+              <div className="mb-1 px-2 py-1 bg-background/95 backdrop-blur-sm rounded-md shadow-lg border text-xs font-medium text-foreground whitespace-nowrap">
+                {label}
+              </div>
+            )}
+            <div className="w-6 h-6 bg-primary rounded-full border-2 border-background shadow-lg flex items-center justify-center">
+              <div className="w-2 h-2 bg-background rounded-full" />
+            </div>
+          </div>
+        </AdvancedMarker>
+      )}
       {numericPosition && radiusMeters && radiusMeters > 0 && (
         <CircleOverlay center={numericPosition} radius={radiusMeters} />
       )}

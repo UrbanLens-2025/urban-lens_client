@@ -1,33 +1,31 @@
-'use client';
+"use client";
 
-import { use, useState, useEffect } from 'react';
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import { useLocationRequestById } from '@/hooks/locations/useLocationRequestById';
-import { useMyLocations } from '@/hooks/locations/useMyLocations';
+import { use, useState, useEffect } from "react";
+import React from "react";
+import { useRouter } from "next/navigation";
+import { useLocationRequestById } from "@/hooks/locations/useLocationRequestById";
+import { useMyLocations } from "@/hooks/locations/useMyLocations";
 import {
   Loader2,
   ArrowLeft,
-  Calendar,
   MapPin,
-  User,
-  FileText,
-  ImageIcon,
-  Layers,
   Phone,
   Mail,
   Building,
   Globe,
-  Tag,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { GoogleMapsPicker } from '@/components/shared/GoogleMapsPicker';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { cn, formatDocumentType } from '@/lib/utils';
-import { DisplayTags } from '@/components/shared/DisplayTags';
-import { ImageViewer } from '@/components/shared/ImageViewer';
-import { PageContainer, PageHeader } from '@/components/shared';
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  AlertCircle,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ImageViewer } from "@/components/shared/ImageViewer";
+import { PageContainer, PageHeader } from "@/components/shared";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { formatDocumentType } from "@/lib/utils";
 
 function InfoRow({
   label,
@@ -40,26 +38,16 @@ function InfoRow({
 }) {
   if (!value) return null;
   return (
-    <div className='flex gap-3'>
-      {Icon && (
-        <Icon className='h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5' />
-      )}
-      <div className='flex-1'>
-        <p className='text-sm font-semibold text-muted-foreground'>{label}</p>
-        <div className='text-base text-foreground'>{value}</div>
+    <div className="flex gap-3">
+      {Icon && <Icon className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-muted-foreground mb-0.5">
+          {label}
+        </p>
+        <div className="text-sm text-foreground">{value}</div>
       </div>
     </div>
   );
-}
-
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 export default function LocationRequestDetailsPage({
@@ -70,8 +58,13 @@ export default function LocationRequestDetailsPage({
   const { requestId } = use(params);
   const router = useRouter();
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [currentImageSrc, setCurrentImageSrc] = useState('');
-  const [currentImageAlt, setCurrentImageAlt] = useState('');
+  const [currentImageSrc, setCurrentImageSrc] = useState("");
+  const [currentImageAlt, setCurrentImageAlt] = useState("");
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [selectedDocument, setSelectedDocument] = useState<{
+    type: string;
+    images: string[];
+  } | null>(null);
 
   const handleImageClick = (src: string, alt: string) => {
     setCurrentImageSrc(src);
@@ -85,10 +78,26 @@ export default function LocationRequestDetailsPage({
     isError,
   } = useLocationRequestById(requestId);
 
+  const images = request?.locationImageUrls || [];
+
+  const nextImage = () => {
+    if (images.length > 0) {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (images.length > 0) {
+      setCurrentImageIndex(
+        (prev) => (prev - 1 + images.length) % images.length
+      );
+    }
+  };
+
   // If request is approved, try to find the corresponding location
-  const { data: locationsData } = useMyLocations(1, '');
+  const { data: locationsData } = useMyLocations(1, "");
   const approvedLocation =
-    request?.status === 'APPROVED'
+    request?.status === "APPROVED"
       ? locationsData?.data?.find(
           (loc) =>
             loc.name === request?.name &&
@@ -99,7 +108,7 @@ export default function LocationRequestDetailsPage({
 
   // Redirect to location detail if approved and location found
   useEffect(() => {
-    if (request?.status === 'APPROVED' && approvedLocation) {
+    if (request?.status === "APPROVED" && approvedLocation) {
       // Use replace with clean URL (no query parameters)
       router.replace(`/dashboard/business/locations/${approvedLocation.id}`, {
         scroll: false,
@@ -110,8 +119,8 @@ export default function LocationRequestDetailsPage({
   if (isLoadingRequest) {
     return (
       <PageContainer>
-        <div className='flex h-screen items-center justify-center'>
-          <Loader2 className='animate-spin' />
+        <div className="flex h-screen items-center justify-center">
+          <Loader2 className="animate-spin" />
         </div>
       </PageContainer>
     );
@@ -119,9 +128,9 @@ export default function LocationRequestDetailsPage({
   if (isError || !request) {
     return (
       <PageContainer>
-        <Card className='border-destructive/50'>
-          <CardContent className='pt-6'>
-            <div className='text-center py-20 text-red-500'>
+        <Card className="border-destructive/50">
+          <CardContent className="pt-6">
+            <div className="text-center py-20 text-red-500">
               Error loading request details.
             </div>
           </CardContent>
@@ -133,12 +142,12 @@ export default function LocationRequestDetailsPage({
   // If this request has already resulted in an approved location,
   // show a lightweight redirect state instead of the full detail UI
   // to avoid a flash before navigating to the location detail page.
-  if (request.status === 'APPROVED' && approvedLocation) {
+  if (request.status === "APPROVED" && approvedLocation) {
     return (
       <PageContainer>
-        <div className='flex h-screen flex-col items-center justify-center gap-3'>
-          <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
-          <p className='text-sm text-muted-foreground'>
+        <div className="flex h-screen flex-col items-center justify-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
             Opening your approved location details…
           </p>
         </div>
@@ -153,21 +162,41 @@ export default function LocationRequestDetailsPage({
 
   const getStatusBadge = () => {
     const statusConfig = {
-      'AWAITING_ADMIN_REVIEW': { label: 'Pending Review', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
-      'NEEDS_MORE_INFO': { label: 'Needs Info', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
-      'APPROVED': { label: 'Approved', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-      'REJECTED': { label: 'Rejected', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
-      'CANCELLED_BY_BUSINESS': { label: 'Cancelled', className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' },
-      'AUTO_VALIDATING': { label: 'Validating', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
+      AWAITING_ADMIN_REVIEW: {
+        label: "Pending Review",
+        className:
+          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+      },
+      NEEDS_MORE_INFO: {
+        label: "Needs Info",
+        className:
+          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+      },
+      APPROVED: {
+        label: "Approved",
+        className:
+          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+      },
+      REJECTED: {
+        label: "Rejected",
+        className:
+          "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+      },
+      CANCELLED_BY_BUSINESS: {
+        label: "Cancelled",
+        className:
+          "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+      },
+      AUTO_VALIDATING: {
+        label: "Validating",
+        className:
+          "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+      },
     };
 
     const config = statusConfig[request.status as keyof typeof statusConfig];
     if (config) {
-      return (
-        <Badge className={config.className}>
-          {config.label}
-        </Badge>
-      );
+      return <Badge className={config.className}>{config.label}</Badge>;
     }
     return <Badge>{request.status}</Badge>;
   };
@@ -176,351 +205,264 @@ export default function LocationRequestDetailsPage({
     <PageContainer>
       {/* Header */}
       <PageHeader
-        title={request.name}
+        title={"Location Request Details"}
+        description={getStatusBadge()}
         icon={MapPin}
         actions={
-          <div className='flex items-center gap-3'>
-            {getStatusBadge()}
-            <Button variant='outline' size='icon' onClick={() => router.push('/dashboard/business/location-requests')}>
-              <ArrowLeft className='h-4 w-4' />
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() =>
+                router.push("/dashboard/business/location-requests")
+              }
+            >
+              <ArrowLeft className="h-4 w-4" />
             </Button>
           </div>
         }
       />
 
-      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-        {/* Left Column */}
-        <div className='space-y-6'>
-          {/* Basic Information & Address - Consolidated */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <Layers className='h-5 w-5' />
-                Location Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              {/* Basic Info Section */}
-              <div className='space-y-4'>
-                <InfoRow label='Description' value={request.description} />
-                <InfoRow
-                  label='Radius'
-                  value={`${request.radiusMeters} meters`}
-                />
-              </div>
+      {/* Rejection Alert */}
+      {request.status === "REJECTED" && request.adminNotes && (
+        <div className="mt-6 rounded-lg bg-red-600 text-white p-6 shadow-lg border-2 border-red-700">
+          <div className="flex items-start gap-4">
+            <AlertCircle className="h-6 w-6 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-2">
+              <p className="text-base font-semibold">
+                Your report has been rejected by our admin for reason:{" "}
+                <span className="font-bold bg-red-700/50 px-2 py-1 rounded">
+                  {request.adminNotes}
+                </span>
+              </p>
+              <p className="text-sm text-red-100">
+                Please create another report.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
-              {/* Divider */}
-              <div className='border-t pt-4'>
-                <div className='flex items-center gap-2 mb-3'>
-                  <MapPin className='h-5 w-5 text-muted-foreground' />
-                  <p className='text-sm font-semibold text-muted-foreground'>
-                    Address & Location
-                  </p>
-                </div>
-                <div className='space-y-4'>
-                  <InfoRow
-                    label='Address'
-                    value={request.addressLine}
-                  />
-                  <div className='grid grid-cols-2 gap-4'>
-                    <InfoRow label='District' value={request.addressLevel1} />
-                    <InfoRow
-                      label='City/Province'
-                      value={request.addressLevel2}
-                    />
-                  </div>
-                  <div className='grid grid-cols-2 gap-4'>
-                    <InfoRow
-                      label='Latitude'
-                      value={
-                        typeof request.latitude === 'number'
-                          ? request.latitude.toFixed(8)
-                          : String(request.latitude || 'N/A')
+      <div className="">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - 2/3 width */}
+          <div className="lg:col-span-2">
+            <Card className="border-2 shadow-lg py-0">
+              <CardContent className="p-6 space-y-6">
+                {/* Image Carousel - At the top */}
+                {images.length > 0 && (
+                  <div className="relative w-full h-64 bg-muted rounded-xl overflow-hidden border-2 border-primary/20 shadow-md">
+                    <img
+                      src={images[currentImageIndex] || "/placeholder.svg"}
+                      alt={`${request.name} - Image ${currentImageIndex + 1}`}
+                      className="w-full h-full object-cover cursor-pointer transition-transform hover:scale-105"
+                      onClick={() =>
+                        handleImageClick(
+                          images[currentImageIndex],
+                          `${request.name} - Image ${currentImageIndex + 1}`
+                        )
                       }
                     />
-                    <InfoRow
-                      label='Longitude'
-                      value={
-                        typeof request.longitude === 'number'
-                          ? request.longitude.toFixed(8)
-                          : String(request.longitude || 'N/A')
-                      }
-                    />
+
+                    {/* Carousel Navigation */}
+                    {images.length > 1 && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={prevImage}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 bg-background/90 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground border-2 border-primary/30 shadow-lg transition-colors"
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={nextImage}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 bg-background/90 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground border-2 border-primary/30 shadow-lg transition-colors"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </Button>
+
+                        {/* Image Indicators */}
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                          {images.map((_, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setCurrentImageIndex(index)}
+                              className={`h-2 rounded-full transition-all ${
+                                index === currentImageIndex
+                                  ? "w-8 bg-primary shadow-md"
+                                  : "w-2 bg-background/60 hover:bg-primary/50"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
+                )}
+
+                {/* Location Name and Description */}
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <h1 className="text-3xl font-bold text-foreground">
+                      {request.name}
+                    </h1>
+                    <p
+                      className="text-sm text-muted-foreground flex-shrink-0"
+                      title={new Date(request.createdAt).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    >
+                      Created{" "}
+                      {Math.floor(
+                        (Date.now() - new Date(request.createdAt).getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      ) === 0
+                        ? "today"
+                        : Math.floor(
+                            (Date.now() -
+                              new Date(request.createdAt).getTime()) /
+                              (1000 * 60 * 60 * 24)
+                          ) === 1
+                        ? "1 day ago"
+                        : `${Math.floor(
+                            (Date.now() -
+                              new Date(request.createdAt).getTime()) /
+                              (1000 * 60 * 60 * 24)
+                          )} days ago`}
+                    </p>
+                  </div>
+                  {request.description && (
+                    <p className="text-base text-foreground leading-relaxed text-muted-foreground">
+                      {request.description}
+                    </p>
+                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Tags */}
-          {request.tags && request.tags.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className='flex items-center gap-2'>
-                  <Tag className='h-5 w-5' />
-                  Tags
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DisplayTags tags={request.tags} maxCount={4} />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Admin Notes */}
-          {request.adminNotes && (
-            <Card className='border-yellow-200 bg-yellow-50'>
-              <CardHeader>
-                <CardTitle className='text-yellow-900 flex items-center gap-2'>
-                  <FileText className='h-5 w-5' />
-                  Admin Notes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className='text-yellow-900'>{request.adminNotes}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Creator Information */}
-          {request.createdBy && (
-            <Card>
-              <CardHeader>
-                <CardTitle className='flex items-center gap-2'>
-                  <User className='h-5 w-5' />
-                  Creator Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                <InfoRow
-                  label='Name'
-                  value={`${request.createdBy.firstName} ${request.createdBy.lastName}`}
-                />
-                <InfoRow
-                  label='Email'
-                  value={request.createdBy.email}
-                  icon={Mail}
-                />
-                <InfoRow
-                  label='Phone Number'
-                  value={request.createdBy.phoneNumber}
-                  icon={Phone}
-                />
-                {request.createdBy.businessProfile && (
-                  <>
-                    <div className='border-t pt-4 mt-4'>
-                      <p className='font-semibold text-sm mb-3 flex items-center gap-2'>
-                        <Building className='h-4 w-4' />
-                        Business Information
-                      </p>
-                      <div className='space-y-3 ml-3'>
+                {/* Business Information */}
+                {request.createdBy?.businessProfile && (
+                  <div className="pt-4 mt-4 border-t">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {request.createdBy.businessProfile.name && (
                         <InfoRow
-                          label='Business Email'
+                          label="Business Name"
+                          value={request.createdBy.businessProfile.name}
+                          icon={Building}
+                        />
+                      )}
+                      {request.createdBy.businessProfile.email && (
+                        <InfoRow
+                          label="Email"
                           value={request.createdBy.businessProfile.email}
                           icon={Mail}
                         />
+                      )}
+                      {request.createdBy.businessProfile.phone && (
                         <InfoRow
-                          label='Business Phone'
+                          label="Phone"
                           value={request.createdBy.businessProfile.phone}
                           icon={Phone}
                         />
+                      )}
+                      {request.createdBy.businessProfile.website && (
                         <InfoRow
-                          label='Website'
+                          label="Website"
                           value={
-                            request.createdBy.businessProfile.website ? (
-                              <a
-                                href={request.createdBy.businessProfile.website}
-                                target='_blank'
-                                rel='noopener noreferrer'
-                                className='text-blue-600 hover:underline'
-                              >
-                                {request.createdBy.businessProfile.website}
-                              </a>
-                            ) : null
+                            <a
+                              href={request.createdBy.businessProfile.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              {request.createdBy.businessProfile.website}
+                            </a>
                           }
                           icon={Globe}
                         />
-                        <InfoRow
-                          label='Business Name'
-                          value={request.createdBy.businessProfile.name}
-                        />
-                        <InfoRow
-                          label='Address'
-                          value={request.createdBy.businessProfile.addressLine}
-                        />
-                        <InfoRow
-                          label='Description'
-                          value={request.createdBy.businessProfile.description}
-                        />
-                        <InfoRow
-                          label='License Type'
-                          value={request.createdBy.businessProfile.licenseType}
-                        />
-                        <InfoRow
-                          label='License Number'
-                          value={
-                            request.createdBy.businessProfile.licenseNumber
-                          }
-                        />
-                        <InfoRow
-                          label='License Expiration Date'
-                          value={
-                            request.createdBy.businessProfile
-                              .licenseExpirationDate
-                          }
-                        />
-                        <InfoRow
-                          label='Category'
-                          value={request.createdBy.businessProfile.category}
-                        />
-                        <InfoRow
-                          label='Status'
-                          value={
-                            <Badge
-                              className={
-                                request.createdBy.businessProfile.isActive
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
-                              }
-                            >
-                              {request.createdBy.businessProfile.isActive
-                                ? 'Active'
-                                : 'Inactive'}
-                            </Badge>
-                          }
-                        />
-                      </div>
+                      )}
                     </div>
-                  </>
+                  </div>
                 )}
               </CardContent>
             </Card>
-          )}
+          </div>
 
-          {/* Validation Documents */}
-          {request.locationValidationDocuments &&
-            request.locationValidationDocuments.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                    <FileText className='h-5 w-5' />
-                    Validation Documents
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className='space-y-6'>
-                  {request.locationValidationDocuments.map((doc, docIndex) => (
-                    <div
-                      key={docIndex}
-                      className='border-b pb-4 last:border-b-0'
-                    >
-                      <p className='font-semibold mb-3 text-sm'>
-                        {formatDocumentType(doc.documentType)}
+          {/* Right Column - 1/3 width */}
+          <div className="lg:col-span-1 space-y-6">
+            <Card className="sticky top-6 p-0 border-2 shadow-lg">
+              <div className="h-[350px] rounded-t-lg overflow-hidden border-b-2 border-primary/20">
+                <GoogleMapsPicker
+                  position={position}
+                  onPositionChange={() => {}}
+                  readOnly={true}
+                />
+              </div>
+              <div className="p-5 pt-0">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                    Address
+                  </p>
+                  <p className="text-sm text-foreground pl-5">
+                    {request.addressLine}, {request.addressLevel1},{" "}
+                    {request.addressLevel2}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Validation Documents Card */}
+            {request.locationValidationDocuments &&
+              request.locationValidationDocuments.length > 0 && (
+                <Card className="border-2 shadow-lg py-0">
+                  <CardContent className="p-5">
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                        <FileText className="h-3.5 w-3.5 text-primary" />
+                        Validation Documents
                       </p>
-                      <div className='flex flex-wrap gap-4'>
-                        {doc.documentImageUrls.map((url, imgIndex) => (
-                          <div key={imgIndex} className='flex flex-col gap-2'>
-                            <img
-                              src={url || '/placeholder.svg'}
-                              alt={`Document ${docIndex + 1} - Image ${
-                                imgIndex + 1
-                              }`}
+                      <div className="space-y-2">
+                        {request.locationValidationDocuments.map(
+                          (doc, index) => (
+                            <button
+                              key={index}
                               onClick={() =>
-                                handleImageClick(
-                                  url,
-                                  `Location ${imgIndex + 1}`
-                                )
+                                setSelectedDocument({
+                                  type: doc.documentType,
+                                  images: doc.documentImageUrls,
+                                })
                               }
-                              className='w-48 h-48 object-cover rounded-md border cursor-pointer'
-                            />
-                            <p className='text-xs text-muted-foreground'>
-                              Document {docIndex + 1} - Image {imgIndex + 1}
-                            </p>
-                          </div>
-                        ))}
+                              className="w-full text-left p-3 rounded-lg border hover:border-primary/40 hover:bg-primary/80 bg-primary transition-all flex items-center gap-3 cursor-pointer"
+                            >
+                              <div>
+                                <FileText className="size-7 text-primary-foreground" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-primary-foreground">
+                                  {formatDocumentType(doc.documentType)}
+                                </p>
+                                <p className="text-xs text-primary-foreground mt-0.5">
+                                  {doc.documentImageUrls.length} image
+                                  {doc.documentImageUrls.length !== 1
+                                    ? "s"
+                                    : ""}
+                                </p>
+                              </div>
+                            </button>
+                          )
+                        )}
                       </div>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-          {/* Metadata */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <Calendar className='h-5 w-5' />
-                Metadata
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <InfoRow
-                label='Created Date'
-                value={formatDate(request.createdAt)}
-              />
-              <InfoRow
-                label='Updated Date'
-                value={formatDate(request.updatedAt)}
-              />
-              {request.processedBy && (
-                <InfoRow
-                  label='Processed By'
-                  value={`${request.processedBy.firstName} ${request.processedBy.lastName}`}
-                  icon={User}
-                />
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column - Images and Map */}
-        <div className='space-y-6'>
-          {/* Location Images */}
-          {request.locationImageUrls &&
-            request.locationImageUrls.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                    <ImageIcon className='h-5 w-5' />
-                    Location Images
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'>
-                    {request.locationImageUrls.map((url, index) => (
-                      <div key={index} className='flex flex-col gap-2'>
-                        <img
-                          src={url || '/placeholder.svg'}
-                          alt={`Location ${index + 1}`}
-                          onClick={() =>
-                            handleImageClick(url, `Location ${index + 1}`)
-                          }
-                          className='w-full h-36 object-cover rounded-md border cursor-pointer'
-                        />
-                        <p className='text-xs text-muted-foreground text-center'>
-                          Image {index + 1}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-          {/* Map */}
-          <Card className='sticky top-6'>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                <MapPin className='h-5 w-5' />
-                Map
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='h-96 rounded-lg overflow-hidden'>
-              <GoogleMapsPicker
-                position={position}
-                onPositionChange={() => {}}
-              />
-            </CardContent>
-          </Card>
+          </div>
         </div>
       </div>
       <ImageViewer
@@ -529,6 +471,45 @@ export default function LocationRequestDetailsPage({
         open={isImageViewerOpen}
         onOpenChange={setIsImageViewerOpen}
       />
+      {/* Validation Documents Modal */}
+      <Dialog
+        open={selectedDocument !== null}
+        onOpenChange={(open) => !open && setSelectedDocument(null)}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogTitle>
+            {selectedDocument
+              ? formatDocumentType(selectedDocument.type)
+              : "Validation Documents"}
+          </DialogTitle>
+          {selectedDocument && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              {selectedDocument.images.map((url, index) => (
+                <div
+                  key={index}
+                  className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden cursor-pointer group"
+                  onClick={() =>
+                    handleImageClick(
+                      url,
+                      `${formatDocumentType(selectedDocument.type)} - Image ${
+                        index + 1
+                      }`
+                    )
+                  }
+                >
+                  <img
+                    src={url || "/placeholder.svg"}
+                    alt={`${formatDocumentType(
+                      selectedDocument.type
+                    )} - Image ${index + 1}`}
+                    className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

@@ -200,43 +200,6 @@ export default function ManageMissionsPage({
       .join(' ');
   };
 
-  const missionStats = useMemo(() => {
-    if (!missions.length) {
-      return {
-        total: 0,
-        active: 0,
-        scheduled: 0,
-        completed: 0,
-        totalReward: 0,
-      };
-    }
-
-    const now = new Date();
-    let active = 0;
-    let scheduled = 0;
-    let completed = 0;
-    const totalReward = missions.reduce(
-      (sum, mission) => sum + (mission.reward ?? 0),
-      0
-    );
-
-    missions.forEach((mission) => {
-      const start = new Date(mission.startDate);
-      const end = new Date(mission.endDate);
-      if (start > now) scheduled += 1;
-      else if (end < now) completed += 1;
-      else active += 1;
-    });
-
-    return {
-      total: meta?.totalItems ?? missions.length,
-      active,
-      scheduled,
-      completed,
-      totalReward,
-    };
-  }, [missions, meta]);
-
   const handleSort = (columnName: string) => {
     setSort((currentSort) => ({
       column: columnName,
@@ -373,7 +336,7 @@ export default function ManageMissionsPage({
               <Table>
                 <TableHeader className='bg-muted/40'>
                   <TableRow>
-                    <TableHead className='w-16'>#</TableHead>
+                    <TableHead className='w-max px-3 flex justify-center items-center'>#</TableHead>
                     <TableHead className='min-w-[220px]'>
                       <Button
                         variant='ghost'
@@ -424,7 +387,7 @@ export default function ManageMissionsPage({
                             {orderNumber}
                           </TableCell>
                           <TableCell>
-                            <div className='flex items-start gap-3 min-w-[300px] max-w-[500px]'>
+                            <div className='flex items-center gap-3 min-w-[300px] max-w-[500px]'>
                               {mission.imageUrls &&
                               mission.imageUrls.length > 0 ? (
                                 <div className='relative h-12 w-12 flex-shrink-0 rounded-md overflow-hidden border border-border'>
@@ -441,7 +404,7 @@ export default function ManageMissionsPage({
                                   <Rocket className='h-5 w-5 text-muted-foreground' />
                                 </div>
                               )}
-                              <div className='space-y-2 flex-1 min-w-0'>
+                              <div className='space-y-1 flex-1 min-w-0'>
                                 <div className='flex items-start gap-2'>
                                   <Link
                                     href={`/dashboard/business/locations/${mission.locationId}/missions/${mission.id}`}
@@ -449,12 +412,6 @@ export default function ManageMissionsPage({
                                   >
                                     {mission.title}
                                   </Link>
-                                  <Badge
-                                    variant='outline'
-                                    className='text-[10px] shrink-0'
-                                  >
-                                    {mission.metric}
-                                  </Badge>
                                 </div>
                                 {mission.description && (
                                   <p className='text-xs text-muted-foreground line-clamp-2 leading-relaxed'>

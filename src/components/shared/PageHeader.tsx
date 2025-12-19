@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface PageHeaderProps {
   title: string;
-  description?: string;
+  description?: string | ReactNode;
   icon?: LucideIcon;
   actions?: ReactNode;
   className?: string;
@@ -18,6 +18,7 @@ export function PageHeader({
   icon: Icon,
   actions,
   className,
+  ...props
 }: PageHeaderProps) {
   return (
     <div className={cn("flex items-start gap-4 pb-6 border-b-2 border-primary/20", className)}>

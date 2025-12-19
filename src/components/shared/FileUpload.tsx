@@ -19,12 +19,14 @@ interface FileUploadProps {
   value: string[];
   onChange: (urls: string[]) => void;
   disabled?: boolean;
+  onUploadingChange?: (isUploading: boolean) => void;
 }
 
 export function FileUpload({
   value,
   onChange,
   disabled = false,
+  onUploadingChange,
 }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [previews, setPreviews] = useState<string[]>(value || []);
@@ -34,6 +36,10 @@ export function FileUpload({
   useEffect(() => {
     setPreviews(value || []);
   }, [value]);
+
+  useEffect(() => {
+    onUploadingChange?.(isUploading);
+  }, [isUploading, onUploadingChange]);
 
   const onDrop = useCallback(
     async (acceptedFiles: FileWithPath[]) => {

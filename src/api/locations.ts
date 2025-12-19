@@ -294,6 +294,67 @@ export const getConflictingBookings = async (
   return data.data;
 };
 
+export interface LocationCheckIn {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  userProfileId: string;
+  userProfile: {
+    accountId: string;
+    account: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      phoneNumber: string;
+      role: string;
+      avatarUrl: string;
+      coverUrl: string;
+      hasOnboarded: boolean;
+      isLocked: boolean;
+    };
+    rank: string;
+    rankingPoint: number;
+    totalAchievements: number;
+    totalCheckIns: number;
+    totalBlogs: number;
+    totalReviews: number;
+    totalFollowers: number;
+    totalFollowing: number;
+    dob: string;
+    bio: string;
+  };
+  locationId: string;
+  latitudeAtCheckIn: number;
+  longitudeAtCheckIn: number;
+}
+
+export interface GetLocationCheckInsParams {
+  locationId: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+}
+
+export const getLocationCheckIns = async ({
+  locationId,
+  page = 1,
+  limit = 10,
+  sortBy = 'createdAt:DESC',
+}: GetLocationCheckInsParams): Promise<PaginatedData<LocationCheckIn>> => {
+  const params: any = {
+    page,
+    limit,
+    sortBy,
+    'filter.locationId': `$eq:${locationId}`,
+  };
+
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<LocationCheckIn>>
+  >('/v1/owner/locations/all-check-ins', { params });
+  return data.data;
+};
+
 export const approveLocationBooking = async (
   locationBookingId: string
 ): Promise<LocationBookingDetail> => {

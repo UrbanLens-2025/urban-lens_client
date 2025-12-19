@@ -330,17 +330,16 @@ export default function ManageVouchersPage({
               <Table>
                 <TableHeader className='bg-muted/40'>
                   <TableRow>
+                    <TableHead className='w-12 text-center'>#</TableHead>
                     <TableHead className='min-w-[220px]'>Voucher</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead>End Date</TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead>Effective Time</TableHead>
                     <TableHead>
                       <Button
                         variant='ghost'
                         className='px-0'
                         onClick={() => handleSort('pricePoint')}
                       >
-                        Price (pts) <SortIcon column='pricePoint' />
+                        Price <SortIcon column='pricePoint' />
                       </Button>
                     </TableHead>
                     <TableHead>Quantity</TableHead>
@@ -350,8 +349,13 @@ export default function ManageVouchersPage({
                 </TableHeader>
                 <TableBody>
                   {filteredVouchers.length > 0 ? (
-                    filteredVouchers.map((voucher) => (
+                    filteredVouchers.map((voucher, index) => {
+                      const rowNumber = ((page - 1) * (meta?.itemsPerPage || 10)) + index + 1;
+                      return (
                       <TableRow key={voucher.id} className='hover:bg-muted/20'>
+                        <TableCell className='text-center text-sm text-muted-foreground font-medium'>
+                          {rowNumber}
+                        </TableCell>
                         <TableCell className='space-y-1'>
                           <div className='flex items-start gap-3'>
                             {voucher.imageUrl ? (
@@ -385,22 +389,19 @@ export default function ManageVouchersPage({
                         <TableCell className='text-xs text-muted-foreground'>
                           <div className='flex items-center gap-2'>
                             <CalendarDays className='h-3 w-3 text-muted-foreground' />
-                            <span>{formatDate(voucher.startDate)}</span>
+                            <span>{formatDate(voucher.startDate)} - {formatDate(voucher.endDate)}</span>
                           </div>
-                        </TableCell>
-                        <TableCell className='text-xs text-muted-foreground'>
-                          <div className='flex items-center gap-2'>
-                            <CalendarDays className='h-3 w-3 text-muted-foreground' />
-                            <span>{formatDate(voucher.endDate)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant='outline' className='text-xs'>
-                            {getVoucherTypeLabel(voucher.voucherType)}
-                          </Badge>
                         </TableCell>
                         <TableCell className='font-medium'>
-                          {voucher.pricePoint.toLocaleString()} pts
+                          {voucher.voucherType === 'public' || voucher.pricePoint === 0 ? (
+                            <Badge variant='outline' className='text-xs bg-emerald-50 text-emerald-700 border-emerald-200'>
+                              FREE
+                            </Badge>
+                          ) : (
+                            <Badge variant='outline' className='text-xs bg-primary/10 text-primary border-primary/20'>
+                              {voucher.pricePoint.toLocaleString()} pts
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className='font-medium'>
                           {voucher.maxQuantity.toLocaleString()}
@@ -435,10 +436,11 @@ export default function ManageVouchersPage({
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
+                      );
+                    })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={9} className='h-32'>
+                      <TableCell colSpan={8} className='h-32'>
                         <div className='flex flex-col items-center justify-center gap-2 py-6 text-center'>
                           <div className='text-base font-semibold'>
                             No vouchers match your filters

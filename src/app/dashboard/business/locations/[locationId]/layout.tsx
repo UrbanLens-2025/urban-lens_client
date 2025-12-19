@@ -30,12 +30,18 @@ import {
   Users,
   Ruler,
   MessageSquare,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import Link from 'next/link';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import ErrorCustom from '@/components/shared/ErrorCustom';
+  ChevronLeft,
+  ChevronRight,
+  MapPin as MapPinIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import Link from "next/link";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 function LocationDetailLayoutContent({
   locationId,
@@ -101,8 +107,9 @@ function LocationDetailLayoutContent({
   const announcementCreateTabOpenedRef = useRef(false);
 
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [currentImageSrc, setCurrentImageSrc] = useState('');
-  const [activeTab, setActiveTab] = useState('overview');
+  const [currentImageSrc, setCurrentImageSrc] = useState("");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const { data: location, isLoading, isError } = useLocationById(locationId);
 
@@ -233,25 +240,52 @@ function LocationDetailLayoutContent({
   const isEditLocationRoute =
     pathname === `/dashboard/business/locations/${locationId}/edit`;
 
-  // Memoize heroImage before conditional returns (Rules of Hooks)
-  const heroImage = useMemo(
-    () => location?.imageUrl?.[0] ?? '',
+  // Get all images for carousel
+  const images = useMemo(
+    () => location?.imageUrl ?? [],
     [location?.imageUrl]
   );
 
+  // Memoize heroImage before conditional returns (Rules of Hooks)
+  const heroImage = useMemo(
+    () => images[currentImageIndex] ?? "",
+    [images, currentImageIndex]
+  );
+
+  // Auto-advance carousel every 10 seconds
+  useEffect(() => {
+    if (images.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
+  }, [images.length]);
+
+  // Reset to first image when images change
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [images.length]);
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
   // Auto-open tabs based on routes
   useEffect(() => {
-    if (pathname.includes('/vouchers')) setActiveTab('vouchers');
-    else if (pathname.includes('/missions')) setActiveTab('missions');
-    else if (
-      pathname.includes('/availability') ||
-      pathname.includes('/booking-config')
-    )
-      setActiveTab('booking');
-    else if (pathname.includes('/announcements')) setActiveTab('announcements');
-    else if (pathname.includes('/posts')) setActiveTab('posts');
-    else if (pathname.includes('/edit')) setActiveTab('edit');
-    else setActiveTab('overview');
+    if (pathname.includes("/vouchers")) setActiveTab("vouchers");
+    else if (pathname.includes("/missions")) setActiveTab("missions");
+    else if (pathname.includes("/availability") || pathname.includes("/booking-config")) setActiveTab("booking");
+    else if (pathname.includes("/announcements")) setActiveTab("announcements");
+    else if (pathname.includes("/posts")) setActiveTab("posts");
+    else if (pathname.includes("/check-ins")) setActiveTab("check-ins");
+    else if (pathname.includes("/edit")) setActiveTab("edit");
+    else setActiveTab("overview");
   }, [pathname]);
 
   // Auto-open voucher create tab when on voucher create route
@@ -440,8 +474,46 @@ function LocationDetailLayoutContent({
             </div>
           </div>
         )}
-        <div className='absolute inset-0 bg-gradient-to-t from-background/80 via-background/40 to-transparent' />
-
+        <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/40 to-transparent" />
+        
+        {/* Carousel Navigation - Only show if multiple images */}
+        {images.length > 1 && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={prevImage}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 bg-background/80 backdrop-blur-sm hover:bg-background border shadow-lg"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={nextImage}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 bg-background/80 backdrop-blur-sm hover:bg-background border shadow-lg"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+            
+            {/* Image Indicators */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+              {images.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentImageIndex(index)}
+                  className={`h-2 rounded-full transition-all ${
+                    index === currentImageIndex
+                      ? "w-8 bg-background"
+                      : "w-2 bg-background/50 hover:bg-background/75"
+                  }`}
+                  aria-label={`Go to image ${index + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+        
         {/* Back Button - Overlay */}
         <div className='absolute top-4 left-4 z-10'>
           <Button
@@ -456,35 +528,24 @@ function LocationDetailLayoutContent({
       </div>
 
       {/* Main Content Container */}
-      <div className='space-y-8 p-6 -mt-20 relative z-10'>
+      <div className="space-y-8 p-6 -mt-24 relative z-10">
         {/* Header Section with Avatar and Key Info */}
         <div className='flex flex-col md:flex-row gap-6'>
           {/* Avatar */}
-          <div className='flex-shrink-0'>
-            <div className='relative'>
-              {heroImage ? (
-                <img
-                  src={heroImage}
-                  alt={location.name}
-                  className='w-32 h-32 md:w-40 md:h-40 rounded-2xl border-4 border-background shadow-lg object-cover cursor-pointer hover:opacity-90 transition-opacity'
-                  onClick={() => handleImageClick(heroImage)}
-                />
-              ) : (
-                <div className='w-32 h-32 md:w-40 md:h-40 rounded-2xl border-4 border-background shadow-lg bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center'>
-                  <ImageIcon className='h-12 w-12 text-muted-foreground/50' />
-                </div>
-              )}
+          <div className="flex-shrink-0">
+            <div className="relative">
+              <div className="size-48 rounded-2xl border-4 border-background shadow-lg bg-muted flex items-center justify-center">
+                <MapPin className="h-12 w-12 md:h-16 md:w-16 text-primary" />
+              </div>
             </div>
           </div>
 
           {/* Key Information */}
-          <div className='flex-1 space-y-4'>
-            <div className='flex flex-col md:flex-row md:items-start md:justify-between gap-4'>
-              <div className='flex-1 space-y-2'>
-                <div className='flex items-center gap-3 flex-wrap'>
-                  <h1 className='text-3xl md:text-4xl font-bold'>
-                    {location.name}
-                  </h1>
+          <div className="flex-1 space-y-4 mt-20">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-3xl md:text-4xl font-bold">{location.name}</h1>
                 </div>
 
                 {truncatedDescription && (
@@ -497,11 +558,10 @@ function LocationDetailLayoutContent({
                 <div className='space-y-2 pt-2 flex justify-between'>
                   <div className='flex flex-wrap items-center gap-3'>
                     {/* Address */}
-                    <div className='flex items-center gap-2 text-sm bg-muted/50 px-3 py-1.5 rounded-lg'>
-                      <MapPin className='h-4 w-4 text-muted-foreground flex-shrink-0' />
-                      <span className='font-medium whitespace-nowrap'>
-                        {location.addressLine}, {location.addressLevel1},{' '}
-                        {location.addressLevel2}
+                    <div className="flex items-center gap-2 text-sm bg-muted/50 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground">
+                      <MapPin className="h-4 w-4 text-primary-foreground flex-shrink-0" />
+                      <span className="font-medium whitespace-nowrap">
+                        {location.addressLine}, {location.addressLevel1}, {location.addressLevel2}
                       </span>
                     </div>
                   </div>
@@ -552,6 +612,20 @@ function LocationDetailLayoutContent({
               >
                 <Layers className='h-4 w-4' />
                 Overview
+              </Button>
+            </Link>
+            <Link href={`/dashboard/business/locations/${locationId}/check-ins`}>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "gap-2 rounded-b-none border-b-2 transition-colors",
+                  isActiveTab(`/dashboard/business/locations/${locationId}/check-ins`)
+                    ? "border-primary bg-muted"
+                    : "border-transparent hover:border-muted-foreground/50"
+                )}
+              >
+                <MapPinIcon className="h-4 w-4" />
+                Check Ins
               </Button>
             </Link>
             <Link href={`/dashboard/business/locations/${locationId}/vouchers`}>

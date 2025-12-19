@@ -44,7 +44,7 @@ import { PageContainer } from '@/components/shared/PageContainer';
 import { StatCard } from '@/components/shared/StatCard';
 
 const getStatusLabel = (isVisible: boolean) => {
-  return isVisible ? 'Visible' : 'Draft';
+  return isVisible ? 'Visible' : 'Hidden';
 };
 
 const getStatusIcon = (isVisible: boolean) => {
@@ -288,8 +288,6 @@ export default function MyLocationsPage() {
                       >
                         Address
                       </SortableTableHeader>
-                      <TableHead className='font-semibold'>Radius</TableHead>
-                      <TableHead className='font-semibold'>Tags</TableHead>
                       <SortableTableHeader
                         column='createdAt'
                         currentSort={sort}
@@ -372,6 +370,7 @@ export default function MyLocationsPage() {
                                     <span className='font-semibold text-foreground hover:text-primary transition-colors truncate'>
                                       {location.name}
                                     </span>
+                                    <span className='text-sm text-gray-500 truncate max-w-[200px]'>{location.description}</span>
                                   </div>
                                 </div>
                               </Link>
@@ -380,62 +379,18 @@ export default function MyLocationsPage() {
                               <div className='flex items-center gap-2 max-w-[200px]'>
                                 <MapPin className='h-4 w-4 text-muted-foreground flex-shrink-0' />
                                 <div className='flex flex-col min-w-0 gap-0.5'>
-                                  <span className='text-sm font-medium truncate'>
+                                  <span className='text-sm font-medium'>
                                     {location.addressLine || 'N/A'}
                                   </span>
-                                  <span className='text-xs text-muted-foreground truncate'>
+                                  <span className='text-xs text-muted-foreground'>
                                     {[
-                                      location.addressLevel2,
                                       location.addressLevel1,
+                                      location.addressLevel2,
                                     ]
                                       .filter(Boolean)
                                       .join(', ') || ''}
                                   </span>
                                 </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className='py-4'>
-                              <span className='text-sm font-medium'>
-                                {location.radiusMeters} m
-                              </span>
-                            </TableCell>
-                            <TableCell className='py-4'>
-                              <div className='flex items-center gap-1.5 flex-wrap'>
-                                {location.tags && location.tags.length > 0 ? (
-                                  <>
-                                    {visibleTags.map((tag, tagIndex) => (
-                                      <Badge
-                                        key={tag.id || tagIndex}
-                                        variant='secondary'
-                                        className='text-xs border-0 font-medium'
-                                        style={{
-                                          backgroundColor:
-                                            tag.color || 'hsl(var(--muted))',
-                                          color: '#fff',
-                                        }}
-                                      >
-                                        {tag.icon && (
-                                          <span className='mr-1'>
-                                            {tag.icon}
-                                          </span>
-                                        )}
-                                        {tag.displayName}
-                                      </Badge>
-                                    ))}
-                                    {remainingTagsCount > 0 && (
-                                      <Badge
-                                        variant='outline'
-                                        className='text-xs px-1.5 py-0.5 font-medium'
-                                      >
-                                        +{remainingTagsCount}
-                                      </Badge>
-                                    )}
-                                  </>
-                                ) : (
-                                  <span className='text-xs text-muted-foreground'>
-                                    No tags
-                                  </span>
-                                )}
                               </div>
                             </TableCell>
                             <TableCell className='py-4'>
