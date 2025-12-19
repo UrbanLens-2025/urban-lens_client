@@ -1362,3 +1362,28 @@ export interface ProcessReportPayload {
   resolutionAction: ReportResolutionActions; // Required: must be NO_ACTION_TAKEN, MALICIOUS_REPORT, or CANCEL_EVENT
   adminNotes?: string; // Optional notes field if API supports it
 }
+
+export type RevenuePeriod = 'day' | 'month' | 'year';
+
+export interface RevenueSummary {
+  totalRevenue: number;
+  available: number;
+  pending: number;
+  pendingWithdraw: number; 
+  totalBalance: number;    
+}
+
+export interface RevenueChartItem {
+  locationId: string;
+  name: string;
+  revenue: number;
+}
+
+export interface DashboardOverviewStats {
+  totalLocations: number;
+  approvedLocations: number; 
+  totalReviews: number;
+  totalCheckIns: number;
+  totalBookings: number;
+  recentBookingsCount: number; 
+}

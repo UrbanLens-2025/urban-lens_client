@@ -69,6 +69,7 @@ import {
 import { formatCurrency } from '@/lib/utils';
 import LoadingCustom from '@/components/shared/LoadingCustom';
 import { IconFile, IconLocation, IconStar } from '@tabler/icons-react';
+import { useRevenueSummary } from '@/hooks/dashboard/useDashboardOwner';
 
 type RevenuePeriod = 'day' | 'month' | 'year';
 
@@ -92,6 +93,8 @@ export default function BusinessDashboardPage() {
       limit: 500,
       sortBy: 'createdAt:DESC',
     });
+
+  const { data: revenueData } = useRevenueSummary();
 
   const locations = locationsData?.data || [];
   const locationsMeta = locationsData?.meta;
@@ -150,10 +153,10 @@ export default function BusinessDashboardPage() {
     const bookingsChange =
       previousPeriodBookings > 0
         ? ((recentBookings - previousPeriodBookings) / previousPeriodBookings) *
-          100
+        100
         : recentBookings > 0
-        ? 100
-        : 0;
+          ? 100
+          : 0;
 
     const thisMonthBookings = bookings.filter((booking) => {
       const bookingDate = new Date(booking.createdAt);
@@ -165,28 +168,12 @@ export default function BusinessDashboardPage() {
       return isSameMonth(bookingDate, subMonths(now, 1));
     });
 
-    // Revenue calculations
-    const totalRevenue = bookings
-      .filter((b) => b.status?.toUpperCase() === 'PAYMENT_RECEIVED')
-      .reduce((sum, b) => sum + parseFloat(b.amountToPay || '0'), 0);
+    const totalRevenue = revenueData?.totalRevenue || 0;
 
-    // Available revenue (total revenue minus withdrawals)
-    // TODO: Replace with actual wallet balance when API is available
-    const totalWithdrawals = 0; // Mock data - replace with wallet withdrawal transactions
-    const availableRevenue = totalRevenue - totalWithdrawals;
+    const totalWithdrawals = revenueData?.pendingWithdraw || 0;
+    const availableRevenue = revenueData?.available || 0;
 
-    // Pending revenue (bookings awaiting payment - not yet received)
-    const pendingRevenue = bookings
-      .filter(
-        (b) => {
-          const status = b.status?.toUpperCase();
-          return (
-            status === 'AWAITING_BUSINESS_PROCESSING' ||
-            status === 'APPROVED'
-          );
-        }
-      )
-      .reduce((sum, b) => sum + parseFloat(b.amountToPay || '0'), 0);
+    const pendingRevenue = revenueData?.pending || 0;
 
     const thisMonthRevenue = thisMonthBookings
       .filter((b) => b.status?.toUpperCase() === 'PAYMENT_RECEIVED')
@@ -200,8 +187,8 @@ export default function BusinessDashboardPage() {
       lastMonthRevenue > 0
         ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
         : thisMonthRevenue > 0
-        ? 100
-        : 0;
+          ? 100
+          : 0;
 
     const pendingBookings = bookings.filter(
       (b) => b.status?.toUpperCase() === 'AWAITING_BUSINESS_PROCESSING'
@@ -248,7 +235,7 @@ export default function BusinessDashboardPage() {
       .map((location) => {
         // Generate consistent mock revenue based on location ID hash
         const hash = location.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-        
+
         // Base revenue ranges per period
         const baseRevenuePerDay = {
           day: (hash % 500000) + 50000, // 50k-550k per day
@@ -257,7 +244,7 @@ export default function BusinessDashboardPage() {
         };
 
         let revenue = baseRevenuePerDay[locationRevenuePeriod] || baseRevenuePerDay.month;
-        
+
         // Add some variation for more realistic data
         const variation = 0.85 + (hash % 30) / 100; // 0.85 to 1.15 multiplier
         revenue = Math.floor(revenue * variation);
@@ -512,7 +499,7 @@ export default function BusinessDashboardPage() {
                 </div>
                 <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
                   <p className='text-xs text-muted-foreground mb-1'>
-                    Total Withdraw
+                    Pending Withdrawals
                   </p>
                   <p className='text-2xl font-bold text-purple-600'>
                     {formatCurrency(stats.totalWithdrawals)}

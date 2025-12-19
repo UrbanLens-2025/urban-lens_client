@@ -58,6 +58,7 @@ import {
   ChartConfig,
 } from '@/components/ui/chart';
 import { formatCurrency } from '@/lib/utils';
+import { useRevenueSummary } from '@/hooks/dashboard/useDashboardCreator';
 
 type PeriodType = 'day' | 'month' | 'year';
 
@@ -74,6 +75,9 @@ export default function CreatorDashboardPage() {
 
   const events = eventsData?.data || [];
   const meta = eventsData?.meta;
+
+  const { data: revenueData } = useRevenueSummary();
+  console.log(revenueData);
 
   const stats = useMemo(() => {
     const totalEvents = meta?.totalItems ?? 0;
@@ -95,14 +99,13 @@ export default function CreatorDashboardPage() {
 
     // Placeholder real metrics until attendance/revenue APIs are available
     // TODO: Replace with actual API data when available
-    const totalRevenue = 0;
-    const thisMonthRevenue = 0;
-    const revenueChange = 0;
+    const totalRevenue = revenueData?.totalRevenue || 0;
+    const thisMonthRevenue = revenueData?.thisMonthRevenue || 0;
+    const revenueChange = revenueData?.revenueChange || 0;
 
-    // Mock revenue metrics - TODO: Replace with actual API data
-    const totalWithdrawals = 0; // Mock data - replace with wallet withdrawal transactions
-    const availableRevenue = totalRevenue - totalWithdrawals;
-    const pendingRevenue = 0; // Mock data - pending ticket sales revenue
+    const totalWithdrawals = revenueData?.pendingWithdraw || 0;
+    const availableRevenue = revenueData?.available || 0;
+    const pendingRevenue = revenueData?.pending || 0;
 
     const thirtyDaysAgo = subDays(new Date(), 30);
     const recentEvents = events.filter((e) => {
@@ -213,76 +216,6 @@ export default function CreatorDashboardPage() {
     () => events.slice(0, 3),
     [events]
   );
-
-  // Mock revenue performance data based on selected period (structure matches business dashboard)
-  const revenueData = useMemo(() => {
-    const now = new Date();
-    const data: Array<{ period: string; revenue: number }> = [];
-
-    const baseRevenue = {
-      day: [
-        850000, 920000, 1100000, 780000, 1300000, 1450000, 980000, 1200000,
-        1350000, 1150000, 1050000, 1400000, 1250000, 950000, 1600000, 1100000,
-        1320000, 1480000, 1020000, 1380000, 1150000, 1260000, 1420000, 980000,
-        1550000, 1180000, 1340000, 1470000, 1080000, 1520000,
-      ],
-      month: [
-        8500000, 9200000, 11000000, 7800000, 13000000, 14500000, 9800000,
-        12000000, 13500000, 11500000, 10500000, 14000000,
-      ],
-      year: [125000000, 142000000, 158000000, 175000000, 198000000],
-    };
-
-    if (revenuePeriod === 'day') {
-      for (let i = 29; i >= 0; i--) {
-        const dayDate = subDays(now, i);
-        const dayOfWeek = dayDate.getDay();
-        const baseIndex = 29 - i;
-
-        let revenue = baseRevenue.day[baseIndex % baseRevenue.day.length];
-        if (dayOfWeek === 0 || dayOfWeek === 6) {
-          revenue = Math.floor(revenue * 0.7);
-        }
-
-        revenue = Math.floor(revenue * (0.85 + Math.random() * 0.3));
-
-        data.push({
-          period: format(dayDate, 'MMM dd'),
-          revenue,
-        });
-      }
-    } else if (revenuePeriod === 'month') {
-      for (let i = 11; i >= 0; i--) {
-        const monthDate = subMonths(now, i);
-        const baseIndex = 11 - i;
-        let revenue = baseRevenue.month[baseIndex % baseRevenue.month.length];
-
-        const growthFactor = 1 + (11 - i) * 0.03;
-        revenue = Math.floor(revenue * growthFactor);
-
-        revenue = Math.floor(revenue * (0.9 + Math.random() * 0.2));
-
-        data.push({
-          period: format(monthDate, 'MMM yyyy'),
-          revenue,
-        });
-      }
-    } else {
-      for (let i = 4; i >= 0; i--) {
-        const yearDate = subYears(now, i);
-        const baseIndex = 4 - i;
-        let revenue = baseRevenue.year[baseIndex];
-
-        revenue = Math.floor(revenue * (0.95 + Math.random() * 0.1));
-
-        data.push({
-          period: format(yearDate, 'yyyy'),
-          revenue,
-        });
-      }
-    }
-    return data;
-  }, [revenuePeriod]);
 
   // Calculate top events with mock performance data
   // TODO: Replace with actual API data when available
@@ -570,7 +503,7 @@ export default function CreatorDashboardPage() {
                 </div>
                 <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
                   <p className='text-xs text-muted-foreground mb-1'>
-                    Total Withdraw
+                    Pending Withdrawals
                   </p>
                   <p className='text-2xl font-bold text-purple-600'>
                     {formatCurrency(stats.totalWithdrawals)}
