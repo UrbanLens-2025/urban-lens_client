@@ -373,10 +373,13 @@ export default function LocationForm({
     );
     if (!allDocumentsHaveImages) return false;
     
+    // Check if any document is currently uploading
+    if (isDocumentsUploading) return false;
+    
     if (formErrors.locationValidationDocuments) return false;
 
     return true;
-  }, [currentStep, locationValidationDocumentsValue, formErrors]);
+  }, [currentStep, locationValidationDocumentsValue, formErrors, isDocumentsUploading]);
 
   // Memoized callback factory for document upload tracking
   const createDocumentUploadHandler = useCallback((index: number) => {
