@@ -832,6 +832,7 @@ export interface LocationBooking {
   bookingObject: string;
   status: string;
   amountToPay: string;
+  amountToReceive: string;
   dates: {
     startDateTime: string;
     endDateTime: string;
@@ -1370,8 +1371,8 @@ export interface RevenueSummary {
   totalRevenue: number;
   available: number;
   pending: number;
-  pendingWithdraw: number; 
-  totalBalance: number;    
+  pendingWithdraw: number;
+  totalBalance: number;
 }
 
 export interface RevenueChartItem {
@@ -1382,9 +1383,9 @@ export interface RevenueChartItem {
 
 export interface DashboardOverviewStats {
   totalLocations: number;
-  approvedLocations: number; 
+  approvedLocations: number;
   totalReviews: number;
   totalCheckIns: number;
   totalBookings: number;
-  recentBookingsCount: number; 
+  recentBookingsCount: number;
 }

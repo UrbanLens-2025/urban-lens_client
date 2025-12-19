@@ -20,8 +20,8 @@ interface ErrorCustomProps {
 }
 
 export function ErrorCustom({
-  title = 'Đã có lỗi xảy ra',
-  description = 'Có lỗi trong quá trình tải dữ liệu. Vui lòng thử lại sau.',
+  title = 'Something went wrong',
+  description = 'An error occurred while loading the data. Please try again later.',
   onRetry,
   fullScreen = true,
   className,
@@ -48,7 +48,7 @@ export function ErrorCustom({
           className='gap-2'
         >
           <RefreshCw className='h-4 w-4' />
-          Thử lại
+          Try again
         </Button>
       )}
     </div>

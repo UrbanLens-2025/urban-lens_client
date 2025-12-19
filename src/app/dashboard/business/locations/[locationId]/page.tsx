@@ -188,26 +188,6 @@ import { useAnnouncementById } from '@/hooks/announcements/useAnnouncementById';
 import { formatDateTime } from '@/lib/utils';
 import { useLocationTabs } from '@/contexts/LocationTabContext';
 import { X, CheckCircle } from 'lucide-react';
-import {
-  Bar,
-  BarChart,
-  Pie,
-  PieChart,
-  Cell,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  Legend,
-  LineChart,
-  Line,
-} from 'recharts';
-import {
-  ChartContainer,
-  ChartTooltipContent,
-  ChartConfig,
-} from '@/components/ui/chart';
 import { StatCard } from '@/components/shared/StatCard';
 
 // Helper function to format voucher type for display
@@ -6542,7 +6522,6 @@ function EditMissionForm({
   );
 }
 
-
 // Voucher Detail View Component
 function VoucherDetailView({
   voucherId,
@@ -7077,9 +7056,7 @@ function AnnouncementDetailView({
           <InfoRow
             label='End Date'
             value={
-              announcement.endDate
-                ? formatDateTime(announcement.endDate)
-                : '—'
+              announcement.endDate ? formatDateTime(announcement.endDate) : '—'
             }
           />
         </CardContent>
@@ -7174,8 +7151,7 @@ export default function LocationDetailsPage({
     { enabled: Boolean(locationId) }
   );
 
-  const totalAnnouncements =
-    announcementsOverviewData?.meta?.totalItems ?? 0;
+  const totalAnnouncements = announcementsOverviewData?.meta?.totalItems ?? 0;
 
   const {
     voucherCreateTab,
@@ -7377,15 +7353,15 @@ export default function LocationDetailsPage({
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-5'>
               {/* Row 1 */}
               <StatCard
-                title='Total Check-ins'
+                title='Check-ins'
                 value={totalCheckIns.toLocaleString()}
                 icon={Users}
-                color='red'
+                color='blue'
                 description='All time check-ins'
               />
 
               <StatCard
-                title='Total Revenue'
+                title='Revenue'
                 value={formatCurrencyOverview(revenueData.total)}
                 icon={DollarSign}
                 color='emerald'
@@ -7393,7 +7369,7 @@ export default function LocationDetailsPage({
               />
 
               <StatCard
-                title='Total Announcements'
+                title='Announcements'
                 value={totalAnnouncements}
                 icon={Megaphone}
                 color='amber'
@@ -7401,19 +7377,23 @@ export default function LocationDetailsPage({
               />
 
               <StatCard
-                title='Total Vouchers'
+                title='Vouchers'
                 value={allVouchers.length}
                 icon={Ticket}
                 color='orange'
-                description={`${allVouchers.filter((v: any) => v.status === 'ACTIVE').length} active`}
+                description={`${
+                  allVouchers.filter((v: any) => v.status === 'ACTIVE').length
+                } active`}
               />
 
               <StatCard
-                title='Total Missions'
+                title='Missions'
                 value={allMissions.length}
                 icon={Rocket}
                 color='purple'
-                description={`${allMissions.filter((m: any) => m.status === 'ACTIVE').length} active`}
+                description={`${
+                  allMissions.filter((m: any) => m.status === 'ACTIVE').length
+                } active`}
               />
             </div>
 

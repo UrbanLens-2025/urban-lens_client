@@ -283,36 +283,32 @@ export default function AdminWalletPage() {
   const totalItems = transactionsData?.meta.totalItems || 0;
 
   // Admin internal transactions per wallet (system & escrow)
-  const {
-    data: systemInternalData,
-    isLoading: isLoadingSystemInternal,
-  } = useAdminInternalWalletTransactions(
-    systemWallet
-      ? {
-          walletId: systemWallet.id,
-          page: 1,
-          limit: 5,
-          sortBy: 'createdAt:DESC',
-        }
-      : null
-  );
+  const { data: systemInternalData, isLoading: isLoadingSystemInternal } =
+    useAdminInternalWalletTransactions(
+      systemWallet
+        ? {
+            walletId: systemWallet.id,
+            page: 1,
+            limit: 5,
+            sortBy: 'createdAt:DESC',
+          }
+        : null
+    );
 
   const systemInternalTransactions: WalletTransaction[] =
     systemInternalData?.data || [];
 
-  const {
-    data: escrowInternalData,
-    isLoading: isLoadingEscrowInternal,
-  } = useAdminInternalWalletTransactions(
-    escrowWallet
-      ? {
-          walletId: escrowWallet.id,
-          page: 1,
-          limit: 5,
-          sortBy: 'createdAt:DESC',
-        }
-      : null
-  );
+  const { data: escrowInternalData, isLoading: isLoadingEscrowInternal } =
+    useAdminInternalWalletTransactions(
+      escrowWallet
+        ? {
+            walletId: escrowWallet.id,
+            page: 1,
+            limit: 5,
+            sortBy: 'createdAt:DESC',
+          }
+        : null
+    );
 
   const escrowInternalTransactions: WalletTransaction[] =
     escrowInternalData?.data || [];
@@ -429,13 +425,9 @@ export default function AdminWalletPage() {
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
     } else if (systemInternalSortBy === 'amount:DESC') {
-      data.sort(
-        (a, b) => parseFloat(b.amount) - parseFloat(a.amount)
-      );
+      data.sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
     } else if (systemInternalSortBy === 'amount:ASC') {
-      data.sort(
-        (a, b) => parseFloat(a.amount) - parseFloat(b.amount)
-      );
+      data.sort((a, b) => parseFloat(a.amount) - parseFloat(b.amount));
     }
 
     return data;
@@ -479,13 +471,9 @@ export default function AdminWalletPage() {
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
     } else if (escrowInternalSortBy === 'amount:DESC') {
-      data.sort(
-        (a, b) => parseFloat(b.amount) - parseFloat(a.amount)
-      );
+      data.sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
     } else if (escrowInternalSortBy === 'amount:ASC') {
-      data.sort(
-        (a, b) => parseFloat(a.amount) - parseFloat(b.amount)
-      );
+      data.sort((a, b) => parseFloat(a.amount) - parseFloat(b.amount));
     }
 
     return data;
@@ -537,7 +525,10 @@ export default function AdminWalletPage() {
             <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
               <StatCard
                 title='System wallet balance'
-                value={formatCurrency(systemWallet.balance, systemWallet.currency)}
+                value={formatCurrency(
+                  systemWallet.balance,
+                  systemWallet.currency
+                )}
                 icon={Wallet}
                 color='blue'
                 description='Available funds in the system wallet'
@@ -614,7 +605,9 @@ export default function AdminWalletPage() {
                       <SelectItem value='createdAt:DESC'>
                         Newest first
                       </SelectItem>
-                      <SelectItem value='createdAt:ASC'>Oldest first</SelectItem>
+                      <SelectItem value='createdAt:ASC'>
+                        Oldest first
+                      </SelectItem>
                       <SelectItem value='amount:DESC'>
                         Amount: high to low
                       </SelectItem>
@@ -691,7 +684,10 @@ export default function AdminWalletPage() {
             <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
               <StatCard
                 title='Escrow wallet balance'
-                value={formatCurrency(escrowWallet.balance, escrowWallet.currency)}
+                value={formatCurrency(
+                  escrowWallet.balance,
+                  escrowWallet.currency
+                )}
                 icon={Wallet}
                 color='green'
                 description='Funds held in escrow for bookings'
@@ -764,7 +760,9 @@ export default function AdminWalletPage() {
                       <SelectItem value='createdAt:DESC'>
                         Newest first
                       </SelectItem>
-                      <SelectItem value='createdAt:ASC'>Oldest first</SelectItem>
+                      <SelectItem value='createdAt:ASC'>
+                        Oldest first
+                      </SelectItem>
                       <SelectItem value='amount:DESC'>
                         Amount: high to low
                       </SelectItem>
@@ -793,7 +791,9 @@ export default function AdminWalletPage() {
                         <TableHead className='font-semibold'>ID</TableHead>
                         <TableHead className='font-semibold'>Type</TableHead>
                         <TableHead className='font-semibold'>Amount</TableHead>
-                        <TableHead className='font-semibold'>Reference</TableHead>
+                        <TableHead className='font-semibold'>
+                          Reference
+                        </TableHead>
                         <TableHead className='font-semibold'>Status</TableHead>
                         <TableHead className='font-semibold'>Date</TableHead>
                       </TableRow>
@@ -820,7 +820,9 @@ export default function AdminWalletPage() {
                               escrowWallet?.currency || 'VND'
                             )}
                           </TableCell>
-                          <TableCell>{t.note ? `${t.note.slice(0, 20)}...` : "-"}</TableCell>
+                          <TableCell>
+                            {t.note ? `${t.note.slice(0, 20)}...` : '-'}
+                          </TableCell>
                           <TableCell>{t.status}</TableCell>
                           <TableCell>{formatDateTime(t.createdAt)}</TableCell>
                         </TableRow>
@@ -834,10 +836,7 @@ export default function AdminWalletPage() {
         </TabsContent>
 
         {/* External Transactions Tab */}
-        <TabsContent
-          value='external-transactions'
-          className='space-y-6'
-        >
+        <TabsContent value='external-transactions' className='space-y-6'>
           {/* Stats Cards */}
           <div className='grid gap-4 md:grid-cols-4'>
             <StatCard

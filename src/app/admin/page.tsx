@@ -52,18 +52,19 @@ import {
 } from 'recharts';
 import { formatCurrency } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
-import { vi } from 'date-fns/locale';
 import { startOfYear, endOfYear } from 'date-fns';
 import Link from 'next/link';
 import {
   useDashboardAdmin,
   useUserAnalytics,
   useWalletAnalytics,
+  useEventsLocationsTotals,
 } from '@/hooks/admin/useDashboardAdmin';
-import { useReports } from '@/hooks/admin/useReports';
+import { useAllReports } from '@/hooks/admin/useDashboardAdmin';
 import { cn } from '@/lib/utils';
 import { IconBuilding, IconBuildingPlus, IconFlag } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
+import type { Report } from '@/types';
 
 // Mapping from API response title to card config
 const cardConfigMap: Record<
@@ -76,12 +77,12 @@ const cardConfigMap: Record<
     description: 'Total users',
   },
   Locations: {
-    title: 'Locations',
+    title: 'Visible Locations',
     icon: MapPin,
     description: 'Total locations',
   },
   Events: {
-    title: 'Events',
+    title: 'Upcoming Events',
     icon: CalendarIcon,
     description: 'Total events',
   },
@@ -134,30 +135,6 @@ const getCardColor = (title: string) => {
       };
   }
 };
-
-// Dữ liệu Locations vs Events
-const locationEventDataByMonth = [
-  { label: 'T1', locations: 60, events: 22 },
-  { label: 'T2', locations: 68, events: 28 },
-  { label: 'T3', locations: 75, events: 25 },
-  { label: 'T4', locations: 82, events: 31 },
-  { label: 'T5', locations: 90, events: 34 },
-  { label: 'T6', locations: 97, events: 40 },
-  { label: 'T7', locations: 105, events: 38 },
-  { label: 'T8', locations: 112, events: 42 },
-  { label: 'T9', locations: 118, events: 45 },
-  { label: 'T10', locations: 125, events: 48 },
-  { label: 'T11', locations: 132, events: 52 },
-  { label: 'T12', locations: 140, events: 55 },
-];
-
-const locationEventDataByYear = [
-  { label: '2020', locations: 320, events: 125 },
-  { label: '2021', locations: 485, events: 198 },
-  { label: '2022', locations: 680, events: 285 },
-  { label: '2023', locations: 920, events: 385 },
-  { label: '2024', locations: 1250, events: 520 },
-];
 
 export default function AdminDashboardPage() {
   // Filter state for summary cards
@@ -224,7 +201,7 @@ export default function AdminDashboardPage() {
     'day'
   );
   const [locationEventPeriod, setLocationEventPeriod] = useState<
-    'month' | 'year'
+    'day' | 'month' | 'year'
   >('month');
 
   const { data: userAnalyticsData, isLoading: isLoadingUserAnalytics } =
@@ -233,21 +210,30 @@ export default function AdminDashboardPage() {
   const { data: walletAnalyticsData, isLoading: isLoadingWalletAnalytics } =
     useWalletAnalytics(revenuePeriod);
 
+  const {
+    data: eventsLocationsTotalsData,
+    isLoading: isLoadingEventsLocationsTotals,
+  } = useEventsLocationsTotals(locationEventPeriod);
+
   // Fetch recent reports from API
-  const { data: reportsData, isLoading: isLoadingReports } = useReports({
-    page: 1,
-    limit: 3,
-    sortBy: 'createdAt:DESC',
-    status: 'PENDING',
-  });
+  const { data: allReportsData, isLoading: isLoadingReports } = useAllReports();
 
   // Map reports data from API to display format
   const recentReports = useMemo(() => {
-    if (!reportsData?.data) {
+    if (!allReportsData?.data || !Array.isArray(allReportsData.data)) {
       return [];
     }
 
-    return reportsData.data.map((report) => {
+    // Sort by createdAt DESC and take first 3
+    const sortedReports = [...allReportsData.data]
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      })
+      .slice(0, 3);
+
+    return sortedReports.map((report: Report) => {
       const reporterName = report.createdBy
         ? `${report.createdBy.firstName} ${report.createdBy.lastName}`.trim()
         : 'Unknown';
@@ -296,37 +282,7 @@ export default function AdminDashboardPage() {
         createdAt: timeAgo,
       };
     });
-  }, [reportsData]);
-
-  const mapDayToVietnamese = (day: string): string => {
-    const dayMap: Record<string, string> = {
-      Sun: 'CN',
-      Mon: 'T2',
-      Tue: 'T3',
-      Wed: 'T4',
-      Thu: 'T5',
-      Fri: 'T6',
-      Sat: 'T7',
-    };
-    return dayMap[day] || day;
-  };
-  const mapMonthToVietnamese = (month: string): string => {
-    const monthMap: Record<string, string> = {
-      Jan: 'T1',
-      Feb: 'T2',
-      Mar: 'T3',
-      Apr: 'T4',
-      May: 'T5',
-      Jun: 'T6',
-      Jul: 'T7',
-      Aug: 'T8',
-      Sep: 'T9',
-      Oct: 'T10',
-      Nov: 'T11',
-      Dec: 'T12',
-    };
-    return monthMap[month] || month;
-  };
+  }, [allReportsData]);
 
   // Get user growth data by time period from API
   const getUserGrowthData = useMemo<
@@ -342,7 +298,7 @@ export default function AdminDashboardPage() {
       return userAnalyticsData
         .filter((item): item is { day: string; count: number } => !!item.day)
         .map((item) => ({
-          day: mapDayToVietnamese(item.day),
+          day: item.day,
           users: item.count,
         }));
     } else if (userGrowthPeriod === 'month') {
@@ -351,7 +307,7 @@ export default function AdminDashboardPage() {
           (item): item is { month: string; count: number } => !!item.month
         )
         .map((item) => ({
-          month: mapMonthToVietnamese(item.month),
+          month: item.month,
           users: item.count,
         }));
     } else if (userGrowthPeriod === 'year') {
@@ -382,7 +338,7 @@ export default function AdminDashboardPage() {
             !!item.day
         )
         .map((item) => ({
-          day: mapDayToVietnamese(item.day),
+          day: item.day,
           deposit: item.deposit,
           withdraw: item.withdraw,
         }));
@@ -395,7 +351,7 @@ export default function AdminDashboardPage() {
             !!item.month
         )
         .map((item) => ({
-          month: mapMonthToVietnamese(item.month),
+          month: item.month,
           deposit: item.deposit,
           withdraw: item.withdraw,
         }));
@@ -414,15 +370,71 @@ export default function AdminDashboardPage() {
     return [];
   }, [walletAnalyticsData, revenuePeriod, isLoadingWalletAnalytics]);
 
-  // Get Locations vs Events data by time period
-  const getLocationEventData = () => {
-    switch (locationEventPeriod) {
-      case 'month':
-        return locationEventDataByMonth;
-      case 'year':
-        return locationEventDataByYear;
+  // Get Locations vs Events data by time period from API
+  const getLocationEventData = useMemo<
+    | { day: string; locations: number; events: number }[]
+    | { month: string; locations: number; events: number }[]
+    | { year: string; locations: number; events: number }[]
+  >(() => {
+    if (!eventsLocationsTotalsData || isLoadingEventsLocationsTotals) {
+      return [];
     }
-  };
+
+    if (locationEventPeriod === 'day') {
+      return eventsLocationsTotalsData
+        .filter(
+          (
+            item
+          ): item is {
+            day: string;
+            events: number;
+            locations: number;
+          } => !!item.day
+        )
+        .map((item) => ({
+          day: item.day,
+          locations: item.locations,
+          events: item.events,
+        }));
+    } else if (locationEventPeriod === 'month') {
+      return eventsLocationsTotalsData
+        .filter(
+          (
+            item
+          ): item is {
+            month: string;
+            events: number;
+            locations: number;
+          } => !!item.month
+        )
+        .map((item) => ({
+          month: item.month,
+          locations: item.locations,
+          events: item.events,
+        }));
+    } else if (locationEventPeriod === 'year') {
+      return eventsLocationsTotalsData
+        .filter(
+          (
+            item
+          ): item is {
+            year: string;
+            events: number;
+            locations: number;
+          } => !!item.year
+        )
+        .map((item) => ({
+          year: item.year,
+          locations: item.locations,
+          events: item.events,
+        }));
+    }
+    return [];
+  }, [
+    eventsLocationsTotalsData,
+    locationEventPeriod,
+    isLoadingEventsLocationsTotals,
+  ]);
 
   // Get key for XAxis
   const getUserGrowthXKey = () => {
@@ -495,10 +507,23 @@ export default function AdminDashboardPage() {
 
   const getLocationEventTitle = () => {
     switch (locationEventPeriod) {
+      case 'day':
+        return 'Locations vs Events (7 days)';
       case 'month':
         return 'Locations vs Events (12 months)';
       case 'year':
         return 'Locations vs Events (5 years)';
+    }
+  };
+
+  const getLocationEventXKey = () => {
+    switch (locationEventPeriod) {
+      case 'day':
+        return 'day';
+      case 'month':
+        return 'month';
+      case 'year':
+        return 'year';
     }
   };
 
@@ -510,7 +535,6 @@ export default function AdminDashboardPage() {
       label: String(currentYear - i),
     }));
   }, []);
-
   const router = useRouter();
 
   return (
@@ -567,9 +591,7 @@ export default function AdminDashboardPage() {
                       >
                         <CalendarIcon className='mr-2 h-3.5 w-3.5' />
                         {dateRange.from ? (
-                          format(dateRange.from, 'dd/MM/yyyy', {
-                            locale: vi,
-                          })
+                          format(dateRange.from, 'MM/dd/yyyy')
                         ) : (
                           <span className='text-xs'>Start date</span>
                         )}
@@ -603,7 +625,7 @@ export default function AdminDashboardPage() {
                       >
                         <CalendarIcon className='mr-2 h-3.5 w-3.5' />
                         {dateRange.to ? (
-                          format(dateRange.to, 'dd/MM/yyyy', { locale: vi })
+                          format(dateRange.to, 'MM/dd/yyyy')
                         ) : (
                           <span className='text-xs'>End date</span>
                         )}
@@ -865,10 +887,11 @@ export default function AdminDashboardPage() {
               <Tabs
                 value={locationEventPeriod}
                 onValueChange={(value) =>
-                  setLocationEventPeriod(value as 'month' | 'year')
+                  setLocationEventPeriod(value as 'day' | 'month' | 'year')
                 }
               >
                 <TabsList>
+                  <TabsTrigger value='day'>Day</TabsTrigger>
                   <TabsTrigger value='month'>Month</TabsTrigger>
                   <TabsTrigger value='year'>Year</TabsTrigger>
                 </TabsList>
@@ -876,27 +899,41 @@ export default function AdminDashboardPage() {
             </div>
           </CardHeader>
           <CardContent className='h-[320px]'>
-            <ResponsiveContainer width='100%' height='100%'>
-              <BarChart data={getLocationEventData()}>
-                <CartesianGrid strokeDasharray='3 3' vertical={false} />
-                <XAxis dataKey='label' tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} />
-                <RechartsTooltip />
-                <Legend />
-                <Bar
-                  dataKey='locations'
-                  name='Locations'
-                  fill='var(--primary)'
-                  radius={6}
-                />
-                <Bar
-                  dataKey='events'
-                  name='Events'
-                  fill='hsl(var(--chart-3))'
-                  radius={6}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            {isLoadingEventsLocationsTotals ? (
+              <div className='flex items-center justify-center h-full'>
+                <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+              </div>
+            ) : getLocationEventData.length > 0 ? (
+              <ResponsiveContainer width='100%' height='100%'>
+                <BarChart data={getLocationEventData}>
+                  <CartesianGrid strokeDasharray='3 3' vertical={false} />
+                  <XAxis
+                    dataKey={getLocationEventXKey()}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis tickLine={false} axisLine={false} />
+                  <RechartsTooltip />
+                  <Legend />
+                  <Bar
+                    dataKey='locations'
+                    name='Locations'
+                    fill='var(--primary)'
+                    radius={6}
+                  />
+                  <Bar
+                    dataKey='events'
+                    name='Events'
+                    fill='hsl(var(--chart-3))'
+                    radius={6}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className='flex items-center justify-center h-full text-muted-foreground'>
+                No data
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>

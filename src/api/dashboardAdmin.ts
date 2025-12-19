@@ -59,3 +59,27 @@ export const getWalletAnalytics = async (
   );
   return response.data.data || [];
 };
+
+export interface EventsLocationsTotalsItem {
+  day?: string;
+  month?: string;
+  year?: string;
+  events: number;
+  locations: number;
+}
+
+export const getEventsLocationsTotals = async (
+  filter: UserAnalyticsFilter
+): Promise<EventsLocationsTotalsItem[]> => {
+  const response = await axiosInstance.get(
+    `/v1/admin/dashboard/totals/events-locations?filter=${filter}`
+  );
+  return response.data.data || [];
+};
+
+export const getAllReports = async () => {
+  const response = await axiosInstance.get('/v1/admin/report');
+  // Response structure: { success, message, statusCode, data: { data: [...], meta: {...}, links: {...} } }
+  // Return the entire data object which contains data array, meta, and links
+  return response.data.data || { data: [], meta: {}, links: {} };
+};

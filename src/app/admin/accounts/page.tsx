@@ -74,7 +74,7 @@ export default function AccountsPage() {
     column: 'createdAt',
     direction: 'DESC',
   });
-  const itemsPerPage = 7;
+  const itemsPerPage = 8;
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -225,14 +225,14 @@ export default function AccountsPage() {
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10'>
         <StatisticCard
           title='Total Accounts'
-          value={stats.total.toLocaleString()}
+          value={stats.total - 1}
           icon={Users}
           iconColorClass='blue'
           subtitle='All accounts in the system'
         />
         <StatisticCard
           title='Active accounts'
-          value={stats.active.toLocaleString()}
+          value={stats.active - 1}
           icon={Users}
           iconColorClass='green'
           subtitle='Accounts are not locked'

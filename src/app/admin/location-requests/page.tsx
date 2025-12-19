@@ -35,6 +35,8 @@ import {
   IconWorld,
   IconMail,
   IconPhone,
+  IconRuler,
+  IconChevronRight,
 } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -60,10 +62,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import StatisticCard from '@/components/admin/StatisticCard';
+import {
+  APIProvider,
+  Map,
+  AdvancedMarker,
+  Pin,
+} from '@vis.gl/react-google-maps';
 
 type StatusFilter = 'all' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -143,6 +158,7 @@ export default function LocationRequestsPage() {
     useState<LocationRequest | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [expandedDescription, setExpandedDescription] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
 
   // Fetch full details of selected request
   const { data: selectedRequestData } =
@@ -491,25 +507,12 @@ export default function LocationRequestsPage() {
                         </div>
                       )}
                       <div className='flex-1'>
-                        <h1 className='text-2xl font-bold mb-2'>
+                        <h1 className='text-3xl font-bold mb-1 text-primary'>
                           {selectedRequest.name}
                         </h1>
-                        <div className='flex items-center gap-2 flex-wrap'>
-                          {getStatusBadge(selectedRequest.status)}
-                          <Badge variant='secondary'>
-                            {selectedRequest.type === 'BUSINESS_OWNED' ? (
-                              <>
-                                <IconBuilding className='h-3 w-3 mr-1' />
-                                Business
-                              </>
-                            ) : (
-                              <>
-                                <IconWorld className='h-3 w-3 mr-1' />
-                                Public
-                              </>
-                            )}
-                          </Badge>
-                        </div>
+                        <p className='text-sm text-muted-foreground'>
+                          {formatDateTime(selectedRequest.createdAt)}
+                        </p>
                       </div>
                     </div>
 
@@ -520,9 +523,7 @@ export default function LocationRequestsPage() {
                           className={`text-sm text-muted-foreground ${
                             !expandedDescription ? 'line-clamp-2' : ''
                           }`}
-                        >
-                          {selectedRequest.description}
-                        </p>
+                        ></p>
                         {selectedRequest.description.length > 150 && (
                           <button
                             onClick={() =>
@@ -564,105 +565,137 @@ export default function LocationRequestsPage() {
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-6'>
                   {/* Location Information Card */}
                   <Card>
-                    <CardHeader>
-                      <CardTitle className='text-base flex items-center gap-2'>
-                        <IconMapPin className='h-4 w-4' />
-                        Location Information
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className='space-y-3'>
-                      <div>
-                        {selectedRequest.createdBy && (
-                          <>
-                            <div className='flex items-start gap-2'>
-                              <Avatar className='h-10 w-10 border-2 border-background'>
-                                {selectedRequest.createdBy.avatarUrl && (
-                                  <AvatarImage
-                                    src={selectedRequest.createdBy.avatarUrl}
-                                    alt={`${selectedRequest.createdBy.firstName} ${selectedRequest.createdBy.lastName}`}
-                                    className='object-cover'
-                                  />
-                                )}
-                                <AvatarFallback className='bg-primary/10 text-primary font-semibold text-xs'>
-                                  {getInitials(
-                                    selectedRequest.createdBy.firstName || '',
-                                    selectedRequest.createdBy.lastName || ''
-                                  )}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className='flex-1'>
-                                <p className='text-sm font-medium'>
-                                  {selectedRequest.createdBy.firstName}{' '}
-                                  {selectedRequest.createdBy.lastName}
-                                </p>
-                                {selectedRequest.createdBy.email && (
-                                  <p className='text-xs text-muted-foreground break-all'>
-                                    {selectedRequest.createdBy.email}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </>
-                        )}
+                    <CardContent className='space-y-4'>
+                      {selectedRequest.description && (
+                        <div className='space-y-2'>
+                          <div className='flex items-center gap-2'>
+                            <IconFileText className='h-4 w-4 text-muted-foreground' />
+                            <p className='text-sm font-semibold'>Description</p>
+                          </div>
+                          <p className='text-sm text-muted-foreground pl-6'>
+                            {selectedRequest.description}
+                          </p>
+                        </div>
+                      )}
+                      <div className='flex items-start gap-2'>
+                        <IconMapPin className='h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0' />
+                        <div className='space-y-1 flex-1'>
+                          <p className='text-sm font-semibold'>Address</p>
+                          <p className='text-sm text-muted-foreground'>
+                            {selectedRequest.addressLine},{' '}
+                            {selectedRequest.addressLevel1},{' '}
+                            {selectedRequest.addressLevel2}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className='text-xs font-medium text-muted-foreground mb-1'>
-                          Address
-                        </p>
-                        <p className='text-sm'>{selectedRequest.addressLine}</p>
-                      </div>
-                      {selectedRequest.addressLevel1 &&
-                        selectedRequest.addressLevel2 && (
-                          <div>
-                            <p className='text-xs font-medium text-muted-foreground mb-1'>
-                              District/ Province
-                            </p>
-                            <p className='text-sm'>
-                              {selectedRequest.addressLevel1}/
-                              {selectedRequest.addressLevel2}
+                      {selectedRequest.radiusMeters && (
+                        <div className='flex items-center gap-2'>
+                          <IconRuler className='h-4 w-4 text-muted-foreground flex-shrink-0' />
+                          <div className='space-y-1 flex-1'>
+                            <p className='text-sm font-semibold'>Radius</p>
+                            <p className='text-sm text-muted-foreground'>
+                              {selectedRequest.radiusMeters} meters
                             </p>
                           </div>
-                        )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
                   {/* Submission Details Card */}
                   <Card>
-                    <CardHeader>
-                      <CardTitle className='text-base flex items-center gap-2'>
-                        <IconCalendar className='h-4 w-4' />
-                        Submission Details
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className='space-y-3'>
-                      <div>
-                        <p className='text-xs font-medium text-muted-foreground mb-1'>
-                          Submitted
-                        </p>
-                        <p className='text-sm'>
-                          {formatDateTime(selectedRequest.createdAt)}
-                        </p>
-                      </div>
-                      {selectedRequest.updatedAt && (
-                        <div>
-                          <p className='text-xs font-medium text-muted-foreground mb-1'>
-                            Last Updated
-                          </p>
-                          <p className='text-sm'>
-                            {formatDateTime(selectedRequest.updatedAt)}
-                          </p>
+                    <CardContent className='space-y-4'>
+                      {selectedRequest.createdBy && (
+                        <div className='flex flex-col items-center gap-3'>
+                          <Avatar className='h-20 w-20 border-2 border-background'>
+                            {selectedRequest.createdBy.avatarUrl && (
+                              <AvatarImage
+                                src={selectedRequest.createdBy.avatarUrl}
+                                alt={`avatar`}
+                                className='object-cover'
+                              />
+                            )}
+                            <AvatarFallback className='bg-primary/10 text-primary font-semibold text-base'>
+                              {getInitials(
+                                selectedRequest.createdBy.firstName || 'N/A',
+                                selectedRequest.createdBy.lastName || 'N/A'
+                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className='text-center space-y-1'>
+                            <p className='text-sm font-medium'>
+                              {selectedRequest.createdBy.firstName}{' '}
+                              {selectedRequest.createdBy.lastName}
+                            </p>
+                            {selectedRequest.createdBy.email && (
+                              <p className='text-xs text-muted-foreground break-all'>
+                                {selectedRequest.createdBy.email}
+                              </p>
+                            )}
+                          </div>
+                          <div className='flex items-center gap-2 w-full justify-center pt-2'>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              className='flex-1 max-w-[100px]'
+                            >
+                              <IconUser className='h-4 w-4 mr-1' />
+                              Profile
+                            </Button>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              className='flex-1 max-w-[100px]'
+                            >
+                              <IconMail className='h-4 w-4 mr-1' />
+                              Contact
+                            </Button>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              className='flex-1 max-w-[100px]'
+                            >
+                              <IconFileText className='h-4 w-4 mr-1' />
+                              Details
+                            </Button>
+                          </div>
                         </div>
                       )}
-                      <div>
-                        <p className='text-xs font-medium text-muted-foreground mb-1'>
-                          Radius
-                        </p>
-                        <p className='text-sm'>
-                          {selectedRequest.radiusMeters} meters
-                        </p>
-                      </div>
                     </CardContent>
                   </Card>
+
+                  {/* Documents Card */}
+                  {selectedRequest.locationValidationDocuments &&
+                    selectedRequest.locationValidationDocuments.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className='text-base flex items-center gap-2'>
+                            <IconFileText className='h-4 w-4' />
+                            Documents
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className='space-y-2'>
+                          {selectedRequest.locationValidationDocuments.map(
+                            (doc: any, docIndex: number) => (
+                              <Button
+                                key={docIndex}
+                                variant='outline'
+                                className='w-full justify-start h-auto py-3 px-4 bg-primary/10 border-primary/20 hover:bg-primary/20 hover:border-primary/30'
+                                onClick={() => setSelectedDocument(doc)}
+                              >
+                                <IconFileText className='h-4 w-4 mr-2' />
+                                <span className='text-sm'>
+                                  {doc.documentType
+                                    ?.toLowerCase()
+                                    .replace(/_/g, ' ') || 'Document'}
+                                </span>
+                                <IconChevronRight className='h-4 w-4 ml-auto' />
+                              </Button>
+                            )
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
 
                   {/* Admin Notes Card */}
                   {selectedRequest.adminNotes && (
@@ -686,12 +719,6 @@ export default function LocationRequestsPage() {
                 {selectedRequest.locationImageUrls &&
                   selectedRequest.locationImageUrls.length > 0 && (
                     <Card className='mt-4'>
-                      <CardHeader>
-                        <CardTitle className='text-base flex items-center gap-2'>
-                          <IconFileText className='h-4 w-4' />
-                          Location Images
-                        </CardTitle>
-                      </CardHeader>
                       <CardContent>
                         <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3'>
                           {selectedRequest.locationImageUrls.map(
@@ -719,16 +746,68 @@ export default function LocationRequestsPage() {
                     </Card>
                   )}
 
-                {/* Action Link */}
-                <div className='mt-6 pt-4 border-t'>
-                  <Link
-                    href={`/admin/location-requests/${selectedRequest.id}`}
-                    className='text-sm text-blue-600 hover:underline inline-flex items-center gap-1'
-                  >
-                    View full request details
-                    <span>→</span>
-                  </Link>
-                </div>
+                {/* Map - Full Width */}
+                {(() => {
+                  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+                  const latValue =
+                    typeof selectedRequest.latitude === 'number'
+                      ? selectedRequest.latitude
+                      : parseFloat(selectedRequest.latitude || '0');
+                  const lngValue =
+                    typeof selectedRequest.longitude === 'number'
+                      ? selectedRequest.longitude
+                      : parseFloat(selectedRequest.longitude || '0');
+                  const lat = latValue;
+                  const lng = lngValue;
+                  const hasValidCoords =
+                    !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+                  const mapCenter = hasValidCoords ? { lat, lng } : null;
+
+                  return (
+                    <Card className='mt-4'>
+                      <CardContent>
+                        <div className='h-[400px] w-full rounded-lg overflow-hidden border'>
+                          {apiKey && hasValidCoords && mapCenter ? (
+                            <APIProvider apiKey={apiKey}>
+                              <Map
+                                defaultCenter={mapCenter}
+                                defaultZoom={15}
+                                mapId='location-request-map'
+                                gestureHandling='none'
+                                disableDefaultUI={true}
+                              >
+                                <AdvancedMarker
+                                  position={mapCenter}
+                                  title={selectedRequest.name}
+                                >
+                                  <Pin
+                                    background='#ef4444'
+                                    borderColor='#991b1b'
+                                    glyphColor='#fff'
+                                    scale={1.2}
+                                  />
+                                </AdvancedMarker>
+                              </Map>
+                            </APIProvider>
+                          ) : (
+                            <div className='flex items-center justify-center h-full bg-muted text-muted-foreground'>
+                              <div className='text-center'>
+                                <MapPin className='h-12 w-12 mx-auto mb-2 opacity-20' />
+                                <p className='text-sm'>
+                                  {!apiKey
+                                    ? 'Map unavailable - API key missing'
+                                    : !hasValidCoords
+                                    ? 'Map unavailable - Invalid coordinates'
+                                    : 'Map unavailable'}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
               </div>
             </div>
           ) : (
@@ -800,6 +879,105 @@ export default function LocationRequestsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Document Images Modal */}
+      <Dialog
+        open={!!selectedDocument}
+        onOpenChange={(open) => !open && setSelectedDocument(null)}
+      >
+        <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <IconFileText className='h-5 w-5' />
+              {selectedDocument?.documentType?.replace(/_/g, ' ') || 'Document'}
+            </DialogTitle>
+            <DialogDescription>
+              View all images for this document
+            </DialogDescription>
+          </DialogHeader>
+          {selectedDocument?.documentImageUrls &&
+            selectedDocument.documentImageUrls.length > 0 && (
+              <div className='space-y-4 mt-4'>
+                {/* First 2 large images */}
+                {selectedDocument.documentImageUrls.length >= 2 && (
+                  <div className='grid grid-cols-2 gap-4'>
+                    {selectedDocument.documentImageUrls
+                      .slice(0, 2)
+                      .map((url: string, imgIndex: number) => (
+                        <a
+                          key={imgIndex}
+                          href={url}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors'
+                        >
+                          <Image
+                            src={url}
+                            alt={`${selectedDocument.documentType} ${
+                              imgIndex + 1
+                            }`}
+                            fill
+                            className='object-cover'
+                            sizes='(max-width: 768px) 50vw, 25vw'
+                          />
+                          <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
+                        </a>
+                      ))}
+                  </div>
+                )}
+
+                {/* Remaining images in smaller grid */}
+                {selectedDocument.documentImageUrls.length > 2 && (
+                  <div className='grid grid-cols-3 gap-3'>
+                    {selectedDocument.documentImageUrls
+                      .slice(2)
+                      .map((url: string, imgIndex: number) => (
+                        <a
+                          key={imgIndex + 2}
+                          href={url}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors'
+                        >
+                          <Image
+                            src={url}
+                            alt={`${selectedDocument.documentType} ${
+                              imgIndex + 3
+                            }`}
+                            fill
+                            className='object-cover'
+                            sizes='(max-width: 768px) 33vw, 20vw'
+                          />
+                          <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
+                        </a>
+                      ))}
+                  </div>
+                )}
+
+                {/* If only 1 image, show it large */}
+                {selectedDocument.documentImageUrls.length === 1 && (
+                  <div className='w-full'>
+                    <a
+                      href={selectedDocument.documentImageUrls[0]}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors block'
+                    >
+                      <Image
+                        src={selectedDocument.documentImageUrls[0]}
+                        alt={`${selectedDocument.documentType} 1`}
+                        fill
+                        className='object-cover'
+                        sizes='(max-width: 768px) 100vw, 50vw'
+                      />
+                      <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

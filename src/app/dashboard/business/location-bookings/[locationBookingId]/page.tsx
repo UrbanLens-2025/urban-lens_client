@@ -20,6 +20,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ImageViewer } from '@/components/shared/ImageViewer';
 import {
   Loader2,
@@ -27,7 +34,7 @@ import {
   MapPin,
   User,
   ImageIcon,
-  Calendar,
+  Calendar as CalendarIcon,
   Phone,
   DollarSign,
   FileText,
@@ -60,7 +67,7 @@ import {
   isSameMonth,
 } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { formatDocumentType, cn } from '@/lib/utils';
+import { formatDocumentType, cn, formatDate } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Table,
@@ -182,6 +189,7 @@ import {
 } from '@/components/ui/currency-display';
 import { useForceCancelBooking } from '@/hooks/locations/useForceCancelBooking';
 import { toast } from 'sonner';
+import ErrorCustom from '@/components/shared/ErrorCustom';
 
 // Keep local formatCurrency for backward compatibility
 const formatCurrency = (amount: string, currency: string = 'VND') => {
@@ -223,16 +231,49 @@ export default function LocationBookingDetailPage({
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [isPaymentDetailsOpen, setIsPaymentDetailsOpen] = useState(false);
 
   const forceCancel = useForceCancelBooking();
   const [isForceCancelOpen, setIsForceCancelOpen] = useState(false);
-  const [reason, setReason] = useState("");
+  const [reason, setReason] = useState('');
 
   const {
     data: booking,
     isLoading,
     isError,
   } = useLocationBookingById(locationBookingId);
+
+  // Parse và tính toán fines
+  const finesData = useMemo(() => {
+    const bookingWithFines = booking as any;
+    if (!bookingWithFines?.fines) return { totalActiveFines: 0, paidFines: [] };
+
+    try {
+      const finesJson =
+        typeof bookingWithFines.fines === 'string'
+          ? JSON.parse(bookingWithFines.fines)
+          : bookingWithFines.fines;
+
+      const finesArray =
+        finesJson?.json || (Array.isArray(finesJson) ? finesJson : []);
+
+      const totalActiveFines = finesArray
+        .filter((fine: any) => fine.isActive === true)
+        .reduce(
+          (sum: number, fine: any) => sum + (Number(fine.fineAmount) || 0),
+          0
+        );
+
+      const paidFines = finesArray.filter(
+        (fine: any) => fine.isActive === true && fine.paidAt !== null
+      );
+
+      return { totalActiveFines, paidFines };
+    } catch (error) {
+      console.error('Error parsing fines:', error);
+      return { totalActiveFines: 0, paidFines: [] };
+    }
+  }, [booking]);
 
   // Giả sử phí hủy là 10%
   const cancellationFee = Number(booking?.amountToPay || 0) * 0.1;
@@ -243,7 +284,8 @@ export default function LocationBookingDetailPage({
 
     const sorted = [...booking.dates].sort(
       (a, b) =>
-        new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
+        new Date(a.startDateTime).getTime() -
+        new Date(b.startDateTime).getTime()
     );
 
     const start = new Date(sorted[0].startDateTime);
@@ -275,7 +317,8 @@ export default function LocationBookingDetailPage({
   };
 
   const handleConfirm = () => {
-    if (!reason.trim()) return toast.error('Please enter a cancellation reason.');
+    if (!reason.trim())
+      return toast.error('Please enter a cancellation reason.');
     if (forceCancelBlockReason) {
       setIsForceCancelOpen(false);
       toast.error(
@@ -286,15 +329,18 @@ export default function LocationBookingDetailPage({
       return;
     }
 
-    forceCancel.mutate({
-      bookingId: locationBookingId,
-      payload: { cancellationReason: reason }
-    }, {
-      onSuccess: () => {
-        setIsForceCancelOpen(false);
-        setReason("");
+    forceCancel.mutate(
+      {
+        bookingId: locationBookingId,
+        payload: { cancellationReason: reason },
+      },
+      {
+        onSuccess: () => {
+          setIsForceCancelOpen(false);
+          setReason('');
+        },
       }
-    });
+    );
   };
 
   const approveBooking = useApproveLocationBooking();
@@ -387,12 +433,10 @@ export default function LocationBookingDetailPage({
 
   const canProcess = booking?.status === 'AWAITING_BUSINESS_PROCESSING';
 
-  // Get targetId from booking (could be targetId field or event.id)
   const targetId = (booking as any)?.targetId || (booking as any)?.event?.id;
   const { data: fetchedEventData, isLoading: isLoadingEvent } =
     useOwnerEventById(targetId);
 
-  // Use fetched event data if available, otherwise fall back to referencedEventRequest or createdBy info
   const eventData = useMemo(() => {
     if (fetchedEventData) {
       return {
@@ -411,11 +455,11 @@ export default function LocationBookingDetailPage({
         coverUrl: fetchedEventData.coverUrl,
         organizer: fetchedEventData.createdBy
           ? {
-            name: `${fetchedEventData.createdBy.firstName} ${fetchedEventData.createdBy.lastName}`,
-            email: fetchedEventData.createdBy.email,
-            phoneNumber: fetchedEventData.createdBy.phoneNumber,
-            avatarUrl: fetchedEventData.createdBy.avatarUrl,
-          }
+              name: `${fetchedEventData.createdBy.firstName} ${fetchedEventData.createdBy.lastName}`,
+              email: fetchedEventData.createdBy.email,
+              phoneNumber: fetchedEventData.createdBy.phoneNumber,
+              avatarUrl: fetchedEventData.createdBy.avatarUrl,
+            }
           : null,
         socialLinks: fetchedEventData.social || [],
         eventSocialLinks: fetchedEventData.social || [],
@@ -439,11 +483,11 @@ export default function LocationBookingDetailPage({
           booking.referencedEventRequest.specialRequirements || '',
         organizer: booking?.createdBy
           ? {
-            name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
-            email: booking.createdBy.email,
-            phoneNumber: booking.createdBy.phoneNumber,
-            avatarUrl: booking.createdBy.avatarUrl,
-          }
+              name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
+              email: booking.createdBy.email,
+              phoneNumber: booking.createdBy.phoneNumber,
+              avatarUrl: booking.createdBy.avatarUrl,
+            }
           : null,
         socialLinks: [],
         eventSocialLinks: [],
@@ -461,11 +505,11 @@ export default function LocationBookingDetailPage({
         specialRequirements: '',
         organizer: booking.createdBy
           ? {
-            name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
-            email: booking.createdBy.email,
-            phoneNumber: booking.createdBy.phoneNumber,
-            avatarUrl: booking.createdBy.avatarUrl,
-          }
+              name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
+              email: booking.createdBy.email,
+              phoneNumber: booking.createdBy.phoneNumber,
+              avatarUrl: booking.createdBy.avatarUrl,
+            }
           : null,
         socialLinks: booking.createdBy.creatorProfile.social || [],
         eventSocialLinks: booking.createdBy.creatorProfile.social || [],
@@ -487,11 +531,11 @@ export default function LocationBookingDetailPage({
       specialRequirements: '',
       organizer: booking?.createdBy
         ? {
-          name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
-          email: booking.createdBy.email,
-          phoneNumber: booking.createdBy.phoneNumber,
-          avatarUrl: booking.createdBy.avatarUrl,
-        }
+            name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
+            email: booking.createdBy.email,
+            phoneNumber: booking.createdBy.phoneNumber,
+            avatarUrl: booking.createdBy.avatarUrl,
+          }
         : null,
       socialLinks: [],
       eventSocialLinks: [],
@@ -565,32 +609,7 @@ export default function LocationBookingDetailPage({
   }
 
   if (isError || !booking) {
-    return (
-      <PageContainer>
-        <Card className='border-destructive/50'>
-          <CardContent className='pt-6'>
-            <div className='flex flex-col items-center justify-center py-12 gap-4'>
-              <div className='h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center'>
-                <AlertCircle className='h-8 w-8 text-destructive' />
-              </div>
-              <div className='text-center'>
-                <h3 className='text-lg font-semibold text-foreground mb-1'>
-                  Error loading booking details
-                </h3>
-                <p className='text-sm text-muted-foreground'>
-                  Please try refreshing the page or contact support if the
-                  problem persists.
-                </p>
-              </div>
-              <Button variant='outline' onClick={() => router.back()}>
-                <ArrowLeft className='h-4 w-4 mr-2' />
-                Go Back
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </PageContainer>
-    );
+    return <ErrorCustom />;
   }
 
   return (
@@ -598,33 +617,209 @@ export default function LocationBookingDetailPage({
       {/* Header */}
       <PageHeader
         title='Booking Details'
-        icon={Calendar}
-        actions={
-          <div className='flex items-center gap-3'>
-            {getStatusBadge(booking.status)}
-            {booking.status === 'AWAITING_BUSINESS_PROCESSING' && (
-              <>
-                <Button variant='default' className='bg-green-600 hover:bg-green-700 text-white' onClick={() => setIsApproveDialogOpen(true)}>
-                  <CheckCircle className='h-4 w-4 mr-2' />
-                  Approve
-                </Button>
-                <Button variant='destructive' onClick={() => setIsRejectDialogOpen(true)}>
-                  <X className='h-4 w-4 mr-2' />
-                  Reject
-                </Button>
-              </>
-            )}
-            <Button variant='outline' size='icon' onClick={() => router.back()}>
-              <ArrowLeft className='h-4 w-4' />
-            </Button>
-          </div>
-        }
+        icon={CalendarIcon}
+        actions={getStatusBadge(booking.status)}
       />
 
       {/* Grid Content */}
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
         {/* Left Column */}
         <div className='lg:col-span-2 space-y-6'>
+          {/* Payment Details Dialog */}
+          <Dialog
+            open={isPaymentDetailsOpen}
+            onOpenChange={setIsPaymentDetailsOpen}
+          >
+            <DialogContent className='max-w-2xl max-h-[85vh] overflow-y-auto'>
+              <DialogHeader>
+                <DialogTitle className='flex items-center gap-2 text-xl'>
+                  <CreditCard className='h-5 w-5 text-primary' />
+                  Payment Details
+                </DialogTitle>
+                <DialogDescription>
+                  Complete breakdown of payment and fees
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className='space-y-6 pt-4'>
+                {/* Payment Summary */}
+                <div className='space-y-4'>
+                  <h3 className='text-sm font-semibold text-foreground uppercase tracking-wide'>
+                    Payment Summary
+                  </h3>
+
+                  <div className='space-y-3'>
+                    {/* Deposit Amount */}
+                    <div className='flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800'>
+                      <div className='flex items-center gap-3'>
+                        <div className='h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center'>
+                          <DollarSign className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+                        </div>
+                        <div>
+                          <p className='text-sm font-medium text-muted-foreground'>
+                            Starting Amount
+                          </p>
+                        </div>
+                      </div>
+                      <p className='text-lg font-bold text-foreground'>
+                        {formatCurrency(booking.amountToPay, 'VND')}
+                      </p>
+                    </div>
+
+                    {/* System Fee */}
+                    {(booking as any).systemCutPercentage && (
+                      <div className='flex items-center justify-between p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800'>
+                        <div className='flex items-center gap-3'>
+                          <div className='h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center'>
+                            <CreditCard className='h-5 w-5 text-amber-600 dark:text-amber-400' />
+                          </div>
+                          <div>
+                            <p className='text-sm font-medium text-muted-foreground'>
+                              System Fee
+                            </p>
+                            <p className='text-xs text-muted-foreground'>
+                              {(booking as any).systemCutPercentage * 100}%
+                            </p>
+                          </div>
+                        </div>
+                        <p className='text-lg font-bold text-amber-700 dark:text-amber-400'>
+                          -
+                          {formatCurrency(
+                            (
+                              Number(booking.amountToPay) -
+                              Number(booking.amountToReceive)
+                            ).toString(),
+                            'VND'
+                          )}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Amount to Receive */}
+                    <div className='flex items-center justify-between p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border-2 border-green-300 dark:border-green-700'>
+                      <div className='flex items-center gap-3'>
+                        <div className='h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center'>
+                          <CheckCircle className='h-5 w-5 text-green-600 dark:text-green-400' />
+                        </div>
+                        <div>
+                          <p className='text-sm font-semibold text-foreground'>
+                            Amount to Receive
+                          </p>
+                          {(booking as any).scheduledPayoutJob?.executeAt && (
+                            <p className='text-xs text-muted-foreground mt-1'>
+                              Scheduled:{' '}
+                              {formatDateTime(
+                                (booking as any).scheduledPayoutJob.executeAt
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <p className='text-2xl font-bold text-green-700 dark:text-green-400'>
+                        {formatCurrency(booking.amountToReceive, 'VND')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fines & Penalties */}
+                {(booking as any).fines && (
+                  <>
+                    <Separator />
+                    <div className='space-y-4'>
+                      <h3 className='text-sm font-semibold text-foreground uppercase tracking-wide flex items-center gap-2'>
+                        <AlertCircle className='h-4 w-4 text-amber-500' />
+                        Fines & Penalties
+                      </h3>
+
+                      {/* Total Active Fines */}
+                      {finesData.totalActiveFines > 0 && (
+                        <div className='p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-300 dark:border-amber-700'>
+                          <div className='flex items-center justify-between gap-3'>
+                            <div className='flex items-center gap-2'>
+                              <AlertCircle className='h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0' />
+                              <span className='text-sm font-semibold text-foreground'>
+                                Total Active Fines
+                              </span>
+                            </div>
+                            <span className='text-xl font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap'>
+                              {formatCurrency(
+                                finesData.totalActiveFines.toString(),
+                                'VND'
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Paid Fines List */}
+                      {finesData.paidFines.length > 0 && (
+                        <div className='space-y-3'>
+                          <h4 className='text-sm font-semibold text-foreground mb-3 flex items-center gap-2'>
+                            <CheckCircle className='h-4 w-4 text-green-600' />
+                            Paid Fines
+                          </h4>
+                          <div className='space-y-2'>
+                            {finesData.paidFines.map((fine: any) => (
+                              <div
+                                key={fine.id}
+                                className='p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800'
+                              >
+                                <div className='flex items-start justify-between gap-3'>
+                                  <div className='flex-1 min-w-0'>
+                                    <div className='flex items-center gap-2 mb-1'>
+                                      <CheckCircle className='h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0' />
+                                      <span className='text-sm font-semibold text-foreground truncate'>
+                                        {fine.fineReason || 'N/A'}
+                                      </span>
+                                    </div>
+                                    {fine.paidAt && (
+                                      <p className='text-xs text-muted-foreground ml-6'>
+                                        Paid:{' '}
+                                        <span className='font-medium'>
+                                          {formatDateTime(fine.paidAt)}
+                                        </span>
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className='text-right flex-shrink-0'>
+                                    <span className='text-sm font-bold text-green-700 dark:text-green-400 whitespace-nowrap'>
+                                      {formatCurrency(
+                                        fine.fineAmount?.toString() || '0',
+                                        'VND'
+                                      )}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* No Fines Message */}
+                      {finesData.paidFines.length === 0 &&
+                        finesData.totalActiveFines === 0 && (
+                          <div className='text-center py-6 text-sm text-muted-foreground'>
+                            <CheckCircle className='h-8 w-8 mx-auto mb-2 text-green-500 opacity-50' />
+                            <p>No fines recorded</p>
+                          </div>
+                        )}
+
+                      {/* Active Fines Warning */}
+                      {finesData.totalActiveFines > 0 &&
+                        finesData.paidFines.length === 0 && (
+                          <div className='text-center py-4 text-sm text-amber-700 dark:text-amber-400'>
+                            <AlertCircle className='h-5 w-5 mx-auto mb-2' />
+                            <p>No fines have been paid yet</p>
+                          </div>
+                        )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
           {/* Event Information */}
           <Card className='border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden'>
             {/* Cover Image */}
@@ -886,215 +1081,73 @@ export default function LocationBookingDetailPage({
               </div>
             </CardContent>
           </Card>
-
-          {/* Booking Time Slots Detail */}
-          {booking.dates && booking.dates.length > 0 && (
-            <Card className='border-2 border-blue-500/10 shadow-lg bg-card/80 backdrop-blur-sm'>
-              <CardHeader className='bg-white border-b border-blue-500/20 py-3'>
-                <CardTitle className='flex items-center gap-2 text-lg'>
-                  <div className='h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center'>
-                    <Clock className='h-4 w-4 text-blue-600' />
-                  </div>
-                  Booking Time Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className='pt-4 pb-4'>
-                <div className='space-y-4'>
-                  {bookingTimeDetails.dateGroups.map((group, groupIdx) => (
-                    <div
-                      key={group.dateKey}
-                      className='border-2 border-border/40 rounded-lg p-4 bg-muted/20'
-                    >
-                      <div className='flex items-center justify-between'>
-                        <div className='flex items-center gap-3'>
-                          <Calendar className='h-5 w-5 text-primary' />
-                          <div>
-                            <p className='font-semibold text-foreground text-base'>
-                              {format(group.date, 'EEEE, dd MMMM yyyy', {
-                                locale: vi,
-                              })}
-                            </p>
-                            <p className='text-sm text-muted-foreground mt-1'>
-                              {format(group.startTime, 'HH:mm')} -{' '}
-                              {format(group.endTime, 'HH:mm')}
-                            </p>
-                          </div>
-                        </div>
-                        <Badge variant='outline' className='font-semibold'>
-                          {group.totalDuration} hours
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                  <div className='pt-2 border-t border-border/40'>
-                    <div className='flex items-center justify-between'>
-                      <p className='text-sm font-semibold text-muted-foreground'>
-                        Total
-                      </p>
-                      <div className='text-right'>
-                        <p className='text-lg font-bold text-primary'>
-                          {totalHours} hours
-                        </p>
-                        <p className='text-xs text-muted-foreground'>
-                          {bookingTimeDetails.totalDays}{' '}
-                          {bookingTimeDetails.totalDays === 1 ? 'day' : 'days'}{' '}
-                          • {booking.dates.length}{' '}
-                          {booking.dates.length === 1 ? 'slot' : 'slots'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Event Request Information */}
-          {booking.referencedEventRequest && (
-            <Card className='border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm'>
-              <CardHeader className='bg-white border-b border-primary/20 py-3'>
-                <CardTitle className='flex items-center gap-2 text-lg'>
-                  <div className='h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center'>
-                    <FileText className='h-4 w-4 text-primary' />
-                  </div>
-                  Event Request Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className='pt-4 pb-4'>
-                <div className='space-y-3'>
-                  <InfoRow
-                    label='Event Name'
-                    value={booking.referencedEventRequest.eventName}
-                  />
-                  <InfoRow
-                    label='Event Description'
-                    value={booking.referencedEventRequest.eventDescription}
-                  />
-                  <InfoRow
-                    label='Expected Participants'
-                    value={
-                      <div className='flex items-center gap-2'>
-                        <Users className='h-4 w-4 text-muted-foreground' />
-                        {
-                          booking.referencedEventRequest
-                            .expectedNumberOfParticipants
-                        }{' '}
-                        people
-                      </div>
-                    }
-                    icon={Users}
-                  />
-                  <InfoRow
-                    label='Allow Tickets'
-                    value={
-                      <Badge
-                        variant={
-                          booking.referencedEventRequest.allowTickets
-                            ? 'default'
-                            : 'outline'
-                        }
-                      >
-                        {booking.referencedEventRequest.allowTickets
-                          ? 'Yes'
-                          : 'No'}
-                      </Badge>
-                    }
-                  />
-                  <InfoRow
-                    label='Special Requirements'
-                    value={
-                      booking.referencedEventRequest.specialRequirements ||
-                      'None'
-                    }
-                  />
-                  <InfoRow
-                    label='Event Status'
-                    value={
-                      <Badge variant='outline'>
-                        {booking.referencedEventRequest.status}
-                      </Badge>
-                    }
-                  />
-                  <InfoRow
-                    label='Event Request ID'
-                    value={
-                      <span className='font-mono text-sm bg-muted px-2 py-1 rounded'>
-                        {booking.referencedEventRequest.id.substring(0, 8)}...
-                      </span>
-                    }
-                  />
-                  <InfoRow
-                    label='Created At'
-                    value={formatDateTime(
-                      booking.referencedEventRequest.createdAt
-                    )}
-                    icon={Calendar}
-                  />
-                  <InfoRow
-                    label='Last Updated'
-                    value={formatDateTime(
-                      booking.referencedEventRequest.updatedAt
-                    )}
-                    icon={Clock}
-                  />
-                </div>
-
-                <Separator className='my-4' />
-
-                {/* Event Validation Documents */}
-                {booking.referencedEventRequest.eventValidationDocuments &&
-                  booking.referencedEventRequest.eventValidationDocuments
-                    .length > 0 && (
-                    <div>
-                      <div className='flex items-center gap-2 mb-3'>
-                        <FileText className='h-4 w-4 text-primary' />
-                        <p className='text-sm font-semibold text-foreground'>
-                          Event Validation Documents
-                        </p>
-                      </div>
-                      <div className='space-y-3'>
-                        {booking.referencedEventRequest.eventValidationDocuments.map(
-                          (doc, docIndex) => (
-                            <div
-                              key={docIndex}
-                              className='space-y-2 p-3 rounded-lg border border-border/40 bg-muted/20'
-                            >
-                              <Badge variant='outline' className='font-medium'>
-                                {formatDocumentType(doc.documentType)}
-                              </Badge>
-                              <div className='grid grid-cols-2 gap-2'>
-                                {doc.documentImageUrls.map((url, imgIndex) => (
-                                  <div
-                                    key={imgIndex}
-                                    className='relative group'
-                                  >
-                                    <img
-                                      src={url}
-                                      alt={`${formatDocumentType(
-                                        doc.documentType
-                                      )} ${imgIndex + 1}`}
-                                      onClick={() => handleImageClick(url)}
-                                      className='w-full h-32 object-cover rounded-lg border-2 border-border/40 cursor-pointer hover:border-primary/50 transition-all hover:shadow-md'
-                                    />
-                                    <div className='absolute inset-0 bg-black/0 group-hover:bg-black/5 rounded-lg transition-colors flex items-center justify-center'>
-                                      <ImageIcon className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity' />
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Right Column */}
         <div className='lg:col-span-1 space-y-6'>
+          {/* Payment Summary Card */}
+          <Card
+            className='border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden cursor-pointer hover:border-primary/30 transition-colors'
+            onClick={() => setIsPaymentDetailsOpen(true)}
+          >
+            <CardContent className='p-6'>
+              <div className='flex items-center justify-between gap-4'>
+                <div className='flex items-center gap-4 flex-1 min-w-0'>
+                  <div className='h-12 w-12 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0'>
+                    <DollarSign className='h-6 w-6 text-green-600 dark:text-green-400' />
+                  </div>
+                  <div className='flex-1 min-w-0'>
+                    <p className='text-sm font-medium text-muted-foreground mb-1'>
+                      Amount to Receive
+                    </p>
+                    <p className='text-2xl font-bold text-green-700 dark:text-green-400'>
+                      {formatCurrency(booking.amountToReceive, 'VND')}
+                    </p>
+                    {(booking as any).scheduledPayoutJob?.executeAt && (
+                      <p className='text-xs text-muted-foreground mt-2 flex items-center gap-1'>
+                        <Clock className='h-3 w-3' />
+                        Scheduled:{' '}
+                        <span className='font-medium'>
+                          {formatDateTime(
+                            (booking as any).scheduledPayoutJob.executeAt
+                          )}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className='flex-shrink-0'>
+                  <ChevronRight className='h-5 w-5 text-muted-foreground' />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          {/* Force Cancel (moved below booking calendar) */}
+          {(booking.status === 'APPROVED' ||
+            booking.status === 'PAYMENT_RECEIVED') && (
+            <Button
+              variant='default'
+              className='w-full bg-red-600 hover:bg-red-700 text-white'
+              onClick={handleForceCancelClick}
+              disabled={Boolean(forceCancelBlockReason)}
+            >
+              <X className='h-4 w-4 mr-2' />
+              Force Cancel
+            </Button>
+          )}
+
+          {(booking.status === 'APPROVED' ||
+            booking.status === 'PAYMENT_RECEIVED') &&
+            forceCancelBlockReason && (
+              <Alert variant='destructive'>
+                <AlertTitle>Force cancel unavailable</AlertTitle>
+                <AlertDescription>
+                  {forceCancelBlockReason === 'IN_PROGRESS'
+                    ? 'This booking is currently in progress, so it cannot be force-cancelled.'
+                    : 'This booking has already started/ended, so it cannot be force-cancelled.'}
+                </AlertDescription>
+              </Alert>
+            )}
           {/* Location Card */}
           <Card className='border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm'>
             <CardHeader className='bg-white border-b border-primary/20 py-3'>
@@ -1140,9 +1193,7 @@ export default function LocationBookingDetailPage({
                 {/* Location Stats */}
                 <div className='grid grid-cols-2 gap-3 pt-2 border-t border-border/40'>
                   <div>
-                    <p className='text-xs text-muted-foreground mb-1'>
-                      Rating
-                    </p>
+                    <p className='text-xs text-muted-foreground mb-1'>Rating</p>
                     <div className='flex items-center gap-1'>
                       <Star className='h-3.5 w-3.5 text-amber-500 fill-amber-500' />
                       <span className='text-sm font-semibold'>
@@ -1293,11 +1344,11 @@ export default function LocationBookingDetailPage({
               return (
                 <TooltipProvider>
                   <Card className='border-2 border-primary/10 shadow-lg bg-card/80 backdrop-blur-sm'>
-                    <CardHeader className='bg-white border-b border-primary/20 py-2 px-4'>
+                    <CardHeader className='bg-white border-b border-primary/20 py-3'>
                       <div className='flex items-center justify-between'>
-                        <CardTitle className='flex items-center gap-1.5 text-base'>
-                          <div className='h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center'>
-                            <Calendar className='h-3 w-3 text-primary' />
+                        <CardTitle className='flex items-center gap-2 text-lg'>
+                          <div className='h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center'>
+                            <CalendarIcon className='h-4 w-4 text-primary' />
                           </div>
                           Booking Calendar
                         </CardTitle>
@@ -1305,36 +1356,36 @@ export default function LocationBookingDetailPage({
                           <Button
                             variant='ghost'
                             size='icon'
-                            className='h-6 w-6'
+                            className='h-8 w-8'
                             onClick={() =>
                               setCalendarMonth(subMonths(calendarMonth, 1))
                             }
                           >
-                            <ChevronLeft className='h-3 w-3' />
+                            <ChevronLeft className='h-4 w-4' />
                           </Button>
                           <Button
                             variant='ghost'
                             size='icon'
-                            className='h-6 w-6'
+                            className='h-8 w-8'
                             onClick={() =>
                               setCalendarMonth(addMonths(calendarMonth, 1))
                             }
                           >
-                            <ChevronRight className='h-3 w-3' />
+                            <ChevronRight className='h-4 w-4' />
                           </Button>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className='pt-3 pb-3 px-4'>
-                      <div className='space-y-2'>
-                        <div className='text-center text-xs font-semibold text-foreground'>
+                    <CardContent className='pt-4 pb-4 px-4'>
+                      <div className='space-y-3'>
+                        <div className='text-center text-sm font-semibold text-foreground'>
                           {format(calendarMonth, 'MMMM yyyy')}
                         </div>
-                        <div className='grid grid-cols-7 gap-0.5'>
+                        <div className='grid grid-cols-7 gap-1'>
                           {weekDays.map((day) => (
                             <div
                               key={day}
-                              className='text-center text-xs font-semibold text-muted-foreground py-0.5'
+                              className='text-center text-xs font-semibold text-muted-foreground py-1'
                             >
                               {day}
                             </div>
@@ -1363,17 +1414,17 @@ export default function LocationBookingDetailPage({
                               <div
                                 key={dayKey}
                                 className={cn(
-                                  'aspect-square flex items-center justify-center text-xs font-medium rounded transition-colors',
+                                  'aspect-square flex items-center justify-center text-xs font-medium rounded-md transition-colors cursor-default',
                                   !isCurrentMonth && 'text-muted-foreground/40',
                                   isCurrentMonth &&
-                                  !isBookingDate &&
-                                  !isToday &&
-                                  'text-foreground hover:bg-muted/50',
+                                    !isBookingDate &&
+                                    !isToday &&
+                                    'text-foreground hover:bg-muted/50',
                                   isToday &&
-                                  !isBookingDate &&
-                                  'bg-primary/10 text-primary font-semibold',
+                                    !isBookingDate &&
+                                    'bg-primary/10 text-primary font-semibold ring-2 ring-primary/20',
                                   isBookingDate &&
-                                  'bg-primary text-primary-foreground font-semibold'
+                                    'bg-primary text-primary-foreground font-semibold shadow-sm'
                                 )}
                               >
                                 {format(day, 'd')}
@@ -1415,33 +1466,6 @@ export default function LocationBookingDetailPage({
                 </TooltipProvider>
               );
             })()}
-
-          {/* Force Cancel (moved below booking calendar) */}
-          {(booking.status === 'APPROVED' ||
-            booking.status === 'PAYMENT_RECEIVED') && (
-              <Button
-                variant='default'
-                className='w-full bg-red-600 hover:bg-red-700 text-white'
-                onClick={handleForceCancelClick}
-                disabled={Boolean(forceCancelBlockReason)}
-              >
-                <X className='h-4 w-4 mr-2' />
-                Force Cancel
-              </Button>
-            )}
-
-          {(booking.status === 'APPROVED' ||
-            booking.status === 'PAYMENT_RECEIVED') &&
-            forceCancelBlockReason && (
-              <Alert variant='destructive'>
-                <AlertTitle>Force cancel unavailable</AlertTitle>
-                <AlertDescription>
-                  {forceCancelBlockReason === 'IN_PROGRESS'
-                    ? 'This booking is currently in progress, so it cannot be force-cancelled.'
-                    : 'This booking has already started/ended, so it cannot be force-cancelled.'}
-                </AlertDescription>
-              </Alert>
-            )}
         </div>
       </div>
 
@@ -1485,16 +1509,18 @@ export default function LocationBookingDetailPage({
           <div className='overflow-y-auto flex-1 px-6 pt-6'>
             <div className='space-y-4 pb-4'>
               <div
-                className={`flex items-center gap-3 p-4 rounded-xl ${pendingStatus === 'APPROVED'
-                  ? 'bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800'
-                  : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800'
-                  }`}
+                className={`flex items-center gap-3 p-4 rounded-xl ${
+                  pendingStatus === 'APPROVED'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800'
+                    : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800'
+                }`}
               >
                 <div
-                  className={`h-12 w-12 rounded-full flex items-center justify-center ${pendingStatus === 'APPROVED'
-                    ? 'bg-emerald-100 dark:bg-emerald-900/40'
-                    : 'bg-red-100 dark:bg-red-900/40'
-                    }`}
+                  className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                    pendingStatus === 'APPROVED'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/40'
+                      : 'bg-red-100 dark:bg-red-900/40'
+                  }`}
                 >
                   {pendingStatus === 'APPROVED' ? (
                     <CheckCircle className='h-6 w-6 text-emerald-600 dark:text-emerald-400' />
@@ -1509,7 +1535,8 @@ export default function LocationBookingDetailPage({
                       : 'Ready to reject this booking?'}
                   </p>
                   <p className='text-xs text-muted-foreground mt-1'>
-                    Please review the details below before confirming your decision.
+                    Please review the details below before confirming your
+                    decision.
                   </p>
                 </div>
               </div>
@@ -1519,14 +1546,15 @@ export default function LocationBookingDetailPage({
                 <AlertCircle className='h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5' />
                 <p className='text-sm text-amber-900 dark:text-amber-200'>
                   <span className='font-semibold'>Important:</span> This action
-                  cannot be undone. Please review the booking details below before confirming.
+                  cannot be undone. Please review the booking details below
+                  before confirming.
                 </p>
               </div>
 
               {/* Booking Summary */}
               <div className='space-y-4 pt-2 pb-6'>
                 <div className='flex items-center gap-2 pb-2 border-b'>
-                  <Calendar className='h-5 w-5 text-primary' />
+                  <CalendarIcon className='h-5 w-5 text-primary' />
                   <h3 className='text-base font-semibold text-foreground'>
                     Booking Summary
                   </h3>
@@ -1672,10 +1700,11 @@ export default function LocationBookingDetailPage({
             <AlertDialogAction
               onClick={handleProcessConfirm}
               disabled={approveBooking.isPending || rejectBookings.isPending}
-              className={`min-w-[140px] font-semibold shadow-md ${pendingStatus === 'REJECTED'
-                ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800'
-                : 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800'
-                }`}
+              className={`min-w-[140px] font-semibold shadow-md ${
+                pendingStatus === 'REJECTED'
+                  ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800'
+                  : 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800'
+              }`}
             >
               {approveBooking.isPending || rejectBookings.isPending ? (
                 <>
@@ -1703,62 +1732,76 @@ export default function LocationBookingDetailPage({
       </AlertDialog>
 
       {/* Approve Booking Confirmation Dialog */}
-      <AlertDialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+      <AlertDialog
+        open={isApproveDialogOpen}
+        onOpenChange={setIsApproveDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Approve Booking</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to approve this booking?
-              <div className="mt-4 space-y-2 text-sm">
+              <div className='mt-4 space-y-2 text-sm'>
                 {booking.location?.name && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Location:</span>
+                  <div className='flex items-center gap-2'>
+                    <MapPin className='h-4 w-4 text-muted-foreground' />
+                    <span className='font-medium'>Location:</span>
                     <span>{booking.location.name}</span>
                   </div>
                 )}
                 {booking.event?.displayName && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Event:</span>
+                  <div className='flex items-center gap-2'>
+                    <CalendarIcon className='h-4 w-4 text-muted-foreground' />
+                    <span className='font-medium'>Event:</span>
                     <span>{booking.event.displayName}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Amount:</span>
-                  <span>{formatCurrency(booking.amountToPay, booking.currency || 'VND')}</span>
+                <div className='flex items-center gap-2'>
+                  <DollarSign className='h-4 w-4 text-muted-foreground' />
+                  <span className='font-medium'>Amount:</span>
+                  <span>
+                    {formatCurrency(
+                      booking.amountToPay,
+                      booking.currency || 'VND'
+                    )}
+                  </span>
                 </div>
-                {booking.dates && booking.dates.length > 0 && (() => {
-                  const sortedDates = [...booking.dates].sort(
-                    (a, b) =>
-                      new Date(a.startDateTime).getTime() -
-                      new Date(b.startDateTime).getTime()
-                  );
-                  const startDate = new Date(sortedDates[0].startDateTime);
-                  const endDate = new Date(
-                    sortedDates[sortedDates.length - 1].endDateTime
-                  );
-                  return (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Hours Booked:</span>
-                        <span>{totalHours} hours</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Start Date:</span>
-                        <span>{format(startDate, "MMM dd, yyyy 'at' h:mm a")}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">End Date:</span>
-                        <span>{format(endDate, "MMM dd, yyyy 'at' h:mm a")}</span>
-                      </div>
-                    </>
-                  );
-                })()}
+                {booking.dates &&
+                  booking.dates.length > 0 &&
+                  (() => {
+                    const sortedDates = [...booking.dates].sort(
+                      (a, b) =>
+                        new Date(a.startDateTime).getTime() -
+                        new Date(b.startDateTime).getTime()
+                    );
+                    const startDate = new Date(sortedDates[0].startDateTime);
+                    const endDate = new Date(
+                      sortedDates[sortedDates.length - 1].endDateTime
+                    );
+                    return (
+                      <>
+                        <div className='flex items-center gap-2'>
+                          <Clock className='h-4 w-4 text-muted-foreground' />
+                          <span className='font-medium'>Hours Booked:</span>
+                          <span>{totalHours} hours</span>
+                        </div>
+                        <div className='flex items-center gap-2'>
+                          <CalendarIcon className='h-4 w-4 text-muted-foreground' />
+                          <span className='font-medium'>Start Date:</span>
+                          <span>
+                            {format(startDate, "MMM dd, yyyy 'at' h:mm a")}
+                          </span>
+                        </div>
+                        <div className='flex items-center gap-2'>
+                          <CalendarIcon className='h-4 w-4 text-muted-foreground' />
+                          <span className='font-medium'>End Date:</span>
+                          <span>
+                            {format(endDate, "MMM dd, yyyy 'at' h:mm a")}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1773,16 +1816,16 @@ export default function LocationBookingDetailPage({
                 });
               }}
               disabled={approveBooking.isPending}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className='bg-green-600 hover:bg-green-700 text-white'
             >
               {approveBooking.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                   Approving...
                 </>
               ) : (
                 <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <CheckCircle className='h-4 w-4 mr-2' />
                   Confirm Approve
                 </>
               )}
@@ -1792,68 +1835,85 @@ export default function LocationBookingDetailPage({
       </AlertDialog>
 
       {/* Reject Booking Confirmation Dialog */}
-      <AlertDialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+      <AlertDialog
+        open={isRejectDialogOpen}
+        onOpenChange={setIsRejectDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Reject Booking</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to reject this booking? This action cannot be undone.
-              <div className="mt-4 space-y-2 text-sm">
+              Are you sure you want to reject this booking? This action cannot
+              be undone.
+              <div className='mt-4 space-y-2 text-sm'>
                 {booking.location?.name && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Location:</span>
+                  <div className='flex items-center gap-2'>
+                    <MapPin className='h-4 w-4 text-muted-foreground' />
+                    <span className='font-medium'>Location:</span>
                     <span>{booking.location.name}</span>
                   </div>
                 )}
                 {booking.event?.displayName && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Event:</span>
+                  <div className='flex items-center gap-2'>
+                    <CalendarIcon className='h-4 w-4 text-muted-foreground' />
+                    <span className='font-medium'>Event:</span>
                     <span>{booking.event.displayName}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Amount:</span>
-                  <span>{formatCurrency(booking.amountToPay, booking.currency || 'VND')}</span>
+                <div className='flex items-center gap-2'>
+                  <DollarSign className='h-4 w-4 text-muted-foreground' />
+                  <span className='font-medium'>Amount:</span>
+                  <span>
+                    {formatCurrency(
+                      booking.amountToPay,
+                      booking.currency || 'VND'
+                    )}
+                  </span>
                 </div>
-                {booking.dates && booking.dates.length > 0 && (() => {
-                  const sortedDates = [...booking.dates].sort(
-                    (a, b) =>
-                      new Date(a.startDateTime).getTime() -
-                      new Date(b.startDateTime).getTime()
-                  );
-                  const startDate = new Date(sortedDates[0].startDateTime);
-                  const endDate = new Date(
-                    sortedDates[sortedDates.length - 1].endDateTime
-                  );
-                  return (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Hours Booked:</span>
-                        <span>{totalHours} hours</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Start Date:</span>
-                        <span>{format(startDate, "MMM dd, yyyy 'at' h:mm a")}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">End Date:</span>
-                        <span>{format(endDate, "MMM dd, yyyy 'at' h:mm a")}</span>
-                      </div>
-                    </>
-                  );
-                })()}
+                {booking.dates &&
+                  booking.dates.length > 0 &&
+                  (() => {
+                    const sortedDates = [...booking.dates].sort(
+                      (a, b) =>
+                        new Date(a.startDateTime).getTime() -
+                        new Date(b.startDateTime).getTime()
+                    );
+                    const startDate = new Date(sortedDates[0].startDateTime);
+                    const endDate = new Date(
+                      sortedDates[sortedDates.length - 1].endDateTime
+                    );
+                    return (
+                      <>
+                        <div className='flex items-center gap-2'>
+                          <Clock className='h-4 w-4 text-muted-foreground' />
+                          <span className='font-medium'>Hours Booked:</span>
+                          <span>{totalHours} hours</span>
+                        </div>
+                        <div className='flex items-center gap-2'>
+                          <CalendarIcon className='h-4 w-4 text-muted-foreground' />
+                          <span className='font-medium'>Start Date:</span>
+                          <span>
+                            {format(startDate, "MMM dd, yyyy 'at' h:mm a")}
+                          </span>
+                        </div>
+                        <div className='flex items-center gap-2'>
+                          <CalendarIcon className='h-4 w-4 text-muted-foreground' />
+                          <span className='font-medium'>End Date:</span>
+                          <span>
+                            {format(endDate, "MMM dd, yyyy 'at' h:mm a")}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
               </div>
-              <div className="mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-900 dark:text-red-200">
-                    <span className="font-semibold">Warning:</span> Rejecting this booking will notify the event creator and cannot be undone.
+              <div className='mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800'>
+                <div className='flex items-start gap-2'>
+                  <AlertCircle className='h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5' />
+                  <p className='text-xs text-red-900 dark:text-red-200'>
+                    <span className='font-semibold'>Warning:</span> Rejecting
+                    this booking will notify the event creator and cannot be
+                    undone.
                   </p>
                 </div>
               </div>
@@ -1870,16 +1930,16 @@ export default function LocationBookingDetailPage({
                 });
               }}
               disabled={rejectBookings.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className='bg-red-600 hover:bg-red-700 text-white'
             >
               {rejectBookings.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                   Rejecting...
                 </>
               ) : (
                 <>
-                  <X className="h-4 w-4 mr-2" />
+                  <X className='h-4 w-4 mr-2' />
                   Confirm Reject
                 </>
               )}
@@ -1890,49 +1950,54 @@ export default function LocationBookingDetailPage({
 
       {/* Force Cancel Booking Confirmation Dialog */}
       <AlertDialog open={isForceCancelOpen} onOpenChange={setIsForceCancelOpen}>
-        <AlertDialogContent className="max-w-md">
+        <AlertDialogContent className='max-w-md'>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-600 flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" /> Confirm force cancel
+            <AlertDialogTitle className='text-red-600 flex items-center gap-2'>
+              <AlertCircle className='h-5 w-5' /> Confirm force cancel
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. A refund will be issued after deducting the cancellation fee.
+              This action cannot be undone. A refund will be issued after
+              deducting the cancellation fee.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className='space-y-4 py-4'>
             {/* Fee breakdown */}
-            <div className="rounded-lg border bg-muted/30 p-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Order amount:</span>
+            <div className='rounded-lg border bg-muted/30 p-4 space-y-2 text-sm'>
+              <div className='flex justify-between'>
+                <span className='text-muted-foreground'>Order amount:</span>
                 <span>{formatCurrency(booking.amountToPay)}</span>
               </div>
-              <div className="flex justify-between text-red-600 font-medium">
+              <div className='flex justify-between text-red-600 font-medium'>
                 <span>Cancellation fee (10%):</span>
                 <span>-{formatCurrency(cancellationFee.toString())}</span>
               </div>
-              <div className="pt-2 border-t flex justify-between font-bold text-base text-green-600">
+              <div className='pt-2 border-t flex justify-between font-bold text-base text-green-600'>
                 <span>Refund amount:</span>
                 <span>{formatCurrency(refundAmount.toString())}</span>
               </div>
             </div>
 
             <textarea
-              className="w-full min-h-[100px] p-3 text-sm border rounded-md focus:ring-1 focus:ring-red-500 outline-none"
-              placeholder="Cancellation reason (e.g., venue issue...)"
+              className='w-full min-h-[100px] p-3 text-sm border rounded-md focus:ring-1 focus:ring-red-500 outline-none'
+              placeholder='Cancellation reason (e.g., venue issue...)'
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={forceCancel.isPending}>Back</AlertDialogCancel>
+            <AlertDialogCancel disabled={forceCancel.isPending}>
+              Back
+            </AlertDialogCancel>
             <Button
-              variant="destructive"
+              variant='destructive'
               onClick={handleConfirm}
               disabled={forceCancel.isPending || !reason.trim()}
             >
-              {forceCancel.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {forceCancel.isPending && (
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+              )}
               Confirm force cancel
             </Button>
           </AlertDialogFooter>

@@ -46,6 +46,7 @@ import {
   type SortDirection,
 } from '@/components/shared';
 import { StatCard } from '@/components/shared/StatCard';
+import { formatDate } from '@/lib/utils';
 
 const getStatusBadge = (status: string) => {
   const statusUpper = status?.toUpperCase();
@@ -148,7 +149,6 @@ const calculateTotalHours = (
   return Math.round(totalHours); // Round to integer
 };
 
-// Component for booking row
 function BookingRow({
   booking,
   index,
@@ -246,7 +246,12 @@ function BookingRow({
       </TableCell>
       <TableCell className='py-4'>
         <span className='text-sm text-muted-foreground'>
-          {format(new Date(booking.createdAt), 'MMM dd, yyyy')}
+          {formatDate(booking.event.startDate)}
+        </span>
+      </TableCell>
+      <TableCell className='py-4'>
+        <span className='text-sm text-muted-foreground'>
+          {formatDate(booking.event.endDate)}
         </span>
       </TableCell>
       <TableCell className='py-4 w-[90px]'>
@@ -254,9 +259,14 @@ function BookingRow({
           {calculateTotalHours(booking.dates)} hrs
         </div>
       </TableCell>
+      {/* <TableCell className='py-4 w-[90px]'>
+        <div className='text-sm font-medium'>
+          {(booking.systemCutPercentage ?? 0) * 100} %
+        </div>
+      </TableCell> */}
       <TableCell className='py-4'>
         <div className='text-sm font-semibold text-emerald-600'>
-          {formatCurrency(booking.amountToPay)}
+          {formatCurrency(booking.amountToReceive)}
         </div>
       </TableCell>
       <TableCell className='py-4'>{getStatusBadge(booking.status)}</TableCell>
@@ -267,9 +277,7 @@ function BookingRow({
 export default function LocationBookingsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<string>(
-    'AWAITING_BUSINESS_PROCESSING'
-  );
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [sort, setSort] = useState<{
     column: string;
     direction: SortDirection;
@@ -303,7 +311,7 @@ export default function LocationBookingsPage() {
     ).length,
     totalRevenue: bookings
       .filter((b) => b.status?.toUpperCase() === 'APPROVED')
-      .reduce((sum, b) => sum + parseFloat(b.amountToPay || '0'), 0),
+      .reduce((sum, b) => sum + parseFloat(b.amountToReceive || '0'), 0),
   };
 
   const handleSort = (column: string, direction: SortDirection) => {
@@ -317,13 +325,6 @@ export default function LocationBookingsPage() {
     if (debouncedSearchTerm) count++;
     return count;
   }, [statusFilter, debouncedSearchTerm]);
-
-  const handleClearFilters = () => {
-    setSearch('');
-    setStatusFilter('AWAITING_BUSINESS_PROCESSING');
-    setSort({ column: 'createdAt', direction: 'DESC' });
-    setPage(1);
-  };
 
   return (
     <PageContainer>
@@ -339,7 +340,7 @@ export default function LocationBookingsPage() {
           title='Total Bookings'
           value={stats.totalBookings.toLocaleString()}
           icon={CalendarDays}
-          color='red'
+          color='blue'
           description='All location bookings'
         />
 
@@ -363,7 +364,7 @@ export default function LocationBookingsPage() {
           title='Total Revenue'
           value={formatCurrency(stats.totalRevenue.toString())}
           icon={DollarSign}
-          color='blue'
+          color='purple'
           description='From approved bookings'
         />
       </div>
@@ -447,12 +448,20 @@ export default function LocationBookingsPage() {
                         Booking At
                       </SortableTableHeader>
                       <SortableTableHeader
-                        column='createdAt'
+                        column='event.startDate'
                         currentSort={sort}
                         onSort={handleSort}
                         className='min-w-[120px] max-w-[150px] text-left text-xs uppercase tracking-wide text-muted-foreground py-3'
                       >
-                        Created At
+                        Start Date
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column='event.endDate'
+                        currentSort={sort}
+                        onSort={handleSort}
+                        className='min-w-[120px] max-w-[150px] text-left text-xs uppercase tracking-wide text-muted-foreground py-3'
+                      >
+                        End Date
                       </SortableTableHeader>
                       <SortableTableHeader
                         column='totalHours'
@@ -462,13 +471,14 @@ export default function LocationBookingsPage() {
                       >
                         Hours
                       </SortableTableHeader>
+
                       <SortableTableHeader
-                        column='amountToPay'
+                        column='amountToReceive'
                         currentSort={sort}
                         onSort={handleSort}
                         className='text-left text-xs uppercase tracking-wide text-muted-foreground py-3 w-[140px]'
                       >
-                        Payment
+                        Amount to Receive
                       </SortableTableHeader>
                       <SortableTableHeader
                         column='status'

@@ -303,19 +303,20 @@ export default function LocationDashboardPage() {
                         Rating
                       </SortableTableHeader>
                       <TableHead className='text-center'>Stats</TableHead>
+
+                      <SortableTableHeader
+                        column='createdAt'
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Created At
+                      </SortableTableHeader>
                       <SortableTableHeader
                         column='isVisibleOnMap'
                         currentSort={sort}
                         onSort={handleSort}
                       >
                         Status
-                      </SortableTableHeader>
-                      <SortableTableHeader
-                        column='createdAt'
-                        currentSort={sort}
-                        onSort={handleSort}
-                      >
-                        Created
                       </SortableTableHeader>
                     </TableRow>
                   </TableHeader>
@@ -367,14 +368,14 @@ export default function LocationDashboardPage() {
                                 <p className='font-medium group-hover:text-primary transition-colors truncate'>
                                   {loc.name}
                                 </p>
-                                {loc.business && (
-                                  <p className='text-xs text-muted-foreground flex items-center gap-1 truncate'>
-                                    <Building2 className='h-3 w-3 shrink-0' />
-                                    <span className='truncate'>
-                                      {loc.business.name}
-                                    </span>
-                                  </p>
-                                )}
+                                <p className='text-xs text-muted-foreground flex items-center gap-1 truncate'>
+                                  <Building2 className='h-3 w-3 shrink-0' />
+                                  <span className='truncate'>
+                                    {loc.business
+                                      ? loc.business.name
+                                      : 'Public'}
+                                  </span>
+                                </p>
                               </div>
                             </Link>
                           </TableCell>
@@ -411,9 +412,6 @@ export default function LocationDashboardPage() {
                                   ? loc.averageRating.toFixed(1)
                                   : '0.0'}
                               </span>
-                              <span className='text-xs text-muted-foreground'>
-                                ({loc.totalReviews || 0})
-                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -427,6 +425,10 @@ export default function LocationDashboardPage() {
                                 <span>{loc.totalReviews || 0}</span>
                               </div>
                             </div>
+                          </TableCell>
+
+                          <TableCell className='text-sm text-muted-foreground'>
+                            {formatShortDate(loc.createdAt)}
                           </TableCell>
                           <TableCell>
                             {loc.isVisibleOnMap ? (
@@ -444,9 +446,6 @@ export default function LocationDashboardPage() {
                                 Hidden
                               </Badge>
                             )}
-                          </TableCell>
-                          <TableCell className='text-sm text-muted-foreground'>
-                            {formatShortDate(loc.createdAt)}
                           </TableCell>
                         </TableRow>
                       ))

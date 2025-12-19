@@ -227,7 +227,8 @@ function RefundCalculationExample({
   // Calculate refund amounts
   const refundBeforeCutoff =
     baseBookingPrice * (refundPercentageBeforeCutoff || 0);
-  const refundAfterCutoff = baseBookingPrice * (refundPercentageAfterCutoff || 0);
+  const refundAfterCutoff =
+    baseBookingPrice * (refundPercentageAfterCutoff || 0);
   const nonRefundBefore = baseBookingPrice - refundBeforeCutoff;
   const nonRefundAfter = baseBookingPrice - refundAfterCutoff;
 
@@ -242,7 +243,8 @@ function RefundCalculationExample({
               Set a base booking price to see refund calculation examples
             </p>
             <p className='text-xs text-amber-700 dark:text-amber-300 mt-1'>
-              Refund examples will appear here once you enter a valid base booking price.
+              Refund examples will appear here once you enter a valid base
+              booking price.
             </p>
           </div>
         </div>
@@ -351,10 +353,11 @@ function RefundCalculationExample({
         <div className='flex items-start gap-2 p-2.5 rounded-md bg-muted/50 border border-border/50'>
           <HelpCircle className='h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0' />
           <p className='text-[11px] text-muted-foreground leading-relaxed'>
-            These calculations are based on your current settings. The cutoff time is{' '}
-            <span className='font-semibold'>{refundCutoffHours} hours</span> before
-            the booking start time. Refund percentages are applied to the base booking
-            price per hour.
+            These calculations are based on your current settings. The cutoff
+            time is{' '}
+            <span className='font-semibold'>{refundCutoffHours} hours</span>{' '}
+            before the booking start time. Refund percentages are applied to the
+            base booking price per hour.
           </p>
         </div>
       </div>
@@ -1534,7 +1537,6 @@ export default function AvailabilityPage({
                 )}
               >
                 <CardContent className='pt-4 space-y-4'>
-
                   {/* Legend and Actions */}
                   <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
                     <div className='flex flex-wrap items-center gap-3 rounded-lg border-2 border-primary/10 bg-gradient-to-r from-muted/50 to-muted/30 px-3 py-2'>

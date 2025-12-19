@@ -116,7 +116,15 @@ export default function AdminPostsPage() {
     }
 
     router.replace(`${pathname}?${params.toString()}`);
-  }, [debouncedSearchTerm, typeFilter, visibilityFilter, page, pathname, router, searchParams]);
+  }, [
+    debouncedSearchTerm,
+    typeFilter,
+    visibilityFilter,
+    page,
+    pathname,
+    router,
+    searchParams,
+  ]);
 
   const sortBy = sort.direction
     ? `${sort.column}:${sort.direction}`
@@ -222,9 +230,7 @@ export default function AdminPostsPage() {
         <StatCard
           title='Total Posts'
           description={`${posts.length} on this page`}
-          value={
-            postStats.isLoading ? '—' : postStats.total.toLocaleString()
-          }
+          value={postStats.isLoading ? '—' : postStats.total.toLocaleString()}
           icon={FileText}
           color='blue'
           isLoading={postStats.isLoading}
@@ -237,11 +243,7 @@ export default function AdminPostsPage() {
               ? Math.round((postStats.reviews / postStats.total) * 100)
               : 0
           }% of total`}
-          value={
-            postStats.isLoading
-              ? '—'
-              : postStats.reviews.toLocaleString()
-          }
+          value={postStats.isLoading ? '—' : postStats.reviews.toLocaleString()}
           icon={Star}
           color='amber'
           isLoading={postStats.isLoading}
@@ -255,9 +257,7 @@ export default function AdminPostsPage() {
               : 0
           }% of total`}
           value={
-            postStats.isLoading
-              ? '—'
-              : postStats.checkIns.toLocaleString()
+            postStats.isLoading ? '—' : postStats.checkIns.toLocaleString()
           }
           icon={FileText}
           color='purple'
@@ -271,11 +271,7 @@ export default function AdminPostsPage() {
               ? Math.round((postStats.public / postStats.total) * 100)
               : 0
           }% of total`}
-          value={
-            postStats.isLoading
-              ? '—'
-              : postStats.public.toLocaleString()
-          }
+          value={postStats.isLoading ? '—' : postStats.public.toLocaleString()}
           icon={Globe}
           color='green'
           isLoading={postStats.isLoading}
@@ -373,7 +369,6 @@ export default function AdminPostsPage() {
                       >
                         Author
                       </SortableTableHeader>
-                      <TableHead>Location</TableHead>
                       <SortableTableHeader
                         column='type'
                         currentSort={sort}
@@ -453,11 +448,13 @@ export default function AdminPostsPage() {
                                 <p className='text-sm font-medium group-hover:text-primary transition-colors line-clamp-2'>
                                   {post.content || '(No content)'}
                                 </p>
-                                {post.imageUrls && post.imageUrls.length > 1 && (
-                                  <p className='text-xs text-muted-foreground mt-1'>
-                                    +{post.imageUrls.length - 1} more image{post.imageUrls.length - 1 > 1 ? 's' : ''}
-                                  </p>
-                                )}
+                                {post.imageUrls &&
+                                  post.imageUrls.length > 1 && (
+                                    <p className='text-xs text-muted-foreground mt-1'>
+                                      +{post.imageUrls.length - 1} more image
+                                      {post.imageUrls.length - 1 > 1 ? 's' : ''}
+                                    </p>
+                                  )}
                               </div>
                             </Link>
                           </TableCell>
@@ -478,43 +475,37 @@ export default function AdminPostsPage() {
                               </Avatar>
                               <div className='flex-1 min-w-0'>
                                 <p className='text-sm font-medium truncate'>
-                                  {post.author?.firstName} {post.author?.lastName}
+                                  {post.author?.firstName}{' '}
+                                  {post.author?.lastName}
                                 </p>
-                                {post.isVerified && (
-                                  <div className='flex items-center gap-1 mt-0.5'>
-                                    <CheckCircle className='h-3 w-3 text-emerald-600' />
-                                    <span className='text-xs text-muted-foreground'>Verified</span>
-                                  </div>
-                                )}
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className='text-muted-foreground max-w-[200px]'>
-                            {post.location ? (
-                              <div className='truncate wrap-anywhere' title={post.location.name}>
-                                {post.location.name}
-                              </div>
-                            ) : (
-                              <span className='text-sm text-muted-foreground'>N/A</span>
-                            )}
-                          </TableCell>
                           <TableCell>{getTypeBadge(post.type)}</TableCell>
-                          <TableCell>{getVisibilityBadge(post.visibility)}</TableCell>
+                          <TableCell>
+                            {getVisibilityBadge(post.visibility)}
+                          </TableCell>
                           <TableCell>
                             <div className='flex flex-col gap-1 text-xs text-center'>
                               {post.analytics && (
                                 <>
                                   <div className='flex items-center justify-center gap-1'>
                                     <ThumbsUp className='h-3 w-3 text-emerald-600' />
-                                    <span>{post.analytics.totalUpvotes || 0}</span>
+                                    <span>
+                                      {post.analytics.totalUpvotes || 0}
+                                    </span>
                                   </div>
                                   <div className='flex items-center justify-center gap-1'>
                                     <ThumbsDown className='h-3 w-3 text-red-600' />
-                                    <span>{post.analytics.totalDownvotes || 0}</span>
+                                    <span>
+                                      {post.analytics.totalDownvotes || 0}
+                                    </span>
                                   </div>
                                   <div className='flex items-center justify-center gap-1'>
                                     <MessageSquare className='h-3 w-3 text-blue-600' />
-                                    <span>{post.analytics.totalComments || 0}</span>
+                                    <span>
+                                      {post.analytics.totalComments || 0}
+                                    </span>
                                   </div>
                                 </>
                               )}
@@ -532,7 +523,9 @@ export default function AdminPostsPage() {
                                 </span>
                               </div>
                             ) : (
-                              <span className='text-sm text-muted-foreground'>—</span>
+                              <span className='text-sm text-muted-foreground'>
+                                —
+                              </span>
                             )}
                           </TableCell>
                           <TableCell className='text-sm text-muted-foreground'>
@@ -599,4 +592,3 @@ export default function AdminPostsPage() {
     </PageContainer>
   );
 }
-

@@ -48,6 +48,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { formatCurrency as formatCurrencyUtil } from '@/components/ui/currency-display';
+import { useGetBookingsAtLocationAdmin } from '@/hooks/admin/useBookingAdmin';
 
 interface BookingsCalendarProps {
   locationId: string;
@@ -65,7 +66,7 @@ const DAYS_OF_WEEK = [
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i); // 0-23 (12 AM to 11 PM)
 
-export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
+export function BookingsCalendarAdmin({ locationId }: BookingsCalendarProps) {
   const router = useRouter();
 
   const [openPopover, setOpenPopover] = useState<string | null>(null);
@@ -87,7 +88,7 @@ export function BookingsCalendar({ locationId }: BookingsCalendarProps) {
     return endOfDay;
   }, [dates]);
 
-  const { data: bookingsData, isLoading } = useAllBookingsAtLocation({
+  const { data: bookingsData, isLoading } = useGetBookingsAtLocationAdmin({
     locationId,
     startDate: weekStartDate.toISOString(),
     endDate: weekEndDate.toISOString(),

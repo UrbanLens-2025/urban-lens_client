@@ -54,7 +54,6 @@ import {
 import { cn } from '@/lib/utils';
 import { PageContainer, PageHeader } from '@/components/shared';
 import { StatCard } from '@/components/shared/StatCard';
-import { BookingsCalendar } from '../[locationId]/availability/_components/BookingsCalendar';
 
 function RequestActions({
   requestId,

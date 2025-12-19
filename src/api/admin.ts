@@ -11,7 +11,6 @@ import type {
   BusinessProfile,
   CreatePublicLocationPayload,
   GetLocationsParams,
-  Location,
   UpdateLocationPayload,
   GetTagsParams,
   Tag,
@@ -24,7 +23,9 @@ import type {
   GetEventsParams,
   User,
   WalletTransaction,
+  LocationBooking,
 } from '@/types';
+import { GetAllBookingsAtLocationParams } from './locations';
 
 export const getLocationRequestsForAdmin = async ({
   page = 1,
@@ -282,9 +283,9 @@ export const getAdminInternalWalletTransactions = async ({
 export const getAdminInternalWalletTransactionById = async (
   transactionId: string
 ): Promise<WalletTransaction> => {
-  const { data } = await axiosInstance.get<
-    ApiResponse<WalletTransaction>
-  >(`/v1/admin/wallet/transactions/internal/get-by-id/${transactionId}`);
+  const { data } = await axiosInstance.get<ApiResponse<WalletTransaction>>(
+    `/v1/admin/wallet/transactions/internal/get-by-id/${transactionId}`
+  );
   return data.data;
 };
 
@@ -484,14 +485,15 @@ export const getAllPostsForAdmin = async ({
     params.select = select;
   }
 
-  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<AdminPost>>>(
-    '/v1/post',
-    { params }
-  );
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<AdminPost>>
+  >('/v1/post', { params });
   return data.data;
 };
 
-export const getPostByIdForAdmin = async (postId: string): Promise<AdminPost> => {
+export const getPostByIdForAdmin = async (
+  postId: string
+): Promise<AdminPost> => {
   const { data } = await axiosInstance.get<ApiResponse<AdminPost>>(
     `/v1/post/${postId}`
   );
@@ -811,6 +813,29 @@ export const updateSystemConfigValue = async (
   const { data } = await axiosInstance.put<ApiResponse<SystemConfigValue>>(
     `/v1/admin/system-config/value/${key}`,
     payload
+  );
+  return data.data;
+};
+
+export const getBookingsAtLocationForAdmin = async ({
+  locationId,
+  startDate,
+  endDate,
+  page = 1,
+  limit = 100,
+}: GetAllBookingsAtLocationParams): Promise<PaginatedData<LocationBooking>> => {
+  const params: any = {
+    startDate,
+    endDate,
+    page,
+    limit: Math.min(limit, 100),
+  };
+
+  const { data } = await axiosInstance.get<
+    ApiResponse<PaginatedData<LocationBooking>>
+  >(
+    `/v1/admin/location-bookings/all-bookings-at-location-paged/${locationId}`,
+    { params }
   );
   return data.data;
 };

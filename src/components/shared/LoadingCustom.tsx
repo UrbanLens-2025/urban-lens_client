@@ -14,7 +14,7 @@ interface LoadingCustomProps {
 }
 
 export function LoadingCustom({
-  message = 'Đang tải dữ liệu...',
+  message = 'Loading data...',
   fullScreen = true,
   className,
 }: LoadingCustomProps) {
@@ -29,7 +29,7 @@ export function LoadingCustom({
       </div>
       <p className='text-sm font-medium text-foreground mb-1'>{message}</p>
       <p className='text-xs text-muted-foreground max-w-sm'>
-        Vui lòng chờ trong giây lát, chúng tôi đang xử lý yêu cầu của bạn.
+        Please wait a moment, we are processing your request.
       </p>
     </div>
   );

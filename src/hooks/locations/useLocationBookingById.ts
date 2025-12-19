@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
-import { getLocationBookingById } from "@/api/locations";
+import { useQuery } from '@tanstack/react-query';
+import { getLocationBookingById } from '@/api/locations';
 
 export function useLocationBookingById(locationBookingId: string | null) {
   return useQuery({
@@ -10,4 +10,3 @@ export function useLocationBookingById(locationBookingId: string | null) {
     enabled: !!locationBookingId,
   });
 }
-
