@@ -483,7 +483,7 @@ export default function BusinessDashboardPage() {
                 </div>
                 <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>
                   <p className='text-xs text-muted-foreground mb-1'>
-                    Available Revenue
+                    Available Balance
                   </p>
                   <p className='text-2xl font-bold text-blue-600'>
                     {formatCurrency(stats.availableRevenue)}
