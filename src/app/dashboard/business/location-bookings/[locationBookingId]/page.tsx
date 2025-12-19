@@ -51,6 +51,7 @@ import {
   ChevronRight,
   ExternalLink,
   Star,
+  Calendar,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -617,8 +618,45 @@ export default function LocationBookingDetailPage({
       {/* Header */}
       <PageHeader
         title='Booking Details'
-        icon={CalendarIcon}
-        actions={getStatusBadge(booking.status)}
+        icon={Calendar}
+        actions={
+          <div className='flex items-center gap-3'>
+            {getStatusBadge(booking.status)}
+            {(booking.status === 'APPROVED' ||
+              booking.status === 'PAYMENT_RECEIVED') && (
+              <Button
+                variant='default'
+                className='bg-red-600 hover:bg-red-700 text-white'
+                onClick={() => setIsForceCancelOpen(true)}
+              >
+                <X className='h-4 w-4 mr-2' />
+                Force Cancel
+              </Button>
+            )}
+            {booking.status === 'AWAITING_BUSINESS_PROCESSING' && (
+              <>
+                <Button
+                  variant='default'
+                  className='bg-green-600 hover:bg-green-700 text-white'
+                  onClick={() => setIsApproveDialogOpen(true)}
+                >
+                  <CheckCircle className='h-4 w-4 mr-2' />
+                  Approve
+                </Button>
+                <Button
+                  variant='destructive'
+                  onClick={() => setIsRejectDialogOpen(true)}
+                >
+                  <X className='h-4 w-4 mr-2' />
+                  Reject
+                </Button>
+              </>
+            )}
+            <Button variant='outline' size='icon' onClick={() => router.back()}>
+              <ArrowLeft className='h-4 w-4' />
+            </Button>
+          </div>
+        }
       />
 
       {/* Grid Content */}
