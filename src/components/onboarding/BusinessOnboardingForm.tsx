@@ -88,9 +88,6 @@ const businessSchema = z.object({
   description: z
     .string()
     .min(10, 'Description must be at least 10 characters.'),
-  addressLine: z.string().min(1, 'Street address is required.'),
-  addressLevel1: z.string().min(1, 'Province/City is required'),
-  addressLevel2: z.string().min(1, 'District/Ward is required'),
   email: z.string().email('Invalid email address.'),
   phone: z
     .string()
@@ -142,9 +139,6 @@ export function BusinessOnboardingForm({
     defaultValues: {
       name: '',
       description: '',
-      addressLine: '',
-      addressLevel1: '',
-      addressLevel2: '',
       email: '',
       phone: '',
       avatar: '',
@@ -868,189 +862,6 @@ export function BusinessOnboardingForm({
                       </p>
                     )}
                   </>
-                )}
-
-                {step === 6 && (
-                  <div className='space-y-6'>
-                    {/* Business Info Section */}
-                    <div className='space-y-4'>
-                      <h3 className='text-lg font-semibold flex items-center gap-2'>
-                        <Store className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-                        Business Information
-                      </h3>
-                      <div className='grid gap-3 p-4 rounded-lg bg-gradient-to-br from-blue-50/50 to-blue-100/30 dark:from-blue-950/20 dark:to-blue-900/10 border border-blue-200 dark:border-blue-900/50'>
-                        <div className='flex justify-between items-start'>
-                          <span className='text-sm text-muted-foreground'>
-                            Business Name:
-                          </span>
-                          <span className='text-sm font-medium text-right'>
-                            {form.getValues('name') || '—'}
-                          </span>
-                        </div>
-                        <div className='flex justify-between items-start'>
-                          <span className='text-sm text-muted-foreground'>
-                            Category:
-                          </span>
-                          <span className='text-sm font-medium'>
-                            {form.getValues('category')
-                              ? form.getValues('category').charAt(0) +
-                                form
-                                  .getValues('category')
-                                  .slice(1)
-                                  .toLowerCase()
-                              : '—'}
-                          </span>
-                        </div>
-                        <div className='flex justify-between items-start'>
-                          <span className='text-sm text-muted-foreground'>
-                            Description:
-                          </span>
-                          <span className='text-sm font-medium text-right max-w-[250px]'>
-                            {form.getValues('description')
-                              ? form.getValues('description').length > 60
-                                ? form
-                                    .getValues('description')
-                                    .substring(0, 60) + '...'
-                                : form.getValues('description')
-                              : '—'}
-                          </span>
-                        </div>
-                        {form.getValues('website') && (
-                          <div className='flex justify-between items-start'>
-                            <span className='text-sm text-muted-foreground'>
-                              Website:
-                            </span>
-                            <a
-                              href={form.getValues('website')}
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              className='text-sm font-medium text-primary hover:underline flex items-center gap-1'
-                            >
-                              <Globe className='h-3 w-3' />
-                              Visit site
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Contact Info Section */}
-                    <div className='space-y-4'>
-                      <h3 className='text-lg font-semibold flex items-center gap-2'>
-                        <Contact className='h-5 w-5 text-emerald-600 dark:text-emerald-400' />
-                        Contact Information
-                      </h3>
-                      <div className='grid gap-3 p-4 rounded-lg bg-gradient-to-br from-emerald-50/50 to-emerald-100/30 dark:from-emerald-950/20 dark:to-emerald-900/10 border border-emerald-200 dark:border-emerald-900/50'>
-                        <div className='flex justify-between items-center'>
-                          <span className='text-sm text-muted-foreground flex items-center gap-2'>
-                            <Mail className='h-3.5 w-3.5' />
-                            Email:
-                          </span>
-                          <span className='text-sm font-medium'>
-                            {form.getValues('email') || '—'}
-                          </span>
-                        </div>
-                        <div className='flex justify-between items-center'>
-                          <span className='text-sm text-muted-foreground flex items-center gap-2'>
-                            <Phone className='h-3.5 w-3.5' />
-                            Phone:
-                          </span>
-                          <span className='text-sm font-medium'>
-                            {form.getValues('phone') || '—'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Location Section */}
-                    <div className='space-y-4'>
-                      <h3 className='text-lg font-semibold flex items-center gap-2'>
-                        <MapPin className='h-5 w-5 text-violet-600 dark:text-violet-400' />
-                        Location
-                      </h3>
-                      <div className='grid gap-3 p-4 rounded-lg bg-gradient-to-br from-violet-50/50 to-violet-100/30 dark:from-violet-950/20 dark:to-violet-900/10 border border-violet-200 dark:border-violet-900/50'>
-                        <div className='flex justify-between items-start'>
-                          <span className='text-sm text-muted-foreground'>
-                            Address:
-                          </span>
-                          <span className='text-sm font-medium text-right max-w-[300px]'>
-                            {form.getValues('addressLine') || '—'}
-                          </span>
-                        </div>
-                        <div className='flex justify-between items-start'>
-                          <span className='text-sm text-muted-foreground'>
-                            City/Province:
-                          </span>
-                          <span className='text-sm font-medium'>
-                            {form.getValues('addressLevel1') || '—'}
-                          </span>
-                        </div>
-                        <div className='flex justify-between items-start'>
-                          <span className='text-sm text-muted-foreground'>
-                            District/Ward:
-                          </span>
-                          <span className='text-sm font-medium'>
-                            {form.getValues('addressLevel2') || '—'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Licenses Section */}
-                    <div className='space-y-4'>
-                      <h3 className='text-lg font-semibold flex items-center gap-2'>
-                        <FileCheck className='h-5 w-5 text-amber-600 dark:text-amber-400' />
-                        Business Licenses
-                      </h3>
-                      <div className='p-4 rounded-lg bg-gradient-to-br from-amber-50/50 to-amber-100/30 dark:from-amber-950/20 dark:to-amber-900/10 border border-amber-200 dark:border-amber-900/50'>
-                        {licenses && licenses.length > 0 ? (
-                          <div className='space-y-2'>
-                            {licenses.map((license, index) => (
-                              <div
-                                key={index}
-                                className='flex items-center gap-2 text-sm'
-                              >
-                                <CheckCircle2 className='h-4 w-4 text-emerald-600 dark:text-emerald-400' />
-                                <span className='font-medium'>
-                                  {getLicenseTypeLabel(license.licenseType)}
-                                </span>
-                                <span className='text-muted-foreground'>
-                                  ({license.documentImageUrls?.length || 0}{' '}
-                                  document
-                                  {license.documentImageUrls?.length !== 1
-                                    ? 's'
-                                    : ''}
-                                  )
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className='text-sm text-muted-foreground'>
-                            No licenses added
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className='p-4 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-900'>
-                      <div className='flex gap-3'>
-                        <div className='rounded-full p-1.5 bg-green-500/10 dark:bg-green-500/20 h-fit'>
-                          <CheckCircle2 className='h-4 w-4 text-green-600 dark:text-green-400' />
-                        </div>
-                        <div>
-                          <p className='text-sm font-medium text-green-900 dark:text-green-100 mb-1'>
-                            Ready to submit?
-                          </p>
-                          <p className='text-sm text-green-700 dark:text-green-200'>
-                            Double-check that everything looks correct. You can
-                            always update your information later from your
-                            dashboard.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 )}
 
                 {/* Navigation Buttons */}
