@@ -769,6 +769,7 @@ export interface WalletTransaction {
   type: string; // e.g., TO_ESCROW, FROM_ESCROW
   status: string; // e.g., COMPLETED
   createdAt: string;
+  note: string | null;
 }
 
 export interface GetWalletTransactionsParams {

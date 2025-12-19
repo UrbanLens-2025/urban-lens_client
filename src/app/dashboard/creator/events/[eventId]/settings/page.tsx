@@ -8,7 +8,7 @@ import { Edit, Ticket, Megaphone, Globe, AlertCircle, XCircle, Scale } from "luc
 import Link from "next/link";
 import { useEventTabs } from "@/contexts/EventTabContext";
 import { useEventById } from "@/hooks/events/useEventById";
-import { CancelEventDialog } from "./_components/CancelEventDialog";
+import { CancelEventDialog } from "@/app/dashboard/creator/events/[eventId]/settings/_components/CancelEventDialog";
 
 export default function EventSettingsPage({
   params,
@@ -18,10 +18,14 @@ export default function EventSettingsPage({
   const { eventId } = use(params);
   const router = useRouter();
   const { openEditEventTab } = useEventTabs();
-  const { data: event } = useEventById(eventId);
+  const { data: event, isLoading: isEventLoading } = useEventById(eventId);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   
   const isEventCancelled = event?.status?.toUpperCase() === "CANCELLED";
+  const hasEventStarted = event?.startDate
+    ? Date.now() >= new Date(event.startDate).getTime()
+    : false;
+  const isCancelEventDisabled = isEventLoading || isEventCancelled || hasEventStarted;
 
   return (
     <div className="space-y-6">
@@ -139,6 +143,7 @@ export default function EventSettingsPage({
                   size="default"
                   onClick={() => setIsCancelDialogOpen(true)}
                   className="w-full sm:w-auto"
+                  disabled={isCancelEventDisabled}
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Cancel Event

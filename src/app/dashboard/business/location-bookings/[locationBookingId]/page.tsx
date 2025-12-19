@@ -238,8 +238,53 @@ export default function LocationBookingDetailPage({
   const cancellationFee = Number(booking?.amountToPay || 0) * 0.1;
   const refundAmount = Number(booking?.amountToPay || 0) - cancellationFee;
 
+  const bookingWindow = useMemo(() => {
+    if (!booking?.dates || booking.dates.length === 0) return null;
+
+    const sorted = [...booking.dates].sort(
+      (a, b) =>
+        new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
+    );
+
+    const start = new Date(sorted[0].startDateTime);
+    const end = new Date(sorted[sorted.length - 1].endDateTime);
+    return { start, end };
+  }, [booking?.dates]);
+
+  const forceCancelBlockReason = useMemo(() => {
+    if (!bookingWindow) return null;
+    const now = new Date().getTime();
+    const start = bookingWindow.start.getTime();
+    const end = bookingWindow.end.getTime();
+
+    if (now >= start && now < end) return 'IN_PROGRESS' as const;
+    if (now >= end) return 'ENDED' as const;
+    return null;
+  }, [bookingWindow]);
+
+  const handleForceCancelClick = () => {
+    if (forceCancelBlockReason) {
+      toast.error(
+        forceCancelBlockReason === 'IN_PROGRESS'
+          ? 'This booking is currently in progress, so it cannot be force-cancelled.'
+          : 'This booking has already started/ended, so it cannot be force-cancelled.'
+      );
+      return;
+    }
+    setIsForceCancelOpen(true);
+  };
+
   const handleConfirm = () => {
-    if (!reason.trim()) return toast.error("Vui lòng nhập lý do");
+    if (!reason.trim()) return toast.error('Please enter a cancellation reason.');
+    if (forceCancelBlockReason) {
+      setIsForceCancelOpen(false);
+      toast.error(
+        forceCancelBlockReason === 'IN_PROGRESS'
+          ? 'This booking is currently in progress, so it cannot be force-cancelled.'
+          : 'This booking has already started/ended, so it cannot be force-cancelled.'
+      );
+      return;
+    }
 
     forceCancel.mutate({
       bookingId: locationBookingId,
@@ -557,16 +602,6 @@ export default function LocationBookingDetailPage({
         actions={
           <div className='flex items-center gap-3'>
             {getStatusBadge(booking.status)}
-            {(booking.status === 'APPROVED' || booking.status === 'PAYMENT_RECEIVED') && (
-              <Button
-                variant='default'
-                className='bg-red-600 hover:bg-red-700 text-white'
-                onClick={() => setIsForceCancelOpen(true)}
-              >
-                <X className='h-4 w-4 mr-2' />
-                Force Cancel
-              </Button>
-            )}
             {booking.status === 'AWAITING_BUSINESS_PROCESSING' && (
               <>
                 <Button variant='default' className='bg-green-600 hover:bg-green-700 text-white' onClick={() => setIsApproveDialogOpen(true)}>
@@ -1380,6 +1415,33 @@ export default function LocationBookingDetailPage({
                 </TooltipProvider>
               );
             })()}
+
+          {/* Force Cancel (moved below booking calendar) */}
+          {(booking.status === 'APPROVED' ||
+            booking.status === 'PAYMENT_RECEIVED') && (
+              <Button
+                variant='default'
+                className='w-full bg-red-600 hover:bg-red-700 text-white'
+                onClick={handleForceCancelClick}
+                disabled={Boolean(forceCancelBlockReason)}
+              >
+                <X className='h-4 w-4 mr-2' />
+                Force Cancel
+              </Button>
+            )}
+
+          {(booking.status === 'APPROVED' ||
+            booking.status === 'PAYMENT_RECEIVED') &&
+            forceCancelBlockReason && (
+              <Alert variant='destructive'>
+                <AlertTitle>Force cancel unavailable</AlertTitle>
+                <AlertDescription>
+                  {forceCancelBlockReason === 'IN_PROGRESS'
+                    ? 'This booking is currently in progress, so it cannot be force-cancelled.'
+                    : 'This booking has already started/ended, so it cannot be force-cancelled.'}
+                </AlertDescription>
+              </Alert>
+            )}
         </div>
       </div>
 
@@ -1831,47 +1893,47 @@ export default function LocationBookingDetailPage({
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-red-600 flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" /> Xác nhận hủy bắt buộc
+              <AlertCircle className="h-5 w-5" /> Confirm force cancel
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Hành động này không thể hoàn tác. Tiền sẽ được hoàn lại sau khi trừ phí.
+              This action cannot be undone. A refund will be issued after deducting the cancellation fee.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Hiển thị phí hủy chuyên nghiệp */}
+            {/* Fee breakdown */}
             <div className="rounded-lg border bg-muted/30 p-4 space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Giá trị đơn hàng:</span>
+                <span className="text-muted-foreground">Order amount:</span>
                 <span>{formatCurrency(booking.amountToPay)}</span>
               </div>
               <div className="flex justify-between text-red-600 font-medium">
-                <span>Phí hủy đơn (10%):</span>
+                <span>Cancellation fee (10%):</span>
                 <span>-{formatCurrency(cancellationFee.toString())}</span>
               </div>
               <div className="pt-2 border-t flex justify-between font-bold text-base text-green-600">
-                <span>Số tiền hoàn trả:</span>
+                <span>Refund amount:</span>
                 <span>{formatCurrency(refundAmount.toString())}</span>
               </div>
             </div>
 
             <textarea
               className="w-full min-h-[100px] p-3 text-sm border rounded-md focus:ring-1 focus:ring-red-500 outline-none"
-              placeholder="Lý do hủy bắt buộc (ví dụ: Sự cố địa điểm...)"
+              placeholder="Cancellation reason (e.g., venue issue...)"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={forceCancel.isPending}>Quay lại</AlertDialogCancel>
+            <AlertDialogCancel disabled={forceCancel.isPending}>Back</AlertDialogCancel>
             <Button
               variant="destructive"
               onClick={handleConfirm}
               disabled={forceCancel.isPending || !reason.trim()}
             >
               {forceCancel.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Xác nhận hủy đơn
+              Confirm force cancel
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
