@@ -210,7 +210,6 @@ export default function MyLocationsPage() {
           color='orange'
           description='Not visible'
         />
-
       </div>
 
       {/* Locations Table */}
@@ -370,7 +369,9 @@ export default function MyLocationsPage() {
                                     <span className='font-semibold text-foreground hover:text-primary transition-colors truncate'>
                                       {location.name}
                                     </span>
-                                    <span className='text-sm text-gray-500 truncate max-w-[200px]'>{location.description}</span>
+                                    <span className='text-sm text-gray-500 truncate max-w-[200px]'>
+                                      {location.description}
+                                    </span>
                                   </div>
                                 </div>
                               </Link>

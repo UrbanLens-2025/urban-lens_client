@@ -471,7 +471,7 @@ export default function AdminBusinessPage() {
                 </div>
 
                 {/* Two Column Grid */}
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-6'>
+                <div className='grid grid-cols-1 md:grid-cols-1 gap-4 mt-6'>
                   {/* Contact Information Card */}
                   <Card>
                     <CardHeader>
@@ -519,46 +519,6 @@ export default function AdminBusinessPage() {
                               {selectedBusiness.website}
                             </a>
                           </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Location Information Card */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className='text-base flex items-center gap-2'>
-                        <IconMapPin className='h-4 w-4' />
-                        Location
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className='space-y-3'>
-                      <div>
-                        <p className='text-xs font-medium text-muted-foreground mb-1'>
-                          Address
-                        </p>
-                        <p className='text-sm'>
-                          {selectedBusiness.addressLine}
-                        </p>
-                      </div>
-                      {selectedBusiness.addressLevel2 && (
-                        <div>
-                          <p className='text-xs font-medium text-muted-foreground mb-1'>
-                            District/City
-                          </p>
-                          <p className='text-sm'>
-                            {selectedBusiness.addressLevel2}
-                          </p>
-                        </div>
-                      )}
-                      {selectedBusiness.addressLevel1 && (
-                        <div>
-                          <p className='text-xs font-medium text-muted-foreground mb-1'>
-                            Province/State
-                          </p>
-                          <p className='text-sm'>
-                            {selectedBusiness.addressLevel1}
-                          </p>
                         </div>
                       )}
                     </CardContent>

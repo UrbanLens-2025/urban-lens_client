@@ -158,6 +158,7 @@ export default function LocationRequestsPage() {
     useState<LocationRequest | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [expandedDescription, setExpandedDescription] = useState(false);
+  const [expandedCardDescription, setExpandedCardDescription] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
 
   // Fetch full details of selected request
@@ -304,6 +305,16 @@ export default function LocationRequestsPage() {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   };
 
+  const formatDocumentType = (documentType?: string) => {
+    if (!documentType) return 'Document';
+    return documentType
+      .toLowerCase()
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   return (
     <div className='space-y-6'>
       {/* Statistics Cards */}
@@ -420,6 +431,7 @@ export default function LocationRequestsPage() {
                     onClick={() => {
                       setSelectedRequestId(req.id);
                       setExpandedDescription(false);
+                      setExpandedCardDescription(false);
                     }}
                     className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
                       selectedRequestId === req.id
@@ -515,27 +527,6 @@ export default function LocationRequestsPage() {
                         </p>
                       </div>
                     </div>
-
-                    {/* Description - Truncated */}
-                    {selectedRequest.description && (
-                      <div className='mt-4'>
-                        <p
-                          className={`text-sm text-muted-foreground ${
-                            !expandedDescription ? 'line-clamp-2' : ''
-                          }`}
-                        ></p>
-                        {selectedRequest.description.length > 150 && (
-                          <button
-                            onClick={() =>
-                              setExpandedDescription(!expandedDescription)
-                            }
-                            className='text-sm text-blue-600 hover:underline mt-1'
-                          >
-                            {expandedDescription ? 'Show less' : 'Read more'}
-                          </button>
-                        )}
-                      </div>
-                    )}
                   </div>
                   {selectedRequest.status === 'AWAITING_ADMIN_REVIEW' && (
                     <div className='flex gap-2 ml-4'>
@@ -572,9 +563,30 @@ export default function LocationRequestsPage() {
                             <IconFileText className='h-4 w-4 text-muted-foreground' />
                             <p className='text-sm font-semibold'>Description</p>
                           </div>
-                          <p className='text-sm text-muted-foreground pl-6'>
-                            {selectedRequest.description}
-                          </p>
+                          <div className='pl-6'>
+                            <p
+                              className={`text-sm text-muted-foreground ${
+                                !expandedCardDescription ? 'line-clamp-2' : ''
+                              }`}
+                            >
+                              {selectedRequest.description}
+                            </p>
+                            {selectedRequest.description.length > 100 && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedCardDescription(
+                                    !expandedCardDescription
+                                  );
+                                }}
+                                className='text-sm text-primary hover:underline mt-1'
+                              >
+                                {expandedCardDescription
+                                  ? 'View less'
+                                  : 'View more'}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )}
                       <div className='flex items-start gap-2'>
@@ -685,9 +697,7 @@ export default function LocationRequestsPage() {
                               >
                                 <IconFileText className='h-4 w-4 mr-2' />
                                 <span className='text-sm'>
-                                  {doc.documentType
-                                    ?.toLowerCase()
-                                    .replace(/_/g, ' ') || 'Document'}
+                                  {formatDocumentType(doc.documentType)}
                                 </span>
                                 <IconChevronRight className='h-4 w-4 ml-auto' />
                               </Button>
@@ -889,7 +899,7 @@ export default function LocationRequestsPage() {
           <DialogHeader>
             <DialogTitle className='flex items-center gap-2'>
               <IconFileText className='h-5 w-5' />
-              {selectedDocument?.documentType?.replace(/_/g, ' ') || 'Document'}
+              {formatDocumentType(selectedDocument?.documentType)}
             </DialogTitle>
             <DialogDescription>
               View all images for this document
