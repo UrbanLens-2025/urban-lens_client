@@ -6,7 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useWallet } from "@/hooks/user/useWallet";
 import { useWalletDeposit } from "@/hooks/wallet/useWalletDeposit";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -34,13 +34,18 @@ type DepositForm = z.infer<typeof depositSchema>;
 
 export default function BusinessWalletDepositPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: wallet } = useWallet();
   const deposit = useWalletDeposit();
+
+  // Get amount from query parameter
+  const amountParam = searchParams.get("amount");
+  const defaultAmount = amountParam ? parseInt(amountParam, 10) : 100000;
 
   const form = useForm<DepositForm>({
     resolver: zodResolver(depositSchema) as any,
     defaultValues: {
-      amount: 100000,
+      amount: defaultAmount,
       currency: wallet?.currency || "VND",
     },
   });
@@ -51,11 +56,31 @@ export default function BusinessWalletDepositPage() {
     }
   }, [wallet?.currency, form]);
 
+  useEffect(() => {
+    if (amountParam) {
+      const parsedAmount = parseInt(amountParam, 10);
+      if (!isNaN(parsedAmount) && parsedAmount > 0) {
+        form.setValue("amount", parsedAmount);
+      }
+    }
+  }, [amountParam, form]);
+
   const onSubmit = (data: DepositForm) => {
     const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-    const returnUrl = isLocalhost 
-      ? "https://google.com"
-      : `${window.location.origin}/dashboard/business/wallet?tab=external`;
+    const fromEvent = searchParams.get("fromEvent") === "true";
+    
+    let returnUrl: string;
+    if (isLocalhost) {
+      // Keep localhost return URL unchanged
+      returnUrl = "https://google.com";
+    } else if (fromEvent) {
+      // If fromEvent=true, redirect to create event page (production only)
+      returnUrl = `${window.location.origin}/dashboard/creator/request/create`;
+    } else {
+      // Default production return URL
+      returnUrl = `${window.location.origin}/dashboard/business/wallet?tab=external`;
+    }
+    
     deposit.mutate({
       amount: data.amount,
       currency: data.currency,

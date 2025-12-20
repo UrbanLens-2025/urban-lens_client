@@ -64,6 +64,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { ImageViewer } from '@/components/shared/ImageViewer';
 import StatisticCard from '@/components/admin/StatisticCard';
+import { toTitleCase } from '@/lib/utils';
 
 export default function AdminBusinessPage() {
   const router = useRouter();

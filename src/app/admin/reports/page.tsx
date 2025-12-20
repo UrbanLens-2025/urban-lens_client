@@ -6,6 +6,8 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +24,6 @@ import {
   CheckCircle,
   Clock,
   FlagOffIcon,
-  XCircle,
 } from 'lucide-react';
 import {
   ReportTargetType,
@@ -32,6 +33,7 @@ import { useHighestReportedPosts } from '@/hooks/admin/useHighestReportedPosts';
 import { useHighestReportedLocations } from '@/hooks/admin/useHighestReportedLocations';
 import { useHighestReportedEvents } from '@/hooks/admin/useHighestReportedEvents';
 import { useReports } from '@/hooks/admin/useReports';
+import { useReportAnalytics } from '@/hooks/admin/useReportAnalytics';
 
 type ReportFilterType = ReportTargetType | 'all';
 import type {
@@ -51,7 +53,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { IconSearch, IconRefresh } from '@tabler/icons-react';
+import { IconSearch, IconRefresh, IconChartBar } from '@tabler/icons-react';
 
 function getTypeBadge(type: ReportTargetType) {
   const colors: Record<ReportTargetType, string> = {
@@ -144,6 +146,12 @@ export default function ReportsPage() {
     limit: itemsPerPage,
     sortBy: 'createdAt:DESC',
   });
+
+  // Report analytics
+  const {
+    data: reportAnalytics,
+    isLoading: isLoadingAnalytics,
+  } = useReportAnalytics();
 
   // Determine which data to use based on typeFilter
   const isLoading =
@@ -261,6 +269,7 @@ export default function ReportsPage() {
     queryClient.invalidateQueries({ queryKey: ['highestReportedPosts'] });
     queryClient.invalidateQueries({ queryKey: ['highestReportedLocations'] });
     queryClient.invalidateQueries({ queryKey: ['highestReportedEvents'] });
+    queryClient.invalidateQueries({ queryKey: ['reportAnalytics'] });
   };
 
   const formatDateTime = (dateString?: string) => {
@@ -274,17 +283,20 @@ export default function ReportsPage() {
     });
   };
 
-  // Calculate statistics from current data
+  // Statistics from analytics API
   const stats = useMemo(() => {
-    const total = meta?.totalItems || 0;
     return {
-      total,
-      pending: total,
-      inProgress: 0,
-      resolved: 0,
-      rejected: 0,
+      total: reportAnalytics?.totalReports ?? 0,
+      pending: reportAnalytics?.countPending ?? 0,
+      closed: reportAnalytics?.countClosed ?? 0,
+      byType: {
+        location: reportAnalytics?.countTotalLocationReports ?? 0,
+        event: reportAnalytics?.countTotalEventReports ?? 0,
+        post: reportAnalytics?.countTotalPostReports ?? 0,
+        booking: reportAnalytics?.countTotalBookingReports ?? 0,
+      },
     };
-  }, [meta?.totalItems]);
+  }, [reportAnalytics]);
 
   // Filter reports based on search term
   const filteredReports = useMemo(() => {
@@ -317,7 +329,7 @@ export default function ReportsPage() {
           <StatisticCard
             title='Total Reports'
             subtitle='All reports'
-            value={stats.total}
+            value={isLoadingAnalytics ? 0 : stats.total}
             icon={FlagIcon}
             iconColorClass='blue'
           />
@@ -327,7 +339,7 @@ export default function ReportsPage() {
           <StatisticCard
             title='Pending'
             subtitle='Awaiting review'
-            value={stats.pending}
+            value={isLoadingAnalytics ? 0 : stats.pending}
             icon={Clock}
             iconColorClass='amber'
           />
@@ -335,34 +347,53 @@ export default function ReportsPage() {
 
         <div>
           <StatisticCard
-            title='Resolved'
-            subtitle='Successfully resolved'
-            value={stats.resolved}
+            title='Closed'
+            subtitle='Closed reports'
+            value={isLoadingAnalytics ? 0 : stats.closed}
             icon={CheckCircle}
             iconColorClass='green'
           />
         </div>
 
         <div>
-          <StatisticCard
-            title='Rejected'
-            subtitle='Rejected reports'
-            value={stats.rejected}
-            icon={XCircle}
-            iconColorClass='red'
-          />
+          <Card className='hover:shadow-md transition-shadow border-l-6 border-blue-500'>
+            <CardContent className='pt-0'>
+              <header className='mb-1 flex items-center gap-2'>
+                <IconChartBar className='h-4 w-4 text-muted-foreground' />
+                <h3 className='text-md font-medium'>Total Reports by Type</h3>
+              </header>
+              <div className=''>
+                <div className='flex items-center justify-between'>
+                  <span className='text-xs text-muted-foreground'>Locations</span>
+                  <span className='text-base font-semibold'>{isLoadingAnalytics ? 0 : stats.byType.location}</span>
+                </div>
+                <div className='flex items-center justify-between'>
+                  <span className='text-xs text-muted-foreground'>Events</span>
+                  <span className='text-base font-semibold'>{isLoadingAnalytics ? 0 : stats.byType.event}</span>
+                </div>
+                <div className='flex items-center justify-between'>
+                  <span className='text-xs text-muted-foreground'>Posts</span>
+                  <span className='text-base font-semibold'>{isLoadingAnalytics ? 0 : stats.byType.post}</span>
+                </div>
+                <div className='flex items-center justify-between'>
+                  <span className='text-xs text-muted-foreground'>Bookings</span>
+                  <span className='text-base font-semibold'>{isLoadingAnalytics ? 0 : stats.byType.booking}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
       {/* Table Section */}
-      <Card className='mt-6'>
+      <Card className='mt-6 py-0 pb-6'>
         <CardContent className='pt-0'>
           <div className='pt-6 pb-6 border-b'>
             <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
               <div>
                 <h2 className='text-2xl font-bold'>Reports</h2>
                 <p className='text-sm text-muted-foreground mt-1'>
-                  {meta?.totalItems || 0} {typeFilter === 'all' ? 'reports' : `${typeFilter}s with reports`}
+                  Found {meta?.totalItems || 0} {typeFilter === 'all' ? 'reports' : typeFilter === 'post' ? 'posts' : typeFilter === 'location' ? 'locations' : 'events'} with Pending Reports
                 </p>
               </div>
               <div className='flex items-center gap-2'>

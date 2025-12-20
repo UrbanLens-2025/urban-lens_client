@@ -55,6 +55,18 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
+self.addEventListener('message', (event) => {
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'SHOW_TOAST',
+            payload: event.data.payload
+          });
+        });
+      });
+})
+
 
 
 

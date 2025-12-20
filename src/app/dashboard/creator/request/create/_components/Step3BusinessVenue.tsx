@@ -1672,7 +1672,24 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               {hasInsufficientBalance ? (
                 <Button
                   onClick={() => {
-                    router.push('/dashboard/creator/wallet?action=deposit');
+                    const insufficientAmount = estimatedCost && walletBalance < estimatedCost.totalCost
+                      ? estimatedCost.totalCost - walletBalance
+                      : 0;
+                    
+                    // Save form state to localStorage
+                    const formValues = form.getValues();
+                    const serializedFormState = {
+                      ...formValues,
+                      startDate: formValues.startDate ? formValues.startDate.toISOString() : undefined,
+                      endDate: formValues.endDate ? formValues.endDate.toISOString() : undefined,
+                      dateRanges: formValues.dateRanges?.map(range => ({
+                        startDateTime: range.startDateTime.toISOString(),
+                        endDateTime: range.endDateTime.toISOString(),
+                      })),
+                    };
+                    localStorage.setItem('createEventFormState', JSON.stringify(serializedFormState));
+                    
+                    router.push(`/dashboard/business/wallet/deposit?amount=${Math.ceil(insufficientAmount)}&fromEvent=true`);
                     setShowConfirmDialog(false);
                   }}
                   className="bg-primary"

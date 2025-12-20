@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   XCircle,
   Wallet,
+  RotateCcw,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -256,6 +257,7 @@ export default function CreateEventRequestPage() {
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [showInsufficientBalanceDialog, setShowInsufficientBalanceDialog] =
     useState(false);
+  const [hasValidSavedForm, setHasValidSavedForm] = useState(false);
   const createEvent = useCreateEvent({
     onInsufficientBalance: () => {
       setShowInsufficientBalanceDialog(true);
@@ -283,6 +285,77 @@ export default function CreateEventRequestPage() {
       publicVenueTermsAccepted: false,
     },
   });
+
+  // Check for saved form state in localStorage on mount
+  useEffect(() => {
+    try {
+      const savedFormState = localStorage.getItem("createEventFormState");
+      if (savedFormState) {
+        const parsed = JSON.parse(savedFormState);
+        
+        // Convert ISO strings back to Date objects for validation
+        const formDataForValidation = {
+          ...parsed,
+          startDate: parsed.startDate ? new Date(parsed.startDate) : undefined,
+          endDate: parsed.endDate ? new Date(parsed.endDate) : undefined,
+          dateRanges: parsed.dateRanges?.map((range: { startDateTime: string; endDateTime: string }) => ({
+            startDateTime: new Date(range.startDateTime),
+            endDateTime: new Date(range.endDateTime),
+          })),
+        };
+
+        // Validate against schema
+        const validationResult = formSchema.safeParse(formDataForValidation);
+        
+        if (validationResult.success) {
+          setHasValidSavedForm(true);
+        } else {
+          // Invalid form state, delete it
+          localStorage.removeItem("createEventFormState");
+          setHasValidSavedForm(false);
+        }
+      }
+    } catch (error) {
+      // If parsing fails, delete the invalid data
+      localStorage.removeItem("createEventFormState");
+      setHasValidSavedForm(false);
+    }
+  }, []);
+
+  const handleRestoreForm = () => {
+    try {
+      const savedFormState = localStorage.getItem("createEventFormState");
+      if (savedFormState) {
+        const parsed = JSON.parse(savedFormState);
+        
+        // Convert ISO strings back to Date objects
+        const restoredFormData = {
+          ...parsed,
+          startDate: parsed.startDate ? new Date(parsed.startDate) : undefined,
+          endDate: parsed.endDate ? new Date(parsed.endDate) : undefined,
+          dateRanges: parsed.dateRanges?.map((range: { startDateTime: string; endDateTime: string }) => ({
+            startDateTime: new Date(range.startDateTime),
+            endDateTime: new Date(range.endDateTime),
+          })),
+        };
+
+        // Reset form with restored data
+        form.reset(restoredFormData as CreateEventRequestForm);
+
+        // Remove from localStorage after restoring
+        localStorage.removeItem("createEventFormState");
+        setHasValidSavedForm(false);
+        
+        toast.success("Form state restored", {
+          description: "Your previous form data has been restored.",
+        });
+      }
+    } catch (error) {
+      toast.error("Failed to restore form state");
+      localStorage.removeItem("createEventFormState");
+      setHasValidSavedForm(false);
+    }
+  };
 
   const validateStep = async (step: number): Promise<boolean> => {
     let fieldsToValidate: (keyof CreateEventRequestForm)[] = [];
@@ -644,6 +717,25 @@ export default function CreateEventRequestPage() {
       />
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
         <div className="max-w-5xl mx-auto space-y-8 py-8 px-4 lg:px-6">
+
+          {/* Restore Form State Alert */}
+          {hasValidSavedForm && (
+            <Alert className="border-2 border-primary/20 bg-primary/5">
+              <RotateCcw className="h-5 w-5 text-primary" />
+              <AlertTitle className="font-semibold">Previous form data found</AlertTitle>
+              <AlertDescription className="mt-2 flex items-center justify-between">
+                <span>You have unsaved form data from a previous session. Would you like to restore it?</span>
+                <Button
+                  onClick={handleRestoreForm}
+                  size="sm"
+                  className="ml-4"
+                  variant="default"
+                >
+                  Restore Form
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Step Indicator */}
           <StepIndicator currentStep={currentStep} />

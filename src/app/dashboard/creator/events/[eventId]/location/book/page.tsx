@@ -1101,7 +1101,10 @@ function LocationDetailsOverlay({
             {hasInsufficientBalance ? (
               <Button
                 onClick={() => {
-                  router.push('/dashboard/creator/wallet?action=deposit');
+                  const insufficientAmount = estimatedCost && walletBalance < estimatedCost.totalCost
+                    ? estimatedCost.totalCost - walletBalance
+                    : 0;
+                  router.push(`/dashboard/business/wallet/deposit?amount=${Math.ceil(insufficientAmount)}&fromEvent=true`);
                   setShowConfirmDialog(false);
                 }}
                 className="bg-primary font-semibold"

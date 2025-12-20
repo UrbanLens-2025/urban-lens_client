@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getMessaging, getToken, isSupported } from "firebase/messaging";
+import { getMessaging, getToken, isSupported, onMessage } from "firebase/messaging";
 
 const firebaseConfig = {
 
@@ -52,6 +52,16 @@ export async function getFCMToken(): Promise<string | null> {
     console.error("Error getting FCM token:", error);
     return null;
   }
+}
+
+
+export const messaging = getMessaging(app);
+
+export function listenForMessages(showToast: (data: any) => void) {
+  onMessage(messaging, (payload) => {
+    console.log('Foreground message:', payload);
+    showToast(payload); // Your toast function
+  });
 }
 
 export { app };

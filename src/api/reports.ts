@@ -271,3 +271,21 @@ export const getHighestReportedEvents = async (
   });
   return data.data;
 };
+
+// Get report analytics
+export interface ReportAnalytics {
+  totalReports: number;
+  countPending: number;
+  countClosed: number;
+  countTotalLocationReports: number;
+  countTotalEventReports: number;
+  countTotalPostReports: number;
+  countTotalBookingReports: number;
+}
+
+export const getReportAnalytics = async (): Promise<ReportAnalytics> => {
+  const { data } = await axiosInstance.get<ApiResponse<ReportAnalytics>>(
+    '/v1/admin/report/analytics/general'
+  );
+  return data.data;
+};

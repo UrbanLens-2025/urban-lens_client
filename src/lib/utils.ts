@@ -78,3 +78,16 @@ export function formatCurrency(amount: number) {
     minimumFractionDigits: 0,
   }).format(amount);
 }
+
+/**
+ * Converts a string to title case.
+ * Handles both regular strings and enum-style strings with underscores.
+ */
+export function toTitleCase(str: string): string {
+  if (!str) return '';
+  
+  return str
+    .split(/[\s_-]+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
