@@ -88,8 +88,8 @@ export default function TicketDetailPage({
   }
 
   const availableQuantity = ticket.totalQuantityAvailable;
-  const availabilityPercentage = ticket.totalQuantityAvailable > 0 
-    ? (availableQuantity / ticket.totalQuantity) * 100 
+  const availabilityPercentage = ticket.totalQuantityAvailable > 0
+    ? (availableQuantity / ticket.totalQuantity) * 100
     : 0;
   const soldQuantity = ticket.quantityReserved;
   const soldPercentage = ticket.totalQuantityAvailable > 0
@@ -106,41 +106,54 @@ export default function TicketDetailPage({
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold">{ticket.displayName}</h1>
-            {ticket.isActive ? (
-              <Badge className="bg-green-500 hover:bg-green-600">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Active
-              </Badge>
-            ) : (
-              <Badge variant="secondary">
-                <XCircle className="h-3 w-3 mr-1" />
-                Inactive
-              </Badge>
-            )}
-            {isSaleActive && ticket.isActive && (
-              <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400">
-                On Sale Now
-              </Badge>
-            )}
+          <div className="items-center gap-3 mb-2">
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold">{ticket.displayName}</h1>
+              {ticket.isActive ? (
+                <Badge className="bg-green-500 hover:bg-green-600">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Active
+                </Badge>
+              ) : (
+                <Badge variant="secondary">
+                  <XCircle className="h-3 w-3 mr-1" />
+                  Inactive
+                </Badge>
+              )}
+              {isSaleActive && ticket.isActive && (
+                <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400">
+                  On Sale Now
+                </Badge>
+              )}
+            </div>
+            <div className='flex flex-row items-start gap-3 text-sm text-muted-foreground'>
+              <div className='flex items-center gap-1.5'>
+                <Calendar className='h-4 w-4' />
+                Start Sale: {formatDateTime(ticket.saleStartDate!)}
+              </div>
+              <div>-</div>
+              <div className='flex items-center gap-1.5'>
+                <Calendar className='h-4 w-4' />
+                End Sale: {formatDateTime(ticket.saleEndDate!)}
+              </div>
+            </div>
           </div>
           <div className="text-muted-foreground text-sm max-w-3xl">
-             <div className={cn("leading-relaxed whitespace-pre-line", !isDescriptionExpanded && "line-clamp-2")}>
-                {ticket.description || "No description provided."}
-             </div>
-             {ticket.description && ticket.description.length > 150 && (
-                <button 
-                  onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                  className="text-primary text-xs font-medium hover:underline mt-1 flex items-center gap-1 focus:outline-none"
-                >
-                  {isDescriptionExpanded ? (
-                    <>Show Less <ChevronUp className="h-3 w-3" /></>
-                  ) : (
-                    <>Read More <ChevronDown className="h-3 w-3" /></>
-                  )}
-                </button>
-             )}
+            <div className={cn("leading-relaxed whitespace-pre-line", !isDescriptionExpanded && "line-clamp-2")}>
+              {ticket.description || "No description provided."}
+            </div>
+            {ticket.description && ticket.description.length > 150 && (
+              <button
+                onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                className="text-primary text-xs font-medium hover:underline mt-1 flex items-center gap-1 focus:outline-none"
+              >
+                {isDescriptionExpanded ? (
+                  <>Show Less <ChevronUp className="h-3 w-3" /></>
+                ) : (
+                  <>Read More <ChevronDown className="h-3 w-3" /></>
+                )}
+              </button>
+            )}
           </div>
         </div>
         <Link href={`/dashboard/creator/ticket-form/edit/${eventId}/${ticketId}`}>
@@ -174,20 +187,20 @@ export default function TicketDetailPage({
           color="purple"
           footer={
             <div className="mt-3 space-y-1.5">
-               <div className="flex justify-between text-[10px] uppercase font-medium text-muted-foreground">
-                  <span>Capacity&nbsp;</span>
-                  <span>{availabilityPercentage.toFixed(0)}% Left</span>
-               </div>
-               <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className={cn(
-                        "h-full transition-all duration-500",
-                        availabilityPercentage > 50 ? "bg-purple-500" :
-                        availabilityPercentage > 20 ? "bg-yellow-500" : "bg-red-500"
-                    )}
-                    style={{ width: `${availabilityPercentage}%` }}
-                  />
-               </div>
+              <div className="flex justify-between text-[10px] uppercase font-medium text-muted-foreground">
+                <span>Capacity&nbsp;</span>
+                <span>{availabilityPercentage.toFixed(0)}% Left</span>
+              </div>
+              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full transition-all duration-500",
+                    availabilityPercentage > 50 ? "bg-purple-500" :
+                      availabilityPercentage > 20 ? "bg-yellow-500" : "bg-red-500"
+                  )}
+                  style={{ width: `${availabilityPercentage}%` }}
+                />
+              </div>
             </div>
           }
         />
@@ -300,92 +313,6 @@ export default function TicketDetailPage({
             )}
           </CardContent>
         </Card>
-
-        {/* Sale Period */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Sale Period
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Sale Start</p>
-              <p className="font-medium">{formatDateTime(ticket.saleStartDate)}</p>
-            </div>
-            <Separator />
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Sale End</p>
-              <p className="font-medium">{formatDateTime(ticket.saleEndDate)}</p>
-            </div>
-            <Separator />
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Status</p>
-              {isSaleActive ? (
-                <Badge className="bg-green-500">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Currently on sale
-                </Badge>
-              ) : new Date(ticket.saleStartDate) > new Date() ? (
-                <Badge variant="outline">
-                  Starts {format(new Date(ticket.saleStartDate), 'MMM dd, yyyy')}
-                </Badge>
-              ) : (
-                <Badge variant="secondary">
-                  <XCircle className="h-3 w-3 mr-1" />
-                  Sale ended
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Availability */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Hash className="h-5 w-5" />
-              Availability
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Total quantity</span>
-              <span className="font-semibold">{ticket.totalQuantityAvailable}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Tickets sold</span>
-              <span className="font-semibold text-green-600 dark:text-green-400">
-                {soldQuantity}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Remaining</span>
-              <span className="font-semibold text-blue-600 dark:text-blue-400">
-                {availableQuantity}
-              </span>
-            </div>
-            <Separator />
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Availability</span>
-                <span className="font-medium">{availabilityPercentage.toFixed(1)}%</span>
-              </div>
-              <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-all ${availabilityPercentage > 50
-                      ? "bg-green-500"
-                      : availabilityPercentage > 20
-                        ? "bg-yellow-500"
-                        : "bg-red-500"
-                    }`}
-                  style={{ width: `${availabilityPercentage}%` }}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Terms of Service */}
@@ -404,28 +331,6 @@ export default function TicketDetailPage({
           </CardContent>
         </Card>
       )}
-
-      {/* Metadata */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Metadata</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Ticket ID</span>
-            <code className="px-2 py-1 bg-muted rounded text-xs">{ticket.id}</code>
-          </div>
-          <Separator />
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Created</span>
-            <span>{format(new Date(ticket.createdAt), "PPP 'at' p")}</span>
-          </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Last Updated</span>
-            <span>{format(new Date(ticket.updatedAt), "PPP 'at' p")}</span>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
