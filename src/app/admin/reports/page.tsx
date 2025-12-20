@@ -299,6 +299,16 @@ export default function ReportsPage() {
     });
   }, [reports, debouncedSearchTerm]);
 
+  // Extract counts for tabs
+  const tabCounts = useMemo(() => {
+    return {
+      post: postsResponse?.count ?? 0,
+      location: locationsResponse?.count ?? 0,
+      event: eventsResponse?.count ?? 0,
+      all: allReportsResponse?.meta?.totalItems ?? 0,
+    };
+  }, [postsResponse?.count, locationsResponse?.count, eventsResponse?.count, allReportsResponse?.meta?.totalItems]);
+
   return (
     <PageContainer>
       {/* Statistics Cards */}
@@ -394,11 +404,39 @@ export default function ReportsPage() {
               }}
             >
               <TabsList>
-                <TabsTrigger value='post'>Posts</TabsTrigger>
-                <TabsTrigger value='location'>Locations</TabsTrigger>
-                <TabsTrigger value='event'>Events</TabsTrigger>
+                <TabsTrigger value='post'>
+                  Posts
+                  {tabCounts.post > 0 && (
+                    <Badge variant='secondary' className='ml-2'>
+                      {tabCounts.post}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value='location'>
+                  Locations
+                  {tabCounts.location > 0 && (
+                    <Badge variant='secondary' className='ml-2'>
+                      {tabCounts.location}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value='event'>
+                  Events
+                  {tabCounts.event > 0 && (
+                    <Badge variant='secondary' className='ml-2'>
+                      {tabCounts.event}
+                    </Badge>
+                  )}
+                </TabsTrigger>
                 <div className='mx-2 h-4 w-px bg-border' />
-                <TabsTrigger value='all'>All Reports</TabsTrigger>
+                <TabsTrigger value='all'>
+                  All Reports
+                  {tabCounts.all > 0 && (
+                    <Badge variant='secondary' className='ml-2'>
+                      {tabCounts.all}
+                    </Badge>
+                  )}
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -424,21 +462,41 @@ export default function ReportsPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Report Count</TableHead>
-                    <TableHead>Description</TableHead>
                     <TableHead>Created At</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredReports.map((item: any, index: number) => {
                     const rowNumber = (page - 1) * itemsPerPage + index + 1;
+                    const isEvent = item.targetType === 'event';
+                    const isPost = item.targetType === 'post';
+                    const isClickable = isEvent || isPost;
+                    const handleRowClick = () => {
+                      if (isEvent) {
+                        router.push(`/admin/events/${item.targetId}?tab=reports`);
+                      } else if (isPost) {
+                        router.push(`/admin/posts/${item.targetId}?tab=reports`);
+                      }
+                    };
                     return (
-                      <TableRow key={item.id}>
+                      <TableRow 
+                        key={item.id}
+                        onClick={handleRowClick}
+                        className={isClickable ? 'cursor-pointer hover:bg-muted/50' : ''}
+                      >
                         <TableCell className='text-sm text-muted-foreground'>
                           {rowNumber}
                         </TableCell>
                         <TableCell className='font-medium'>
-                          <div className='max-w-[300px] truncate' title={item.name}>
-                            {item.name}
+                          <div className='max-w-[300px]'>
+                            <div className='truncate' title={item.name}>
+                              {item.name}
+                            </div>
+                            {item.description && (
+                              <div className='truncate text-sm text-muted-foreground mt-1' title={item.description}>
+                                {item.description}
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>{getTypeBadge(item.targetType)}</TableCell>
@@ -449,11 +507,6 @@ export default function ReportsPage() {
                           >
                             {item.reportCount} {item.reportCount === 1 ? 'report' : 'reports'}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className='max-w-[400px] truncate text-sm text-muted-foreground' title={item.description}>
-                            {item.description || '-'}
-                          </div>
                         </TableCell>
                         <TableCell className='text-sm text-muted-foreground'>
                           {formatDateTime(item.createdAt)}

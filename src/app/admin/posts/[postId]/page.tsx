@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { use, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
 import { usePostByIdForAdmin } from "@/hooks/admin/usePostByIdForAdmin";
@@ -86,9 +86,27 @@ export default function AdminPostDetailsPage({
 }) {
   const { postId } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState("");
+
+  // Get tab from URL or default to "details"
+  const activeTab = searchParams.get("tab") || "details";
+  const validTabs = ["details", "comments", "reports", "penalties"];
+  const currentTab = validTabs.includes(activeTab) ? activeTab : "details";
+
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === "details") {
+      params.delete("tab");
+    } else {
+      params.set("tab", value);
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  };
 
   const {
     data: post,
@@ -388,7 +406,7 @@ export default function AdminPostDetailsPage({
         </Card>
 
         {/* --- Main Layout --- */}
-        <Tabs defaultValue="details" className="flex flex-col gap-2 space-y-4">
+        <Tabs value={currentTab} onValueChange={handleTabChange} className="flex flex-col gap-2 space-y-4">
           <TabsList className="bg-transparent h-auto p-0 border-b border-border rounded-none flex gap-8">
             <TabsTrigger
               value="details"

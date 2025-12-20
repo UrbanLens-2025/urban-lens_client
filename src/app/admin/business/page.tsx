@@ -36,7 +36,7 @@ import {
   IconCalendar,
 } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
-import { Briefcase, CheckCircle, Clock, Loader2, XCircle } from 'lucide-react';
+import { Briefcase, CheckCircle, Clock, Loader2, XCircle, ChevronRight } from 'lucide-react';
 import { BusinessProfile, BusinessStatus } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -49,7 +49,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
+import { ImageViewer } from '@/components/shared/ImageViewer';
 import StatisticCard from '@/components/admin/StatisticCard';
 
 export default function AdminBusinessPage() {
@@ -119,6 +132,9 @@ export default function AdminBusinessPage() {
     useState<BusinessProfile | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [expandedDescription, setExpandedDescription] = useState(false);
+  const [selectedLicense, setSelectedLicense] = useState<any | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showAdminPopover, setShowAdminPopover] = useState(false);
 
   const handleConfirmApprove = () => {
     if (!approvingBusiness) return;
@@ -479,6 +495,216 @@ export default function AdminBusinessPage() {
                   )}
                 </div>
 
+                {/* Approval Notice - Above Documents */}
+                {(selectedBusiness as any).status === 'APPROVED' &&
+                  (selectedBusiness as any).processedBy && (
+                    <Card className='mt-6 border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 py-0'>
+                      <CardContent className='pt-4 pb-4'>
+                        <div className='flex items-start gap-3'>
+                          <IconCheck className='h-5 w-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5' />
+                          <div className='flex-1 min-w-0'>
+                            <p className='text-sm text-green-900 dark:text-green-100'>
+                              This report was approved by{' '}
+                              {(selectedBusiness as any).processedBy ? (
+                                <Popover open={showAdminPopover} onOpenChange={setShowAdminPopover}>
+                                  <PopoverTrigger asChild>
+                                    <span
+                                      className='font-medium cursor-pointer hover:underline'
+                                      onMouseEnter={() => setShowAdminPopover(true)}
+                                      onMouseLeave={() => setShowAdminPopover(false)}
+                                    >
+                                      {(selectedBusiness as any).processedBy?.firstName &&
+                                      (selectedBusiness as any).processedBy?.lastName
+                                        ? `${(selectedBusiness as any).processedBy.firstName} ${(selectedBusiness as any).processedBy.lastName}`
+                                        : 'Admin'}
+                                    </span>
+                                  </PopoverTrigger>
+                                  <PopoverContent
+                                    className='w-64'
+                                    side='top'
+                                    onMouseEnter={() => setShowAdminPopover(true)}
+                                    onMouseLeave={() => setShowAdminPopover(false)}
+                                  >
+                                    <div className='space-y-2'>
+                                      <div>
+                                        <p className='text-xs font-medium text-muted-foreground mb-1'>
+                                          Admin Information
+                                        </p>
+                                        <p className='text-sm font-semibold'>
+                                          {(selectedBusiness as any).processedBy?.firstName &&
+                                          (selectedBusiness as any).processedBy?.lastName
+                                            ? `${(selectedBusiness as any).processedBy.firstName} ${(selectedBusiness as any).processedBy.lastName}`
+                                            : 'Admin'}
+                                        </p>
+                                      </div>
+                                      {(selectedBusiness as any).processedBy?.email && (
+                                        <div>
+                                          <p className='text-xs font-medium text-muted-foreground mb-0.5'>
+                                            Email
+                                          </p>
+                                          <p className='text-sm'>
+                                            {(selectedBusiness as any).processedBy.email}
+                                          </p>
+                                        </div>
+                                      )}
+                                      {(selectedBusiness as any).processedBy?.phoneNumber && (
+                                        <div>
+                                          <p className='text-xs font-medium text-muted-foreground mb-0.5'>
+                                            Phone
+                                          </p>
+                                          <p className='text-sm'>
+                                            {(selectedBusiness as any).processedBy.phoneNumber}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              ) : (
+                                <span className='font-medium'>Admin</span>
+                              )}{' '}
+                              on{' '}
+                              {(selectedBusiness as any).processedAt && (
+                                <span className='font-medium'>
+                                  {formatDateTime((selectedBusiness as any).processedAt)}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                {/* Rejection Notice - Above Documents */}
+                {(selectedBusiness as any).status === 'REJECTED' &&
+                  selectedBusiness.adminNotes && (
+                    <Card className='mt-6 border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900 py-0'>
+                      <CardContent className='pt-6 pb-4'>
+                        <div className='flex items-start gap-3'>
+                          <IconX className='h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5' />
+                          <div className='flex-1 min-w-0'>
+                            <p className='text-sm text-red-900 dark:text-red-100'>
+                              This report has been rejected by{' '}
+                              {(selectedBusiness as any).processedBy ? (
+                                <Popover open={showAdminPopover} onOpenChange={setShowAdminPopover}>
+                                  <PopoverTrigger asChild>
+                                    <span
+                                      className='font-medium cursor-pointer hover:underline'
+                                      onMouseEnter={() => setShowAdminPopover(true)}
+                                      onMouseLeave={() => setShowAdminPopover(false)}
+                                    >
+                                      {(selectedBusiness as any).processedBy?.firstName &&
+                                      (selectedBusiness as any).processedBy?.lastName
+                                        ? `${(selectedBusiness as any).processedBy.firstName} ${(selectedBusiness as any).processedBy.lastName}`
+                                        : 'Admin'}
+                                    </span>
+                                  </PopoverTrigger>
+                                  <PopoverContent
+                                    className='w-64'
+                                    side='top'
+                                    onMouseEnter={() => setShowAdminPopover(true)}
+                                    onMouseLeave={() => setShowAdminPopover(false)}
+                                  >
+                                    <div className='space-y-2'>
+                                      <div>
+                                        <p className='text-xs font-medium text-muted-foreground mb-1'>
+                                          Admin Information
+                                        </p>
+                                        <p className='text-sm font-semibold'>
+                                          {(selectedBusiness as any).processedBy?.firstName &&
+                                          (selectedBusiness as any).processedBy?.lastName
+                                            ? `${(selectedBusiness as any).processedBy.firstName} ${(selectedBusiness as any).processedBy.lastName}`
+                                            : 'Admin'}
+                                        </p>
+                                      </div>
+                                      {(selectedBusiness as any).processedBy?.email && (
+                                        <div>
+                                          <p className='text-xs font-medium text-muted-foreground mb-0.5'>
+                                            Email
+                                          </p>
+                                          <p className='text-sm'>
+                                            {(selectedBusiness as any).processedBy.email}
+                                          </p>
+                                        </div>
+                                      )}
+                                      {(selectedBusiness as any).processedBy?.phoneNumber && (
+                                        <div>
+                                          <p className='text-xs font-medium text-muted-foreground mb-0.5'>
+                                            Phone
+                                          </p>
+                                          <p className='text-sm'>
+                                            {(selectedBusiness as any).processedBy.phoneNumber}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              ) : (
+                                <span className='font-medium'>Admin</span>
+                              )}{' '}
+                              for reason:{' '}
+                              <span className='font-medium'>
+                                {selectedBusiness.adminNotes}
+                              </span>
+                            </p>
+                            {(selectedBusiness as any).processedAt && (
+                              <p className='text-xs text-red-700 dark:text-red-300 mt-2 text-right'>
+                                {formatDateTime((selectedBusiness as any).processedAt)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                {/* Documents - Full Width */}
+                {(selectedBusiness as any).licenses &&
+                  (selectedBusiness as any).licenses.length > 0 && (
+                    <Card className='mt-6'>
+                      <CardHeader>
+                        <CardTitle className='text-base flex items-center gap-2'>
+                          <IconFileText className='h-4 w-4' />
+                          Documents
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className='space-y-3'>
+                          {(selectedBusiness as any).licenses.map(
+                            (license: any, index: number) => (
+                              <button
+                                key={index}
+                                onClick={() => setSelectedLicense(license)}
+                                className='w-full border border-primary/20 rounded-lg p-4 bg-primary/10 hover:bg-primary/20 transition-colors text-left cursor-pointer group flex items-center gap-3'
+                              >
+                                <IconFileText className='h-5 w-5 text-primary shrink-0' />
+                                <div className='flex-1 min-w-0'>
+                                  <p className='font-medium text-sm text-primary'>
+                                    {toTitleCase(
+                                      license.licenseType || 'Business License'
+                                    )}
+                                  </p>
+                                  {license.documentImageUrls &&
+                                    license.documentImageUrls.length > 0 && (
+                                      <p className='text-xs text-primary/70 mt-1'>
+                                        {license.documentImageUrls.length}{' '}
+                                        {license.documentImageUrls.length === 1
+                                          ? 'image'
+                                          : 'images'}
+                                      </p>
+                                    )}
+                                </div>
+                                <ChevronRight className='h-5 w-5 text-primary/70 shrink-0' />
+                              </button>
+                            )
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                 {/* Two Column Grid */}
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-6'>
                   {/* Contact Information Card */}
@@ -486,14 +712,14 @@ export default function AdminBusinessPage() {
                     <CardHeader>
                       <CardTitle className='text-base flex items-center gap-2'>
                         <IconUser className='h-4 w-4' />
-                        Contact Information
+                        Business Contact
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className='space-y-3'>
+                    <CardContent className='space-y-1.5 pt-0 pb-3'>
                       <div className='flex items-start gap-2'>
-                        <IconMail className='h-4 w-4 text-muted-foreground mt-0.5' />
-                        <div className='flex-1'>
-                          <p className='text-xs font-medium text-muted-foreground mb-1'>
+                        <IconMail className='h-4 w-4 text-muted-foreground mt-0.5 shrink-0' />
+                        <div className='flex-1 min-w-0'>
+                          <p className='text-xs font-medium text-muted-foreground mb-0.5'>
                             Email
                           </p>
                           <p className='text-sm break-all'>
@@ -503,9 +729,9 @@ export default function AdminBusinessPage() {
                       </div>
                       {selectedBusiness.phone && (
                         <div className='flex items-start gap-2'>
-                          <IconPhone className='h-4 w-4 text-muted-foreground mt-0.5' />
-                          <div className='flex-1'>
-                            <p className='text-xs font-medium text-muted-foreground mb-1'>
+                          <IconPhone className='h-4 w-4 text-muted-foreground mt-0.5 shrink-0' />
+                          <div className='flex-1 min-w-0'>
+                            <p className='text-xs font-medium text-muted-foreground mb-0.5'>
                               Phone
                             </p>
                             <p className='text-sm'>{selectedBusiness.phone}</p>
@@ -514,9 +740,9 @@ export default function AdminBusinessPage() {
                       )}
                       {selectedBusiness.website && (
                         <div className='flex items-start gap-2'>
-                          <IconWorld className='h-4 w-4 text-muted-foreground mt-0.5' />
-                          <div className='flex-1'>
-                            <p className='text-xs font-medium text-muted-foreground mb-1'>
+                          <IconWorld className='h-4 w-4 text-muted-foreground mt-0.5 shrink-0' />
+                          <div className='flex-1 min-w-0'>
+                            <p className='text-xs font-medium text-muted-foreground mb-0.5'>
                               Website
                             </p>
                             <a
@@ -578,6 +804,7 @@ export default function AdminBusinessPage() {
                   </Card>
                 </div>
 
+                    <span>→</span>
                 {/* Admin Notes Card (Full Width) */}
                 {selectedBusiness.adminNotes && (
                   <Card className="mt-4">
@@ -771,6 +998,59 @@ export default function AdminBusinessPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* License Images Modal */}
+      <Dialog
+        open={!!selectedLicense}
+        onOpenChange={(open) => !open && setSelectedLicense(null)}
+      >
+        <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <IconFileText className='h-5 w-5' />
+              {toTitleCase(
+                selectedLicense?.licenseType || 'Business License'
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              View all images for this license
+            </DialogDescription>
+          </DialogHeader>
+          {selectedLicense?.documentImageUrls &&
+            selectedLicense.documentImageUrls.length > 0 && (
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
+                {selectedLicense.documentImageUrls.map(
+                  (url: string, index: number) => (
+                    <div
+                      key={index}
+                      className='relative w-full aspect-video bg-muted rounded-lg overflow-hidden border group cursor-pointer'
+                      onClick={() => setPreviewImage(url)}
+                    >
+                      <img
+                        src={url}
+                        alt={`License document ${index + 1}`}
+                        className='w-full h-full object-cover group-hover:opacity-90 transition-opacity'
+                      />
+                      <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center'>
+                        <span className='text-white opacity-0 group-hover:opacity-100 transition-opacity text-sm font-medium'>
+                          Click to view full size
+                        </span>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Preview Modal */}
+      <ImageViewer
+        src={previewImage || ''}
+        alt='License document preview'
+        open={!!previewImage}
+        onOpenChange={(open) => !open && setPreviewImage(null)}
+      />
     </div>
   );
 }
