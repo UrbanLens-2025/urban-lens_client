@@ -384,54 +384,6 @@ export default function EditLocationPage({
             </div>
           </form>
         </Form>
-
-        <div className='space-y-4'>
-          <Card className='border-border/60 shadow-sm'>
-            <CardHeader>
-              <CardTitle className='text-base font-semibold'>
-                Current publishing state
-              </CardTitle>
-              <CardDescription>
-                Quick snapshot of how this location appears today.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='flex items-center justify-between rounded-lg border border-border/60 bg-muted/10 px-3 py-2'>
-                <div className='text-sm text-muted-foreground'>Visibility</div>
-                <Badge
-                  variant={location.isVisibleOnMap ? 'secondary' : 'outline'}
-                  className={
-                    location.isVisibleOnMap
-                      ? 'bg-emerald-500/10 text-emerald-600'
-                      : ''
-                  }
-                >
-                  {location.isVisibleOnMap ? 'Visible' : 'Hidden'}
-                </Badge>
-              </div>
-              <div className='flex items-center justify-between text-sm'>
-                <span className='text-muted-foreground'>Total check-ins</span>
-                <span className='font-semibold'>
-                  {(location.totalCheckIns || '0').toString()}
-                </span>
-              </div>
-              <div>
-                <p className='text-xs font-medium uppercase tracking-wide text-muted-foreground'>
-                  Live tags
-                </p>
-                <div className='mt-2'>
-                  {location.tags.length > 0 ? (
-                    <DisplayTags tags={location.tags} maxCount={10} />
-                  ) : (
-                    <p className='text-sm text-muted-foreground'>
-                      No tags currently assigned.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );
