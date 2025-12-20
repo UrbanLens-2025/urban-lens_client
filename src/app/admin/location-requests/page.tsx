@@ -79,6 +79,7 @@ import {
   AdvancedMarker,
   Pin,
 } from '@vis.gl/react-google-maps';
+import { ImageViewer } from '@/components/shared/ImageViewer'; // Ensure this path is correct
 
 type StatusFilter = 'all' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -160,6 +161,10 @@ export default function LocationRequestsPage() {
   const [expandedDescription, setExpandedDescription] = useState(false);
   const [expandedCardDescription, setExpandedCardDescription] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
+  
+  // Image Viewer State
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState('');
 
   // Fetch full details of selected request
   const { data: selectedRequestData } =
@@ -314,6 +319,11 @@ export default function LocationRequestsPage() {
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   };
+
+  const handleImageClick = (url: string) => {
+    setCurrentImageSrc(url);
+    setIsImageViewerOpen(true);
+  }
 
   return (
     <div className='space-y-6'>
@@ -733,12 +743,10 @@ export default function LocationRequestsPage() {
                         <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3'>
                           {selectedRequest.locationImageUrls.map(
                             (url: string, index: number) => (
-                              <a
+                              <div
                                 key={index}
-                                href={url}
-                                target='_blank'
-                                rel='noopener noreferrer'
-                                className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors'
+                                onClick={() => handleImageClick(url)}
+                                className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors cursor-pointer'
                               >
                                 <Image
                                   src={url}
@@ -748,7 +756,7 @@ export default function LocationRequestsPage() {
                                   sizes='(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
                                 />
                                 <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
-                              </a>
+                              </div>
                             )
                           )}
                         </div>
@@ -914,12 +922,10 @@ export default function LocationRequestsPage() {
                     {selectedDocument.documentImageUrls
                       .slice(0, 2)
                       .map((url: string, imgIndex: number) => (
-                        <a
+                        <div
                           key={imgIndex}
-                          href={url}
-                          target='_blank'
-                          rel='noopener noreferrer'
-                          className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors'
+                          onClick={() => handleImageClick(url)}
+                          className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors cursor-pointer'
                         >
                           <Image
                             src={url}
@@ -931,7 +937,7 @@ export default function LocationRequestsPage() {
                             sizes='(max-width: 768px) 50vw, 25vw'
                           />
                           <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
-                        </a>
+                        </div>
                       ))}
                   </div>
                 )}
@@ -942,12 +948,10 @@ export default function LocationRequestsPage() {
                     {selectedDocument.documentImageUrls
                       .slice(2)
                       .map((url: string, imgIndex: number) => (
-                        <a
+                        <div
                           key={imgIndex + 2}
-                          href={url}
-                          target='_blank'
-                          rel='noopener noreferrer'
-                          className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors'
+                          onClick={() => handleImageClick(url)}
+                          className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors cursor-pointer'
                         >
                           <Image
                             src={url}
@@ -959,7 +963,7 @@ export default function LocationRequestsPage() {
                             sizes='(max-width: 768px) 33vw, 20vw'
                           />
                           <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
-                        </a>
+                        </div>
                       ))}
                   </div>
                 )}
@@ -967,11 +971,11 @@ export default function LocationRequestsPage() {
                 {/* If only 1 image, show it large */}
                 {selectedDocument.documentImageUrls.length === 1 && (
                   <div className='w-full'>
-                    <a
-                      href={selectedDocument.documentImageUrls[0]}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors block'
+                    <div
+                      onClick={() =>
+                        handleImageClick(selectedDocument.documentImageUrls[0])
+                      }
+                      className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors block cursor-pointer'
                     >
                       <Image
                         src={selectedDocument.documentImageUrls[0]}
@@ -981,13 +985,21 @@ export default function LocationRequestsPage() {
                         sizes='(max-width: 768px) 100vw, 50vw'
                       />
                       <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
-                    </a>
+                    </div>
                   </div>
                 )}
               </div>
             )}
         </DialogContent>
       </Dialog>
+      
+      {/* Global Image Viewer */}
+      <ImageViewer
+        src={currentImageSrc}
+        alt="Location Image"
+        open={isImageViewerOpen}
+        onOpenChange={setIsImageViewerOpen}
+      />
     </div>
   );
 }
