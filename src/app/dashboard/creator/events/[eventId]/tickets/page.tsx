@@ -80,7 +80,7 @@ export default function EventTicketsPage({
   const { data: event } = useEventById(eventId);
   const deleteTicket = useDeleteTicket();
   const { openTicketDetailsTab } = useEventTabs();
-  
+
   const isEventCancelled = event?.status?.toUpperCase() === "CANCELLED";
 
   const formatCurrency = (amount: string, currency: string) => {
@@ -118,17 +118,17 @@ export default function EventTicketsPage({
   // Filter tickets
   const filteredTickets = tickets?.filter((ticket) => {
     const matchesSearch = ticket.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         ticket.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || 
-                         (statusFilter === "active" && ticket.isActive) ||
-                         (statusFilter === "inactive" && !ticket.isActive);
+      ticket.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" ||
+      (statusFilter === "active" && ticket.isActive) ||
+      (statusFilter === "inactive" && !ticket.isActive);
     return matchesSearch && matchesStatus;
   }) || [];
 
   // Calculate stats
   const totalTickets = tickets?.length || 0;
   const activeTickets = tickets?.filter(t => t.isActive).length || 0;
-  const totalRevenuePotential = tickets?.reduce((sum, ticket) => 
+  const totalRevenuePotential = tickets?.reduce((sum, ticket) =>
     sum + (parseFloat(ticket.price) * ticket.totalQuantityAvailable), 0
   ) || 0;
 
@@ -211,17 +211,22 @@ export default function EventTicketsPage({
                 {tickets?.length === 0 ? "No tickets created yet" : "No tickets found"}
               </h3>
               <p className="text-sm text-muted-foreground mb-6">
-                {tickets?.length === 0 
-                  ? "Create your first ticket to start selling" 
+                {tickets?.length === 0
+                  ? "Create your first ticket to start selling"
                   : "Try adjusting your search or filters"}
               </p>
               {tickets?.length === 0 && !isEventCancelled && (
-                <Link href={`/dashboard/creator/ticket-form/create/${eventId}`}>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Ticket
-                  </Button>
-                </Link>
+                <Button
+                  className="w-full md:w-auto"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openTicketCreateTab();
+                    router.push(`/dashboard/creator/events/${eventId}/tickets/create`);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Ticket
+                </Button>
               )}
             </div>
           ) : (
@@ -244,11 +249,11 @@ export default function EventTicketsPage({
                     const totalCapacity = ticket.totalQuantity;
                     const soldQuantity = totalCapacity - ticket.totalQuantityAvailable;
                     const remainingQuantity = ticket.totalQuantityAvailable;
-                    const soldPercentage = totalCapacity > 0 
-                      ? (soldQuantity / totalCapacity) * 100 
+                    const soldPercentage = totalCapacity > 0
+                      ? (soldQuantity / totalCapacity) * 100
                       : 0;
-                    const isSaleActive = new Date(ticket.saleStartDate) <= new Date() && 
-                                        new Date(ticket.saleEndDate) >= new Date();
+                    const isSaleActive = new Date(ticket.saleStartDate) <= new Date() &&
+                      new Date(ticket.saleEndDate) >= new Date();
 
                     return (
                       <TableRow key={ticket.id} className="group">
@@ -276,7 +281,7 @@ export default function EventTicketsPage({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Link 
+                          <Link
                             href={`/dashboard/creator/events/${eventId}/tickets/${ticket.id}`}
                             className="block space-y-1 hover:opacity-80 transition-opacity cursor-pointer"
                             onClick={(e) => {
@@ -288,8 +293,8 @@ export default function EventTicketsPage({
                             <div className="font-medium hover:underline">{ticket.displayName}</div>
                             {ticket.description && (
                               <div className="text-sm text-muted-foreground line-clamp-1 truncate">
-                                {ticket.description.length > 60 
-                                  ? `${ticket.description.substring(0, 60)}...` 
+                                {ticket.description.length > 60
+                                  ? `${ticket.description.substring(0, 60)}...`
                                   : ticket.description}
                               </div>
                             )}
@@ -313,13 +318,12 @@ export default function EventTicketsPage({
                             </div>
                             <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
                               <div
-                                className={`h-full transition-all ${
-                                  soldPercentage < 70
+                                className={`h-full transition-all ${soldPercentage < 70
                                     ? "bg-green-500"
                                     : soldPercentage < 90
-                                    ? "bg-yellow-500"
-                                    : "bg-red-500"
-                                }`}
+                                      ? "bg-yellow-500"
+                                      : "bg-red-500"
+                                  }`}
                                 style={{ width: `${soldPercentage}%` }}
                               />
                             </div>
@@ -354,8 +358,8 @@ export default function EventTicketsPage({
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="icon"
                                 className="opacity-0 group-hover:opacity-100 transition-opacity"
                               >
