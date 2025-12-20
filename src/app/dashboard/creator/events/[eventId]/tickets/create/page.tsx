@@ -135,6 +135,16 @@ const baseTicketSchema = z
   )
   .refine(
     (data) => {
+      // Max quantity per order cannot be higher than the total stock available
+      return data.maxQuantityPerOrder <= data.totalQuantityAvailable;
+    },
+    {
+      message: 'Maximum quantity per order cannot exceed total quantity available',
+      path: ['maxQuantityPerOrder'], // Shows the error on the Max Quantity field
+    }
+  )
+  .refine(
+    (data) => {
       if (data.allowRefunds) {
         if (
           data.refundPercentageBeforeCutoff === undefined ||
