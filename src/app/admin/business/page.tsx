@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import Link from 'next/link';
 import { useDebounce } from 'use-debounce';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useBusinessAccounts } from '@/hooks/admin/useBusinessAccounts';
@@ -11,7 +10,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,18 +24,16 @@ import {
   IconSearch,
   IconFilter,
   IconBriefcase,
-  IconClock,
   IconCheck,
   IconX,
   IconRefresh,
   IconMail,
   IconPhone,
   IconWorld,
-  IconMapPin,
   IconFileText,
-  IconCalendar,
   IconUser,
-  IconBriefcase2,
+  IconMapPin,
+  IconCalendar,
 } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
 import { Briefcase, CheckCircle, Clock, Loader2, XCircle } from 'lucide-react';
@@ -134,6 +130,10 @@ export default function AdminBusinessPage() {
           setPage(1);
           queryClient.invalidateQueries({ queryKey: ['businessAccounts'] });
           setApprovingBusiness(null);
+          // Keep selection if it's the same, or clear it if it moved lists
+          if (selectedBusiness?.accountId === approvingBusiness.accountId) {
+             // Optional: update local state to reflect change immediately
+          }
         },
       }
     );
@@ -170,6 +170,15 @@ export default function AdminBusinessPage() {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+    });
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
   };
 
@@ -387,7 +396,7 @@ export default function AdminBusinessPage() {
         <div className='lg:col-span-7 xl:col-span-8 border rounded-lg bg-card overflow-hidden'>
           {selectedBusiness ? (
             <div className='h-full overflow-y-auto'>
-              <div className='p-6'>
+              <div className='p-6 pb-20'> {/* Added pb-20 to ensure content isn't cut off at bottom */}
                 {/* Header with Name and Actions */}
                 <div className='flex items-start justify-between mb-4'>
                   <div className='flex-1'>
@@ -471,9 +480,9 @@ export default function AdminBusinessPage() {
                 </div>
 
                 {/* Two Column Grid */}
-                <div className='grid grid-cols-1 md:grid-cols-1 gap-4 mt-6'>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-6'>
                   {/* Contact Information Card */}
-                  <Card>
+                  <Card className="h-full">
                     <CardHeader>
                       <CardTitle className='text-base flex items-center gap-2'>
                         <IconUser className='h-4 w-4' />
@@ -524,23 +533,67 @@ export default function AdminBusinessPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Admin Notes Card */}
-                  {selectedBusiness.adminNotes && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className='text-base flex items-center gap-2'>
-                          <IconFileText className='h-4 w-4' />
-                          Admin Notes
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className='text-sm whitespace-pre-wrap'>
-                          {selectedBusiness.adminNotes}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
+                   {/* Location & System Info Card */}
+                   <Card className="h-full">
+                    <CardHeader>
+                      <CardTitle className='text-base flex items-center gap-2'>
+                        <IconMapPin className='h-4 w-4' />
+                        Location & System Info
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className='space-y-3'>
+                       <div>
+                          <p className='text-xs font-medium text-muted-foreground mb-1'>
+                            Full Address
+                          </p>
+                          <p className='text-sm text-foreground'>
+                            {[
+                              (selectedBusiness as any).addressLine,
+                              (selectedBusiness as any).addressLevel1,
+                              (selectedBusiness as any).addressLevel2,
+                            ]
+                              .filter(Boolean)
+                              .join(', ') || 'Not provided'}
+                          </p>
+                       </div>
+                       <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                          <div>
+                            <p className='text-xs font-medium text-muted-foreground mb-1'>
+                              Created
+                            </p>
+                            <p className='text-sm'>
+                              {formatDateTime((selectedBusiness as any).createdAt)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className='text-xs font-medium text-muted-foreground mb-1'>
+                              Updated
+                            </p>
+                            <p className='text-sm'>
+                               {formatDateTime((selectedBusiness as any).updatedAt)}
+                            </p>
+                          </div>
+                       </div>
+                    </CardContent>
+                  </Card>
                 </div>
+
+                {/* Admin Notes Card (Full Width) */}
+                {selectedBusiness.adminNotes && (
+                  <Card className="mt-4">
+                    <CardHeader>
+                      <CardTitle className='text-base flex items-center gap-2'>
+                        <IconFileText className='h-4 w-4' />
+                        Admin Notes
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className='text-sm whitespace-pre-wrap'>
+                        {selectedBusiness.adminNotes}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Business Licenses - Full Width */}
                 {(selectedBusiness as any).licenses &&
@@ -560,10 +613,31 @@ export default function AdminBusinessPage() {
                                 key={index}
                                 className='border rounded-lg p-4 bg-muted/20'
                               >
-                                <Badge variant='outline' className='mb-3'>
-                                  {license.licenseType?.replace(/_/g, ' ') ||
-                                    'License'}
-                                </Badge>
+                                <div className="flex flex-wrap gap-4 items-start justify-between mb-4">
+                                  <div>
+                                     <Badge variant='outline' className='mb-2'>
+                                      {license.licenseType?.replace(/_/g, ' ') || 'License'}
+                                    </Badge>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 mt-2">
+                                        {license.licenseNumber && (
+                                            <div>
+                                                <p className="text-xs text-muted-foreground">License Number</p>
+                                                <p className="text-sm font-medium">{license.licenseNumber}</p>
+                                            </div>
+                                        )}
+                                        {license.licenseExpirationDate && (
+                                            <div>
+                                                <p className="text-xs text-muted-foreground">Expiration Date</p>
+                                                <p className="text-sm font-medium flex items-center gap-1">
+                                                    <IconCalendar className="h-3 w-3" />
+                                                    {formatDate(license.licenseExpirationDate)}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                  </div>
+                                </div>
+                                
                                 {license.documentImageUrls &&
                                   license.documentImageUrls.length > 0 && (
                                     <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-3'>
@@ -596,17 +670,36 @@ export default function AdminBusinessPage() {
                       </CardContent>
                     </Card>
                   )}
+                  
+                  {/* Legacy Single License Fields (Fallback) */}
+                  {((selectedBusiness as any).licenseNumber || (selectedBusiness as any).licenseType || (selectedBusiness as any).licenseExpirationDate) && 
+                   (!(selectedBusiness as any).licenses || (selectedBusiness as any).licenses.length === 0) && (
+                     <Card className='mt-4'>
+                       <CardHeader>
+                         <CardTitle className='text-base flex items-center gap-2'>
+                           <IconFileText className='h-4 w-4' />
+                           Legacy License Info
+                         </CardTitle>
+                       </CardHeader>
+                       <CardContent>
+                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                  <p className="text-xs text-muted-foreground">License Number</p>
+                                  <p className="text-sm font-medium">{(selectedBusiness as any).licenseNumber || '-'}</p>
+                              </div>
+                              <div>
+                                  <p className="text-xs text-muted-foreground">Type</p>
+                                  <p className="text-sm font-medium">{(selectedBusiness as any).licenseType || '-'}</p>
+                              </div>
+                              <div>
+                                  <p className="text-xs text-muted-foreground">Expiration</p>
+                                  <p className="text-sm font-medium">{formatDate((selectedBusiness as any).licenseExpirationDate)}</p>
+                              </div>
+                           </div>
+                       </CardContent>
+                     </Card>
+                  )}
 
-                {/* Action Link */}
-                <div className='mt-6 pt-4 border-t'>
-                  <Link
-                    href={`/admin/business/${selectedBusiness.accountId}`}
-                    className='text-sm text-blue-600 hover:underline inline-flex items-center gap-1'
-                  >
-                    View full account details
-                    <span>→</span>
-                  </Link>
-                </div>
               </div>
             </div>
           ) : (
