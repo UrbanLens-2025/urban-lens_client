@@ -18,42 +18,49 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 // Handle background messages
-messaging.onBackgroundMessage((payload) => {
-  console.log("[firebase-messaging-sw.js] Received background message:", payload);
+// messaging.onBackgroundMessage((payload) => {
+//   console.log("[firebase-messaging-sw.js] Received background message:", payload);
+  
+//   // Check if any client (tab) is focused
+//   return clients.matchAll({ type: 'window', includeUncontrolled: true })
+//     .then(clientList => {
+//       const hasFocusedClient = clientList.some(client => client.focused);
+      
+//       // Only show notification if NO tab is focused
+//       if (!hasFocusedClient) {
+//         const notificationTitle = payload.notification?.title || "New Notification";
+//         const notificationOptions = {
+//           body: payload.notification?.body || "",
+//           icon: "/favicon.ico",
+//           badge: "/favicon.ico",
+//           data: payload.data,
+//         };
+//         return self.registration.showNotification(notificationTitle, notificationOptions);
+//       }
+//     });
+// });
+// // Handle notification click
+// self.addEventListener("notificationclick", (event) => {
+//   console.log("[firebase-messaging-sw.js] Notification click received:", event);
 
-  const notificationTitle = payload.notification?.title || "New Notification";
-  const notificationOptions = {
-    body: payload.notification?.body || "",
-    icon: "/favicon.ico",
-    badge: "/favicon.ico",
-    data: payload.data,
-  };
+//   event.notification.close();
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
-
-// Handle notification click
-self.addEventListener("notificationclick", (event) => {
-  console.log("[firebase-messaging-sw.js] Notification click received:", event);
-
-  event.notification.close();
-
-  // Focus or open the app window
-  event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      // If a window is already open, focus it
-      for (const client of clientList) {
-        if ("focus" in client) {
-          return client.focus();
-        }
-      }
-      // Otherwise, open a new window
-      if (clients.openWindow) {
-        return clients.openWindow("/");
-      }
-    })
-  );
-});
+//   // Focus or open the app window
+//   event.waitUntil(
+//     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+//       // If a window is already open, focus it
+//       for (const client of clientList) {
+//         if ("focus" in client) {
+//           return client.focus();
+//         }
+//       }
+//       // Otherwise, open a new window
+//       if (clients.openWindow) {
+//         return clients.openWindow("/");
+//       }
+//     })
+//   );
+// });
 
 
 

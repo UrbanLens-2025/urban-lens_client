@@ -23,6 +23,7 @@ export function useAutoRegisterDevice(enabled: boolean) {
     if (!authToken) return;
 
     const registerFCMDevice = async () => {
+      console.log("Attempting to register FCM device");
       try {
         // Request notification permission
         const permission = await Notification.requestPermission();
@@ -33,6 +34,7 @@ export function useAutoRegisterDevice(enabled: boolean) {
 
         // Get FCM token
         const fcmToken = await getFCMToken();
+        console.log("REGISTERED FCM DEVICE WITH TOKEN: ", fcmToken);
         if (!fcmToken) {
           console.warn("Failed to get FCM token");
           return;
@@ -41,8 +43,6 @@ export function useAutoRegisterDevice(enabled: boolean) {
         // Always register the device with the backend on every login
         // Backend handles duplicates gracefully (returns 200 if token exists)
         await registerDevice({ token: fcmToken });
-
-        localStorage.setItem("deviceRegistered", "true");
 
         console.log("FCM device registered successfully");
       } catch (error) {
