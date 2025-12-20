@@ -7,6 +7,9 @@ import {
   getWalletAnalytics,
   getEventsLocationsTotals,
   getAllReports,
+  getAnnouncementsByLocationId,
+  getLocationBookingDetail,
+  getReviewsByLocationId,
 } from '@/api/dashboardAdmin';
 
 export const useDashboardAdmin = (params?: GetDashboardAdminParams) => {
@@ -46,5 +49,32 @@ export const useAllReports = () => {
     queryKey: ['admin-all-reports'],
     queryFn: () => getAllReports(),
     placeholderData: (previousData) => previousData,
+  });
+};
+
+export const useAnnouncementsByLocationId = (locationId: string) => {
+  return useQuery({
+    queryKey: ['admin-announcements-by-location', locationId],
+    queryFn: () => getAnnouncementsByLocationId(locationId),
+    placeholderData: (previousData) => previousData,
+    enabled: Boolean(locationId),
+  });
+};
+
+export const useLocationBookingDetail = (bookingId: string) => {
+  return useQuery({
+    queryKey: ['admin-location-booking-detail', bookingId],
+    queryFn: () => getLocationBookingDetail(bookingId),
+    placeholderData: (previousData) => previousData,
+    enabled: Boolean(bookingId),
+  });
+};
+
+export const useReviewsByLocationId = (locationId: string) => {
+  return useQuery({
+    queryKey: ['admin-reviews-by-location', locationId],
+    queryFn: () => getReviewsByLocationId(locationId),
+    placeholderData: (previousData) => previousData,
+    enabled: Boolean(locationId),
   });
 };

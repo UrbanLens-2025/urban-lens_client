@@ -1,4 +1,5 @@
 import axiosInstance from './axios-config';
+import type { Announcement, ApiResponse } from '@/types';
 
 export interface GetDashboardAdminParams {
   startDate?: string;
@@ -79,7 +80,28 @@ export const getEventsLocationsTotals = async (
 
 export const getAllReports = async () => {
   const response = await axiosInstance.get('/v1/admin/report');
-  // Response structure: { success, message, statusCode, data: { data: [...], meta: {...}, links: {...} } }
-  // Return the entire data object which contains data array, meta, and links
   return response.data.data || { data: [], meta: {}, links: {} };
+};
+
+export const getAnnouncementsByLocationId = async (
+  locationId: string
+): Promise<Announcement[]> => {
+  const response = await axiosInstance.get<ApiResponse<Announcement[]>>(
+    `/v1/admin/announcements?filter.locationId=$eq:${locationId}`
+  );
+  return response.data.data || [];
+};
+
+export const getReviewsByLocationId = async (locationId: string) => {
+  const response = await axiosInstance.get(
+    `/v1/post/location/${locationId}?page=1&limit=100`
+  );
+  return response.data.data || { data: [], meta: {} };
+};
+
+export const getLocationBookingDetail = async (bookingId: string) => {
+  const response = await axiosInstance.get(
+    `/v1/admin/location-bookings/${bookingId}`
+  );
+  return response.data.data;
 };

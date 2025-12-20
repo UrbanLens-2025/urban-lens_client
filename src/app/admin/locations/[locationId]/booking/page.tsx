@@ -285,7 +285,7 @@ export function BookingsCalendarAdmin({ locationId }: BookingsCalendarProps) {
 
   // Handle booking cell click
   const handleBookingClick = (bookingId: string) => {
-    router.push(`/dashboard/business/location-bookings/${bookingId}`);
+    router.push(`/admin/location-booking/${bookingId}`);
   };
 
   // Format currency using shared utility

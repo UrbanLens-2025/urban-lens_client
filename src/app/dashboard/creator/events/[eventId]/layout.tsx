@@ -452,7 +452,9 @@ function EventDetailLayoutContent({
 
   const normalizedEventStatus = event?.status?.toUpperCase();
   const canAccessAttendanceTab = normalizedEventStatus
-    ? ['PUBLISHED', 'CANCELLED', 'FINISHED', 'COMPLETED'].includes(normalizedEventStatus)
+    ? ['PUBLISHED', 'CANCELLED', 'FINISHED', 'COMPLETED'].includes(
+        normalizedEventStatus
+      )
     : false;
 
   const renderAttendanceTabButton = () => {
@@ -774,82 +776,83 @@ function EventDetailLayoutContent({
                 )}
 
                 {/* Metadata Section */}
-                <div className='flex flex-col sm:flex-row sm:items-center gap-3 pt-1'>
-                  {/* Date Range */}
-                  {event.startDate || event.endDate ? (
-                    <div className='flex items-center gap-2 text-sm bg-muted/60 hover:bg-muted/80 transition-colors px-4 py-2 rounded-lg border border-border/50'>
-                      <CalendarDays className='h-4 w-4 text-primary flex-shrink-0' />
-                      <div className='flex items-center gap-2 flex-wrap'>
-                        {event.startDate ? (
-                          <span className='font-medium text-foreground'>
-                            {formatCompactDateTime(event.startDate)}
-                          </span>
-                        ) : (
-                          <span className='text-muted-foreground italic'>
-                            Not set
-                          </span>
-                        )}
-                        {event.endDate && (
-                          <>
-                            <span className='text-muted-foreground'>→</span>
+                <div className='flex justify-between items-center'>
+                  <div className='flex flex-col sm:flex-row sm:items-center gap-3 pt-1'>
+                    {/* Date Range */}
+                    {event.startDate || event.endDate ? (
+                      <div className='flex items-center gap-2 text-sm bg-muted/60 hover:bg-muted/80 transition-colors px-4 py-2 rounded-lg border border-border/50'>
+                        <CalendarDays className='h-4 w-4 text-primary flex-shrink-0' />
+                        <div className='flex items-center gap-2 flex-wrap'>
+                          {event.startDate ? (
                             <span className='font-medium text-foreground'>
-                              {formatCompactDateTime(event.endDate)}
+                              {formatCompactDateTime(event.startDate)}
                             </span>
+                          ) : (
+                            <span className='text-muted-foreground italic'>
+                              Not set
+                            </span>
+                          )}
+                          {event.endDate && (
+                            <>
+                              <span className='text-muted-foreground'>→</span>
+                              <span className='font-medium text-foreground'>
+                                {formatCompactDateTime(event.endDate)}
+                              </span>
+                            </>
+                          )}
+                          {!event.endDate && event.startDate && (
+                            <span className='text-xs text-muted-foreground/70 ml-1'>
+                              (no end date)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className='flex items-center gap-2 text-sm bg-muted/30 px-4 py-2 rounded-lg border border-dashed border-muted-foreground/30'>
+                        <CalendarDays className='h-4 w-4 text-muted-foreground flex-shrink-0' />
+                        <span className='text-muted-foreground italic'>
+                          Dates not set
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Finish Event Button - Show only if PUBLISHED */}
+                  {isPublished && (
+                    <div className='pt-4'>
+                      <Button
+                        onClick={handleFinishClick}
+                        disabled={finishEvent.isPending}
+                        variant='outline'
+                        size='lg'
+                        className='w-full sm:w-auto'
+                      >
+                        {finishEvent.isPending ? (
+                          <>
+                            <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                            Finishing...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className='h-4 w-4 mr-2' />
+                            Finish Event
                           </>
                         )}
-                        {!event.endDate && event.startDate && (
-                          <span className='text-xs text-muted-foreground/70 ml-1'>
-                            (no end date)
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className='flex items-center gap-2 text-sm bg-muted/30 px-4 py-2 rounded-lg border border-dashed border-muted-foreground/30'>
-                      <CalendarDays className='h-4 w-4 text-muted-foreground flex-shrink-0' />
-                      <span className='text-muted-foreground italic'>
-                        Dates not set
-                      </span>
+                      </Button>
+                      {/* TODO: Re-add this message once validation is restored */}
+                      {!isEventEnded && (
+                        <p className='text-xs text-muted-foreground mt-2'>
+                          You can finish the event after the end date has
+                          passed.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Finish Event Button - Show only if PUBLISHED */}
-            {isPublished && (
-              <div className='pt-4'>
-                <Button
-                  onClick={handleFinishClick}
-                  // TODO: Re-add `!isEventEnded` validation once found a way to demo
-                  disabled={finishEvent.isPending}
-                  variant='outline'
-                  size='lg'
-                  className='w-full sm:w-auto'
-                >
-                  {finishEvent.isPending ? (
-                    <>
-                      <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                      Finishing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className='h-4 w-4 mr-2' />
-                      Finish Event
-                    </>
-                  )}
-                </Button>
-                {/* TODO: Re-add this message once validation is restored */}
-                {/* {!isEventEnded && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    You can finish the event after the end date has passed.
-                  </p>
-                )} */}
-              </div>
-            )}
-
             {/* Action Buttons */}
-            <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-4'>
+            <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2'>
               <div className='flex flex-col sm:flex-row gap-2 flex-1'>
                 {event.status === 'DRAFT' && (
                   <>

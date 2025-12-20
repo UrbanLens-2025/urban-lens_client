@@ -283,7 +283,8 @@ export default function LocationBookingDetailPage({
     queryKey: ['system-config'],
     queryFn: async () => {
       // Ensure your env variable matches your setup, or use the full URL if needed
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
       const res = await fetch(`${baseUrl}/api/v1/public/system-config/values`);
       if (!res.ok) throw new Error('Failed to fetch system config');
       return res.json();
@@ -295,14 +296,16 @@ export default function LocationBookingDetailPage({
     if (!configData?.data) return 0;
 
     const config = configData.data.find(
-      (item: any) => item.key === 'LOCATION_BOOKING_FORCE_CANCELLATION_FINE_PERCENTAGE'
+      (item: any) =>
+        item.key === 'LOCATION_BOOKING_FORCE_CANCELLATION_FINE_PERCENTAGE'
     );
 
     return config?.value || 0; // Default to 0 if key not found
   }, [configData]);
 
   // Calculate fee based on dynamic percentage
-  const cancellationFee = Number(booking?.amountToPay || 0) * cancellationPercentage;
+  const cancellationFee =
+    Number(booking?.amountToPay || 0) * cancellationPercentage;
   const refundAmount = Number(booking?.amountToPay || 0) - cancellationFee;
 
   const bookingWindow = useMemo(() => {
@@ -481,11 +484,11 @@ export default function LocationBookingDetailPage({
         coverUrl: fetchedEventData.coverUrl,
         organizer: fetchedEventData.createdBy
           ? {
-            name: `${fetchedEventData.createdBy.firstName} ${fetchedEventData.createdBy.lastName}`,
-            email: fetchedEventData.createdBy.email,
-            phoneNumber: fetchedEventData.createdBy.phoneNumber,
-            avatarUrl: fetchedEventData.createdBy.avatarUrl,
-          }
+              name: `${fetchedEventData.createdBy.firstName} ${fetchedEventData.createdBy.lastName}`,
+              email: fetchedEventData.createdBy.email,
+              phoneNumber: fetchedEventData.createdBy.phoneNumber,
+              avatarUrl: fetchedEventData.createdBy.avatarUrl,
+            }
           : null,
         socialLinks: fetchedEventData.social || [],
         eventSocialLinks: fetchedEventData.social || [],
@@ -509,11 +512,11 @@ export default function LocationBookingDetailPage({
           booking.referencedEventRequest.specialRequirements || '',
         organizer: booking?.createdBy
           ? {
-            name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
-            email: booking.createdBy.email,
-            phoneNumber: booking.createdBy.phoneNumber,
-            avatarUrl: booking.createdBy.avatarUrl,
-          }
+              name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
+              email: booking.createdBy.email,
+              phoneNumber: booking.createdBy.phoneNumber,
+              avatarUrl: booking.createdBy.avatarUrl,
+            }
           : null,
         socialLinks: [],
         eventSocialLinks: [],
@@ -531,11 +534,11 @@ export default function LocationBookingDetailPage({
         specialRequirements: '',
         organizer: booking.createdBy
           ? {
-            name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
-            email: booking.createdBy.email,
-            phoneNumber: booking.createdBy.phoneNumber,
-            avatarUrl: booking.createdBy.avatarUrl,
-          }
+              name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
+              email: booking.createdBy.email,
+              phoneNumber: booking.createdBy.phoneNumber,
+              avatarUrl: booking.createdBy.avatarUrl,
+            }
           : null,
         socialLinks: booking.createdBy.creatorProfile.social || [],
         eventSocialLinks: booking.createdBy.creatorProfile.social || [],
@@ -557,11 +560,11 @@ export default function LocationBookingDetailPage({
       specialRequirements: '',
       organizer: booking?.createdBy
         ? {
-          name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
-          email: booking.createdBy.email,
-          phoneNumber: booking.createdBy.phoneNumber,
-          avatarUrl: booking.createdBy.avatarUrl,
-        }
+            name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
+            email: booking.createdBy.email,
+            phoneNumber: booking.createdBy.phoneNumber,
+            avatarUrl: booking.createdBy.avatarUrl,
+          }
         : null,
       socialLinks: [],
       eventSocialLinks: [],
@@ -649,15 +652,15 @@ export default function LocationBookingDetailPage({
             {getStatusBadge(booking.status)}
             {(booking.status === 'APPROVED' ||
               booking.status === 'PAYMENT_RECEIVED') && (
-                <Button
-                  variant='default'
-                  className='bg-red-600 hover:bg-red-700 text-white'
-                  onClick={() => setIsForceCancelOpen(true)}
-                >
-                  <X className='h-4 w-4 mr-2' />
-                  Force Cancel
-                </Button>
-              )}
+              <Button
+                variant='default'
+                className='bg-red-600 hover:bg-red-700 text-white'
+                onClick={() => setIsForceCancelOpen(true)}
+              >
+                <X className='h-4 w-4 mr-2' />
+                Force Cancel
+              </Button>
+            )}
             {booking.status === 'AWAITING_BUSINESS_PROCESSING' && (
               <>
                 <Button
@@ -749,8 +752,8 @@ export default function LocationBookingDetailPage({
                           -
                           {formatCurrency(
                             (
-                              Number(booking.amountToPay) -
-                              Number(booking.amountToReceive)
+                              Number(booking.amountToPay) *
+                              (booking as any).systemCutPercentage
                             ).toString(),
                             'VND'
                           )}
@@ -1188,16 +1191,16 @@ export default function LocationBookingDetailPage({
           {/* Force Cancel (moved below booking calendar) */}
           {(booking.status === 'APPROVED' ||
             booking.status === 'PAYMENT_RECEIVED') && (
-              <Button
-                variant='default'
-                className='w-full bg-red-600 hover:bg-red-700 text-white'
-                onClick={handleForceCancelClick}
-                disabled={Boolean(forceCancelBlockReason)}
-              >
-                <X className='h-4 w-4 mr-2' />
-                Force Cancel
-              </Button>
-            )}
+            <Button
+              variant='default'
+              className='w-full bg-red-600 hover:bg-red-700 text-white'
+              onClick={handleForceCancelClick}
+              disabled={Boolean(forceCancelBlockReason)}
+            >
+              <X className='h-4 w-4 mr-2' />
+              Force Cancel
+            </Button>
+          )}
 
           {(booking.status === 'APPROVED' ||
             booking.status === 'PAYMENT_RECEIVED') &&
@@ -1480,14 +1483,14 @@ export default function LocationBookingDetailPage({
                                   'aspect-square flex items-center justify-center text-xs font-medium rounded-md transition-colors cursor-default',
                                   !isCurrentMonth && 'text-muted-foreground/40',
                                   isCurrentMonth &&
-                                  !isBookingDate &&
-                                  !isToday &&
-                                  'text-foreground hover:bg-muted/50',
+                                    !isBookingDate &&
+                                    !isToday &&
+                                    'text-foreground hover:bg-muted/50',
                                   isToday &&
-                                  !isBookingDate &&
-                                  'bg-primary/10 text-primary font-semibold ring-2 ring-primary/20',
+                                    !isBookingDate &&
+                                    'bg-primary/10 text-primary font-semibold ring-2 ring-primary/20',
                                   isBookingDate &&
-                                  'bg-primary text-primary-foreground font-semibold shadow-sm'
+                                    'bg-primary text-primary-foreground font-semibold shadow-sm'
                                 )}
                               >
                                 {format(day, 'd')}
@@ -1572,16 +1575,18 @@ export default function LocationBookingDetailPage({
           <div className='overflow-y-auto flex-1 px-6 pt-6'>
             <div className='space-y-4 pb-4'>
               <div
-                className={`flex items-center gap-3 p-4 rounded-xl ${pendingStatus === 'APPROVED'
+                className={`flex items-center gap-3 p-4 rounded-xl ${
+                  pendingStatus === 'APPROVED'
                     ? 'bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800'
                     : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800'
-                  }`}
+                }`}
               >
                 <div
-                  className={`h-12 w-12 rounded-full flex items-center justify-center ${pendingStatus === 'APPROVED'
+                  className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                    pendingStatus === 'APPROVED'
                       ? 'bg-emerald-100 dark:bg-emerald-900/40'
                       : 'bg-red-100 dark:bg-red-900/40'
-                    }`}
+                  }`}
                 >
                   {pendingStatus === 'APPROVED' ? (
                     <CheckCircle className='h-6 w-6 text-emerald-600 dark:text-emerald-400' />
@@ -1761,10 +1766,11 @@ export default function LocationBookingDetailPage({
             <AlertDialogAction
               onClick={handleProcessConfirm}
               disabled={approveBooking.isPending || rejectBookings.isPending}
-              className={`min-w-[140px] font-semibold shadow-md ${pendingStatus === 'REJECTED'
+              className={`min-w-[140px] font-semibold shadow-md ${
+                pendingStatus === 'REJECTED'
                   ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800'
                   : 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800'
-                }`}
+              }`}
             >
               {approveBooking.isPending || rejectBookings.isPending ? (
                 <>
@@ -2029,7 +2035,7 @@ export default function LocationBookingDetailPage({
                 <span>{formatCurrency(booking.amountToPay)}</span>
               </div>
               <div className='flex justify-between text-red-600 font-medium'>
-                <span>Cancellation fee ({(cancellationPercentage * 100)}%):</span>
+                <span>Cancellation fee ({cancellationPercentage * 100}%):</span>
                 <span>-{formatCurrency(cancellationFee.toString())}</span>
               </div>
               <div className='pt-2 border-t flex justify-between font-bold text-base text-green-600'>

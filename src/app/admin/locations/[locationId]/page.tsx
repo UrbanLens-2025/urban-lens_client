@@ -34,6 +34,7 @@ import {
   ShieldCheck,
   Star,
   MessageSquare,
+  Megaphone,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,8 +62,10 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BookingsCalendar } from '@/app/dashboard/business/locations/[locationId]/availability/_components/BookingsCalendar';
-import { BookingsCalendarAdmin } from './components/BookingCalendarAdmin';
 import { IconMapPin } from '@tabler/icons-react';
+import AnnouncementsTabPage from './annoucement/page';
+import { BookingsCalendarAdmin } from './booking/page';
+import ReviewTabPage from './review/page';
 
 function InfoRow({
   label,
@@ -102,13 +105,22 @@ export default function AdminLocationDetailsPage({
 
   const coerceTab = (
     tab: string | null
-  ): 'overview' | 'bookings' | 'reports' | 'booking-reports' | 'penalties' => {
+  ):
+    | 'overview'
+    | 'bookings'
+    | 'reports'
+    | 'booking-reports'
+    | 'penalties'
+    | 'announcements'
+    | 'review' => {
     if (
       tab === 'overview' ||
       tab === 'bookings' ||
       tab === 'reports' ||
       tab === 'booking-reports' ||
-      tab === 'penalties'
+      tab === 'penalties' ||
+      tab === 'announcements' ||
+      tab === 'review'
     ) {
       return tab;
     }
@@ -116,7 +128,13 @@ export default function AdminLocationDetailsPage({
   };
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'bookings' | 'reports' | 'booking-reports' | 'penalties'
+    | 'overview'
+    | 'bookings'
+    | 'reports'
+    | 'booking-reports'
+    | 'penalties'
+    | 'announcements'
+    | 'review'
   >(() => coerceTab(searchParams.get('tab')));
 
   useEffect(() => {
@@ -310,6 +328,20 @@ export default function AdminLocationDetailsPage({
           >
             <CalendarDays className='h-4 w-4' />
             Bookings
+          </TabsTrigger>
+          <TabsTrigger
+            value='announcements'
+            className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2 data-[state=active]:text-foreground after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent data-[state=active]:after:bg-primary"
+          >
+            <Megaphone className='h-4 w-4' />
+            Announcements
+          </TabsTrigger>
+          <TabsTrigger
+            value='review'
+            className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2 data-[state=active]:text-foreground after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent data-[state=active]:after:bg-primary"
+          >
+            <Star className='h-4 w-4' />
+            Reviews
           </TabsTrigger>
           <TabsTrigger
             value='reports'
@@ -557,11 +589,15 @@ export default function AdminLocationDetailsPage({
             </div>
           </div>
         </TabsContent>
-
+        <TabsContent value='announcements'>
+          <AnnouncementsTabPage locationId={locationId} />
+        </TabsContent>
         <TabsContent value='bookings' className='space-y-6'>
           <BookingsCalendarAdmin locationId={locationId} />
         </TabsContent>
-
+        <TabsContent value='review'>
+          <ReviewTabPage locationId={locationId} />
+        </TabsContent>
         <TabsContent value='reports'>
           <ReportsPanel targetId={locationId} targetType='location' />
         </TabsContent>
