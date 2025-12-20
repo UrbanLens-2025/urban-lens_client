@@ -45,6 +45,7 @@ import {
   ImageIcon,
   RotateCcw,
   HelpCircle,
+  Calculator,
 } from 'lucide-react';
 import type { CreateTicketPayload } from '@/types';
 import { DatePicker } from '@/components/shared/DatePicker';
@@ -705,6 +706,7 @@ export default function CreateTicketPage({
               {form.watch('allowRefunds') && (
                 <div className='space-y-6 pl-4 border-l-2 border-primary/20 animate-in fade-in slide-in-from-top-2 duration-300'>
                   
+                  {/* Explanation Box */}
                   <div className="bg-muted/50 p-4 rounded-md text-sm text-muted-foreground space-y-2">
                     <div className="font-semibold text-foreground flex items-center gap-2">
                         <HelpCircle className="h-4 w-4" /> 
@@ -717,13 +719,14 @@ export default function CreateTicketPage({
                     </p>
                   </div>
 
+                  {/* Input Fields Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                         control={form.control}
                         name='refundCutoffHoursAfterPayment'
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Refund Eligibility Period (Hours)</FormLabel>
+                            <FormLabel>Refund Eligibility Period</FormLabel>
                             <FormControl>
                             <div className="relative">
                                 <Input
@@ -751,7 +754,7 @@ export default function CreateTicketPage({
                             </div>
                             </FormControl>
                             <FormDescription>
-                                Customers can request a refund within this many hours after their purchase.
+                                Refund allowed within this many hours after purchase.
                             </FormDescription>
                             <FormMessage />
                         </FormItem>
@@ -768,7 +771,7 @@ export default function CreateTicketPage({
                             <div className="relative">
                                 <Input
                                     type='number'
-                                    step='0.01' // Allow finer steps
+                                    step='0.01'
                                     min='0'
                                     max='1'
                                     placeholder='1.0'
@@ -778,13 +781,6 @@ export default function CreateTicketPage({
                                         if (value === '' || value === '-') {
                                             field.onChange(undefined);
                                             return;
-                                        }
-                                        // Allow typing "0." without immediately parsing
-                                        if (value === '0.' || value.endsWith('.')) {
-                                            // Ideally we shouldn't trigger onChange with invalid number, 
-                                            // but React Hook Form needs a value. 
-                                            // We can let the user type, but validation will catch it on blur/submit.
-                                            // Here we try to parse valid numbers.
                                         }
                                         const numValue = parseFloat(value);
                                         if (!isNaN(numValue) && numValue >= 0 && numValue <= 1) {
@@ -799,8 +795,7 @@ export default function CreateTicketPage({
                             </div>
                             </FormControl>
                             <FormDescription>
-                                The portion of the ticket price to refund. <br/>
-                                <span className="font-mono text-xs">1.0 = 100% (Full Refund), 0.5 = 50%</span>
+                                Portion of price to refund (1.0 = 100%).
                             </FormDescription>
                             <FormMessage />
                         </FormItem>
@@ -808,25 +803,33 @@ export default function CreateTicketPage({
                     />
                   </div>
 
-                  {/* Example Calculation Box */}
-                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md p-4 text-sm">
-                    <div className="font-semibold text-blue-800 dark:text-blue-300 mb-2">Example Scenario:</div>
+                  {/* Dynamic Example Calculation Box */}
+                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md p-4 text-sm transition-all">
+                    <div className="font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
+                        <Calculator className="h-4 w-4" />
+                        Live Example:
+                    </div>
                     <ul className="list-disc list-inside space-y-1 text-blue-700 dark:text-blue-400">
                         <li>
-                            Ticket Price: <strong>{form.watch('price') ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(form.watch('price')) : '100.000 đ'}</strong>
+                            Ticket Price: <strong>
+                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: form.watch('currency') || 'VND' }).format(form.watch('price') || 0)}
+                            </strong>
                         </li>
                         <li>
-                            If a customer cancels within <strong>{form.watch('refundCutoffHoursAfterPayment') ?? 48} hours</strong> of purchase:
+                            If customer cancels within <strong>{form.watch('refundCutoffHoursAfterPayment') ?? 0} hours</strong> of purchase:
                         </li>
-                        <li>
-                            They will receive: <strong>
+                        <li className="pt-1">
+                            Refund Amount: <strong>
                                 {(() => {
-                                    const price = form.watch('price') || 100000;
-                                    const percentage = form.watch('refundPercentageBeforeCutoff') ?? 1;
+                                    const price = form.watch('price') || 0;
+                                    const percentage = form.watch('refundPercentageBeforeCutoff') ?? 0;
                                     const refundAmount = price * percentage;
-                                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(refundAmount);
+                                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: form.watch('currency') || 'VND' }).format(refundAmount);
                                 })()}
-                            </strong> ({((form.watch('refundPercentageBeforeCutoff') ?? 1) * 100).toFixed(0)}%)
+                            </strong> 
+                            <span className="ml-1 text-xs opacity-80">
+                                ({((form.watch('refundPercentageBeforeCutoff') ?? 0) * 100).toFixed(0)}% of price)
+                            </span>
                         </li>
                     </ul>
                   </div>
