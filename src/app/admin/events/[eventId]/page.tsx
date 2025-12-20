@@ -37,7 +37,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import type React from 'react';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDateTime } from '@/lib/utils';
 import LoadingCustom from '@/components/shared/LoadingCustom';
 import ErrorCustom from '@/components/shared/ErrorCustom';
 import { ReportsPanel } from '@/components/admin/event/ReportsPanel';
@@ -219,12 +219,12 @@ export default function AdminEventDetailsPage({
               <div className='flex flex-row items-start gap-3 text-sm text-muted-foreground'>
                 <div className='flex items-center gap-1.5'>
                   <Calendar className='h-4 w-4' />
-                  {formatDate(event.startDate!)}
+                  {formatDateTime(event.startDate!)}
                 </div>
                 <div>-</div>
                 <div className='flex items-center gap-1.5'>
                   <Calendar className='h-4 w-4' />
-                  {formatDate(event.startDate!)}
+                  {formatDateTime(event.endDate!)}
                 </div>
               </div>
             </div>
