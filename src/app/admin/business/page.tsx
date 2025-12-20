@@ -448,29 +448,6 @@ export default function AdminBusinessPage() {
                         </div>
                       </div>
                     </div>
-
-                    {/* Description - Truncated */}
-                    {selectedBusiness.description && (
-                      <div className='mt-4'>
-                        <p
-                          className={`text-sm text-muted-foreground ${
-                            !expandedDescription ? 'line-clamp-2' : ''
-                          }`}
-                        >
-                          {selectedBusiness.description}
-                        </p>
-                        {selectedBusiness.description.length > 150 && (
-                          <button
-                            onClick={() =>
-                              setExpandedDescription(!expandedDescription)
-                            }
-                            className='text-sm text-blue-600 hover:underline mt-1'
-                          >
-                            {expandedDescription ? 'Show less' : 'Read more'}
-                          </button>
-                        )}
-                      </div>
-                    )}
                   </div>
                   {statusTab === 'PENDING' && (
                     <div className='flex gap-2 ml-4'>
@@ -495,6 +472,29 @@ export default function AdminBusinessPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Description - Full Width */}
+                {selectedBusiness.description && (
+                  <div className='mb-4'>
+                    <p
+                      className={`text-sm text-muted-foreground ${
+                        !expandedDescription ? 'line-clamp-2' : ''
+                      }`}
+                    >
+                      {selectedBusiness.description}
+                    </p>
+                    {selectedBusiness.description.length > 150 && (
+                      <button
+                        onClick={() =>
+                          setExpandedDescription(!expandedDescription)
+                        }
+                        className='text-sm text-blue-600 hover:underline mt-1'
+                      >
+                        {expandedDescription ? 'Show less' : 'Read more'}
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Approval Notice - Above Documents */}
                 {(selectedBusiness as any).status === 'APPROVED' &&
@@ -709,7 +709,7 @@ export default function AdminBusinessPage() {
                 {/* Two Column Grid */}
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-6'>
                   {/* Contact Information Card */}
-                  <Card className="h-full">
+                  <Card className="h-full md:col-span-2">
                     <CardHeader>
                       <CardTitle className='text-base flex items-center gap-2'>
                         <IconUser className='h-4 w-4' />
@@ -759,53 +759,8 @@ export default function AdminBusinessPage() {
                       )}
                     </CardContent>
                   </Card>
-
-                   {/* Location & System Info Card */}
-                   <Card className="h-full">
-                    <CardHeader>
-                      <CardTitle className='text-base flex items-center gap-2'>
-                        <IconMapPin className='h-4 w-4' />
-                        Location & System Info
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className='space-y-3'>
-                       <div>
-                          <p className='text-xs font-medium text-muted-foreground mb-1'>
-                            Full Address
-                          </p>
-                          <p className='text-sm text-foreground'>
-                            {[
-                              (selectedBusiness as any).addressLine,
-                              (selectedBusiness as any).addressLevel1,
-                              (selectedBusiness as any).addressLevel2,
-                            ]
-                              .filter(Boolean)
-                              .join(', ') || 'Not provided'}
-                          </p>
-                       </div>
-                       <div className="grid grid-cols-2 gap-2 pt-2 border-t">
-                          <div>
-                            <p className='text-xs font-medium text-muted-foreground mb-1'>
-                              Created
-                            </p>
-                            <p className='text-sm'>
-                              {formatDateTime((selectedBusiness as any).createdAt)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className='text-xs font-medium text-muted-foreground mb-1'>
-                              Updated
-                            </p>
-                            <p className='text-sm'>
-                               {formatDateTime((selectedBusiness as any).updatedAt)}
-                            </p>
-                          </div>
-                       </div>
-                    </CardContent>
-                  </Card>
                 </div>
 
-                    <span>→</span>
                 {/* Admin Notes Card (Full Width) */}
                 {selectedBusiness.adminNotes && (
                   <Card className="mt-4">
@@ -823,81 +778,6 @@ export default function AdminBusinessPage() {
                   </Card>
                 )}
 
-                {/* Business Licenses - Full Width */}
-                {(selectedBusiness as any).licenses &&
-                  (selectedBusiness as any).licenses.length > 0 && (
-                    <Card className='mt-4'>
-                      <CardHeader>
-                        <CardTitle className='text-base flex items-center gap-2'>
-                          <IconFileText className='h-4 w-4' />
-                          Business Licenses
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className='space-y-4'>
-                          {(selectedBusiness as any).licenses.map(
-                            (license: any, index: number) => (
-                              <div
-                                key={index}
-                                className='border rounded-lg p-4 bg-muted/20'
-                              >
-                                <div className="flex flex-wrap gap-4 items-start justify-between mb-4">
-                                  <div>
-                                     <Badge variant='outline' className='mb-2'>
-                                      {license.licenseType?.replace(/_/g, ' ') || 'License'}
-                                    </Badge>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 mt-2">
-                                        {license.licenseNumber && (
-                                            <div>
-                                                <p className="text-xs text-muted-foreground">License Number</p>
-                                                <p className="text-sm font-medium">{license.licenseNumber}</p>
-                                            </div>
-                                        )}
-                                        {license.licenseExpirationDate && (
-                                            <div>
-                                                <p className="text-xs text-muted-foreground">Expiration Date</p>
-                                                <p className="text-sm font-medium flex items-center gap-1">
-                                                    <IconCalendar className="h-3 w-3" />
-                                                    {formatDate(license.licenseExpirationDate)}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                {license.documentImageUrls &&
-                                  license.documentImageUrls.length > 0 && (
-                                    <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-3'>
-                                      {license.documentImageUrls.map(
-                                        (url: string, imgIndex: number) => (
-                                          <a
-                                            key={imgIndex}
-                                            href={url}
-                                            target='_blank'
-                                            rel='noopener noreferrer'
-                                            className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors'
-                                          >
-                                            <img
-                                              src={url}
-                                              alt={`License document ${
-                                                imgIndex + 1
-                                              }`}
-                                              className='w-full h-full object-cover'
-                                            />
-                                            <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
-                                          </a>
-                                        )
-                                      )}
-                                    </div>
-                                  )}
-                              </div>
-                            )
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
                   
                   {/* Legacy Single License Fields (Fallback) */}
                   {((selectedBusiness as any).licenseNumber || (selectedBusiness as any).licenseType || (selectedBusiness as any).licenseExpirationDate) && 

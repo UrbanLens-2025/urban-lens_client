@@ -256,11 +256,22 @@ export default function MissionDetailsPage({
                 </div>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <>
-              <Table>
-                <TableHeader className='bg-muted/40'>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <>
+            <Table>
+              <TableHeader className='bg-muted/40'>
+                <TableRow>
+                  <TableHead>Participant</TableHead>
+                  <TableHead>Progress</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Started At</TableHead>
+                  <TableHead>Completed At</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {participants.length === 0 ? (
                   <TableRow>
                     <TableHead>Participant</TableHead>
                     <TableHead>Progress</TableHead>
