@@ -357,6 +357,28 @@ export default function CreateTicketPage({
 
               <FormField
                 control={form.control}
+                name='isActive'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm'>
+                    <div className='space-y-0.5'>
+                      <FormLabel className='text-sm font-medium'>Active Status</FormLabel>
+                      <FormDescription className='text-xs'>
+                        Enable or disable ticket sales immediately
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="scale-90 origin-right"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name='description'
                 render={({ field }) => (
                   <FormItem>
@@ -542,8 +564,8 @@ export default function CreateTicketPage({
                           min='1'
                           step='1'
                           placeholder='1'
-                        {...field}
-                        value={field.value ?? ''}
+                          {...field}
+                          value={field.value ?? ''}
                           onChange={(e) =>
                             field.onChange(parseInt(e.target.value) || 0)
                           }
@@ -567,8 +589,8 @@ export default function CreateTicketPage({
                           min='1'
                           step='1'
                           placeholder='5'
-                        {...field}
-                        value={field.value ?? ''}
+                          {...field}
+                          value={field.value ?? ''}
                           onChange={(e) =>
                             field.onChange(parseInt(e.target.value) || 0)
                           }
@@ -705,166 +727,137 @@ export default function CreateTicketPage({
 
               {form.watch('allowRefunds') && (
                 <div className='space-y-6 pl-4 border-l-2 border-primary/20 animate-in fade-in slide-in-from-top-2 duration-300'>
-                  
+
                   {/* Explanation Box */}
                   <div className="bg-muted/50 p-4 rounded-md text-sm text-muted-foreground space-y-2">
                     <div className="font-semibold text-foreground flex items-center gap-2">
-                        <HelpCircle className="h-4 w-4" /> 
-                        How Refunds Work
+                      <HelpCircle className="h-4 w-4" />
+                      How Refunds Work
                     </div>
                     <p>
-                        Set the conditions under which a customer can receive a refund. 
-                        You define a <strong>cutoff period</strong> (e.g., 48 hours after purchase) 
-                        and the <strong>percentage</strong> of the ticket price to return.
+                      Set the conditions under which a customer can receive a refund.
+                      You define a <strong>cutoff period</strong> (e.g., 48 hours after purchase)
+                      and the <strong>percentage</strong> of the ticket price to return.
                     </p>
                   </div>
 
                   {/* Input Fields Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
-                        control={form.control}
-                        name='refundCutoffHoursAfterPayment'
-                        render={({ field }) => (
+                      control={form.control}
+                      name='refundCutoffHoursAfterPayment'
+                      render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Refund Eligibility Period</FormLabel>
-                            <FormControl>
+                          <FormLabel>Refund Eligibility Period</FormLabel>
+                          <FormControl>
                             <div className="relative">
-                                <Input
-                                    type='number'
-                                    min='0'
-                                    step='1'
-                                    placeholder='48'
-                                    value={field.value ?? ''}
-                                    onChange={(e) => {
-                                        const value = e.target.value;
-                                        if (value === '' || value === '-') {
-                                            field.onChange(undefined);
-                                            return;
-                                        }
-                                        const numValue = parseInt(value);
-                                        if (!isNaN(numValue) && numValue >= 0) {
-                                            field.onChange(numValue);
-                                        }
-                                    }}
-                                    className='h-11 pr-12'
-                                />
-                                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted-foreground text-sm">
-                                    hours
-                                </div>
+                              <Input
+                                type='number'
+                                min='0'
+                                step='1'
+                                placeholder='48'
+                                value={field.value ?? ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '' || value === '-') {
+                                    field.onChange(undefined);
+                                    return;
+                                  }
+                                  const numValue = parseInt(value);
+                                  if (!isNaN(numValue) && numValue >= 0) {
+                                    field.onChange(numValue);
+                                  }
+                                }}
+                                className='h-11 pr-12'
+                              />
+                              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted-foreground text-sm">
+                                hours
+                              </div>
                             </div>
-                            </FormControl>
-                            <FormDescription>
-                                Refund allowed within this many hours after purchase.
-                            </FormDescription>
-                            <FormMessage />
+                          </FormControl>
+                          <FormDescription>
+                            Refund allowed within this many hours after purchase.
+                          </FormDescription>
+                          <FormMessage />
                         </FormItem>
-                        )}
+                      )}
                     />
 
                     <FormField
-                        control={form.control}
-                        name='refundPercentageBeforeCutoff'
-                        render={({ field }) => (
+                      control={form.control}
+                      name='refundPercentageBeforeCutoff'
+                      render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Refund Percentage</FormLabel>
-                            <FormControl>
+                          <FormLabel>Refund Percentage</FormLabel>
+                          <FormControl>
                             <div className="relative">
-                                <Input
-                                    type='number'
-                                    step='0.01'
-                                    min='0'
-                                    max='1'
-                                    placeholder='1.0'
-                                    value={field.value ?? ''}
-                                    onChange={(e) => {
-                                        const value = e.target.value;
-                                        if (value === '' || value === '-') {
-                                            field.onChange(undefined);
-                                            return;
-                                        }
-                                        const numValue = parseFloat(value);
-                                        if (!isNaN(numValue) && numValue >= 0 && numValue <= 1) {
-                                            field.onChange(numValue);
-                                        }
-                                    }}
-                                    className='h-11 pr-16'
-                                />
-                                 <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted-foreground text-sm">
-                                    (0.0 - 1.0)
-                                </div>
+                              <Input
+                                type='number'
+                                step='0.01'
+                                min='0'
+                                max='1'
+                                placeholder='1.0'
+                                value={field.value ?? ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '' || value === '-') {
+                                    field.onChange(undefined);
+                                    return;
+                                  }
+                                  const numValue = parseFloat(value);
+                                  if (!isNaN(numValue) && numValue >= 0 && numValue <= 1) {
+                                    field.onChange(numValue);
+                                  }
+                                }}
+                                className='h-11 pr-16'
+                              />
+                              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted-foreground text-sm">
+                                (0.0 - 1.0)
+                              </div>
                             </div>
-                            </FormControl>
-                            <FormDescription>
-                                Portion of price to refund (1.0 = 100%).
-                            </FormDescription>
-                            <FormMessage />
+                          </FormControl>
+                          <FormDescription>
+                            Portion of price to refund (1.0 = 100%).
+                          </FormDescription>
+                          <FormMessage />
                         </FormItem>
-                        )}
+                      )}
                     />
                   </div>
 
                   {/* Dynamic Example Calculation Box */}
                   <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md p-4 text-sm transition-all">
                     <div className="font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
-                        <Calculator className="h-4 w-4" />
-                        Live Example:
+                      <Calculator className="h-4 w-4" />
+                      Live Example:
                     </div>
                     <ul className="list-disc list-inside space-y-1 text-blue-700 dark:text-blue-400">
-                        <li>
-                            Ticket Price: <strong>
-                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: form.watch('currency') || 'VND' }).format(form.watch('price') || 0)}
-                            </strong>
-                        </li>
-                        <li>
-                            If customer cancels within <strong>{form.watch('refundCutoffHoursAfterPayment') ?? 0} hours</strong> of purchase:
-                        </li>
-                        <li className="pt-1">
-                            Refund Amount: <strong>
-                                {(() => {
-                                    const price = form.watch('price') || 0;
-                                    const percentage = form.watch('refundPercentageBeforeCutoff') ?? 0;
-                                    const refundAmount = price * percentage;
-                                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: form.watch('currency') || 'VND' }).format(refundAmount);
-                                })()}
-                            </strong> 
-                            <span className="ml-1 text-xs opacity-80">
-                                ({((form.watch('refundPercentageBeforeCutoff') ?? 0) * 100).toFixed(0)}% of price)
-                            </span>
-                        </li>
+                      <li>
+                        Ticket Price: <strong>
+                          {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: form.watch('currency') || 'VND' }).format(form.watch('price') || 0)}
+                        </strong>
+                      </li>
+                      <li>
+                        If customer cancels within <strong>{form.watch('refundCutoffHoursAfterPayment') ?? 0} hours</strong> of purchase:
+                      </li>
+                      <li className="pt-1">
+                        Refund Amount: <strong>
+                          {(() => {
+                            const price = form.watch('price') || 0;
+                            const percentage = form.watch('refundPercentageBeforeCutoff') ?? 0;
+                            const refundAmount = price * percentage;
+                            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: form.watch('currency') || 'VND' }).format(refundAmount);
+                          })()}
+                        </strong>
+                        <span className="ml-1 text-xs opacity-80">
+                          ({((form.watch('refundPercentageBeforeCutoff') ?? 0) * 100).toFixed(0)}% of price)
+                        </span>
+                      </li>
                     </ul>
                   </div>
 
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Additional Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Additional Settings</CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-6'>
-              <FormField
-                control={form.control}
-                name='isActive'
-                render={({ field }) => (
-                  <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
-                    <div className='space-y-0.5'>
-                      <FormLabel className='text-base'>Active Status</FormLabel>
-                      <p className='text-sm text-muted-foreground'>
-                        Enable or disable ticket sales
-                      </p>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
             </CardContent>
           </Card>
 
