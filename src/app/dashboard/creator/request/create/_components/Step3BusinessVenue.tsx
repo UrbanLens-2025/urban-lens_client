@@ -59,18 +59,25 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isRefundPolicyOpen, setIsRefundPolicyOpen] = useState(false);
   const [isRefundPolicyOpenInDialog, setIsRefundPolicyOpenInDialog] = useState(false);
-  
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+
+  // Reset image index when location changes
+  useEffect(() => {
+    setCurrentImageIndex(0);
+    setIsDescriptionExpanded(false);
+  }, [selectedLocationId]);
+
   // Get event dates from form
   const startDate = form.watch("startDate");
   const endDate = form.watch("endDate");
-  
+
   // Convert dates to ISO strings for API
   const startTime = startDate ? startDate.toISOString() : undefined;
   const endTime = endDate ? endDate.toISOString() : undefined;
-  
-  const { data: bookableLocationsData, isLoading: isLoadingLocations } = useBookableLocations({ 
-    page: 1, 
-    limit: 50, 
+
+  const { data: bookableLocationsData, isLoading: isLoadingLocations } = useBookableLocations({
+    page: 1,
+    limit: 50,
     sortBy: 'name:ASC',
     startTime,
     endTime,
@@ -78,12 +85,12 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   });
 
   const locations = bookableLocationsData?.data || [];
-  
+
   // Filter locations by search query (client-side fallback for name/address)
   const filteredLocations = useMemo(() => {
     if (!debouncedSearch) return locations;
     const query = debouncedSearch.toLowerCase();
-    return locations.filter(loc => 
+    return locations.filter(loc =>
       loc.name?.toLowerCase().includes(query) ||
       loc.addressLine?.toLowerCase().includes(query) ||
       loc.description?.toLowerCase().includes(query)
@@ -92,27 +99,27 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   const location = locations.find((loc) => loc.id === selectedLocationId);
   const dateRanges = form.watch("dateRanges") || [];
   const hasBookedSlots = dateRanges && dateRanges.length > 0;
-  
+
   // Fetch detailed location data for analytics (check-ins, reviews, etc.)
   const { data: bookableLocationDetails } = useBookableLocationById(selectedLocationId);
   // Also fetch regular location data which may have analytics
   const { data: regularLocationDetails } = useLocationById(selectedLocationId || null);
-  
+
   // Combine data from both sources
   const locationDetails = bookableLocationDetails || regularLocationDetails;
 
   // Handle location selection - clear dateRanges when location changes
   const handleLocationSelect = (locationId: string, openModal: boolean = false) => {
     const previousLocationId = selectedLocationId;
-    
+
     // If location changed (not just initial set), clear dateRanges
     if (previousLocationId && previousLocationId !== locationId) {
       form.setValue("dateRanges" as any, [], { shouldValidate: false });
     }
-    
+
     setSelectedLocationId(locationId);
     form.setValue("locationId", locationId, { shouldValidate: true });
-    
+
     // Open modal if requested (e.g., when clicking marker)
     if (openModal) {
       setShowLocationModal(true);
@@ -140,10 +147,10 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   const handleSaveSlots = () => {
     // Dismiss any existing toasts first
     toast.dismiss();
-    
+
     // Use tempSlots (from calendar) - these are the slots selected but not yet saved
     const currentSlots = tempSlots;
-    
+
     if (currentSlots.length === 0) {
       toast.error("No time slots selected", {
         description: "Please select at least one time slot to continue.",
@@ -152,7 +159,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       });
       return;
     }
-    
+
     // Validate that booking covers event dates
     // Booking must start on or before event start, and end on or after event end
     if (startDate && endDate) {
@@ -161,7 +168,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       eventStart.setMilliseconds(0);
       const eventEnd = new Date(endDate);
       eventEnd.setMilliseconds(0);
-      
+
       // Find the earliest start time and latest end time across all selected slots
       const allSlotStarts = currentSlots.map(slot => {
         const d = new Date(slot.startDateTime);
@@ -173,48 +180,48 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
         d.setMilliseconds(0);
         return d.getTime();
       });
-      
+
       const bookingStart = new Date(Math.min(...allSlotStarts));
       const bookingEnd = new Date(Math.max(...allSlotEnds));
-      
+
       // Validation: booking start <= event start AND booking end >= event end
       if (bookingStart.getTime() > eventStart.getTime() || bookingEnd.getTime() < eventEnd.getTime()) {
-        const eventStartStr = eventStart.toLocaleString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
+        const eventStartStr = eventStart.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
           year: 'numeric',
-          hour: '2-digit', 
+          hour: '2-digit',
           minute: '2-digit',
-          hour12: true 
+          hour12: true
         });
-        const eventEndStr = eventEnd.toLocaleString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
+        const eventEndStr = eventEnd.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
           year: 'numeric',
-          hour: '2-digit', 
+          hour: '2-digit',
           minute: '2-digit',
-          hour12: true 
+          hour12: true
         });
-        const bookingStartStr = bookingStart.toLocaleString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
+        const bookingStartStr = bookingStart.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
           year: 'numeric',
-          hour: '2-digit', 
+          hour: '2-digit',
           minute: '2-digit',
-          hour12: true 
+          hour12: true
         });
-        const bookingEndStr = bookingEnd.toLocaleString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
+        const bookingEndStr = bookingEnd.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
           year: 'numeric',
-          hour: '2-digit', 
+          hour: '2-digit',
           minute: '2-digit',
-          hour12: true 
+          hour12: true
         });
-        
+
         let errorTitle = "Booking doesn't cover event period";
         let errorDescription: React.ReactNode;
-        
+
         if (bookingStart.getTime() > eventStart.getTime() && bookingEnd.getTime() < eventEnd.getTime()) {
           // Both conditions fail
           errorDescription = (
@@ -240,20 +247,20 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
             </div>
           );
         }
-        
+
         toast.error(errorTitle, {
           description: errorDescription,
           icon: <Clock className="h-4 w-4" />,
           duration: 10000,
         });
-        
+
         // Clear invalid slots from form and prevent closing dialog
         form.setValue("dateRanges" as any, [], { shouldValidate: true });
         // Don't close dialog - user needs to fix it
         return; // Don't close dialog, don't save
       }
     }
-    
+
     // Validate minimum duration per slot (if venue is selected)
     if (location?.bookingConfig?.minBookingDurationMinutes) {
       const minDurationMs = location.bookingConfig.minBookingDurationMinutes * 60 * 1000;
@@ -261,7 +268,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
         const slotDurationMs = slot.endDateTime.getTime() - slot.startDateTime.getTime();
         return slotDurationMs < minDurationMs;
       });
-      
+
       if (invalidSlots.length > 0) {
         toast.dismiss();
         toast.error("Slot duration too short", {
@@ -272,13 +279,13 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
         return;
       }
     }
-    
+
     // Don't save slots to form yet - just store in pendingSlots and show payment dialog
     // Slots will be saved only when "Confirm Booking" is clicked
     setPendingSlots(currentSlots);
     setShowCalendar(false);
     setIsInitializingCalendar(false);
-    
+
     // Small delay to ensure calendar closes smoothly before payment dialog opens
     setTimeout(() => {
       setShowConfirmDialog(true);
@@ -288,14 +295,14 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   // Calculate estimated cost - use pendingSlots if available (for payment dialog), otherwise use dateRanges
   const estimatedCost = useMemo(() => {
     const slotsToCalculate = pendingSlots.length > 0 ? pendingSlots : (dateRanges || []);
-    
+
     if (!location?.bookingConfig?.baseBookingPrice || slotsToCalculate.length === 0) {
       return null;
     }
 
     const basePrice = parseFloat(location.bookingConfig.baseBookingPrice);
     const currency = location.bookingConfig.currency || "VND";
-    
+
     // Calculate total hours
     let totalMilliseconds = 0;
     slotsToCalculate.forEach(slot => {
@@ -303,10 +310,10 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
       const end = new Date(slot.endDateTime);
       totalMilliseconds += (end.getTime() - start.getTime());
     });
-    
+
     const totalHours = totalMilliseconds / (1000 * 60 * 60);
     const totalCost = basePrice * totalHours;
-    
+
     return {
       totalHours,
       totalCost,
@@ -323,23 +330,23 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
   // Calculate refund information - use pendingSlots if available, otherwise use dateRanges
   const refundInfo = useMemo(() => {
     const slotsToCalculate = pendingSlots.length > 0 ? pendingSlots : (dateRanges || []);
-    
+
     if (!estimatedCost || !location?.bookingConfig?.refundEnabled || slotsToCalculate.length === 0) {
       return null;
     }
 
     const config = location.bookingConfig;
     const totalCost = estimatedCost.totalCost;
-    
+
     // Find earliest booking slot start time for cutoff calculation
-    const earliestSlotStart = slotsToCalculate.length > 0 
+    const earliestSlotStart = slotsToCalculate.length > 0
       ? new Date(Math.min(...slotsToCalculate.map(s => s.startDateTime.getTime())))
       : null;
 
     const refundBeforeCutoff = config.refundPercentageBeforeCutoff !== undefined
       ? totalCost * config.refundPercentageBeforeCutoff
       : totalCost; // Default to 100% if not specified
-    
+
     const refundAfterCutoff = config.refundPercentageAfterCutoff !== undefined
       ? totalCost * config.refundPercentageAfterCutoff
       : 0; // Default to 0% if not specified
@@ -375,7 +382,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
 
     // Use pendingSlots if available, otherwise use dateRanges
     const slotsToConfirm = pendingSlots.length > 0 ? pendingSlots : (dateRanges || []);
-    
+
     if (slotsToConfirm.length === 0) {
       toast.error("No slots selected", {
         description: "Please select time slots first.",
@@ -388,7 +395,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     form.setValue("dateRanges" as any, slotsToConfirm, { shouldValidate: true });
     setShowConfirmDialog(false);
     setPendingSlots([]);
-    
+
     toast.success("Booking confirmed", {
       description: `Saved successfully. Payment will be processed when you submit the event request.`,
       duration: 5000,
@@ -399,7 +406,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
     if (!selectedLocationId) {
       return;
     }
-    
+
     // Initialize tempSlots with existing dateRanges when opening calendar
     setTempSlots(dateRanges || []);
     setIsInitializingCalendar(true);
@@ -481,15 +488,15 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
           <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-green-300 scrollbar-track-transparent">
             {(() => {
               // Sort all slots by start time (regardless of date) and merge consecutive ones across days
-              const sortedSlots = [...dateRanges].sort((a, b) => 
+              const sortedSlots = [...dateRanges].sort((a, b) =>
                 new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
               );
-              
+
               const mergedRanges: Array<{ start: Date; end: Date }> = [];
               for (let i = 0; i < sortedSlots.length; i++) {
                 const currentStart = new Date(sortedSlots[i].startDateTime);
                 const currentEnd = new Date(sortedSlots[i].endDateTime);
-                
+
                 if (mergedRanges.length === 0) {
                   mergedRanges.push({ start: currentStart, end: currentEnd });
                 } else {
@@ -502,7 +509,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                   }
                 }
               }
-              
+
               // Group merged ranges by their start date for display
               const groupedByDate = mergedRanges.reduce((acc, range) => {
                 const dateKey = format(range.start, "yyyy-MM-dd");
@@ -512,15 +519,15 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 acc[dateKey].push(range);
                 return acc;
               }, {} as Record<string, Array<{ start: Date; end: Date }>>);
-              
+
               // Sort dates
               const sortedDates = Object.keys(groupedByDate).sort();
-              
+
               return sortedDates.map((dateKey) => {
                 const ranges = groupedByDate[dateKey];
                 const date = new Date(dateKey + "T00:00:00");
                 const dayName = format(date, "EEEE");
-                
+
                 return (
                   <div key={dateKey} className="p-2.5 bg-white dark:bg-gray-900/50 rounded-md border border-green-200 dark:border-green-800">
                     <div className="flex items-center gap-2 mb-2">
@@ -534,14 +541,14 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                         const durationMs = range.end.getTime() - range.start.getTime();
                         const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
                         const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-                        const durationText = durationHours > 0 
+                        const durationText = durationHours > 0
                           ? `${durationHours}h${durationMinutes > 0 ? ` ${durationMinutes}m` : ''}`
                           : `${durationMinutes}m`;
-                        
+
                         return (
-                          <Badge 
+                          <Badge
                             key={idx}
-                            variant="outline" 
+                            variant="outline"
                             className="text-xs font-mono bg-green-100 dark:bg-green-900/40 border-green-300 dark:border-green-700 text-green-900 dark:text-green-200"
                           >
                             {(() => {
@@ -588,7 +595,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 </Badge>
               )}
             </div>
-            
+
             {/* View Mode Toggle */}
             {!isLoadingLocations && filteredLocations.length > 0 && (
               <div className="flex items-center gap-2">
@@ -624,7 +631,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               </div>
             )}
           </div>
-          
+
           {/* Search Bar */}
           {!isLoadingLocations && (
             <div className="relative">
@@ -676,7 +683,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 locations={filteredLocations.map((loc) => {
                   const isSelected = loc.id === selectedLocationId;
                   const detailedData = isSelected && locationDetails ? locationDetails : null;
-                  
+
                   return {
                     id: loc.id,
                     name: loc.name,
@@ -692,16 +699,16 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                     ...(detailedData && {
                       totalCheckIns: (detailedData as any).totalCheckIns,
                       analytics: {
-                        totalCheckIns: (detailedData as any).totalCheckIns 
-                          ? (typeof (detailedData as any).totalCheckIns === 'string' 
-                              ? parseInt((detailedData as any).totalCheckIns) 
-                              : (detailedData as any).totalCheckIns)
+                        totalCheckIns: (detailedData as any).totalCheckIns
+                          ? (typeof (detailedData as any).totalCheckIns === 'string'
+                            ? parseInt((detailedData as any).totalCheckIns)
+                            : (detailedData as any).totalCheckIns)
                           : 0,
                         totalReviews: (detailedData as any).totalReviews || 0,
-                        averageRating: (detailedData as any).averageRating 
-                          ? (typeof (detailedData as any).averageRating === 'string' 
-                              ? parseFloat((detailedData as any).averageRating) 
-                              : (detailedData as any).averageRating)
+                        averageRating: (detailedData as any).averageRating
+                          ? (typeof (detailedData as any).averageRating === 'string'
+                            ? parseFloat((detailedData as any).averageRating)
+                            : (detailedData as any).averageRating)
                           : 0,
                       },
                     }),
@@ -720,7 +727,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
             {filteredLocations.map((loc) => {
               const isSelected = loc.id === selectedLocationId;
               const locDetails = isSelected && locationDetails ? locationDetails : null;
-              
+
               return (
                 <Card
                   key={loc.id}
@@ -749,7 +756,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                           <Building2 className="h-8 w-8 text-primary/40" />
                         </div>
                       )}
-                      
+
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
@@ -777,14 +784,14 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                             )}
                           </div>
                         </div>
-                        
+
                         {/* Analytics */}
                         <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
                           {locDetails && (locDetails as any).averageRating > 0 && (
                             <div className="flex items-center gap-1">
                               <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                               <span className="font-medium text-foreground">
-                                {typeof (locDetails as any).averageRating === 'string' 
+                                {typeof (locDetails as any).averageRating === 'string'
                                   ? parseFloat((locDetails as any).averageRating).toFixed(1)
                                   : (locDetails as any).averageRating.toFixed(1)}
                               </span>
@@ -821,7 +828,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
             {filteredLocations.map((loc) => {
               const isSelected = loc.id === selectedLocationId;
               const locDetails = isSelected && locationDetails ? locationDetails : null;
-              
+
               return (
                 <Card
                   key={loc.id}
@@ -864,7 +871,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                       )}
                     </div>
                   )}
-                  
+
                   {/* Content */}
                   <CardContent className="p-4">
                     <h3 className="font-semibold text-base mb-2 line-clamp-1">{loc.name}</h3>
@@ -875,14 +882,14 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                         {loc.addressLevel1 && `, ${loc.addressLevel1}`}
                       </span>
                     </p>
-                    
+
                     {/* Analytics */}
                     <div className="flex items-center gap-3 text-xs text-muted-foreground pt-3 border-t">
                       {locDetails && (locDetails as any).averageRating > 0 && (
                         <div className="flex items-center gap-1">
                           <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                           <span className="font-medium text-foreground">
-                            {typeof (locDetails as any).averageRating === 'string' 
+                            {typeof (locDetails as any).averageRating === 'string'
                               ? parseFloat((locDetails as any).averageRating).toFixed(1)
                               : (locDetails as any).averageRating.toFixed(1)}
                           </span>
@@ -905,7 +912,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
             })}
           </div>
         )}
-        
+
         {/* No Results */}
         {!isLoadingLocations && searchQuery && filteredLocations.length === 0 && (
           <div className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-8 text-center">
@@ -926,7 +933,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
             </Button>
           </div>
         )}
-        
+
         {/* Empty State - No Venues */}
         {!isLoadingLocations && !searchQuery && filteredLocations.length === 0 && locations.length === 0 && (
           <div className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-8 text-center">
@@ -962,8 +969,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
 
       {/* Location Details Modal */}
       {location && (
-        <Dialog 
-          open={showLocationModal} 
+        <Dialog
+          open={showLocationModal}
           onOpenChange={(open) => {
             setShowLocationModal(open);
             if (open) {
@@ -998,7 +1005,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 </Button>
               </div>
             </DialogHeader>
-            
+
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
               {/* Image Carousel */}
@@ -1013,7 +1020,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                       priority={currentImageIndex === 0}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    
+
                     {/* Navigation Buttons */}
                     {location.imageUrl.length > 1 && (
                       <>
@@ -1023,7 +1030,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                           className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm border-2 shadow-lg hover:bg-background z-10"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setCurrentImageIndex((prev) => 
+                            setCurrentImageIndex((prev) =>
                               prev === 0 ? location.imageUrl.length - 1 : prev - 1
                             );
                           }}
@@ -1036,7 +1043,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                           className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm border-2 shadow-lg hover:bg-background z-10"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setCurrentImageIndex((prev) => 
+                            setCurrentImageIndex((prev) =>
                               prev === location.imageUrl.length - 1 ? 0 : prev + 1
                             );
                           }}
@@ -1045,7 +1052,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                         </Button>
                       </>
                     )}
-                    
+
                     {/* Image Counter */}
                     {location.imageUrl.length > 1 && (
                       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full border shadow-lg">
@@ -1054,7 +1061,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                         </span>
                       </div>
                     )}
-                    
+
                     {/* Dots Indicator */}
                     {location.imageUrl.length > 1 && (
                       <div className="absolute bottom-3 right-3 flex gap-1.5">
@@ -1065,18 +1072,17 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                               e.stopPropagation();
                               setCurrentImageIndex(index);
                             }}
-                            className={`h-2 rounded-full transition-all ${
-                              index === currentImageIndex
-                                ? 'w-6 bg-primary'
-                                : 'w-2 bg-background/60 hover:bg-background/80'
-                            }`}
+                            className={`h-2 rounded-full transition-all ${index === currentImageIndex
+                              ? 'w-6 bg-primary'
+                              : 'w-2 bg-background/60 hover:bg-background/80'
+                              }`}
                             aria-label={`Go to image ${index + 1}`}
                           />
                         ))}
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Thumbnail Strip */}
                   {location.imageUrl.length > 1 && (
                     <div className="flex gap-2 mt-3 overflow-x-auto pb-2 scrollbar-hide">
@@ -1084,11 +1090,10 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                         <button
                           key={index}
                           onClick={() => setCurrentImageIndex(index)}
-                          className={`relative flex-shrink-0 w-20 h-14 rounded-md overflow-hidden border-2 transition-all ${
-                            index === currentImageIndex
-                              ? 'border-primary ring-2 ring-primary/20'
-                              : 'border-border hover:border-primary/50'
-                          }`}
+                          className={`relative flex-shrink-0 w-20 h-14 rounded-md overflow-hidden border-2 transition-all ${index === currentImageIndex
+                            ? 'border-primary ring-2 ring-primary/20'
+                            : 'border-border hover:border-primary/50'
+                            }`}
                         >
                           <Image
                             src={url}
@@ -1102,14 +1107,39 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                   )}
                 </div>
               )}
-              
+
               {/* Description */}
               {location.description && (
                 <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
-                  <p className="text-sm text-foreground leading-relaxed">{location.description}</p>
+                  <p
+                    className={cn(
+                      "text-sm text-foreground leading-relaxed",
+                      !isDescriptionExpanded && "line-clamp-2"
+                    )}
+                  >
+                    {location.description}
+                  </p>
+                  {/* Only show button if description is long enough (e.g., > 150 chars) */}
+                  {location.description.length > 150 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                      className="cursor-pointer text-xs text-primary font-medium mt-1.5 hover:underline focus:outline-none flex items-center gap-1"
+                    >
+                      {isDescriptionExpanded ? (
+                        <>
+                          Show less <ChevronUp className="h-3 w-3" />
+                        </>
+                      ) : (
+                        <>
+                          Read more <ChevronDown className="h-3 w-3" />
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               )}
-              
+
               {/* Analytics */}
               <div className="flex items-center gap-4 flex-wrap p-4 bg-gradient-to-r from-primary/5 to-transparent rounded-lg border border-primary/10">
                 {(locationDetails as any)?.averageRating !== undefined ? (
@@ -1120,7 +1150,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                       </div>
                       <div>
                         <span className="font-bold text-foreground text-base">
-                          {typeof (locationDetails as any).averageRating === 'string' 
+                          {typeof (locationDetails as any).averageRating === 'string'
                             ? parseFloat((locationDetails as any).averageRating).toFixed(1)
                             : (locationDetails as any).averageRating.toFixed(1)}
                         </span>
@@ -1146,10 +1176,10 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                   </div>
                   <div>
                     <span className="font-semibold text-foreground">
-                      {(locationDetails as any)?.totalCheckIns 
-                        ? (typeof (locationDetails as any).totalCheckIns === 'string' 
-                            ? parseInt((locationDetails as any).totalCheckIns) 
-                            : (locationDetails as any).totalCheckIns)
+                      {(locationDetails as any)?.totalCheckIns
+                        ? (typeof (locationDetails as any).totalCheckIns === 'string'
+                          ? parseInt((locationDetails as any).totalCheckIns)
+                          : (locationDetails as any).totalCheckIns)
                         : 0}
                     </span>
                     <span className="text-xs text-muted-foreground ml-1">check-ins</span>
@@ -1168,7 +1198,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                   </div>
                 </div>
               </div>
-              
+
               {/* Booking Price */}
               {location.bookingConfig?.baseBookingPrice && (
                 <div className="flex items-center gap-2 p-4 bg-gradient-to-r from-primary/5 to-transparent rounded-lg border border-primary/10">
@@ -1183,7 +1213,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                   </div>
                 </div>
               )}
-              
+
               {/* Refund Policy */}
               {location.bookingConfig && (
                 <Collapsible open={isRefundPolicyOpen} onOpenChange={setIsRefundPolicyOpen}>
@@ -1197,8 +1227,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                           <h4 className="text-sm font-semibold text-foreground">Refund Policy</h4>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <button 
-                                type="button" 
+                              <button
+                                type="button"
                                 className="text-muted-foreground hover:text-foreground transition-colors"
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -1208,7 +1238,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
                               <p className="text-xs">
-                                The cutoff time is calculated from the location booking start date (when you receive access to the location). 
+                                The cutoff time is calculated from the location booking start date (when you receive access to the location).
                                 Refund percentage depends on when you cancel relative to this cutoff time.
                               </p>
                             </TooltipContent>
@@ -1226,53 +1256,53 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                     <div className="border-2 border-primary/10 border-t-0 rounded-b-lg p-4 bg-card space-y-3">
                       {location.bookingConfig.refundEnabled ? (
                         <div className="space-y-3">
-                      {location.bookingConfig.refundCutoffHours !== undefined && (
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border border-border/50">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium text-foreground">
-                                Cancel {location.bookingConfig.refundCutoffHours}h+ before booking start
-                              </span>
-                              <span className="text-xs text-muted-foreground mt-0.5">
-                                Before cutoff time
-                              </span>
+                          {location.bookingConfig.refundCutoffHours !== undefined && (
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border border-border/50">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-foreground">
+                                    Cancel {location.bookingConfig.refundCutoffHours}h+ before booking start
+                                  </span>
+                                  <span className="text-xs text-muted-foreground mt-0.5">
+                                    Before cutoff time
+                                  </span>
+                                </div>
+                                <Badge variant="outline" className="font-bold text-primary border-primary/30 bg-primary/5">
+                                  {location.bookingConfig.refundPercentageBeforeCutoff !== undefined
+                                    ? `${(location.bookingConfig.refundPercentageBeforeCutoff * 100).toFixed(0)}%`
+                                    : "100%"} refund
+                                </Badge>
+                              </div>
+                              <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border border-border/50">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-foreground">
+                                    Cancel less than {location.bookingConfig.refundCutoffHours}h before booking start
+                                  </span>
+                                  <span className="text-xs text-muted-foreground mt-0.5">
+                                    After cutoff time
+                                  </span>
+                                </div>
+                                <Badge variant="outline" className="font-bold text-primary border-primary/30 bg-primary/5">
+                                  {location.bookingConfig.refundPercentageAfterCutoff !== undefined
+                                    ? `${(location.bookingConfig.refundPercentageAfterCutoff * 100).toFixed(0)}%`
+                                    : "0%"} refund
+                                </Badge>
+                              </div>
+                              <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-foreground">
+                                    Cancel after booking has started
+                                  </span>
+                                  <span className="text-xs text-muted-foreground mt-0.5">
+                                    Once you receive access to the location
+                                  </span>
+                                </div>
+                                <Badge variant="outline" className="font-bold text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 bg-red-100 dark:bg-red-900/30">
+                                  No refund
+                                </Badge>
+                              </div>
                             </div>
-                            <Badge variant="outline" className="font-bold text-primary border-primary/30 bg-primary/5">
-                              {location.bookingConfig.refundPercentageBeforeCutoff !== undefined
-                                ? `${(location.bookingConfig.refundPercentageBeforeCutoff * 100).toFixed(0)}%`
-                                : "100%"} refund
-                            </Badge>
-                          </div>
-                          <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border border-border/50">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium text-foreground">
-                                Cancel less than {location.bookingConfig.refundCutoffHours}h before booking start
-                              </span>
-                              <span className="text-xs text-muted-foreground mt-0.5">
-                                After cutoff time
-                              </span>
-                            </div>
-                            <Badge variant="outline" className="font-bold text-primary border-primary/30 bg-primary/5">
-                              {location.bookingConfig.refundPercentageAfterCutoff !== undefined
-                                ? `${(location.bookingConfig.refundPercentageAfterCutoff * 100).toFixed(0)}%`
-                                : "0%"} refund
-                            </Badge>
-                          </div>
-                          <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium text-foreground">
-                                Cancel after booking has started
-                              </span>
-                              <span className="text-xs text-muted-foreground mt-0.5">
-                                Once you receive access to the location
-                              </span>
-                            </div>
-                            <Badge variant="outline" className="font-bold text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 bg-red-100 dark:bg-red-900/30">
-                              No refund
-                            </Badge>
-                          </div>
-                        </div>
-                      )}
+                          )}
                         </div>
                       ) : (
                         <div className="p-3 bg-muted/50 rounded-lg border border-border/50">
@@ -1286,7 +1316,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 </Collapsible>
               )}
             </div>
-              
+
             {/* Fixed Footer Button */}
             <div className="sticky bottom-0 z-10 bg-background border-t px-6 py-4 shadow-lg">
               {!hasBookedSlots ? (
@@ -1376,7 +1406,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               )}
             </div>
           </DialogHeader>
-          
+
           {/* Event Time Alert */}
           {startDate && endDate && (
             <div className="px-6 pt-4">
@@ -1396,7 +1426,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               </Alert>
             </div>
           )}
-          
+
           <div className="flex-1 overflow-y-auto px-6 py-4">
             {selectedLocationId && (
               <AvailabilityCalendar
@@ -1485,7 +1515,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
               Confirm Booking & Payment
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-3">
             {/* Booking Summary */}
             <div className="bg-muted p-3 rounded-lg space-y-1.5">
@@ -1536,8 +1566,8 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                         <span className="text-xs font-medium">Refund Policy</span>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               className="text-muted-foreground hover:text-foreground transition-colors"
                               onClick={(e) => e.stopPropagation()}
                             >
@@ -1547,7 +1577,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p className="text-xs">
-                              The cutoff time is calculated from the location booking start date (when you receive access to the location). 
+                              The cutoff time is calculated from the location booking start date (when you receive access to the location).
                               Refund percentage depends on when you cancel relative to this cutoff time.
                             </p>
                           </TooltipContent>
@@ -1563,39 +1593,39 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="bg-muted p-2.5 pt-0 rounded-b-lg space-y-2 text-xs">
-                  {refundInfo.cutoffTime && (
-                    <div className="text-muted-foreground mb-2 p-2 bg-background/50 rounded border border-border/50">
-                      <span className="font-medium">Cutoff time: </span>
-                      {format(refundInfo.cutoffTime, "MMM dd, h:mm a")} ({refundInfo.cutoffHours}h before booking start)
+                    {refundInfo.cutoffTime && (
+                      <div className="text-muted-foreground mb-2 p-2 bg-background/50 rounded border border-border/50">
+                        <span className="font-medium">Cutoff time: </span>
+                        {format(refundInfo.cutoffTime, "MMM dd, h:mm a")} ({refundInfo.cutoffHours}h before booking start)
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center p-2 bg-background/50 rounded border border-border/50">
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground font-medium">Cancel {refundInfo.cutoffHours}h+ before booking start</span>
+                        <span className="text-[10px] text-muted-foreground mt-0.5">Before cutoff time</span>
+                      </div>
+                      <span className="font-semibold text-green-600 dark:text-green-400">
+                        {Math.round(refundInfo.percentageBeforeCutoff * 100)}% ({refundInfo.refundBeforeCutoff.toLocaleString("vi-VN")} {refundInfo.currency})
+                      </span>
                     </div>
-                  )}
-                  <div className="flex justify-between items-center p-2 bg-background/50 rounded border border-border/50">
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground font-medium">Cancel {refundInfo.cutoffHours}h+ before booking start</span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5">Before cutoff time</span>
+                    <div className="flex justify-between items-center p-2 bg-background/50 rounded border border-border/50">
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground font-medium">Cancel less than {refundInfo.cutoffHours}h before booking start</span>
+                        <span className="text-[10px] text-muted-foreground mt-0.5">After cutoff time</span>
+                      </div>
+                      <span className="font-semibold text-amber-600 dark:text-amber-400">
+                        {Math.round(refundInfo.percentageAfterCutoff * 100)}% ({refundInfo.refundAfterCutoff.toLocaleString("vi-VN")} {refundInfo.currency})
+                      </span>
                     </div>
-                    <span className="font-semibold text-green-600 dark:text-green-400">
-                      {Math.round(refundInfo.percentageBeforeCutoff * 100)}% ({refundInfo.refundBeforeCutoff.toLocaleString("vi-VN")} {refundInfo.currency})
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-background/50 rounded border border-border/50">
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground font-medium">Cancel less than {refundInfo.cutoffHours}h before booking start</span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5">After cutoff time</span>
+                    <div className="flex justify-between items-center p-2 bg-red-50 dark:bg-red-950/20 rounded border border-red-200 dark:border-red-800">
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground font-medium">Cancel after booking has started</span>
+                        <span className="text-[10px] text-muted-foreground mt-0.5">Once you receive access to the location</span>
+                      </div>
+                      <span className="font-semibold text-red-600 dark:text-red-400">
+                        No refund
+                      </span>
                     </div>
-                    <span className="font-semibold text-amber-600 dark:text-amber-400">
-                      {Math.round(refundInfo.percentageAfterCutoff * 100)}% ({refundInfo.refundAfterCutoff.toLocaleString("vi-VN")} {refundInfo.currency})
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-red-50 dark:bg-red-950/20 rounded border border-red-200 dark:border-red-800">
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground font-medium">Cancel after booking has started</span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5">Once you receive access to the location</span>
-                    </div>
-                    <span className="font-semibold text-red-600 dark:text-red-400">
-                      No refund
-                    </span>
-                  </div>
                   </div>
                 </CollapsibleContent>
               </Collapsible>
