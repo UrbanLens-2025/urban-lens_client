@@ -915,12 +915,6 @@ function LocationDetailsOverlay({
                   {estimatedCost && (
                     <div className="space-y-3">
                       <div className="flex items-baseline justify-between">
-                        <span className="text-sm text-muted-foreground">Slots</span>
-                        <span className="text-sm font-semibold text-foreground">
-                          {selectedSlots.length} slot{selectedSlots.length !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                      <div className="flex items-baseline justify-between">
                         <span className="text-sm text-muted-foreground">Duration</span>
                         <span className="text-sm font-semibold text-foreground">
                           {Math.round(estimatedCost.totalHours)}h
