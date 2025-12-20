@@ -1,3 +1,4 @@
+import { TopRevenueLocation } from '@/types';
 import axiosInstance from './axios-config';
 
 export interface RevenueSummaryData {
@@ -22,11 +23,9 @@ export const getRevenueSummary = async () => {
   return response.data.data;
 };
 
-export const getTopRevenueLocations = async (
-  filter: RevenueAnalyticsFilter
-): Promise<RevenueLocationItem[]> => {
+export const getTopLocationsByRevenue = async (limit: number = 5): Promise<TopRevenueLocation[]> => {
   const response = await axiosInstance.get(
-    `/v1/owner/dashboard/revenue/top-locations?filter=${filter}`
+    `/v1/owner/dashboard/locations/top-revenue?limit=${limit}`
   );
   return response.data.data || [];
 };

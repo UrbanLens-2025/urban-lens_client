@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Table,
@@ -19,11 +19,9 @@ import {
   DollarSign,
   Loader2,
   TrendingUp,
-  TrendingDown,
   ArrowRight,
   MapPin,
   CheckCircle2,
-  Clock,
   Activity,
   Wallet,
   Eye,
@@ -35,10 +33,8 @@ import { useOwnerLocationBookings } from '@/hooks/locations/useOwnerLocationBook
 import {
   format,
   subDays,
-  subMonths,
-  startOfMonth,
-  endOfMonth,
   isSameMonth,
+  subMonths,
 } from 'date-fns';
 import { DashboardSection, StatusBadge } from '@/components/dashboard';
 import {
@@ -69,14 +65,10 @@ import {
 import { formatCurrency } from '@/lib/utils';
 import LoadingCustom from '@/components/shared/LoadingCustom';
 import { IconFile, IconLocation, IconStar } from '@tabler/icons-react';
-import { useRevenueSummary } from '@/hooks/dashboard/useDashboardOwner';
-
-type RevenuePeriod = 'day' | 'month' | 'year';
+import { useRevenueSummary, useTopLocationsByRevenue } from '@/hooks/dashboard/useDashboardOwner';
 
 export default function BusinessDashboardPage() {
   const router = useRouter();
-  const [locationRevenuePeriod, setLocationRevenuePeriod] =
-    useState<RevenuePeriod>('month');
 
   const { data: locationsData, isLoading: isLoadingLocations } = useMyLocations(
     1,
@@ -95,6 +87,8 @@ export default function BusinessDashboardPage() {
     });
 
   const { data: revenueData } = useRevenueSummary();
+
+  const { data: topLocationsRaw, isLoading: isLoadingTopLocations } = useTopLocationsByRevenue(5);
 
   const locations = locationsData?.data || [];
   const locationsMeta = locationsData?.meta;
@@ -128,8 +122,6 @@ export default function BusinessDashboardPage() {
       const ratio = approvedLocations / locations.length;
       visibleLocationsCount = Math.round(ratio * totalLocations);
     }
-
-    // Ensure we never return NaN
     visibleLocationsCount = isNaN(visibleLocationsCount)
       ? 0
       : visibleLocationsCount;
@@ -153,10 +145,10 @@ export default function BusinessDashboardPage() {
     const bookingsChange =
       previousPeriodBookings > 0
         ? ((recentBookings - previousPeriodBookings) / previousPeriodBookings) *
-        100
+          100
         : recentBookings > 0
-          ? 100
-          : 0;
+        ? 100
+        : 0;
 
     const thisMonthBookings = bookings.filter((booking) => {
       const bookingDate = new Date(booking.createdAt);
@@ -169,10 +161,8 @@ export default function BusinessDashboardPage() {
     });
 
     const totalRevenue = revenueData?.totalRevenue || 0;
-
     const totalWithdrawals = revenueData?.pendingWithdraw || 0;
     const availableRevenue = revenueData?.available || 0;
-
     const pendingRevenue = revenueData?.pending || 0;
 
     const thisMonthRevenue = thisMonthBookings
@@ -187,21 +177,8 @@ export default function BusinessDashboardPage() {
       lastMonthRevenue > 0
         ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
         : thisMonthRevenue > 0
-          ? 100
-          : 0;
-
-    const pendingBookings = bookings.filter(
-      (b) => b.status?.toUpperCase() === 'AWAITING_BUSINESS_PROCESSING'
-    ).length;
-
-    const activeBookings = bookings.filter((booking) => {
-      if (booking.status?.toUpperCase() === 'CANCELLED') return false;
-      const hasFutureDate = booking.dates?.some((dateSlot: any) => {
-        const endDate = new Date(dateSlot.endDateTime);
-        return endDate >= now;
-      });
-      return hasFutureDate;
-    }).length;
+        ? 100
+        : 0;
 
     return {
       totalLocations,
@@ -217,46 +194,20 @@ export default function BusinessDashboardPage() {
       totalWithdrawals,
       thisMonthRevenue,
       revenueChange,
-      pendingBookings,
-      activeBookings,
       hasMoreBookings:
         bookingsMeta && bookingsMeta.totalItems > bookings.length,
       hasMoreLocations:
         locationsMeta && locationsMeta.totalItems > locations.length,
     };
-  }, [locations, locationsMeta, bookings, bookingsMeta]);
+  }, [locations, locationsMeta, bookings, bookingsMeta, revenueData]);
 
-  // Mock revenue data for top locations by period
-  // TODO: Replace with actual API data when available
   const topRevenueLocations = useMemo(() => {
-    if (locations.length === 0) return [];
-
-    return locations
-      .map((location) => {
-        // Generate consistent mock revenue based on location ID hash
-        const hash = location.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-
-        // Base revenue ranges per period
-        const baseRevenuePerDay = {
-          day: (hash % 500000) + 50000, // 50k-550k per day
-          month: (hash % 15000000) + 1500000, // 1.5M-16.5M per month
-          year: (hash % 200000000) + 20000000, // 20M-220M per year
-        };
-
-        let revenue = baseRevenuePerDay[locationRevenuePeriod] || baseRevenuePerDay.month;
-
-        // Add some variation for more realistic data
-        const variation = 0.85 + (hash % 30) / 100; // 0.85 to 1.15 multiplier
-        revenue = Math.floor(revenue * variation);
-
-        return {
-          name: location.name || 'Unnamed Location',
-          revenue,
-        };
-      })
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-  }, [locations, locationRevenuePeriod]);
+    if (!topLocationsRaw) return [];
+    return topLocationsRaw.map((loc) => ({
+      name: loc.locationName,
+      revenue: loc.revenue,
+    }));
+  }, [topLocationsRaw]);
 
   const recentLocations = locations.slice(0, 5);
   const recentBookingsList = bookings.slice(0, 3);
@@ -268,7 +219,6 @@ export default function BusinessDashboardPage() {
   const locationChartConfig: ChartConfig = {
     checkIns: {
       label: 'Revenue',
-      // Brand accent color for revenue bars (no gradient)
       color: 'lab(58.8635% 31.6645 115.942)',
     },
   };
@@ -335,12 +285,12 @@ export default function BusinessDashboardPage() {
         />
 
         <StatCard
-          title='Total Reivews'
+          title='Total Reviews'
           value={stats.totalReviews}
           icon={MessageCircle}
           color='amber'
-          description={`${stats.recentBookings} in last 30 days`}
-          onClick={() => router.push('/dashboard/business/wallet')}
+          description='Across all locations'
+          onClick={() => router.push('/dashboard/business/locations')}
         />
       </div>
 
@@ -355,40 +305,14 @@ export default function BusinessDashboardPage() {
                   Top Locations by Revenue
                 </CardTitle>
                 <CardDescription className='mt-1'>
-                  Locations generating the most revenue
+                  Your best performing locations
                 </CardDescription>
-              </div>
-              <div className='flex gap-1'>
-                <Button
-                  variant={locationRevenuePeriod === 'day' ? 'default' : 'outline'}
-                  size='sm'
-                  onClick={() => setLocationRevenuePeriod('day')}
-                  className='h-8 px-3 text-xs'
-                >
-                  Day
-                </Button>
-                <Button
-                  variant={locationRevenuePeriod === 'month' ? 'default' : 'outline'}
-                  size='sm'
-                  onClick={() => setLocationRevenuePeriod('month')}
-                  className='h-8 px-3 text-xs'
-                >
-                  Month
-                </Button>
-                <Button
-                  variant={locationRevenuePeriod === 'year' ? 'default' : 'outline'}
-                  size='sm'
-                  onClick={() => setLocationRevenuePeriod('year')}
-                  className='h-8 px-3 text-xs'
-                >
-                  Year
-                </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className='h-64'>
-              {isLoadingLocations ? (
+              {isLoadingTopLocations ? (
                 <div className='flex items-center justify-center h-full'>
                   <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
                 </div>
@@ -465,7 +389,7 @@ export default function BusinessDashboardPage() {
                   Revenue Overview
                 </CardTitle>
                 <CardDescription className='mt-1 text-sm'>
-                  Monthly revenue from bookings
+                  Overall financial summary
                 </CardDescription>
               </div>
             </div>
@@ -559,7 +483,9 @@ export default function BusinessDashboardPage() {
                   key={location.id}
                   className='hover:bg-muted/50 cursor-pointer transition-colors'
                   onClick={() =>
-                    router.push(`/dashboard/business/locations/${location.id}`)
+                    router.push(
+                      `/dashboard/business/locations/${location.id}`
+                    )
                   }
                 >
                   <TableCell className='font-medium'>

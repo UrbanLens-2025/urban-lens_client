@@ -1402,3 +1402,9 @@ export interface TopRevenueEvent {
   totalRevenue: number;
   totalTicketsSold: number;
 }
+
+export interface TopRevenueLocation {
+  locationId: string;
+  locationName: string;
+  revenue: number;
+}

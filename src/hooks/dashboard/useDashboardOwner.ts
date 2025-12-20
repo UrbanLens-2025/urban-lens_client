@@ -1,12 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   getRevenueSummary,
-  getTopRevenueLocations,
+  getTopLocationsByRevenue,
   getOwnerDashboardStats,
-  RevenueAnalyticsFilter,
 } from '@/api/dashboardOwner';
 
-// Hook: Revenue Summary
 export const useRevenueSummary = () => {
   return useQuery({
     queryKey: ['ownerRevenueSummary'],
@@ -15,16 +13,14 @@ export const useRevenueSummary = () => {
   });
 };
 
-// Hook: Top Locations Chart
-export const useTopRevenueLocations = (filter: RevenueAnalyticsFilter) => {
+export const useTopLocationsByRevenue = (limit: number = 5) => {
   return useQuery({
-    queryKey: ['ownerTopRevenueLocations', filter],
-    queryFn: () => getTopRevenueLocations(filter),
+    queryKey: ['ownerTopLocationsByRevenue', limit],
+    queryFn: () => getTopLocationsByRevenue(limit),
     placeholderData: (previousData) => previousData,
   });
 };
 
-// Hook: General Stats
 export const useOwnerDashboardStats = () => {
   return useQuery({
     queryKey: ['ownerDashboardStats'],
