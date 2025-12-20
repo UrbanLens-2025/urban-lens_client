@@ -252,8 +252,10 @@ export default function EventTicketsPage({
                     const soldPercentage = totalCapacity > 0
                       ? (soldQuantity / totalCapacity) * 100
                       : 0;
-                    const isSaleActive = new Date(ticket.saleStartDate) <= new Date() &&
-                      new Date(ticket.saleEndDate) >= new Date();
+                    const now = new Date().getTime();
+                    const start = new Date(ticket.saleStartDate).getTime();
+                    const end = new Date(ticket.saleEndDate).getTime();
+                    const isSaleActive = start <= now && end >= now;
 
                     return (
                       <TableRow key={ticket.id} className="group">
@@ -319,10 +321,10 @@ export default function EventTicketsPage({
                             <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
                               <div
                                 className={`h-full transition-all ${soldPercentage < 70
-                                    ? "bg-green-500"
-                                    : soldPercentage < 90
-                                      ? "bg-yellow-500"
-                                      : "bg-red-500"
+                                  ? "bg-green-500"
+                                  : soldPercentage < 90
+                                    ? "bg-yellow-500"
+                                    : "bg-red-500"
                                   }`}
                                 style={{ width: `${soldPercentage}%` }}
                               />
@@ -330,14 +332,17 @@ export default function EventTicketsPage({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="space-y-1 text-xs">
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              <div className="text-muted-foreground text-sm">{new Date(ticket.saleStartDate).toLocaleDateString('vi-VN')} - {new Date(ticket.saleEndDate).toLocaleDateString('vi-VN')}</div>
+                          <div className="space-y-1">
+                            <div className={`text-sm font-medium flex items-center gap-1.5 ${isSaleActive ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
+                              {isSaleActive ? <TrendingUp className="h-3.5 w-3.5" /> : <Calendar className="h-3.5 w-3.5" />}
+                              <span>
+                                {formatDate(ticket.saleStartDate)} - {formatDate(ticket.saleEndDate)}
+                              </span>
                             </div>
-                            {!isSaleActive && ticket.isActive && (
+
+                            {ticket.isActive && !isSaleActive && (
                               <Badge variant="outline" className="text-xs">
-                                Not on sale
+                                Coming Soon
                               </Badge>
                             )}
                           </div>
