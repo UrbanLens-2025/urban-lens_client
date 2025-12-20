@@ -1,7 +1,8 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { useEventTickets } from "@/hooks/events/useEventTickets";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
+import { StatCard } from "@/components/shared";
 
 export default function TicketDetailPage({
   params,
@@ -33,8 +35,9 @@ export default function TicketDetailPage({
   const { eventId, ticketId } = use(params);
   const router = useRouter();
   const { data: tickets, isLoading } = useEventTickets(eventId);
-  
+
   const ticket = tickets?.find(t => t.id === ticketId);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const formatCurrency = (amount: string, currency: string) => {
     const num = parseFloat(amount);
@@ -82,17 +85,19 @@ export default function TicketDetailPage({
     );
   }
 
-  const availableQuantity = ticket.totalQuantityAvailable - ticket.quantityReserved;
+  const availableQuantity = ticket.totalQuantityAvailable;
   const availabilityPercentage = ticket.totalQuantityAvailable > 0 
-    ? (availableQuantity / ticket.totalQuantityAvailable) * 100 
+    ? (availableQuantity / ticket.totalQuantity) * 100 
     : 0;
   const soldQuantity = ticket.quantityReserved;
-  const soldPercentage = ticket.totalQuantityAvailable > 0 
-    ? (soldQuantity / ticket.totalQuantityAvailable) * 100 
+  const soldPercentage = ticket.totalQuantityAvailable > 0
+    ? (soldQuantity / ticket.totalQuantity) * 100
     : 0;
-  const isSaleActive = new Date(ticket.saleStartDate) <= new Date() && 
-                      new Date(ticket.saleEndDate) >= new Date();
+  const isSaleActive = new Date(ticket.saleStartDate) <= new Date() &&
+    new Date(ticket.saleEndDate) >= new Date();
   const totalRevenue = parseFloat(ticket.price) * soldQuantity;
+
+  const refundValue = parseFloat(ticket.price) * (ticket.refundPercentageBeforeCutoff || 0);
 
   return (
     <div className="space-y-6">
@@ -118,9 +123,23 @@ export default function TicketDetailPage({
               </Badge>
             )}
           </div>
-          {ticket.description && (
-            <p className="text-muted-foreground">{ticket.description}</p>
-          )}
+          <div className="text-muted-foreground text-sm max-w-3xl">
+             <div className={cn("leading-relaxed whitespace-pre-line", !isDescriptionExpanded && "line-clamp-2")}>
+                {ticket.description || "No description provided."}
+             </div>
+             {ticket.description && ticket.description.length > 150 && (
+                <button 
+                  onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  className="text-primary text-xs font-medium hover:underline mt-1 flex items-center gap-1 focus:outline-none"
+                >
+                  {isDescriptionExpanded ? (
+                    <>Show Less <ChevronUp className="h-3 w-3" /></>
+                  ) : (
+                    <>Read More <ChevronDown className="h-3 w-3" /></>
+                  )}
+                </button>
+             )}
+          </div>
         </div>
         <Link href={`/dashboard/creator/ticket-form/edit/${eventId}/${ticketId}`}>
           <Button size="lg">
@@ -131,64 +150,51 @@ export default function TicketDetailPage({
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Price
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(ticket.price, ticket.currency)}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Price"
+          value={formatCurrency(ticket.price, ticket.currency)}
+          icon={DollarSign}
+          color="blue"
+        />
+        <StatCard
+          title="Tickets Sold"
+          value={soldQuantity}
+          description={`${soldPercentage.toFixed(0)}% of total`}
+          icon={Users}
+          color="green"
+        />
+        <StatCard
+          title="Available"
+          value={availableQuantity}
+          description={`of ${ticket.totalQuantity} total`}
+          icon={TicketIcon}
+          color="purple"
+          footer={
+            <div className="mt-3 space-y-1.5">
+               <div className="flex justify-between text-[10px] uppercase font-medium text-muted-foreground">
+                  <span>Capacity&nbsp;</span>
+                  <span>{availabilityPercentage.toFixed(0)}% Left</span>
+               </div>
+               <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                        "h-full transition-all duration-500",
+                        availabilityPercentage > 50 ? "bg-purple-500" :
+                        availabilityPercentage > 20 ? "bg-yellow-500" : "bg-red-500"
+                    )}
+                    style={{ width: `${availabilityPercentage}%` }}
+                  />
+               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Tickets Sold
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{soldQuantity}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {soldPercentage.toFixed(1)}% of total
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2">
-              <TicketIcon className="h-4 w-4" />
-              Available
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{availableQuantity}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              of {ticket.totalQuantityAvailable} total
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Total Revenue
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(totalRevenue.toString(), ticket.currency)}
-            </div>
-          </CardContent>
-        </Card>
+          }
+        />
+        <StatCard
+          title="Total Revenue"
+          value={formatCurrency(totalRevenue.toString(), ticket.currency)}
+          icon={TrendingUp}
+          color="amber"
+        />
       </div>
 
       {/* Details Grid */}
@@ -254,6 +260,42 @@ export default function TicketDetailPage({
               <span className="text-sm text-muted-foreground">Currency</span>
               <Badge variant="outline">{ticket.currency}</Badge>
             </div>
+            <Separator />
+            {ticket.allowRefunds ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-green-600 font-medium">
+                  <CheckCircle className="h-4 w-4" /> Refunds are allowed
+                </div>
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="p-3 bg-muted/50 rounded-md border">
+                    <span className="text-xs text-muted-foreground block mb-1">Refund Amount</span>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-lg text-primary">
+                        {formatCurrency(refundValue.toString(), ticket.currency)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        ({((ticket.refundPercentageBeforeCutoff || 0) * 100).toFixed(0)}% of price)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-muted/50 rounded-md border">
+                    <span className="text-xs text-muted-foreground block mb-1">Eligibility Period</span>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-lg">
+                        {ticket.refundCutoffHoursAfterPayment} hours
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        after purchase
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-muted-foreground p-3 bg-muted/30 rounded-md">
+                <XCircle className="h-4 w-4" /> This ticket is non-refundable.
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -330,13 +372,12 @@ export default function TicketDetailPage({
               </div>
               <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all ${
-                    availabilityPercentage > 50
+                  className={`h-full transition-all ${availabilityPercentage > 50
                       ? "bg-green-500"
                       : availabilityPercentage > 20
-                      ? "bg-yellow-500"
-                      : "bg-red-500"
-                  }`}
+                        ? "bg-yellow-500"
+                        : "bg-red-500"
+                    }`}
                   style={{ width: `${availabilityPercentage}%` }}
                 />
               </div>
