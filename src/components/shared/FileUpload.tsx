@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useState, useEffect } from 'react';
-import { useDropzone, FileWithPath } from 'react-dropzone';
+// 1. Thêm import FileRejection để định nghĩa kiểu dữ liệu
+import { useDropzone, FileWithPath, FileRejection } from 'react-dropzone'; 
 import { toast } from 'sonner';
 import { uploadImage } from '@/api/upload';
 import { Loader2, UploadCloud, X } from 'lucide-react';
@@ -41,15 +42,48 @@ export function FileUpload({
     onUploadingChange?.(isUploading);
   }, [isUploading, onUploadingChange]);
 
+  // --- CẬP NHẬT MỚI: Thêm tham số fileRejections ---
   const onDrop = useCallback(
-    async (acceptedFiles: FileWithPath[]) => {
+    async (acceptedFiles: FileWithPath[], fileRejections: FileRejection[]) => {
+      
+      if (fileRejections.length > 0) {
+        // Kiểm tra xem có lỗi "too-many-files" trong bất kỳ file nào không
+        const isTooManyFiles = fileRejections.some((rejection) =>
+          rejection.errors.some((error) => error.code === 'too-many-files')
+        );
+
+        if (isTooManyFiles) {
+          toast.error('Lỗi: Bạn chỉ được tải lên tối đa 5 hình ảnh một lần.');
+          return;
+        }
+
+        // Nếu không phải lỗi quá số lượng, lấy lỗi của file đầu tiên để báo (tránh spam)
+        const firstRejection = fileRejections[0];
+        const firstError = firstRejection.errors[0];
+
+        if (firstError.code === 'file-invalid-type') {
+          toast.error(`Lỗi: File "${firstRejection.file.name}" không đúng định dạng ảnh.`);
+        } else if (firstError.code === 'file-too-large') {
+          toast.error(`Lỗi: File "${firstRejection.file.name}" quá lớn (Max 10MB).`);
+        } else {
+          toast.error(`Lỗi: ${firstError.message}`);
+        }
+        
+        return; 
+      }
+
+      // 2. Kiểm tra thủ công (Fallback)
+      if (acceptedFiles.length > 5) {
+        toast.error('Bạn chỉ có thể tải lên tối đa 5 hình ảnh cùng một lúc.');
+        return;
+      }
+
       if (acceptedFiles.length === 0) return;
 
       setIsUploading(true);
       const tempUrls = acceptedFiles.map((file) => URL.createObjectURL(file));
       const currentUrls = value || [];
 
-      // Add temp URLs to previews and mark as uploading
       setUploadingUrls(new Set(tempUrls));
       onChange([...currentUrls, ...tempUrls]);
 
@@ -62,8 +96,10 @@ export function FileUpload({
         );
         onChange([...nonTempPreviews, ...finalUrls]);
         setUploadingUrls(new Set());
+        // Thông báo thành công (tuỳ chọn)
+        toast.success(`Đã tải lên ${finalUrls.length} hình ảnh.`);
       } catch (error) {
-        toast.error('An error occurred during upload. Please try again.');
+        toast.error('Có lỗi xảy ra khi tải ảnh. Vui lòng thử lại.');
         const nonTempPreviews = (value || []).filter(
           (p) => !tempUrls.includes(p)
         );
@@ -80,6 +116,8 @@ export function FileUpload({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: true,
+    maxFiles: 5, // Quan trọng: Prop này báo cho thư viện biết giới hạn
+    maxSize: 10 * 1024 * 1024, // 10MB (Khớp với text hiển thị)
     accept: { 'image/*': ['.png', '.gif', '.jpeg', '.jpg'] },
     disabled: disabled || isUploading,
   });
@@ -91,6 +129,7 @@ export function FileUpload({
 
   return (
     <div>
+      {/* Phần hiển thị ảnh preview giữ nguyên */}
       {previews && previews.length > 0 && (
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 mb-6'>
           {previews.map((url, index) => {
@@ -100,7 +139,6 @@ export function FileUpload({
                 key={url || index}
                 className='relative w-full aspect-square min-h-[150px] sm:min-h-[180px] bg-muted/50 rounded-lg overflow-hidden border-2 border-border transition-all duration-300 shadow-sm'
               >
-                {/* Image Preview - Always visible */}
                 <Dialog onOpenChange={(open) => !open && setZoomedImage(null)}>
                   <DialogTrigger asChild>
                     <div
@@ -153,15 +191,11 @@ export function FileUpload({
                   </DialogContent>
                 </Dialog>
 
-                {/* Uploading Overlay - Only when uploading */}
                 {isUploadingThis && (
                   <div className='absolute inset-0 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm z-10 rounded-lg pointer-events-none'>
                     <div className='flex flex-col items-center gap-3'>
                       <div className='relative'>
                         <Loader2 className='h-10 w-10 animate-spin text-primary' />
-                        <div className='absolute inset-0 flex items-center justify-center'>
-                          <div className='h-6 w-6 rounded-full bg-primary/20 animate-pulse' />
-                        </div>
                       </div>
                       <div className='text-center space-y-1'>
                         <p className='text-sm font-semibold text-foreground'>
@@ -177,6 +211,7 @@ export function FileUpload({
         </div>
       )}
 
+      {/* Phần Dropzone */}
       {!disabled && (
         <div
           {...getRootProps()}
@@ -191,12 +226,7 @@ export function FileUpload({
           <input {...getInputProps()} disabled={isUploading} />
           {isUploading ? (
             <div className='flex flex-col items-center justify-center gap-3 w-full'>
-              <div className='relative'>
-                <Loader2 className='h-10 w-10 animate-spin text-primary' />
-                <div className='absolute inset-0 flex items-center justify-center'>
-                  <div className='h-6 w-6 rounded-full bg-primary/20 animate-pulse' />
-                </div>
-              </div>
+              <Loader2 className='h-10 w-10 animate-spin text-primary' />
               <div className='text-center space-y-1'>
                 <p className='text-sm font-semibold text-foreground'>
                   Uploading images...
@@ -225,7 +255,7 @@ export function FileUpload({
                   drag and drop
                 </p>
                 <p className='text-xs text-muted-foreground'>
-                  PNG, JPG, GIF up to 10MB
+                  PNG, JPG, GIF up to 10MB (Max 5 images per upload)
                 </p>
               </div>
             </div>
