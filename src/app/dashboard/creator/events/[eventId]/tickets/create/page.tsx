@@ -674,7 +674,7 @@ export default function CreateTicketPage({
                     <div className='space-y-0.5'>
                       <FormLabel className='text-base'>Allow Refunds</FormLabel>
                       <p className='text-sm text-muted-foreground'>
-                        Enable refunds for this ticket type
+                        Allow customers to request a refund for this ticket type.
                       </p>
                     </div>
                     <FormControl>
@@ -692,8 +692,8 @@ export default function CreateTicketPage({
                               undefined
                             );
                           } else {
-                            form.setValue('refundPercentageBeforeCutoff', 1);
-                            form.setValue('refundCutoffHoursAfterPayment', 4);
+                            form.setValue('refundPercentageBeforeCutoff', 1); // Default 100%
+                            form.setValue('refundCutoffHoursAfterPayment', 48); // Default 48h
                           }
                         }}
                       />
@@ -703,111 +703,134 @@ export default function CreateTicketPage({
               />
 
               {form.watch('allowRefunds') && (
-                <div className='space-y-4 pl-4 border-l-2 border-primary/20'>
-                  <FormField
-                    control={form.control}
-                    name='refundPercentageBeforeCutoff'
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className='flex items-center gap-2'>
-                          <FormLabel>Refund Percentage</FormLabel>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <HelpCircle className='h-4 w-4 text-muted-foreground cursor-help' />
-                              </TooltipTrigger>
-                              <TooltipContent className='max-w-xs'>
-                                <p>
-                                  Percentage of ticket price refunded (0.0 to
-                                  1.0, e.g., 0.8 = 80%)
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                        <FormDescription>
-                          Percentage of ticket price to refund (0.0 to 1.0)
-                        </FormDescription>
-                        <FormControl>
-                          <Input
-                            type='number'
-                            step='0.01'
-                            min='0'
-                            max='1'
-                            placeholder='1.0'
-                            value={field.value ?? ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === '' || value === '-') {
-                                field.onChange(undefined);
-                                return;
-                              }
-                              const numValue = parseFloat(value);
-                              if (
-                                !isNaN(numValue) &&
-                                numValue >= 0 &&
-                                numValue <= 1
-                              ) {
-                                field.onChange(numValue);
-                              }
-                            }}
-                            className='h-11'
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className='space-y-6 pl-4 border-l-2 border-primary/20 animate-in fade-in slide-in-from-top-2 duration-300'>
+                  
+                  <div className="bg-muted/50 p-4 rounded-md text-sm text-muted-foreground space-y-2">
+                    <div className="font-semibold text-foreground flex items-center gap-2">
+                        <HelpCircle className="h-4 w-4" /> 
+                        How Refunds Work
+                    </div>
+                    <p>
+                        Set the conditions under which a customer can receive a refund. 
+                        You define a <strong>cutoff period</strong> (e.g., 48 hours after purchase) 
+                        and the <strong>percentage</strong> of the ticket price to return.
+                    </p>
+                  </div>
 
-                  <FormField
-                    control={form.control}
-                    name='refundCutoffHoursAfterPayment'
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className='flex items-center gap-2'>
-                          <FormLabel>Refund Cutoff Hours</FormLabel>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <HelpCircle className='h-4 w-4 text-muted-foreground cursor-help' />
-                              </TooltipTrigger>
-                              <TooltipContent className='max-w-xs'>
-                                <p>
-                                  Number of hours after payment when refunds are
-                                  no longer allowed
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                        <FormDescription>
-                          Hours after payment when refunds are no longer allowed
-                        </FormDescription>
-                        <FormControl>
-                          <Input
-                            type='number'
-                            min='0'
-                            step='1'
-                            placeholder='4'
-                            value={field.value ?? ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === '' || value === '-') {
-                                field.onChange(undefined);
-                                return;
-                              }
-                              const numValue = parseInt(value);
-                              if (!isNaN(numValue) && numValue >= 0) {
-                                field.onChange(numValue);
-                              }
-                            }}
-                            className='h-11'
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name='refundCutoffHoursAfterPayment'
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Refund Eligibility Period (Hours)</FormLabel>
+                            <FormControl>
+                            <div className="relative">
+                                <Input
+                                    type='number'
+                                    min='0'
+                                    step='1'
+                                    placeholder='48'
+                                    value={field.value ?? ''}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        if (value === '' || value === '-') {
+                                            field.onChange(undefined);
+                                            return;
+                                        }
+                                        const numValue = parseInt(value);
+                                        if (!isNaN(numValue) && numValue >= 0) {
+                                            field.onChange(numValue);
+                                        }
+                                    }}
+                                    className='h-11 pr-12'
+                                />
+                                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted-foreground text-sm">
+                                    hours
+                                </div>
+                            </div>
+                            </FormControl>
+                            <FormDescription>
+                                Customers can request a refund within this many hours after their purchase.
+                            </FormDescription>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name='refundPercentageBeforeCutoff'
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Refund Percentage</FormLabel>
+                            <FormControl>
+                            <div className="relative">
+                                <Input
+                                    type='number'
+                                    step='0.01' // Allow finer steps
+                                    min='0'
+                                    max='1'
+                                    placeholder='1.0'
+                                    value={field.value ?? ''}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        if (value === '' || value === '-') {
+                                            field.onChange(undefined);
+                                            return;
+                                        }
+                                        // Allow typing "0." without immediately parsing
+                                        if (value === '0.' || value.endsWith('.')) {
+                                            // Ideally we shouldn't trigger onChange with invalid number, 
+                                            // but React Hook Form needs a value. 
+                                            // We can let the user type, but validation will catch it on blur/submit.
+                                            // Here we try to parse valid numbers.
+                                        }
+                                        const numValue = parseFloat(value);
+                                        if (!isNaN(numValue) && numValue >= 0 && numValue <= 1) {
+                                            field.onChange(numValue);
+                                        }
+                                    }}
+                                    className='h-11 pr-16'
+                                />
+                                 <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted-foreground text-sm">
+                                    (0.0 - 1.0)
+                                </div>
+                            </div>
+                            </FormControl>
+                            <FormDescription>
+                                The portion of the ticket price to refund. <br/>
+                                <span className="font-mono text-xs">1.0 = 100% (Full Refund), 0.5 = 50%</span>
+                            </FormDescription>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                  </div>
+
+                  {/* Example Calculation Box */}
+                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md p-4 text-sm">
+                    <div className="font-semibold text-blue-800 dark:text-blue-300 mb-2">Example Scenario:</div>
+                    <ul className="list-disc list-inside space-y-1 text-blue-700 dark:text-blue-400">
+                        <li>
+                            Ticket Price: <strong>{form.watch('price') ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(form.watch('price')) : '100.000 đ'}</strong>
+                        </li>
+                        <li>
+                            If a customer cancels within <strong>{form.watch('refundCutoffHoursAfterPayment') ?? 48} hours</strong> of purchase:
+                        </li>
+                        <li>
+                            They will receive: <strong>
+                                {(() => {
+                                    const price = form.watch('price') || 100000;
+                                    const percentage = form.watch('refundPercentageBeforeCutoff') ?? 1;
+                                    const refundAmount = price * percentage;
+                                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(refundAmount);
+                                })()}
+                            </strong> ({((form.watch('refundPercentageBeforeCutoff') ?? 1) * 100).toFixed(0)}%)
+                        </li>
+                    </ul>
+                  </div>
+
                 </div>
               )}
             </CardContent>
