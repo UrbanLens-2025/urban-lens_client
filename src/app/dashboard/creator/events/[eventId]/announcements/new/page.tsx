@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -20,6 +20,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,20 +28,10 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SingleFileUpload } from "@/components/shared/SingleFileUpload";
-import { DateTimePickerField } from "@/components/shared/DateTimePickerField";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useCreateCreatorAnnouncement } from "@/hooks/announcements/useCreateCreatorAnnouncement";
-
-const announcementSchema = z.object({
-  title: z.string().min(3, "Title is required"),
-  description: z.string().min(10, "Description should be at least 10 characters"),
-  startDate: z.string().min(1, "Start date is required"),
-  endDate: z.string().min(1, "End date is required"),
-  imageUrl: z.string().url("Please provide a valid URL").optional().or(z.literal("")),
-  isHidden: z.boolean(),
-});
-
-type AnnouncementFormValues = z.infer<typeof announcementSchema>;
+import { useEventById } from "@/hooks/events/useEventById";
+import { DatePicker } from "@/components/shared/DatePicker";
 
 export default function NewCreatorAnnouncementPage({
   params,
@@ -50,10 +41,39 @@ export default function NewCreatorAnnouncementPage({
   const { eventId } = use(params);
   const router = useRouter();
   const [placeholderImage, setPlaceholderImage] = useState<string | undefined>(undefined);
+  
+  const { data: event, isLoading: isLoadingEvent } = useEventById(eventId);
   const { mutate: createAnnouncement, isPending: isCreating } = useCreateCreatorAnnouncement();
 
+  const formSchema = useMemo(() => {
+    return z.object({
+      title: z.string().min(3, "Title is required"),
+      description: z.string().min(10, "Description should be at least 10 characters"),
+      startDate: z.string().min(1, "Start date is required"),
+      endDate: z.string().min(1, "End date is required"),
+      imageUrl: z.string().url("Please provide a valid URL").optional().or(z.literal("")),
+      isHidden: z.boolean(),
+    })
+    .refine((data) => {
+      if (!data.startDate || !data.endDate) return true;
+      return new Date(data.endDate) > new Date(data.startDate);
+    }, {
+      message: "End date must be after start date",
+      path: ["endDate"],
+    })
+    .refine((data) => {
+      if (!event?.endDate || !data.endDate) return true;
+      return new Date(data.endDate) <= new Date(event.endDate);
+    }, {
+      message: "Announcement cannot extend beyond the event end date",
+      path: ["endDate"],
+    });
+  }, [event?.endDate]);
+
+  type AnnouncementFormValues = z.infer<typeof formSchema>;
+
   const form = useForm<AnnouncementFormValues>({
-    resolver: zodResolver(announcementSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
       description: "",
@@ -80,6 +100,14 @@ export default function NewCreatorAnnouncementPage({
       }
     );
   };
+
+  if (isLoadingEvent) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -152,11 +180,21 @@ export default function NewCreatorAnnouncementPage({
                       <FormItem>
                         <FormLabel>Start at</FormLabel>
                         <FormControl>
-                          <DateTimePickerField
-                            value={field.value}
-                            onChange={field.onChange}
-                            error={form.formState.errors.startDate?.message}
+                          <DatePicker
+                            value={field.value || undefined}
+                            onChange={(value) => {
+                              field.onChange(value);
+                              // Trigger validation for endDate whenever startDate changes
+                              if (form.getValues("endDate")) {
+                                form.trigger("endDate");
+                              }
+                            }}
+                            disabled={isCreating}
                             minDate={new Date()}
+                            // Optional: Constrain max date to event end date if desired
+                            maxDate={event?.endDate ? new Date(event.endDate) : undefined}
+                            placeholder="Pick a start date & time"
+                            showTime
                           />
                         </FormControl>
                         <FormMessage />
@@ -171,11 +209,23 @@ export default function NewCreatorAnnouncementPage({
                       <FormItem>
                         <FormLabel>End at</FormLabel>
                         <FormControl>
-                          <DateTimePickerField
-                            value={field.value}
-                            onChange={field.onChange}
-                            error={form.formState.errors.endDate?.message}
-                            minDate={field.value ? new Date(field.value) : new Date()}
+                          <DatePicker
+                            value={field.value || undefined}
+                            onChange={(value) => {
+                              field.onChange(value);
+                              void form.trigger("endDate");
+                            }}
+                            disabled={isCreating}
+                            // Min date should be start date or now
+                            minDate={
+                              form.getValues("startDate") 
+                                ? new Date(form.getValues("startDate")) 
+                                : new Date()
+                            }
+                            // Max date is the event end date
+                            maxDate={event?.endDate ? new Date(event.endDate) : undefined}
+                            placeholder="Pick an end date & time"
+                            showTime
                           />
                         </FormControl>
                         <FormMessage />
