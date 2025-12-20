@@ -2548,31 +2548,6 @@ export default function AvailabilityPage({
 
             {sourceDay !== null && (
               <>
-                {/* Source Day Info */}
-                <div className='rounded-lg border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-4'>
-                  <div className='flex items-center justify-between'>
-                    <div>
-                      <div className='text-sm font-semibold text-muted-foreground mb-1'>
-                        Copying from:
-                      </div>
-                      <div className='text-lg font-bold text-foreground'>
-                        {DAYS_OF_WEEK[sourceDay]}
-                      </div>
-                    </div>
-                    <div className='text-right'>
-                      <div className='text-2xl font-bold text-primary'>
-                        {
-                          displayAvailability.filter(
-                            (s) => s.dayOfWeek === sourceDay
-                          ).length
-                        }
-                      </div>
-                      <div className='text-xs text-muted-foreground'>
-                        slot(s)
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Target Days Selection */}
                 <div className='space-y-3'>
@@ -2580,7 +2555,7 @@ export default function AvailabilityPage({
                     <div className='p-1 rounded bg-primary/10'>
                       <Calendar className='h-3.5 w-3.5 text-primary' />
                     </div>
-                    Target Days (copy to):
+                    Target Days:
                   </Label>
                   <div className='grid grid-cols-2 sm:grid-cols-3 gap-2'>
                     {DAYS_OF_WEEK.map((day, index) => {
@@ -2621,13 +2596,7 @@ export default function AvailabilityPage({
                   <div className='rounded-lg border-2 border-primary/20 bg-gradient-to-r from-muted/50 to-muted/30 p-4'>
                     <div className='flex items-center justify-between mb-2'>
                       <div className='text-sm font-semibold text-muted-foreground'>
-                        Will create:
-                      </div>
-                      <div className='text-lg font-bold text-primary'>
-                        {displayAvailability.filter(
-                          (s) => s.dayOfWeek === sourceDay
-                        ).length * targetDays.size}{' '}
-                        slot(s)
+                        Copy to:
                       </div>
                     </div>
                     <div className='flex flex-wrap gap-1.5'>
