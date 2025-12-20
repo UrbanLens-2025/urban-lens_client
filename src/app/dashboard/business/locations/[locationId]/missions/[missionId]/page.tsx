@@ -133,14 +133,6 @@ export default function MissionDetailsPage({
   const isScheduled = new Date(mission.startDate) > now;
   const isActive = !isExpired && !isScheduled;
 
-  const badges = (
-    <>
-      {isActive && <Badge className='bg-green-600'>Active</Badge>}
-      {isScheduled && <Badge variant='outline'>Scheduled</Badge>}
-      {isExpired && <Badge variant='secondary'>Completed</Badge>}
-    </>
-  );
-
   const participants = participantsResponse?.data ?? [];
   const participantsMeta = participantsResponse?.meta;
 
@@ -174,7 +166,11 @@ export default function MissionDetailsPage({
                 {mission.title}
               </p>
             )}
-
+            <>
+              {isActive && <Badge className='bg-green-600'>Active</Badge>}
+              {isScheduled && <Badge variant='outline'>Scheduled</Badge>}
+              {isExpired && <Badge variant='secondary'>Completed</Badge>}
+            </>
             {/* Description */}
             {mission.description && (
               <p className='text-sm line-clamp-3 text-muted-foreground'>
@@ -390,8 +386,8 @@ export default function MissionDetailsPage({
   return (
     <>
       <DetailViewLayout
-        title={mission.title}
-        badges={badges}
+        title={'Mission Details'}
+        badges={''}
         onClose={() => {
           router.push(`/dashboard/business/locations/${locationId}/missions`);
         }}

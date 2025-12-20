@@ -45,8 +45,8 @@ export function DashboardSection({
       <CardHeader className={cn('border-b bg-muted/20', headerClassName)}>
         <div className='flex justify-between items-center'>
           <CardTitle className='text-lg font-semibold flex items-center'>
-            {Icon && <Icon className='h-5 w-5 text-primary' />}{' '}
-            <span>{title}</span>
+            {Icon && <Icon className='h-5 w-5 text-primary' />}
+            <span className='ml-2'>{title}</span>
           </CardTitle>
           {action && (
             <Link href={action.href}>

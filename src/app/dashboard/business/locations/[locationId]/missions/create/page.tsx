@@ -131,7 +131,7 @@ export default function CreateMissionPage({
       {/* Header */}
       <div className='flex items-center justify-between mb-4'>
         <div>
-          <h1 className='text-3xl font-bold'>Create Mission</h1>
+          <h1 className='text-3xl font-bold'>Create a Mission</h1>
           <p className='text-sm text-muted-foreground mt-1'>
             Add a new mission for{' '}
             <span className='font-semibold text-primary'>

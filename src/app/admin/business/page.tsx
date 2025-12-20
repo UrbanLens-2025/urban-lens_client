@@ -5,12 +5,7 @@ import { useDebounce } from 'use-debounce';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useBusinessAccounts } from '@/hooks/admin/useBusinessAccounts';
 import { useProcessBusinessAccount } from '@/hooks/admin/useProcessBusinessAccount';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -36,7 +31,14 @@ import {
   IconCalendar,
 } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
-import { Briefcase, CheckCircle, Clock, Loader2, XCircle, ChevronRight } from 'lucide-react';
+import {
+  Briefcase,
+  CheckCircle,
+  Clock,
+  Loader2,
+  XCircle,
+  ChevronRight,
+} from 'lucide-react';
 import { BusinessProfile, BusinessStatus } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -149,7 +151,7 @@ export default function AdminBusinessPage() {
           setApprovingBusiness(null);
           // Keep selection if it's the same, or clear it if it moved lists
           if (selectedBusiness?.accountId === approvingBusiness.accountId) {
-             // Optional: update local state to reflect change immediately
+            // Optional: update local state to reflect change immediately
           }
         },
       }
@@ -413,7 +415,9 @@ export default function AdminBusinessPage() {
         <div className='lg:col-span-7 xl:col-span-8 border rounded-lg bg-card overflow-hidden'>
           {selectedBusiness ? (
             <div className='h-full overflow-y-auto'>
-              <div className='p-6 pb-20'> {/* Added pb-20 to ensure content isn't cut off at bottom */}
+              <div className='p-6 pb-20'>
+                {' '}
+                {/* Added pb-20 to ensure content isn't cut off at bottom */}
                 {/* Header with Name and Actions */}
                 <div className='flex items-start justify-between mb-4'>
                   <div className='flex-1'>
@@ -472,30 +476,6 @@ export default function AdminBusinessPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Description - Full Width */}
-                {selectedBusiness.description && (
-                  <div className='mb-4'>
-                    <p
-                      className={`text-sm text-muted-foreground ${
-                        !expandedDescription ? 'line-clamp-2' : ''
-                      }`}
-                    >
-                      {selectedBusiness.description}
-                    </p>
-                    {selectedBusiness.description.length > 150 && (
-                      <button
-                        onClick={() =>
-                          setExpandedDescription(!expandedDescription)
-                        }
-                        className='text-sm text-blue-600 hover:underline mt-1'
-                      >
-                        {expandedDescription ? 'Show less' : 'Read more'}
-                      </button>
-                    )}
-                  </div>
-                )}
-
                 {/* Approval Notice - Above Documents */}
                 {(selectedBusiness as any).status === 'APPROVED' &&
                   (selectedBusiness as any).processedBy && (
@@ -507,24 +487,43 @@ export default function AdminBusinessPage() {
                             <p className='text-sm text-green-900 dark:text-green-100'>
                               This report was approved by{' '}
                               {(selectedBusiness as any).processedBy ? (
-                                <Popover open={showAdminPopover} onOpenChange={setShowAdminPopover}>
+                                <Popover
+                                  open={showAdminPopover}
+                                  onOpenChange={setShowAdminPopover}
+                                >
                                   <PopoverTrigger asChild>
                                     <span
                                       className='font-medium cursor-pointer hover:underline'
-                                      onMouseEnter={() => setShowAdminPopover(true)}
-                                      onMouseLeave={() => setShowAdminPopover(false)}
+                                      onMouseEnter={() =>
+                                        setShowAdminPopover(true)
+                                      }
+                                      onMouseLeave={() =>
+                                        setShowAdminPopover(false)
+                                      }
                                     >
-                                      {(selectedBusiness as any).processedBy?.firstName &&
-                                      (selectedBusiness as any).processedBy?.lastName
-                                        ? `${(selectedBusiness as any).processedBy.firstName} ${(selectedBusiness as any).processedBy.lastName}`
+                                      {(selectedBusiness as any).processedBy
+                                        ?.firstName &&
+                                      (selectedBusiness as any).processedBy
+                                        ?.lastName
+                                        ? `${
+                                            (selectedBusiness as any)
+                                              .processedBy.firstName
+                                          } ${
+                                            (selectedBusiness as any)
+                                              .processedBy.lastName
+                                          }`
                                         : 'Admin'}
                                     </span>
                                   </PopoverTrigger>
                                   <PopoverContent
                                     className='w-64'
                                     side='top'
-                                    onMouseEnter={() => setShowAdminPopover(true)}
-                                    onMouseLeave={() => setShowAdminPopover(false)}
+                                    onMouseEnter={() =>
+                                      setShowAdminPopover(true)
+                                    }
+                                    onMouseLeave={() =>
+                                      setShowAdminPopover(false)
+                                    }
                                   >
                                     <div className='space-y-2'>
                                       <div>
@@ -532,29 +531,45 @@ export default function AdminBusinessPage() {
                                           Admin Information
                                         </p>
                                         <p className='text-sm font-semibold'>
-                                          {(selectedBusiness as any).processedBy?.firstName &&
-                                          (selectedBusiness as any).processedBy?.lastName
-                                            ? `${(selectedBusiness as any).processedBy.firstName} ${(selectedBusiness as any).processedBy.lastName}`
+                                          {(selectedBusiness as any).processedBy
+                                            ?.firstName &&
+                                          (selectedBusiness as any).processedBy
+                                            ?.lastName
+                                            ? `${
+                                                (selectedBusiness as any)
+                                                  .processedBy.firstName
+                                              } ${
+                                                (selectedBusiness as any)
+                                                  .processedBy.lastName
+                                              }`
                                             : 'Admin'}
                                         </p>
                                       </div>
-                                      {(selectedBusiness as any).processedBy?.email && (
+                                      {(selectedBusiness as any).processedBy
+                                        ?.email && (
                                         <div>
                                           <p className='text-xs font-medium text-muted-foreground mb-0.5'>
                                             Email
                                           </p>
                                           <p className='text-sm'>
-                                            {(selectedBusiness as any).processedBy.email}
+                                            {
+                                              (selectedBusiness as any)
+                                                .processedBy.email
+                                            }
                                           </p>
                                         </div>
                                       )}
-                                      {(selectedBusiness as any).processedBy?.phoneNumber && (
+                                      {(selectedBusiness as any).processedBy
+                                        ?.phoneNumber && (
                                         <div>
                                           <p className='text-xs font-medium text-muted-foreground mb-0.5'>
                                             Phone
                                           </p>
                                           <p className='text-sm'>
-                                            {(selectedBusiness as any).processedBy.phoneNumber}
+                                            {
+                                              (selectedBusiness as any)
+                                                .processedBy.phoneNumber
+                                            }
                                           </p>
                                         </div>
                                       )}
@@ -567,7 +582,9 @@ export default function AdminBusinessPage() {
                               on{' '}
                               {(selectedBusiness as any).processedAt && (
                                 <span className='font-medium'>
-                                  {formatDateTime((selectedBusiness as any).processedAt)}
+                                  {formatDateTime(
+                                    (selectedBusiness as any).processedAt
+                                  )}
                                 </span>
                               )}
                             </p>
@@ -576,7 +593,6 @@ export default function AdminBusinessPage() {
                       </CardContent>
                     </Card>
                   )}
-
                 {/* Rejection Notice - Above Documents */}
                 {(selectedBusiness as any).status === 'REJECTED' &&
                   selectedBusiness.adminNotes && (
@@ -588,24 +604,43 @@ export default function AdminBusinessPage() {
                             <p className='text-sm text-red-900 dark:text-red-100'>
                               This report has been rejected by{' '}
                               {(selectedBusiness as any).processedBy ? (
-                                <Popover open={showAdminPopover} onOpenChange={setShowAdminPopover}>
+                                <Popover
+                                  open={showAdminPopover}
+                                  onOpenChange={setShowAdminPopover}
+                                >
                                   <PopoverTrigger asChild>
                                     <span
                                       className='font-medium cursor-pointer hover:underline'
-                                      onMouseEnter={() => setShowAdminPopover(true)}
-                                      onMouseLeave={() => setShowAdminPopover(false)}
+                                      onMouseEnter={() =>
+                                        setShowAdminPopover(true)
+                                      }
+                                      onMouseLeave={() =>
+                                        setShowAdminPopover(false)
+                                      }
                                     >
-                                      {(selectedBusiness as any).processedBy?.firstName &&
-                                      (selectedBusiness as any).processedBy?.lastName
-                                        ? `${(selectedBusiness as any).processedBy.firstName} ${(selectedBusiness as any).processedBy.lastName}`
+                                      {(selectedBusiness as any).processedBy
+                                        ?.firstName &&
+                                      (selectedBusiness as any).processedBy
+                                        ?.lastName
+                                        ? `${
+                                            (selectedBusiness as any)
+                                              .processedBy.firstName
+                                          } ${
+                                            (selectedBusiness as any)
+                                              .processedBy.lastName
+                                          }`
                                         : 'Admin'}
                                     </span>
                                   </PopoverTrigger>
                                   <PopoverContent
                                     className='w-64'
                                     side='top'
-                                    onMouseEnter={() => setShowAdminPopover(true)}
-                                    onMouseLeave={() => setShowAdminPopover(false)}
+                                    onMouseEnter={() =>
+                                      setShowAdminPopover(true)
+                                    }
+                                    onMouseLeave={() =>
+                                      setShowAdminPopover(false)
+                                    }
                                   >
                                     <div className='space-y-2'>
                                       <div>
@@ -613,29 +648,45 @@ export default function AdminBusinessPage() {
                                           Admin Information
                                         </p>
                                         <p className='text-sm font-semibold'>
-                                          {(selectedBusiness as any).processedBy?.firstName &&
-                                          (selectedBusiness as any).processedBy?.lastName
-                                            ? `${(selectedBusiness as any).processedBy.firstName} ${(selectedBusiness as any).processedBy.lastName}`
+                                          {(selectedBusiness as any).processedBy
+                                            ?.firstName &&
+                                          (selectedBusiness as any).processedBy
+                                            ?.lastName
+                                            ? `${
+                                                (selectedBusiness as any)
+                                                  .processedBy.firstName
+                                              } ${
+                                                (selectedBusiness as any)
+                                                  .processedBy.lastName
+                                              }`
                                             : 'Admin'}
                                         </p>
                                       </div>
-                                      {(selectedBusiness as any).processedBy?.email && (
+                                      {(selectedBusiness as any).processedBy
+                                        ?.email && (
                                         <div>
                                           <p className='text-xs font-medium text-muted-foreground mb-0.5'>
                                             Email
                                           </p>
                                           <p className='text-sm'>
-                                            {(selectedBusiness as any).processedBy.email}
+                                            {
+                                              (selectedBusiness as any)
+                                                .processedBy.email
+                                            }
                                           </p>
                                         </div>
                                       )}
-                                      {(selectedBusiness as any).processedBy?.phoneNumber && (
+                                      {(selectedBusiness as any).processedBy
+                                        ?.phoneNumber && (
                                         <div>
                                           <p className='text-xs font-medium text-muted-foreground mb-0.5'>
                                             Phone
                                           </p>
                                           <p className='text-sm'>
-                                            {(selectedBusiness as any).processedBy.phoneNumber}
+                                            {
+                                              (selectedBusiness as any)
+                                                .processedBy.phoneNumber
+                                            }
                                           </p>
                                         </div>
                                       )}
@@ -652,7 +703,9 @@ export default function AdminBusinessPage() {
                             </p>
                             {(selectedBusiness as any).processedAt && (
                               <p className='text-xs text-red-700 dark:text-red-300 mt-2 text-right'>
-                                {formatDateTime((selectedBusiness as any).processedAt)}
+                                {formatDateTime(
+                                  (selectedBusiness as any).processedAt
+                                )}
                               </p>
                             )}
                           </div>
@@ -660,7 +713,6 @@ export default function AdminBusinessPage() {
                       </CardContent>
                     </Card>
                   )}
-
                 {/* Documents - Full Width */}
                 {(selectedBusiness as any).licenses &&
                   (selectedBusiness as any).licenses.length > 0 && (
@@ -705,11 +757,10 @@ export default function AdminBusinessPage() {
                       </CardContent>
                     </Card>
                   )}
-
                 {/* Two Column Grid */}
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-6'>
                   {/* Contact Information Card */}
-                  <Card className="h-full md:col-span-2">
+                  <Card className='h-full'>
                     <CardHeader>
                       <CardTitle className='text-base flex items-center gap-2'>
                         <IconUser className='h-4 w-4' />
@@ -759,11 +810,58 @@ export default function AdminBusinessPage() {
                       )}
                     </CardContent>
                   </Card>
-                </div>
 
+                  {/* Location & System Info Card */}
+                  <Card className='h-full'>
+                    <CardHeader>
+                      <CardTitle className='text-base flex items-center gap-2'>
+                        <IconMapPin className='h-4 w-4' />
+                        Location & System Info
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className='space-y-3'>
+                      <div>
+                        <p className='text-xs font-medium text-muted-foreground mb-1'>
+                          Full Address
+                        </p>
+                        <p className='text-sm text-foreground'>
+                          {[
+                            (selectedBusiness as any).addressLine,
+                            (selectedBusiness as any).addressLevel1,
+                            (selectedBusiness as any).addressLevel2,
+                          ]
+                            .filter(Boolean)
+                            .join(', ') || 'Not provided'}
+                        </p>
+                      </div>
+                      <div className='grid grid-cols-2 gap-2 pt-2 border-t'>
+                        <div>
+                          <p className='text-xs font-medium text-muted-foreground mb-1'>
+                            Created
+                          </p>
+                          <p className='text-sm'>
+                            {formatDateTime(
+                              (selectedBusiness as any).createdAt
+                            )}
+                          </p>
+                        </div>
+                        <div>
+                          <p className='text-xs font-medium text-muted-foreground mb-1'>
+                            Updated
+                          </p>
+                          <p className='text-sm'>
+                            {formatDateTime(
+                              (selectedBusiness as any).updatedAt
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
                 {/* Admin Notes Card (Full Width) */}
                 {selectedBusiness.adminNotes && (
-                  <Card className="mt-4">
+                  <Card className='mt-4'>
                     <CardHeader>
                       <CardTitle className='text-base flex items-center gap-2'>
                         <IconFileText className='h-4 w-4' />
@@ -777,37 +875,137 @@ export default function AdminBusinessPage() {
                     </CardContent>
                   </Card>
                 )}
+                {/* Business Licenses - Full Width */}
+                {(selectedBusiness as any).licenses &&
+                  (selectedBusiness as any).licenses.length > 0 && (
+                    <Card className='mt-4'>
+                      <CardHeader>
+                        <CardTitle className='text-base flex items-center gap-2'>
+                          <IconFileText className='h-4 w-4' />
+                          Business Licenses
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className='space-y-4'>
+                          {(selectedBusiness as any).licenses.map(
+                            (license: any, index: number) => (
+                              <div
+                                key={index}
+                                className='border rounded-lg p-4 bg-muted/20'
+                              >
+                                <div className='flex flex-wrap gap-4 items-start justify-between mb-4'>
+                                  <div>
+                                    <Badge variant='outline' className='mb-2'>
+                                      {license.licenseType?.replace(
+                                        /_/g,
+                                        ' '
+                                      ) || 'License'}
+                                    </Badge>
+                                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 mt-2'>
+                                      {license.licenseNumber && (
+                                        <div>
+                                          <p className='text-xs text-muted-foreground'>
+                                            License Number
+                                          </p>
+                                          <p className='text-sm font-medium'>
+                                            {license.licenseNumber}
+                                          </p>
+                                        </div>
+                                      )}
+                                      {license.licenseExpirationDate && (
+                                        <div>
+                                          <p className='text-xs text-muted-foreground'>
+                                            Expiration Date
+                                          </p>
+                                          <p className='text-sm font-medium flex items-center gap-1'>
+                                            <IconCalendar className='h-3 w-3' />
+                                            {formatDate(
+                                              license.licenseExpirationDate
+                                            )}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
 
-                  
-                  {/* Legacy Single License Fields (Fallback) */}
-                  {((selectedBusiness as any).licenseNumber || (selectedBusiness as any).licenseType || (selectedBusiness as any).licenseExpirationDate) && 
-                   (!(selectedBusiness as any).licenses || (selectedBusiness as any).licenses.length === 0) && (
-                     <Card className='mt-4'>
-                       <CardHeader>
-                         <CardTitle className='text-base flex items-center gap-2'>
-                           <IconFileText className='h-4 w-4' />
-                           Legacy License Info
-                         </CardTitle>
-                       </CardHeader>
-                       <CardContent>
-                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div>
-                                  <p className="text-xs text-muted-foreground">License Number</p>
-                                  <p className="text-sm font-medium">{(selectedBusiness as any).licenseNumber || '-'}</p>
+                                {license.documentImageUrls &&
+                                  license.documentImageUrls.length > 0 && (
+                                    <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-3'>
+                                      {license.documentImageUrls.map(
+                                        (url: string, imgIndex: number) => (
+                                          <a
+                                            key={imgIndex}
+                                            href={url}
+                                            target='_blank'
+                                            rel='noopener noreferrer'
+                                            className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors'
+                                          >
+                                            <img
+                                              src={url}
+                                              alt={`License document ${
+                                                imgIndex + 1
+                                              }`}
+                                              className='w-full h-full object-cover'
+                                            />
+                                            <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
+                                          </a>
+                                        )
+                                      )}
+                                    </div>
+                                  )}
                               </div>
-                              <div>
-                                  <p className="text-xs text-muted-foreground">Type</p>
-                                  <p className="text-sm font-medium">{(selectedBusiness as any).licenseType || '-'}</p>
-                              </div>
-                              <div>
-                                  <p className="text-xs text-muted-foreground">Expiration</p>
-                                  <p className="text-sm font-medium">{formatDate((selectedBusiness as any).licenseExpirationDate)}</p>
-                              </div>
-                           </div>
-                       </CardContent>
-                     </Card>
+                            )
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
                   )}
-
+                {/* Legacy Single License Fields (Fallback) */}
+                {((selectedBusiness as any).licenseNumber ||
+                  (selectedBusiness as any).licenseType ||
+                  (selectedBusiness as any).licenseExpirationDate) &&
+                  (!(selectedBusiness as any).licenses ||
+                    (selectedBusiness as any).licenses.length === 0) && (
+                    <Card className='mt-4'>
+                      <CardHeader>
+                        <CardTitle className='text-base flex items-center gap-2'>
+                          <IconFileText className='h-4 w-4' />
+                          Legacy License Info
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                          <div>
+                            <p className='text-xs text-muted-foreground'>
+                              License Number
+                            </p>
+                            <p className='text-sm font-medium'>
+                              {(selectedBusiness as any).licenseNumber || '-'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className='text-xs text-muted-foreground'>
+                              Type
+                            </p>
+                            <p className='text-sm font-medium'>
+                              {(selectedBusiness as any).licenseType || '-'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className='text-xs text-muted-foreground'>
+                              Expiration
+                            </p>
+                            <p className='text-sm font-medium'>
+                              {formatDate(
+                                (selectedBusiness as any).licenseExpirationDate
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
               </div>
             </div>
           ) : (
@@ -889,9 +1087,7 @@ export default function AdminBusinessPage() {
           <DialogHeader>
             <DialogTitle className='flex items-center gap-2'>
               <IconFileText className='h-5 w-5' />
-              {toTitleCase(
-                selectedLicense?.licenseType || 'Business License'
-              )}
+              {toTitleCase(selectedLicense?.licenseType || 'Business License')}
             </DialogTitle>
             <DialogDescription>
               View all images for this license

@@ -248,7 +248,7 @@ function WalletCard({
 }
 
 export default function AdminWalletPage() {
-  const [activeTab, setActiveTab] = useState('system-wallet');
+  const [activeTab, setActiveTab] = useState('external-transactions');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -494,6 +494,12 @@ export default function AdminWalletPage() {
       >
         <TabsList className='grid w-full max-w-md grid-cols-3'>
           <TabsTrigger
+            value='external-transactions'
+            className='flex items-center gap-2'
+          >
+            External Transactions
+          </TabsTrigger>
+          <TabsTrigger
             value='system-wallet'
             className='flex items-center gap-2'
           >
@@ -506,12 +512,6 @@ export default function AdminWalletPage() {
           >
             <Lock className='h-4 w-4' />
             Escrow wallet
-          </TabsTrigger>
-          <TabsTrigger
-            value='external-transactions'
-            className='flex items-center gap-2'
-          >
-            External Transactions
           </TabsTrigger>
         </TabsList>
 

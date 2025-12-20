@@ -59,7 +59,10 @@ import {
 } from '@/components/ui/chart';
 import { formatCurrency } from '@/lib/utils';
 // Updated import to include useTopRevenueEvents
-import { useRevenueSummary, useTopRevenueEvents } from '@/hooks/dashboard/useDashboardCreator';
+import {
+  useRevenueSummary,
+  useTopRevenueEvents,
+} from '@/hooks/dashboard/useDashboardCreator';
 
 type PeriodType = 'day' | 'month' | 'year';
 
@@ -79,7 +82,8 @@ export default function CreatorDashboardPage() {
 
   const { data: revenueData } = useRevenueSummary();
   // Fetch Top Revenue Events (Real Data)
-  const { data: topRevenueEventsData, isLoading: isLoadingTopEvents } = useTopRevenueEvents(5);
+  const { data: topRevenueEventsData, isLoading: isLoadingTopEvents } =
+    useTopRevenueEvents(5);
 
   const stats = useMemo(() => {
     const totalEvents = meta?.totalItems ?? 0;
@@ -152,7 +156,9 @@ export default function CreatorDashboardPage() {
 
       if (!startDate) {
         // Create a mock future date (1-30 days from now)
-        const hash = event.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+        const hash = event.id
+          .split('')
+          .reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
         const daysFromNow = (hash % 30) + 1;
         startDate = new Date(now);
         startDate.setDate(startDate.getDate() + daysFromNow);
@@ -160,20 +166,26 @@ export default function CreatorDashboardPage() {
 
       if (!endDate && startDate) {
         // Create end date 1-3 days after start date
-        const hash = event.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+        const hash = event.id
+          .split('')
+          .reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
         endDate = new Date(startDate);
         endDate.setDate(endDate.getDate() + ((hash % 3) + 1));
       }
 
       // Generate mock ticket sales and revenue
-      const hash = event.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+      const hash = event.id
+        .split('')
+        .reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
       const baseTickets = (hash % 500) + 50;
       const baseRevenue = baseTickets * ((hash % 200) + 50);
-      
-      const isPublished = event.status?.toUpperCase() === 'PUBLISHED' || event.status?.toUpperCase() === 'ACTIVE';
+
+      const isPublished =
+        event.status?.toUpperCase() === 'PUBLISHED' ||
+        event.status?.toUpperCase() === 'ACTIVE';
       let ticketsSold = baseTickets;
       let revenue = baseRevenue;
-      
+
       if (isPublished) {
         ticketsSold = Math.floor(baseTickets * 0.7);
         revenue = Math.floor(baseRevenue * 0.75);
@@ -212,25 +224,76 @@ export default function CreatorDashboardPage() {
       .slice(0, 3);
   }, [events]);
 
-  // Calculate top events with REAL data from useTopRevenueEvents
+  const recentEventsList = useMemo(() => events.slice(0, 3), [events]);
+
+  // Calculate top events with mock performance data
+  // TODO: Replace with actual API data when available
   const topEvents = useMemo(() => {
-    return (topRevenueEventsData || []).map((event) => ({
-      name: event.eventName || 'Untitled Event',
-      revenue: event.totalRevenue || 0,
-      ticketsSold: event.totalTicketsSold || 0, // Available if needed
-    }));
-  }, [topRevenueEventsData]);
+    return events
+      .map((event) => {
+        // Generate mock ticket sales and revenue based on event properties
+        // This creates consistent mock data per event
+        const hash = event.id
+          .split('')
+          .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const baseTickets = (hash % 500) + 50; // 50-550 tickets
+        const baseRevenue = baseTickets * ((hash % 200) + 50); // Varying price per ticket
+
+        // Adjust based on status and date
+        let ticketsSold = baseTickets;
+        let revenue = baseRevenue;
+
+        const isPublished =
+          event.status?.toUpperCase() === 'PUBLISHED' ||
+          event.status?.toUpperCase() === 'ACTIVE';
+        const isCompleted = event.status?.toUpperCase() === 'COMPLETED';
+        const isDraft = event.status?.toUpperCase() === 'DRAFT';
+
+        if (isCompleted) {
+          ticketsSold = Math.floor(baseTickets * 0.9); // Completed events have more sales
+          revenue = Math.floor(baseRevenue * 0.95);
+        } else if (isPublished) {
+          ticketsSold = Math.floor(baseTickets * 0.7); // Active events have partial sales
+          revenue = Math.floor(baseRevenue * 0.75);
+        } else if (isDraft) {
+          ticketsSold = 0;
+          revenue = 0;
+        }
+
+        return {
+          ...event,
+          ticketsSold,
+          revenue,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue) // Sort by revenue descending
+      .slice(0, 5) // Top 5 events
+      .map((event) => ({
+        name: event.displayName || 'Untitled event',
+        revenue: event.revenue,
+      }));
+  }, [events]);
 
   // Mock report list data - TODO: Replace with actual API data when available
   const reportList = useMemo(() => {
     return events.slice(0, 3).map((event, index) => {
-      const hash = event.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+      const hash = event.id
+        .split('')
+        .reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
       return {
         id: event.id,
         eventName: event.displayName || 'Untitled event',
-        reportType: ['Event Summary', 'Revenue Report', 'Attendance Report', 'Performance Report'][hash % 4],
+        reportType: [
+          'Event Summary',
+          'Revenue Report',
+          'Attendance Report',
+          'Performance Report',
+        ][hash % 4],
         generatedDate: subDays(new Date(), hash % 30),
-        status: ['completed', 'pending', 'generating'][hash % 3] as 'completed' | 'pending' | 'generating',
+        status: ['completed', 'pending', 'generating'][hash % 3] as
+          | 'completed'
+          | 'pending'
+          | 'generating',
       };
     });
   }, [events]);
@@ -295,7 +358,7 @@ export default function CreatorDashboardPage() {
           title='Upcoming Events'
           value={upcomingEvents.length}
           icon={Ticket}
-          color='blue'
+          color='amber'
           description='Scheduled events'
           onClick={() => router.push('/dashboard/creator/events')}
         />
@@ -320,7 +383,7 @@ export default function CreatorDashboardPage() {
           title='Total Revenue'
           value={formatCurrency(stats.totalRevenue)}
           icon={DollarSign}
-          color='amber'
+          color='green'
           description={`${formatCurrency(stats.thisMonthRevenue)} this month`}
           trend={
             stats.revenueChange !== 0
@@ -551,8 +614,8 @@ export default function CreatorDashboardPage() {
                         </TableCell>
                         <TableCell className='py-2'>
                           <div className='flex items-center gap-2 min-w-0'>
-                              {eventImage ? (
-                                <div className='relative w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0'>
+                            {eventImage ? (
+                              <div className='relative w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0'>
                                 <Image
                                   src={eventImage}
                                   alt={event.displayName}
@@ -561,11 +624,11 @@ export default function CreatorDashboardPage() {
                                   sizes='48px'
                                 />
                               </div>
-                              ) : (
-                                <div className='w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0'>
-                                  <CalendarDays className='h-4 w-4 text-primary/60' />
-                                </div>
-                              )}
+                            ) : (
+                              <div className='w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0'>
+                                <CalendarDays className='h-4 w-4 text-primary/60' />
+                              </div>
+                            )}
                             <div className='flex flex-col gap-1 min-w-0 flex-1'>
                               <span className='font-semibold text-sm truncate'>
                                 {event.displayName || 'Untitled event'}
@@ -663,7 +726,9 @@ export default function CreatorDashboardPage() {
                 <TableRow className='hover:bg-transparent border-b'>
                   <TableHead className='font-semibold'>Event Name</TableHead>
                   <TableHead className='font-semibold'>Report Type</TableHead>
-                  <TableHead className='font-semibold'>Generated Date</TableHead>
+                  <TableHead className='font-semibold'>
+                    Generated Date
+                  </TableHead>
                   <TableHead className='font-semibold'>Status</TableHead>
                 </TableRow>
               </TableHeader>

@@ -288,19 +288,6 @@ export default function ManageMissionsPage({
 
   return (
     <div className='space-y-6'>
-      {/* --- Header --- */}
-      <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
-        <div className='flex-1'></div>
-        <Button asChild>
-          <Link
-            href={`/dashboard/business/locations/${locationId}/missions/create`}
-          >
-            <PlusCircle className='mr-2 h-4 w-4' />
-            Create mission
-          </Link>
-        </Button>
-      </div>
-
       {/* --- Missions Table --- */}
       <Card className='border-border/60 shadow-sm'>
         <CardHeader>
@@ -313,12 +300,22 @@ export default function ManageMissionsPage({
                 Showing page {meta?.currentPage} of {meta?.totalPages}.
               </CardDescription>
             </div>
-            <div className='w-full md:w-72'>
-              <Input
-                placeholder='Search missions by title...'
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className='flex items-center gap-10'>
+              <Button asChild>
+                <Link
+                  href={`/dashboard/business/locations/${locationId}/missions/create`}
+                >
+                  <PlusCircle className='mr-2 h-4 w-4' />
+                  Create mission
+                </Link>
+              </Button>
+              <div className='w-full md:w-72'>
+                <Input
+                  placeholder='Search missions by title...'
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
           </div>
         </CardHeader>

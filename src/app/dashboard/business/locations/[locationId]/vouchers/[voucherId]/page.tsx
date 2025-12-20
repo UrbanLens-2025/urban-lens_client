@@ -102,15 +102,6 @@ export default function VoucherDetailsPage({
   const exchanges = exchangeHistoryResponse?.data ?? [];
   const exchangesMeta = exchangeHistoryResponse?.meta;
 
-  const badges = (
-    <>
-      <Badge variant='outline'>{voucher.voucherCode}</Badge>
-      {isActive && <Badge className='bg-green-600'>Active</Badge>}
-      {isScheduled && <Badge variant='outline'>Scheduled</Badge>}
-      {isExpired && <Badge variant='secondary'>Expired</Badge>}
-    </>
-  );
-
   const mainContent = (
     <>
       <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
@@ -144,9 +135,16 @@ export default function VoucherDetailsPage({
             )}
             {/* Code */}
             <div className='flex items-center justify-between gap-2'>
-              <Badge variant='outline' className='text-xs'>
-                {voucher.voucherCode}
-              </Badge>
+              <div className='flex gap-2 '>
+                <Badge variant='outline' className='text-xs'>
+                  {voucher.voucherCode}
+                </Badge>
+                <>
+                  {isActive && <Badge className='bg-green-600'>Active</Badge>}
+                  {isScheduled && <Badge variant='outline'>Scheduled</Badge>}
+                  {isExpired && <Badge variant='secondary'>Expired</Badge>}
+                </>
+              </div>
               <Badge variant='default' className='text-xs'>
                 {formatVoucherType(voucher.voucherType)}
               </Badge>
@@ -380,8 +378,8 @@ export default function VoucherDetailsPage({
   return (
     <>
       <DetailViewLayout
-        title={voucher.title}
-        badges={badges}
+        title={'Voucher Details'}
+        badges={''}
         onClose={() => {
           router.push(`/dashboard/business/locations/${locationId}/vouchers`);
         }}

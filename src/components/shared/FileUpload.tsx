@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useEffect } from 'react';
 // 1. Thêm import FileRejection để định nghĩa kiểu dữ liệu
-import { useDropzone, FileWithPath, FileRejection } from 'react-dropzone'; 
+import { useDropzone, FileWithPath, FileRejection } from 'react-dropzone';
 import { toast } from 'sonner';
 import { uploadImage } from '@/api/upload';
 import { Loader2, UploadCloud, X } from 'lucide-react';
@@ -45,7 +45,6 @@ export function FileUpload({
   // --- CẬP NHẬT MỚI: Thêm tham số fileRejections ---
   const onDrop = useCallback(
     async (acceptedFiles: FileWithPath[], fileRejections: FileRejection[]) => {
-      
       if (fileRejections.length > 0) {
         // Kiểm tra xem có lỗi "too-many-files" trong bất kỳ file nào không
         const isTooManyFiles = fileRejections.some((rejection) =>
@@ -62,14 +61,18 @@ export function FileUpload({
         const firstError = firstRejection.errors[0];
 
         if (firstError.code === 'file-invalid-type') {
-          toast.error(`Lỗi: File "${firstRejection.file.name}" không đúng định dạng ảnh.`);
+          toast.error(
+            `Lỗi: File "${firstRejection.file.name}" không đúng định dạng ảnh.`
+          );
         } else if (firstError.code === 'file-too-large') {
-          toast.error(`Lỗi: File "${firstRejection.file.name}" quá lớn (Max 10MB).`);
+          toast.error(
+            `Lỗi: File "${firstRejection.file.name}" quá lớn (Max 10MB).`
+          );
         } else {
           toast.error(`Lỗi: ${firstError.message}`);
         }
-        
-        return; 
+
+        return;
       }
 
       // 2. Kiểm tra thủ công (Fallback)
@@ -97,9 +100,9 @@ export function FileUpload({
         onChange([...nonTempPreviews, ...finalUrls]);
         setUploadingUrls(new Set());
         // Thông báo thành công (tuỳ chọn)
-        toast.success(`Đã tải lên ${finalUrls.length} hình ảnh.`);
+        toast.success(`Uploaded ${finalUrls.length} images.`);
       } catch (error) {
-        toast.error('Có lỗi xảy ra khi tải ảnh. Vui lòng thử lại.');
+        toast.error('An error occurred during upload. Please try again.');
         const nonTempPreviews = (value || []).filter(
           (p) => !tempUrls.includes(p)
         );
