@@ -256,7 +256,6 @@ export default function MissionDetailsPage({
                 </div>
               </div>
             </div>
-          </div>
         </CardHeader>
         <CardContent>
           <>
@@ -271,16 +270,6 @@ export default function MissionDetailsPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {participants.length === 0 ? (
-                  <TableRow>
-                    <TableHead>Participant</TableHead>
-                    <TableHead>Progress</TableHead>
-                    <TableHead>Completed</TableHead>
-                    <TableHead>Started At</TableHead>
-                    <TableHead>Completed At</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
                   {participants.length === 0 ? (
                     <TableRow>
                       <TableCell
