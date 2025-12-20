@@ -219,7 +219,7 @@ export function Step3BusinessVenue({ form }: Step3BusinessVenueProps) {
           hour12: true
         });
 
-        let errorTitle = "Booking doesn't cover event period";
+        const errorTitle = "Booking doesn't cover event period";
         let errorDescription: React.ReactNode;
 
         if (bookingStart.getTime() > eventStart.getTime() && bookingEnd.getTime() < eventEnd.getTime()) {

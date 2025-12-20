@@ -54,15 +54,5 @@ export async function getFCMToken(): Promise<string | null> {
   }
 }
 
-
-export const messaging = getMessaging(app);
-
-export function listenForMessages(showToast: (data: any) => void) {
-  onMessage(messaging, (payload) => {
-    console.log('Foreground message:', payload);
-    showToast(payload); // Your toast function
-  });
-}
-
 export { app };
 

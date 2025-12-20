@@ -15,7 +15,6 @@ import { useUser } from "@/hooks/user/useUser";
 import { useOnboardingCheck } from "@/hooks/onboarding/useOnboardingCheck";
 import { useAutoRegisterDevice } from "@/hooks/notifications/useAutoRegisterDevice";
 import { useBrowserNotifications } from "@/hooks/notifications/useBrowserNotifications";
-import NotificationListener from "@/lib/NotificationsListener";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useUser();
@@ -231,7 +230,6 @@ export default function RootLayoutClient({
                 <AuthenticatedLayout>{children}</AuthenticatedLayout>
               </>
             )}
-            <NotificationListener />
             <Toaster />
           </GoogleMapsProvider>
         </Providers>
