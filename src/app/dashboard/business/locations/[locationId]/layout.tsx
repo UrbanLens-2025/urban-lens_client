@@ -63,6 +63,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useUpdateLocation } from '@/hooks/locations/useUpdateLocation';
+import Image from 'next/image';
 
 function LocationDetailLayoutContent({
   locationId,
@@ -591,7 +592,7 @@ function LocationDetailLayoutContent({
           <div className="flex-shrink-0">
             <div className="relative">
               <div className="size-48 rounded-2xl border-4 border-background shadow-lg bg-muted flex items-center justify-center">
-                <MapPin className="h-12 w-12 md:h-16 md:w-16 text-primary" />
+                <Image className='w-full h-full object-cover' src={location.imageUrl[0]} alt={location.name} width={100} height={100} />
               </div>
             </div>
           </div>
