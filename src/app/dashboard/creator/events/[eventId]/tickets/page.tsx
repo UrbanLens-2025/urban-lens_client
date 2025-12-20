@@ -239,7 +239,8 @@ export default function EventTicketsPage({
                     <TableHead>Ticket</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Sales</TableHead>
-                    <TableHead>Sale Period</TableHead>
+                    <TableHead>Start Sale</TableHead>
+                    <TableHead>End Sale</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
@@ -334,9 +335,25 @@ export default function EventTicketsPage({
                         <TableCell>
                           <div className="space-y-1">
                             <div className={`text-sm font-medium flex items-center gap-1.5 ${isSaleActive ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
-                              {isSaleActive ? <TrendingUp className="h-3.5 w-3.5" /> : <Calendar className="h-3.5 w-3.5" />}
+                              {isSaleActive ? <Calendar className="h-3.5 w-3.5" /> : <Calendar className="h-3.5 w-3.5" />}
                               <span>
-                                {formatDate(ticket.saleStartDate)} - {formatDate(ticket.saleEndDate)}
+                                {formatDate(ticket.saleStartDate)}
+                              </span>
+                            </div>
+
+                            {ticket.isActive && !isSaleActive && (
+                              <Badge variant="outline" className="text-xs">
+                                Coming Soon
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className={`text-sm font-medium flex items-center gap-1.5 ${isSaleActive ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
+                              {isSaleActive ? <Calendar className="h-3.5 w-3.5" /> : <Calendar className="h-3.5 w-3.5" />}
+                              <span>
+                                {formatDate(ticket.saleEndDate)}
                               </span>
                             </div>
 
