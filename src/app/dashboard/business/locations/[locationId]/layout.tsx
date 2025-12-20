@@ -2,6 +2,8 @@
 
 import type React from 'react';
 import { use, useState, useEffect, useRef, useMemo } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useRouter, usePathname } from 'next/navigation';
 import { useLocationById } from '@/hooks/locations/useLocationById';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +35,7 @@ import {
   ChevronLeft,
   ChevronRight,
   MapPin as MapPinIcon,
+  MoreHorizontal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -43,6 +46,24 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useUpdateLocation } from '@/hooks/locations/useUpdateLocation';
+
 function LocationDetailLayoutContent({
   locationId,
   children,
@@ -52,6 +73,7 @@ function LocationDetailLayoutContent({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const {
     voucherCreateTab,
     openVoucherCreateTab,
@@ -81,6 +103,41 @@ function LocationDetailLayoutContent({
     openAnnouncementDetailTab,
     closeAnnouncementDetailTab,
   } = useLocationTabs();
+
+  const [visibilityDialogOpen, setVisibilityDialogOpen] = useState(false);
+  const [pendingVisibility, setPendingVisibility] = useState<boolean | null>(null);
+
+  const { mutate: updateLocationApi, isPending: isUpdating } = useUpdateLocation();
+
+  // Hàm xử lý khi nhấn vào item trong dropdown (Mở modal)
+  const handleVisibilityClick = (targetState: boolean) => {
+    setPendingVisibility(targetState);
+    setVisibilityDialogOpen(true);
+  };
+
+  // Hàm xử lý khi nhấn nút Confirm trong Modal (Gọi API)
+  const confirmVisibilityChange = () => {
+    if (pendingVisibility !== null) {
+      updateLocationApi(
+        {
+          locationId,
+          payload: { isVisibleOnMap: pendingVisibility } as any, // Cast as any hoặc Partial<UpdateLocationPayload> nếu type chưa khớp
+        },
+        {
+          onSuccess: () => {
+            // Hook đã xử lý toast và invalidate query rồi
+            // Chúng ta chỉ cần đóng modal tại đây
+            setVisibilityDialogOpen(false);
+            setPendingVisibility(null);
+          },
+          onError: () => {
+            // Nếu lỗi thì cũng nên đóng modal hoặc để user thử lại
+            setVisibilityDialogOpen(false);
+          }
+        }
+      );
+    }
+  };
 
   const [preventAutoOpenVoucherId, setPreventAutoOpenVoucherId] = useState<
     string | null
@@ -475,7 +532,7 @@ function LocationDetailLayoutContent({
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/40 to-transparent" />
-        
+
         {/* Carousel Navigation - Only show if multiple images */}
         {images.length > 1 && (
           <>
@@ -495,25 +552,24 @@ function LocationDetailLayoutContent({
             >
               <ChevronRight className="h-5 w-5" />
             </Button>
-            
+
             {/* Image Indicators */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
               {images.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentImageIndex(index)}
-                  className={`h-2 rounded-full transition-all ${
-                    index === currentImageIndex
-                      ? "w-8 bg-background"
-                      : "w-2 bg-background/50 hover:bg-background/75"
-                  }`}
+                  className={`h-2 rounded-full transition-all ${index === currentImageIndex
+                    ? "w-8 bg-background"
+                    : "w-2 bg-background/50 hover:bg-background/75"
+                    }`}
                   aria-label={`Go to image ${index + 1}`}
                 />
               ))}
             </div>
           </>
         )}
-        
+
         {/* Back Button - Overlay */}
         <div className='absolute top-4 left-4 z-10'>
           <Button
@@ -572,11 +628,10 @@ function LocationDetailLayoutContent({
                       variant={
                         location.isVisibleOnMap ? 'default' : 'secondary'
                       }
-                      className={`text-sm px-3 py-1.5 font-semibold ${
-                        location.isVisibleOnMap
-                          ? 'bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-600'
-                          : 'bg-muted text-muted-foreground border-muted-foreground/20'
-                      }`}
+                      className={`text-sm px-3 py-1.5 font-semibold ${location.isVisibleOnMap
+                        ? 'bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-600'
+                        : 'bg-muted text-muted-foreground border-muted-foreground/20'
+                        }`}
                     >
                       {location.isVisibleOnMap ? (
                         <span className='flex items-center gap-1.5'>
@@ -590,6 +645,36 @@ function LocationDetailLayoutContent({
                         </span>
                       )}
                     </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-full hover:bg-muted"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleVisibilityClick(!location.isVisibleOnMap)}
+                        >
+                          {/* Logic hiển thị text ngược lại với trạng thái hiện tại */}
+                          {location.isVisibleOnMap ? (
+                            <>
+                              <EyeOff className="mr-2 h-4 w-4" />
+                              Make Hidden
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Make Visible
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </div>
@@ -1130,6 +1215,32 @@ function LocationDetailLayoutContent({
         open={isImageViewerOpen}
         onOpenChange={setIsImageViewerOpen}
       />
+
+      <AlertDialog open={visibilityDialogOpen} onOpenChange={setVisibilityDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingVisibility ? "Make Location Visible?" : "Hide Location?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingVisibility
+                ? "This will make the location visible to all users on the map. Are you sure?"
+                : "This will hide the location from the map. Users will no longer be able to see it. Are you sure?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingVisibility(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmVisibilityChange}
+              disabled={isUpdating} // Sử dụng biến isUpdating từ hook
+              className={pendingVisibility ? "bg-emerald-600 hover:bg-emerald-700" : "bg-destructive hover:bg-destructive/90"}
+            >
+              {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {pendingVisibility ? "Make Visible" : "Hide Location"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
