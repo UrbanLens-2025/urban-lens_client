@@ -1395,3 +1395,10 @@ export interface DashboardOverviewStats {
   totalBookings: number;
   recentBookingsCount: number;
 }
+
+export interface TopRevenueEvent {
+  eventId: string;
+  eventName: string;
+  totalRevenue: number;
+  totalTicketsSold: number;
+}

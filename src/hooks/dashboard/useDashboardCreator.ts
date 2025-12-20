@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   getRevenueSummary,
-  getTopRevenueLocations,
-  RevenueAnalyticsFilter,
+  getCreatorDashboardStats,
+  getTopRevenueEvents,
 } from '@/api/dashboardCreator';
-import { getCreatorDashboardStats } from '@/api/dashboardCreator';
 
 export const useRevenueSummary = () => {
   return useQuery({
@@ -14,18 +13,18 @@ export const useRevenueSummary = () => {
   });
 };
 
-export const useTopRevenueLocations = (filter: RevenueAnalyticsFilter) => {
-  return useQuery({
-    queryKey: ['creatorTopRevenueLocations', filter],
-    queryFn: () => getTopRevenueLocations(filter),
-    placeholderData: (previousData) => previousData,
-  });
-};
-
 export const useCreatorDashboardStats = () => {
   return useQuery({
     queryKey: ['creatorDashboardStats'],
     queryFn: () => getCreatorDashboardStats(),
+    placeholderData: (previousData) => previousData,
+  });
+};
+
+export const useTopRevenueEvents = (limit: number = 5) => {
+  return useQuery({
+    queryKey: ['creatorTopRevenueEvents', limit],
+    queryFn: () => getTopRevenueEvents(limit),
     placeholderData: (previousData) => previousData,
   });
 };

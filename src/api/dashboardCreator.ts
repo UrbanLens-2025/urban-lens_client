@@ -1,3 +1,4 @@
+import { TopRevenueEvent } from '@/types';
 import axiosInstance from './axios-config';
 
 export interface RevenueSummaryData {
@@ -22,11 +23,9 @@ export const getRevenueSummary = async () => {
   return response.data.data;
 };
 
-export const getTopRevenueLocations = async (
-  filter: RevenueAnalyticsFilter
-): Promise<RevenueLocationItem[]> => {
+export const getTopRevenueEvents = async (limit: number = 5): Promise<TopRevenueEvent[]> => {
   const response = await axiosInstance.get(
-    `/v1/creator/dashboard/revenue/top-locations?filter=${filter}`
+    `/v1/creator/dashboard/events/top-revenue?limit=${limit}`
   );
   return response.data.data || [];
 };

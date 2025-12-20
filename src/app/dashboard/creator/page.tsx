@@ -58,7 +58,8 @@ import {
   ChartConfig,
 } from '@/components/ui/chart';
 import { formatCurrency } from '@/lib/utils';
-import { useRevenueSummary } from '@/hooks/dashboard/useDashboardCreator';
+// Updated import to include useTopRevenueEvents
+import { useRevenueSummary, useTopRevenueEvents } from '@/hooks/dashboard/useDashboardCreator';
 
 type PeriodType = 'day' | 'month' | 'year';
 
@@ -77,7 +78,8 @@ export default function CreatorDashboardPage() {
   const meta = eventsData?.meta;
 
   const { data: revenueData } = useRevenueSummary();
-  console.log(revenueData);
+  // Fetch Top Revenue Events (Real Data)
+  const { data: topRevenueEventsData, isLoading: isLoadingTopEvents } = useTopRevenueEvents(5);
 
   const stats = useMemo(() => {
     const totalEvents = meta?.totalItems ?? 0;
@@ -97,8 +99,6 @@ export default function CreatorDashboardPage() {
       return e.status?.toUpperCase() === 'COMPLETED';
     });
 
-    // Placeholder real metrics until attendance/revenue APIs are available
-    // TODO: Replace with actual API data when available
     const totalRevenue = revenueData?.totalRevenue || 0;
     const thisMonthRevenue = revenueData?.thisMonthRevenue || 0;
     const revenueChange = revenueData?.revenueChange || 0;
@@ -140,7 +140,7 @@ export default function CreatorDashboardPage() {
       recentEvents,
       eventsChange,
     };
-  }, [events, meta]);
+  }, [events, meta, revenueData]);
 
   // Mock upcoming events data - TODO: Replace with actual API data when available
   const upcomingEvents = useMemo(() => {
@@ -212,54 +212,14 @@ export default function CreatorDashboardPage() {
       .slice(0, 3);
   }, [events]);
 
-  const recentEventsList = useMemo(
-    () => events.slice(0, 3),
-    [events]
-  );
-
-  // Calculate top events with mock performance data
-  // TODO: Replace with actual API data when available
+  // Calculate top events with REAL data from useTopRevenueEvents
   const topEvents = useMemo(() => {
-    return events
-      .map((event) => {
-        // Generate mock ticket sales and revenue based on event properties
-        // This creates consistent mock data per event
-        const hash = event.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const baseTickets = (hash % 500) + 50; // 50-550 tickets
-        const baseRevenue = baseTickets * ((hash % 200) + 50); // Varying price per ticket
-        
-        // Adjust based on status and date
-        let ticketsSold = baseTickets;
-        let revenue = baseRevenue;
-        
-        const isPublished = event.status?.toUpperCase() === 'PUBLISHED' || event.status?.toUpperCase() === 'ACTIVE';
-        const isCompleted = event.status?.toUpperCase() === 'COMPLETED';
-        const isDraft = event.status?.toUpperCase() === 'DRAFT';
-        
-        if (isCompleted) {
-          ticketsSold = Math.floor(baseTickets * 0.9); // Completed events have more sales
-          revenue = Math.floor(baseRevenue * 0.95);
-        } else if (isPublished) {
-          ticketsSold = Math.floor(baseTickets * 0.7); // Active events have partial sales
-          revenue = Math.floor(baseRevenue * 0.75);
-        } else if (isDraft) {
-          ticketsSold = 0;
-          revenue = 0;
-        }
-
-        return {
-          ...event,
-          ticketsSold,
-          revenue,
-        };
-      })
-      .sort((a, b) => b.revenue - a.revenue) // Sort by revenue descending
-      .slice(0, 5) // Top 5 events
-      .map((event) => ({
-        name: event.displayName || 'Untitled event',
-        revenue: event.revenue,
-      }));
-  }, [events]);
+    return (topRevenueEventsData || []).map((event) => ({
+      name: event.eventName || 'Untitled Event',
+      revenue: event.totalRevenue || 0,
+      ticketsSold: event.totalTicketsSold || 0, // Available if needed
+    }));
+  }, [topRevenueEventsData]);
 
   // Mock report list data - TODO: Replace with actual API data when available
   const reportList = useMemo(() => {
@@ -393,7 +353,7 @@ export default function CreatorDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className='h-48'>
-              {isLoading ? (
+              {isLoadingTopEvents ? (
                 <div className='flex items-center justify-center h-full'>
                   <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
                 </div>
