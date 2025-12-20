@@ -271,40 +271,6 @@ export default function EditLocationPage({
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  name='tagIds'
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tags</FormLabel>
-                      <FormControl>
-                        <LocationTagsSelector
-                          value={field.value}
-                          onChange={(ids) => field.onChange(ids)}
-                          error={form.formState.errors.tagIds?.message}
-                          helperText='Select the location type and other relevant categories.'
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className='rounded-lg border border-dashed border-border/60 bg-muted/20 p-3'>
-                  <p className='text-xs font-medium uppercase tracking-wide text-muted-foreground'>
-                    Selected tag categories
-                  </p>
-                  <div className='mt-3'>
-                    {tags.length > 0 ? (
-                      <DisplayTags tags={tags} maxCount={10} />
-                    ) : (
-                      <p className='text-sm text-muted-foreground'>
-                        No tags selected yet.
-                      </p>
-                    )}
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
