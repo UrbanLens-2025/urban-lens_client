@@ -358,41 +358,6 @@ export default function EventOverviewPage({
               {event.tags && event.tags.length > 0 && (
                 <div className="border-t" />
               )}
-
-              {/* Tags Section */}
-              {event.tags && event.tags.length > 0 && (
-                <div>
-                  <p className="text-sm font-semibold text-muted-foreground mb-3">Tags</p>
-                  <div className="flex flex-wrap gap-2">
-                    {visibleTags.map((tag: any) => (
-                      <Badge 
-                        key={tag.id} 
-                        variant="secondary"
-                        style={{ 
-                          backgroundColor: `${tag.color}20`,
-                          borderColor: tag.color,
-                          color: tag.color
-                        }}
-                        className="flex items-center gap-1 text-sm px-3 py-1"
-                      >
-                        <span>{tag.icon}</span>
-                        <span>{tag.displayName}</span>
-                      </Badge>
-                    ))}
-                  </div>
-                  {hasMoreTags && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setVisibleTagsCount(prev => prev + 10)}
-                      className="mt-3 p-0 h-auto font-normal text-primary hover:text-primary/80"
-                    >
-                      <ChevronDown className="h-4 w-4 mr-1" />
-                      Load 10 more tags
-                    </Button>
-                  )}
-                </div>
-              )}
             </CardContent>
           </Card>
 
