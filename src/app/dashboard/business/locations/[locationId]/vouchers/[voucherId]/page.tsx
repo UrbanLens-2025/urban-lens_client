@@ -20,6 +20,8 @@ import {
   User,
   Clock,
   ImageIcon,
+  Package,
+  CheckCircle2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +37,10 @@ import { ImageViewer } from '@/components/shared/ImageViewer';
 import { DetailViewLayout } from '@/components/shared/DetailViewLayout';
 import ErrorCustom from '@/components/shared/ErrorCustom';
 import LoadingCustom from '@/components/shared/LoadingCustom';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDateTime } from '@/lib/utils';
+import Image from 'next/image';
+import { toast } from 'sonner';
+import { IconTicket } from '@tabler/icons-react';
 
 const formatVoucherType = (voucherType: string): string => {
   if (voucherType === 'public') return 'Free';
@@ -97,27 +102,6 @@ export default function VoucherDetailsPage({
   const exchanges = exchangeHistoryResponse?.data ?? [];
   const exchangesMeta = exchangeHistoryResponse?.meta;
 
-  function InfoRow({
-    label,
-    value,
-    icon: Icon,
-  }: {
-    label: string;
-    value: React.ReactNode;
-    icon?: React.ComponentType<{ className?: string }>;
-  }) {
-    if (value === undefined || value === null || value === '') return null;
-    return (
-      <div className='flex gap-2 mb-4'>
-        {Icon && <Icon className='h-4 w-4 text-muted-foreground mt-0.5' />}
-        <div className='flex-1'>
-          <p className='text-sm font-semibold text-muted-foreground'>{label}</p>
-          <div className='text-base text-foreground break-words'>{value}</div>
-        </div>
-      </div>
-    );
-  }
-
   const badges = (
     <>
       <Badge variant='outline'>{voucher.voucherCode}</Badge>
@@ -129,213 +113,267 @@ export default function VoucherDetailsPage({
 
   const mainContent = (
     <>
-      <Card className='border-primary/20 shadow-sm p-0 overflow-hidden'>
-        <div className='flex flex-col lg:flex-row'>
-          {/* Left: Voucher Image - Edge to Edge */}
-          <div className='flex-shrink-0 w-full lg:w-80'>
+      <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
+        {/* Voucher Info Card - Compact Sidebar */}
+        <Card className='lg:col-span-1'>
+          <CardContent className='space-y-2'>
+            <CardTitle className='text-base font-semibold flex gap-2 items-center'>
+              <IconTicket className='h-5 w-5 text-primary' />
+              <p className='text-base font-semibold'>Voucher Information</p>
+            </CardTitle>
+            {/* Image */}
             {voucher.imageUrl ? (
-              <img
+              <Image
                 src={voucher.imageUrl}
                 alt={voucher.title}
-                className='w-full h-full min-h-[400px] lg:min-h-full object-cover cursor-pointer hover:opacity-90 transition-opacity'
+                width={144}
+                height={144}
+                className='w-48 h-36 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity'
                 onClick={() => handleImageClick(voucher.imageUrl)}
               />
             ) : (
-              <div className='w-full h-full min-h-[400px] lg:min-h-full bg-muted flex items-center justify-center'>
-                <ImageIcon className='h-16 w-16 text-muted-foreground/50' />
+              <div className='w-48 h-36 bg-muted flex items-center justify-center rounded-md border'>
+                <ImageIcon className='h-8 w-8 text-muted-foreground/50' />
               </div>
             )}
-          </div>
+            {/* Title */}
+            {voucher.title && (
+              <p className='text-base text-foreground font-semibold'>
+                {voucher.title}
+              </p>
+            )}
+            {/* Code */}
+            <div className='flex items-center justify-between gap-2'>
+              <Badge variant='outline' className='text-xs'>
+                {voucher.voucherCode}
+              </Badge>
+              <Badge variant='default' className='text-xs'>
+                {formatVoucherType(voucher.voucherType)}
+              </Badge>
+            </div>
+            {/* Description */}
+            {voucher.description && (
+              <p className='text-sm line-clamp-3 text-muted-foreground'>
+                {voucher.description}
+              </p>
+            )}
 
-          {/* Right: Voucher Details */}
-          <div className='flex-1 p-6 space-y-6'>
-              {/* Voucher Name */}
-              <div>
-                <h2 className='text-2xl font-bold text-foreground mb-4'>{voucher.title}</h2>
-              </div>
-
-              {/* Description */}
-              <div>
-                <p className='text-base text-foreground leading-relaxed'>{voucher.description || 'No description provided'}</p>
-              </div>
-
-              {/* Voucher Config */}
-              <div className='pt-4 border-t border-primary/10'>
-                <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-                  <div className='space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/10'>
+            {/* Key Stats */}
+            <div className='space-y-3 pt-2 border-t border-primary/10'>
+              {voucher.statistics && (
+                <>
+                  <div className='flex items-center justify-between'>
                     <div className='flex items-center gap-2'>
-                      <Layers className='h-4 w-4 text-primary' />
-                      <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Type</span>
+                      <Package className='h-4 w-4 text-primary' />
+                      <span className='text-xs font-semibold text-muted-foreground'>
+                        Total
+                      </span>
                     </div>
-                    <p className='text-base font-semibold text-foreground'>{formatVoucherType(voucher.voucherType)}</p>
+                    <span className='text-sm font-semibold text-foreground'>
+                      {voucher.statistics.total}
+                    </span>
                   </div>
-                  <div className='space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/10'>
+                  <div className='flex items-center justify-between'>
                     <div className='flex items-center gap-2'>
-                      <Zap className='h-4 w-4 text-primary' />
-                      <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Quantity</span>
+                      <CheckCircle2 className='h-4 w-4 text-green-600' />
+                      <span className='text-xs font-semibold text-muted-foreground'>
+                        Used
+                      </span>
                     </div>
-                    <p className='text-base font-semibold text-foreground'>{voucher.maxQuantity}</p>
+                    <span className='text-sm font-semibold text-foreground'>
+                      {voucher.statistics.used}
+                    </span>
                   </div>
-                  <div className='space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/10'>
+                  <div className='flex items-center justify-between'>
                     <div className='flex items-center gap-2'>
-                      <Star className='h-4 w-4 text-primary' />
-                      <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Price</span>
+                      <Ticket className='h-4 w-4 text-orange-600' />
+                      <span className='text-xs font-semibold text-muted-foreground'>
+                        Remaining
+                      </span>
                     </div>
-                    <p className='text-base font-semibold text-foreground'>{voucher.pricePoint} pts</p>
+                    <span className='text-sm font-semibold text-foreground'>
+                      {voucher.statistics.remaining}
+                    </span>
                   </div>
-                  <div className='space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/10'>
-                    <div className='flex items-center gap-2'>
-                      <User className='h-4 w-4 text-primary' />
-                      <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>Limit per Person</span>
-                    </div>
-                    <p className='text-base font-semibold text-foreground'>{voucher.userRedeemedLimit}</p>
-                  </div>
+                </>
+              )}
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-2'>
+                  <Star className='h-4 w-4 text-primary' />
+                  <span className='text-xs font-semibold text-muted-foreground'>
+                    Price
+                  </span>
                 </div>
+                <span className='text-sm font-semibold text-foreground'>
+                  {voucher.pricePoint} pts
+                </span>
               </div>
-
-              {/* Duration */}
-              <div className='pt-4 border-t border-primary/10'>
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div className='p-3 rounded-lg bg-primary/5 border border-primary/10'>
-                    <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2'>Start Date</p>
-                    <p className='text-base font-semibold text-foreground'>{formatDate(voucher.startDate)}</p>
-                  </div>
-                  <div className='p-3 rounded-lg bg-primary/5 border border-primary/10'>
-                    <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2'>End Date</p>
-                    <p className='text-base font-semibold text-foreground'>{formatDate(voucher.endDate)}</p>
-                  </div>
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-2'>
+                  <User className='h-4 w-4 text-primary' />
+                  <span className='text-xs font-semibold text-muted-foreground'>
+                    Limit/Person
+                  </span>
                 </div>
+                <span className='text-sm font-semibold text-foreground'>
+                  {voucher.userRedeemedLimit}
+                </span>
+              </div>
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-2'>
+                  <CalendarDaysIcon className='h-4 w-4 text-primary' />
+                  <span className='text-xs font-semibold text-muted-foreground'>
+                    Start Date
+                  </span>
+                </div>
+                <span className='text-xs text-foreground'>
+                  {formatDate(voucher.startDate)}
+                </span>
+              </div>
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-2'>
+                  <CalendarDaysIcon className='h-4 w-4 text-primary' />
+                  <span className='text-xs font-semibold text-muted-foreground'>
+                    End Date
+                  </span>
+                </div>
+                <span className='text-xs text-foreground'>
+                  {formatDate(voucher.endDate)}
+                </span>
               </div>
             </div>
-          </div>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card className='border-primary/20 shadow-sm p-0'>
-        <CardHeader className='border-b border-primary/10 px-6 pt-6 pb-4'>
-          <CardTitle className='flex items-center gap-2 text-primary'>
-            <Clock className='h-5 w-5' />
-            <span className='text-lg font-semibold'>Exchange History</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className='px-6 pb-6'>
-          <div className='overflow-hidden rounded-lg border border-primary/20'>
-            {isLoadingExchangeHistory ? (
-              <div className='flex items-center justify-center py-8 text-muted-foreground gap-2'>
-                <Loader2 className='h-4 w-4 animate-spin' />
-                <span className='text-sm'>Loading exchange history...</span>
-              </div>
-            ) : (
-              <>
-                <Table>
-                  <TableHeader className='bg-muted/40'>
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Redeemed At</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {exchanges.length === 0 ? (
+        {/* Exchange History Card - Main Content */}
+        <Card className='lg:col-span-3'>
+          <CardHeader>
+            <CardTitle className='flex items-center gap-2'>
+              <Clock className='h-5 w-5' />
+              <span className='text-lg font-semibold'>Exchange History</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className='overflow-hidden rounded-lg border border-primary/20'>
+              {isLoadingExchangeHistory ? (
+                <div className='flex items-center justify-center py-8 text-muted-foreground gap-2'>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                  <span className='text-sm'>Loading exchange history...</span>
+                </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader className='bg-muted/40'>
                       <TableRow>
-                        <TableCell
-                          colSpan={5}
-                          className='py-8 text-center text-sm text-muted-foreground'
-                        >
-                          No exchange history yet.
-                        </TableCell>
+                        <TableHead>User</TableHead>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Point</TableHead>
+                        <TableHead>Redeemed At</TableHead>
+                        <TableHead>Used At</TableHead>
                       </TableRow>
-                    ) : (
-                      exchanges.map((item: any) => (
-                        <TableRow key={item.id} className='hover:bg-muted/20'>
-                          <TableCell>
-                            <div className='space-y-1'>
-                              <div className='font-medium'>
-                                {item.user?.fullName ||
-                                  `${item.user?.firstName || ''} ${
-                                    item.user?.lastName || ''
-                                  }`.trim() ||
-                                  'Unknown User'}
-                              </div>
-                              {item.user?.username && (
-                                <div className='text-xs text-muted-foreground'>
-                                  @{item.user.username}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-sm'>
-                            {item.userVoucherCode || '—'}
-                          </TableCell>
-                          <TableCell className='text-sm'>
-                            <Badge
-                              variant={
-                                item.status === 'REDEEMED'
-                                  ? 'default'
-                                  : 'outline'
-                              }
-                              className='text-xs'
-                            >
-                              {item.status || 'PENDING'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className='text-sm text-muted-foreground'>
-                            {item.redeemedAt || item.createdAt
-                              ? formatDate(item.redeemedAt || item.createdAt)
-                              : '—'}
+                    </TableHeader>
+                    <TableBody>
+                      {exchanges.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={5}
+                            className='py-8 text-center text-sm text-muted-foreground'
+                          >
+                            No exchange history yet.
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        exchanges.map((item: any) => (
+                          <TableRow key={item.id} className='hover:bg-muted/20'>
+                            <TableCell>
+                              <div className='flex items-center gap-2'>
+                                <Image
+                                  src={item.user.avatarUrl || ''}
+                                  alt={item.user.fullName || ''}
+                                  width={32}
+                                  height={32}
+                                  className='w-8 h-8 rounded-md border'
+                                />
+                                <span className='font-medium text-sm'>
+                                  {item.user.firstName || ''}{' '}
+                                  {item.user.lastName || ''}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className='text-sm'>
+                              {item.userVoucherCode || '—'}
+                            </TableCell>
+                            <TableCell className='text-sm'>
+                              <span className='font-medium text-sm'>
+                                {item.pointSpent || 0} pts
+                              </span>
+                            </TableCell>
+                            <TableCell className='text-sm text-muted-foreground'>
+                              {formatDateTime(item.createdAt) || '—'}
+                            </TableCell>
+                            {item.usedAt ? (
+                              <TableCell className='text-sm text-muted-foreground'>
+                                {formatDateTime(item.usedAt) || '—'}
+                              </TableCell>
+                            ) : (
+                              <TableCell className='text-sm text-muted-foreground'>
+                                -
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
 
-                {exchangesMeta && exchangesMeta.totalPages > 1 && (
-                  <div className='flex items-center justify-between mt-6 px-4 py-4 border-t bg-background/40'>
-                    <div className='text-sm text-muted-foreground'>
-                      Showing{' '}
-                      {(exchangesMeta.currentPage - 1) * exchangeLimit + 1} to{' '}
-                      {Math.min(
-                        exchangesMeta.currentPage * exchangeLimit,
-                        exchangesMeta.totalItems
-                      )}{' '}
-                      of {exchangesMeta.totalItems} exchanges
-                    </div>
-                    <div className='flex items-center gap-2'>
-                      <button
-                        className='px-3 py-1 text-sm border rounded-md disabled:opacity-50'
-                        onClick={() =>
-                          setExchangePage((p) => Math.max(1, p - 1))
-                        }
-                        disabled={exchangesMeta.currentPage === 1}
-                      >
-                        Previous
-                      </button>
-                      <div className='text-sm text-muted-foreground px-2'>
-                        Page {exchangesMeta.currentPage} of{' '}
-                        {exchangesMeta.totalPages}
+                  {exchangesMeta && exchangesMeta.totalPages > 1 && (
+                    <div className='flex items-center justify-between mt-6 px-4 py-4 border-t bg-background/40'>
+                      <div className='text-sm text-muted-foreground'>
+                        Showing{' '}
+                        {(exchangesMeta.currentPage - 1) * exchangeLimit + 1} to{' '}
+                        {Math.min(
+                          exchangesMeta.currentPage * exchangeLimit,
+                          exchangesMeta.totalItems
+                        )}{' '}
+                        of {exchangesMeta.totalItems} exchanges
                       </div>
-                      <button
-                        className='px-3 py-1 text-sm border rounded-md disabled:opacity-50'
-                        onClick={() =>
-                          setExchangePage((p) =>
-                            Math.min(exchangesMeta.totalPages, p + 1)
-                          )
-                        }
-                        disabled={
-                          exchangesMeta.currentPage === exchangesMeta.totalPages
-                        }
-                      >
-                        Next
-                      </button>
+                      <div className='flex items-center gap-2'>
+                        <button
+                          className='px-3 py-1 text-sm border rounded-md disabled:opacity-50'
+                          onClick={() =>
+                            setExchangePage((p) => Math.max(1, p - 1))
+                          }
+                          disabled={exchangesMeta.currentPage === 1}
+                        >
+                          Previous
+                        </button>
+                        <div className='text-sm text-muted-foreground px-2'>
+                          Page {exchangesMeta.currentPage} of{' '}
+                          {exchangesMeta.totalPages}
+                        </div>
+                        <button
+                          className='px-3 py-1 text-sm border rounded-md disabled:opacity-50'
+                          onClick={() =>
+                            setExchangePage((p) =>
+                              Math.min(exchangesMeta.totalPages, p + 1)
+                            )
+                          }
+                          disabled={
+                            exchangesMeta.currentPage ===
+                            exchangesMeta.totalPages
+                          }
+                        >
+                          Next
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                  )}
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </>
   );
 
@@ -348,9 +386,11 @@ export default function VoucherDetailsPage({
           router.push(`/dashboard/business/locations/${locationId}/vouchers`);
         }}
         onEdit={() => {
-          router.push(
-            `/dashboard/business/locations/${locationId}/vouchers/${voucherId}/edit`
-          );
+          voucher.statistics?.used && voucher.statistics?.used > 0
+            ? toast.error('Voucher has been used')
+            : router.push(
+                `/dashboard/business/locations/${locationId}/vouchers/${voucherId}/edit`
+              );
         }}
         editLabel='Edit Voucher'
         mainContent={mainContent}

@@ -414,6 +414,11 @@ export interface LocationVoucher {
   createdAt: string;
   updatedAt: string;
   location: LocationForVoucher;
+  statistics?: {
+    total: number;
+    used: number;
+    remaining: number;
+  };
 }
 
 export interface CreateLocationVoucherPayload {

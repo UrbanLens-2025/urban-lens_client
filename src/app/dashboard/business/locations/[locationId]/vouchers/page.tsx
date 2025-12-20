@@ -332,7 +332,8 @@ export default function ManageVouchersPage({
                   <TableRow>
                     <TableHead className='w-12 text-center'>#</TableHead>
                     <TableHead className='min-w-[220px]'>Voucher</TableHead>
-                    <TableHead>Effective Time</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
                     <TableHead>
                       <Button
                         variant='ghost'
@@ -342,7 +343,9 @@ export default function ManageVouchersPage({
                         Price <SortIcon column='pricePoint' />
                       </Button>
                     </TableHead>
-                    <TableHead>Quantity</TableHead>
+                    <TableHead>Total quantity</TableHead>
+                    <TableHead>Used</TableHead>
+                    <TableHead>Remaining</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className='text-right'>Actions</TableHead>
                   </TableRow>
@@ -350,92 +353,117 @@ export default function ManageVouchersPage({
                 <TableBody>
                   {filteredVouchers.length > 0 ? (
                     filteredVouchers.map((voucher, index) => {
-                      const rowNumber = ((page - 1) * (meta?.itemsPerPage || 10)) + index + 1;
+                      const rowNumber =
+                        (page - 1) * (meta?.itemsPerPage || 10) + index + 1;
                       return (
-                      <TableRow key={voucher.id} className='hover:bg-muted/20'>
-                        <TableCell className='text-center text-sm text-muted-foreground font-medium'>
-                          {rowNumber}
-                        </TableCell>
-                        <TableCell className='space-y-1'>
-                          <div className='flex items-start gap-3'>
-                            {voucher.imageUrl ? (
-                              <img
-                                src={voucher.imageUrl}
-                                alt={voucher.title}
-                                className='h-10 w-10 object-cover'
-                              />
-                            ) : (
-                              <div className='flex h-full w-full items-center justify-center text-[10px] text-muted-foreground'>
-                                No image
-                              </div>
-                            )}
-                            <div className='space-y-1'>
-                              <div className='flex items-center gap-2'>
-                                <Link
-                                  href={`/dashboard/business/locations/${voucher.locationId}/vouchers/${voucher.id}`}
-                                  className='text-sm font-semibold leading-tight hover:text-primary hover:underline transition-colors'
-                                >
-                                  {voucher.title}
-                                </Link>
-                              </div>
-                              {voucher.description && (
-                                <p className='max-w-md text-xs text-muted-foreground line-clamp-2'>
-                                  {voucher.description}
-                                </p>
+                        <TableRow
+                          key={voucher.id}
+                          className='hover:bg-muted/20'
+                        >
+                          <TableCell className='text-center text-sm text-muted-foreground font-medium'>
+                            {rowNumber}
+                          </TableCell>
+                          <TableCell className='space-y-1'>
+                            <div className='flex items-start gap-3'>
+                              {voucher.imageUrl ? (
+                                <img
+                                  src={voucher.imageUrl}
+                                  alt={voucher.title}
+                                  className='h-10 w-10 object-cover'
+                                />
+                              ) : (
+                                <div className='flex h-full w-full items-center justify-center text-[10px] text-muted-foreground'>
+                                  No image
+                                </div>
                               )}
+                              <div className='space-y-1'>
+                                <div className='flex items-center gap-2'>
+                                  <Link
+                                    href={`/dashboard/business/locations/${voucher.locationId}/vouchers/${voucher.id}`}
+                                    className='text-sm font-semibold leading-tight hover:text-primary hover:underline transition-colors'
+                                  >
+                                    {voucher.title}
+                                  </Link>
+                                </div>
+                                {voucher.description && (
+                                  <p className='max-w-md text-xs text-muted-foreground line-clamp-2'>
+                                    {voucher.description}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className='text-xs text-muted-foreground'>
-                          <div className='flex items-center gap-2'>
-                            <CalendarDays className='h-3 w-3 text-muted-foreground' />
-                            <span>{formatDate(voucher.startDate)} - {formatDate(voucher.endDate)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className='font-medium'>
-                          {voucher.voucherType === 'public' || voucher.pricePoint === 0 ? (
-                            <Badge variant='outline' className='text-xs bg-emerald-50 text-emerald-700 border-emerald-200'>
-                              FREE
-                            </Badge>
-                          ) : (
-                            <Badge variant='outline' className='text-xs bg-primary/10 text-primary border-primary/20'>
-                              {voucher.pricePoint.toLocaleString()} pts
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className='font-medium'>
-                          {voucher.maxQuantity.toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(voucher.startDate, voucher.endDate)}
-                        </TableCell>
-                        <TableCell className='text-right'>
-                          <div className='flex items-center justify-end gap-2'>
-                            <Button
-                              variant='ghost'
-                              size='icon'
-                              className='h-8 w-8'
-                              asChild
-                            >
-                              <Link
-                                href={`/dashboard/business/locations/${voucher.locationId}/vouchers/${voucher.id}/edit`}
-                                title='Edit'
+                          </TableCell>
+                          <TableCell className='text-xs text-muted-foreground'>
+                            <div className='flex items-center gap-2'>
+                              <CalendarDays className='h-3 w-3 text-muted-foreground' />
+                              <span>{formatDate(voucher.startDate)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className='text-xs text-muted-foreground'>
+                            <div className='flex items-center gap-2'>
+                              <CalendarDays className='h-3 w-3 text-muted-foreground' />
+                              <span>{formatDate(voucher.endDate)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className='font-medium'>
+                            {voucher.voucherType === 'public' ||
+                            voucher.pricePoint === 0 ? (
+                              <Badge
+                                variant='outline'
+                                className='text-xs bg-emerald-50 text-emerald-700 border-emerald-200'
                               >
-                                <Edit className='h-4 w-4' />
-                              </Link>
-                            </Button>
-                            <Button
-                              variant='ghost'
-                              size='icon'
-                              className='h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20'
-                              onClick={() => setVoucherToDelete(voucher)}
-                              title='Delete'
-                            >
-                              <Trash2 className='h-4 w-4' />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                                FREE
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant='outline'
+                                className='text-xs bg-primary/10 text-primary border-primary/20'
+                              >
+                                {voucher.pricePoint.toLocaleString()} pts
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className='font-medium'>
+                            {voucher.statistics?.total?.toLocaleString()}
+                          </TableCell>
+                          <TableCell className='font-medium'>
+                            {voucher.statistics?.used?.toLocaleString()}
+                          </TableCell>
+                          <TableCell className='font-medium'>
+                            {voucher.statistics?.remaining?.toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(voucher.startDate, voucher.endDate)}
+                          </TableCell>
+                          <TableCell className='text-right'>
+                            <div className='flex items-center justify-end gap-2'>
+                              {voucher.statistics?.used === 0 && (
+                                <Button
+                                  variant='ghost'
+                                  size='icon'
+                                  className='h-8 w-8'
+                                  asChild
+                                >
+                                  <Link
+                                    href={`/dashboard/business/locations/${voucher.locationId}/vouchers/${voucher.id}/edit`}
+                                    title='Edit'
+                                  >
+                                    <Edit className='h-4 w-4' />
+                                  </Link>
+                                </Button>
+                              )}
+                              <Button
+                                variant='ghost'
+                                size='icon'
+                                className='h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20'
+                                onClick={() => setVoucherToDelete(voucher)}
+                                title='Delete'
+                              >
+                                <Trash2 className='h-4 w-4' />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       );
                     })
                   ) : (
@@ -468,7 +496,6 @@ export default function ManageVouchersPage({
         </CardContent>
       </Card>
 
-      {/* --- Phân trang --- */}
       <div className='flex items-center justify-end space-x-2 py-4'>
         <Button
           variant='outline'

@@ -14,10 +14,10 @@ export function formatDate(dateString: string) {
 }
 
 export function formatDateTime(dateString: string) {
-  return new Date(dateString).toLocaleDateString('en-US', {
+  return new Date(dateString).toLocaleString('vi-VN', {
     year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -85,7 +85,7 @@ export function formatCurrency(amount: number) {
  */
 export function toTitleCase(str: string): string {
   if (!str) return '';
-  
+
   return str
     .split(/[\s_-]+/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())

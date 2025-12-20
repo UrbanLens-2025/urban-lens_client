@@ -287,7 +287,7 @@ export default function ManageMissionsPage({
   };
 
   return (
-    <div className='space-y-8'>
+    <div className='space-y-6'>
       {/* --- Header --- */}
       <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
         <div className='flex-1'></div>
@@ -336,7 +336,9 @@ export default function ManageMissionsPage({
               <Table>
                 <TableHeader className='bg-muted/40'>
                   <TableRow>
-                    <TableHead className='w-max px-3 flex justify-center items-center'>#</TableHead>
+                    <TableHead className='w-max px-3 flex justify-center items-center'>
+                      #
+                    </TableHead>
                     <TableHead className='min-w-[220px]'>
                       <Button
                         variant='ghost'
@@ -348,15 +350,7 @@ export default function ManageMissionsPage({
                     </TableHead>
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
-                    <TableHead>
-                      <Button
-                        variant='ghost'
-                        className='px-0'
-                        onClick={() => handleSort('target')}
-                      >
-                        Target <SortIcon column='target' />
-                      </Button>
-                    </TableHead>
+                    <TableHead>Target</TableHead>
                     <TableHead>
                       <Button
                         variant='ghost'
@@ -387,7 +381,7 @@ export default function ManageMissionsPage({
                             {orderNumber}
                           </TableCell>
                           <TableCell>
-                            <div className='flex items-center gap-3 min-w-[300px] max-w-[500px]'>
+                            <div className='flex items-center gap-3 min-w-[300px] max-w-[400px]'>
                               {mission.imageUrls &&
                               mission.imageUrls.length > 0 ? (
                                 <div className='relative h-12 w-12 flex-shrink-0 rounded-md overflow-hidden border border-border'>
@@ -443,7 +437,7 @@ export default function ManageMissionsPage({
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className='font-medium'>
+                          <TableCell className='font-center'>
                             {mission.target}
                           </TableCell>
                           <TableCell className='font-medium'>
