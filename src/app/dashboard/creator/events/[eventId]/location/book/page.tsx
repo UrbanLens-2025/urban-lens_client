@@ -73,17 +73,17 @@ const splitRangeIntoDailySlots = (rangeStart: Date, rangeEnd: Date): SlotSelecti
   return slots;
 };
 
-function MapController({ 
-  locations, 
+function MapController({
+  locations,
   selectedLocationId,
-}: { 
-  locations: LocationWithCoords[]; 
+}: {
+  locations: LocationWithCoords[];
   selectedLocationId?: string;
 }) {
   const map = useMap();
   const hasInitialized = useRef(false);
   const lastSelectedId = useRef<string | undefined>(undefined);
-  
+
   // Initialize center only once on mount
   useEffect(() => {
     if (map && !hasInitialized.current && locations.length > 0) {
@@ -119,7 +119,7 @@ function MapController({
       lastSelectedId.current = undefined;
     }
   }, [selectedLocationId, locations, map]);
-  
+
   return null;
 }
 
@@ -129,8 +129,8 @@ function LocationDetailsOverlay({
   onClose,
   eventId,
   eventDetail
-}: { 
-  location: BookableLocation | null; 
+}: {
+  location: BookableLocation | null;
   onClose: () => void;
   eventId: string;
   eventDetail?: { startDate?: string; endDate?: string };
@@ -201,7 +201,7 @@ function LocationDetailsOverlay({
 
     const basePrice = parseFloat(displayLocation.bookingConfig.baseBookingPrice);
     const currency = displayLocation.bookingConfig.currency || "VND";
-    
+
     // Calculate total hours
     let totalMilliseconds = 0;
     selectedSlots.forEach(slot => {
@@ -209,10 +209,10 @@ function LocationDetailsOverlay({
       const end = new Date(slot.endDateTime);
       totalMilliseconds += (end.getTime() - start.getTime());
     });
-    
+
     const totalHours = totalMilliseconds / (1000 * 60 * 60);
     const totalCost = basePrice * totalHours;
-    
+
     return {
       totalHours,
       totalCost,
@@ -234,16 +234,16 @@ function LocationDetailsOverlay({
 
     const config = displayLocation.bookingConfig;
     const totalCost = estimatedCost.totalCost;
-    
+
     // Find earliest booking slot start time for cutoff calculation
-    const earliestSlotStart = selectedSlots.length > 0 
+    const earliestSlotStart = selectedSlots.length > 0
       ? new Date(Math.min(...selectedSlots.map(s => s.startDateTime.getTime())))
       : null;
 
     const refundBeforeCutoff = config.refundPercentageBeforeCutoff !== undefined
       ? totalCost * config.refundPercentageBeforeCutoff
       : totalCost; // Default to 100% if not specified
-    
+
     const refundAfterCutoff = config.refundPercentageAfterCutoff !== undefined
       ? totalCost * config.refundPercentageAfterCutoff
       : 0; // Default to 0% if not specified
@@ -286,7 +286,7 @@ function LocationDetailsOverlay({
   };
 
   // Get business contact info and analytics from detailed location
-  type LocationWithBusiness = BookableLocation & { 
+  type LocationWithBusiness = BookableLocation & {
     business?: { email?: string; phone?: string };
     averageRating?: string | number;
     totalReviews?: number;
@@ -297,7 +297,7 @@ function LocationDetailsOverlay({
       endTime: string;
     }>;
   };
-  
+
   const availabilities = useMemo(() => {
     if (!displayLocation) return [];
     return (displayLocation as LocationWithBusiness)?.availabilities || [];
@@ -311,7 +311,7 @@ function LocationDetailsOverlay({
   // Group and sort availabilities by day order
   const groupedAvailabilities = useMemo(() => {
     const dayOrder = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
-    
+
     // Group availabilities by day
     const grouped = availabilities.reduce((acc, availability) => {
       const day = availability.dayOfWeek;
@@ -336,14 +336,14 @@ function LocationDetailsOverlay({
   const images = displayLocation.imageUrl || [];
   const visibleTags = displayLocation.tags?.slice(0, 3) || [];
   const remainingTagsCount = (displayLocation.tags?.length || 0) - visibleTags.length;
-  
+
   const businessEmail = (displayLocation as LocationWithBusiness)?.business?.email;
   const businessPhone = (displayLocation as LocationWithBusiness)?.business?.phone;
   const averageRating = (displayLocation as LocationWithBusiness)?.averageRating;
   const totalReviews = (displayLocation as LocationWithBusiness)?.totalReviews ?? 0;
   const totalCheckInsValue = (displayLocation as LocationWithBusiness)?.totalCheckIns ?? 0;
   const totalCheckIns = typeof totalCheckInsValue === 'string' ? parseInt(totalCheckInsValue, 10) : totalCheckInsValue;
-  
+
   // Format rating
   const ratingValue = averageRating ? parseFloat(String(averageRating)) : 0;
 
@@ -392,7 +392,7 @@ function LocationDetailsOverlay({
             fill
             className="object-cover"
           />
-          
+
           {/* Carousel Navigation */}
           {images.length > 1 && (
             <>
@@ -412,18 +412,17 @@ function LocationDetailsOverlay({
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              
+
               {/* Image Indicators */}
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
                 {images.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentImageIndex(index)}
-                    className={`h-1.5 rounded-full transition-all ${
-                      index === currentImageIndex
+                    className={`h-1.5 rounded-full transition-all ${index === currentImageIndex
                         ? "w-6 bg-background"
                         : "w-1.5 bg-background/50"
-                    }`}
+                      }`}
                   />
                 ))}
               </div>
@@ -438,7 +437,7 @@ function LocationDetailsOverlay({
           {/* Location Name */}
           <div>
             <h2 className="text-2xl font-bold mb-2">{displayLocation.name}</h2>
-            
+
             {/* Rating and Reviews */}
             <div className="flex items-center gap-2 mb-3">
               <div className="flex items-center gap-1">
@@ -504,9 +503,8 @@ function LocationDetailsOverlay({
 
             {/* Price */}
             {displayLocation.bookingConfig?.baseBookingPrice && (
-              <div className={`flex items-start gap-3 p-3 bg-muted/50 border border-border/50 ${
-                !displayLocation.bookingConfig?.refundEnabled && !businessEmail && !businessPhone ? 'rounded-b-xl rounded-t-xs' : 'rounded-xs'
-              }`}>
+              <div className={`flex items-start gap-3 p-3 bg-muted/50 border border-border/50 ${!displayLocation.bookingConfig?.refundEnabled && !businessEmail && !businessPhone ? 'rounded-b-xl rounded-t-xs' : 'rounded-xs'
+                }`}>
                 <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-foreground">
                   {parseFloat(displayLocation.bookingConfig.baseBookingPrice).toLocaleString("vi-VN")} {displayLocation.bookingConfig.currency || "VND"} / hour
@@ -516,9 +514,8 @@ function LocationDetailsOverlay({
 
             {/* Refund Policy */}
             {displayLocation.bookingConfig && (
-              <div className={`flex items-start gap-3 p-3 bg-muted/50 border border-border/50 ${
-                !businessEmail && !businessPhone ? 'rounded-b-xl rounded-t-xs' : 'rounded-xs'
-              }`}>
+              <div className={`flex items-start gap-3 p-3 bg-muted/50 border border-border/50 ${!businessEmail && !businessPhone ? 'rounded-b-xl rounded-t-xs' : 'rounded-xs'
+                }`}>
                 <RotateCcw className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
                 <div className="flex-1 space-y-1">
                   <p className="text-sm font-medium text-foreground">Refund Policy</p>
@@ -554,9 +551,8 @@ function LocationDetailsOverlay({
 
             {/* Email */}
             {businessEmail && (
-              <div className={`flex items-start gap-3 p-3 bg-muted/50 border border-border/50 ${
-                !businessPhone ? 'rounded-b-xl rounded-t-xs' : 'rounded-xs'
-              }`}>
+              <div className={`flex items-start gap-3 p-3 bg-muted/50 border border-border/50 ${!businessPhone ? 'rounded-b-xl rounded-t-xs' : 'rounded-xs'
+                }`}>
                 <Mail className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-foreground">{businessEmail}</p>
               </div>
@@ -564,9 +560,8 @@ function LocationDetailsOverlay({
 
             {/* Phone */}
             {businessPhone && (
-              <div className={`flex items-start gap-3 p-3 bg-muted/50 border border-border/50 ${
-                availabilities.length === 0 ? 'rounded-b-xl rounded-t-xs' : 'rounded-xs'
-              }`}>
+              <div className={`flex items-start gap-3 p-3 bg-muted/50 border border-border/50 ${availabilities.length === 0 ? 'rounded-b-xl rounded-t-xs' : 'rounded-xs'
+                }`}>
                 <Phone className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-foreground">{businessPhone}</p>
               </div>
@@ -661,7 +656,7 @@ function LocationDetailsOverlay({
               )}
             </div>
           </DialogHeader>
-          
+
           {/* Event Time Alert */}
           {eventDetail?.startDate && eventDetail?.endDate && (
             <div className="px-6 pt-4">
@@ -684,7 +679,7 @@ function LocationDetailsOverlay({
               </Alert>
             </div>
           )}
-          
+
           <div className="flex-1 overflow-y-auto px-6 py-4">
             {displayLocation && (
               <AvailabilityCalendar
@@ -725,148 +720,148 @@ function LocationDetailsOverlay({
                 Cancel
               </Button>
               <Button
-              onClick={async () => {
-                // Dismiss any existing toasts first
-                toast.dismiss();
-                
-                if (!displayLocation || selectedSlots.length === 0) {
-                  toast.error("No time slots selected", {
-                    description: "Please select at least one time slot to continue.",
-                    icon: <Calendar className="h-4 w-4" />,
-                    duration: 4000,
-                  });
-                  return;
-                }
+                onClick={async () => {
+                  // Dismiss any existing toasts first
+                  toast.dismiss();
 
-                // Validate that booking covers event dates
-                // Booking must start on or before event start, and end on or after event end
-                if (eventDetail?.startDate && eventDetail?.endDate) {
-                  const eventStart = new Date(eventDetail.startDate);
-                  eventStart.setMilliseconds(0);
-                  const eventEnd = new Date(eventDetail.endDate);
-                  eventEnd.setMilliseconds(0);
-                  
-                  const allSlotStarts = selectedSlots.map(slot => {
-                    const d = new Date(slot.startDateTime);
-                    d.setMilliseconds(0);
-                    return d.getTime();
-                  });
-                  const allSlotEnds = selectedSlots.map(slot => {
-                    const d = new Date(slot.endDateTime);
-                    d.setMilliseconds(0);
-                    return d.getTime();
-                  });
-                  
-                  const bookingStart = new Date(Math.min(...allSlotStarts));
-                  const bookingEnd = new Date(Math.max(...allSlotEnds));
-                  
-                  // Validation: booking start <= event start AND booking end >= event end
-                  if (bookingStart.getTime() > eventStart.getTime() || bookingEnd.getTime() < eventEnd.getTime()) {
-                    const eventStartStr = eventStart.toLocaleString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric', 
-                      year: 'numeric',
-                      hour: '2-digit', 
-                      minute: '2-digit',
-                      hour12: true 
+                  if (!displayLocation || selectedSlots.length === 0) {
+                    toast.error("No time slots selected", {
+                      description: "Please select at least one time slot to continue.",
+                      icon: <Calendar className="h-4 w-4" />,
+                      duration: 4000,
                     });
-                    const eventEndStr = eventEnd.toLocaleString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric', 
-                      year: 'numeric',
-                      hour: '2-digit', 
-                      minute: '2-digit',
-                      hour12: true 
+                    return;
+                  }
+
+                  // Validate that booking covers event dates
+                  // Booking must start on or before event start, and end on or after event end
+                  if (eventDetail?.startDate && eventDetail?.endDate) {
+                    const eventStart = new Date(eventDetail.startDate);
+                    eventStart.setMilliseconds(0);
+                    const eventEnd = new Date(eventDetail.endDate);
+                    eventEnd.setMilliseconds(0);
+
+                    const allSlotStarts = selectedSlots.map(slot => {
+                      const d = new Date(slot.startDateTime);
+                      d.setMilliseconds(0);
+                      return d.getTime();
                     });
-                    const bookingStartStr = bookingStart.toLocaleString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric', 
-                      year: 'numeric',
-                      hour: '2-digit', 
-                      minute: '2-digit',
-                      hour12: true 
+                    const allSlotEnds = selectedSlots.map(slot => {
+                      const d = new Date(slot.endDateTime);
+                      d.setMilliseconds(0);
+                      return d.getTime();
                     });
-                    const bookingEndStr = bookingEnd.toLocaleString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric', 
-                      year: 'numeric',
-                      hour: '2-digit', 
-                      minute: '2-digit',
-                      hour12: true 
-                    });
-                    
-                    let errorTitle = "Booking doesn't cover event period";
-                    let errorDescription: React.ReactNode;
-                    
-                    if (bookingStart.getTime() > eventStart.getTime() && bookingEnd.getTime() < eventEnd.getTime()) {
-                      // Both conditions fail
-                      errorDescription = (
-                        <div className="space-y-1.5 mt-1">
-                          <p className="text-sm">Your booking period (<strong className="text-destructive">{bookingStartStr}</strong> - <strong className="text-destructive">{bookingEndStr}</strong>) doesn't cover the event period (<strong>{eventStartStr}</strong> - <strong>{eventEndStr}</strong>).</p>
-                          <p className="text-xs text-muted-foreground">Booking must start on or before event start and end on or after event end.</p>
-                        </div>
-                      );
-                    } else if (bookingStart.getTime() > eventStart.getTime()) {
-                      // Booking starts after event starts
-                      errorDescription = (
-                        <div className="space-y-1.5 mt-1">
-                          <p className="text-sm">Your booking starts <strong className="text-destructive">{bookingStartStr}</strong>, but the event starts <strong>{eventStartStr}</strong>.</p>
-                          <p className="text-xs text-muted-foreground">Booking must start on or before the event start time.</p>
-                        </div>
-                      );
-                    } else {
-                      // Booking ends before event ends
-                      errorDescription = (
-                        <div className="space-y-1.5 mt-1">
-                          <p className="text-sm">Your booking ends <strong className="text-destructive">{bookingEndStr}</strong>, but the event ends <strong>{eventEndStr}</strong>.</p>
-                          <p className="text-xs text-muted-foreground">Booking must end on or after the event end time.</p>
-                        </div>
-                      );
+
+                    const bookingStart = new Date(Math.min(...allSlotStarts));
+                    const bookingEnd = new Date(Math.max(...allSlotEnds));
+
+                    // Validation: booking start <= event start AND booking end >= event end
+                    if (bookingStart.getTime() > eventStart.getTime() || bookingEnd.getTime() < eventEnd.getTime()) {
+                      const eventStartStr = eventStart.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      });
+                      const eventEndStr = eventEnd.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      });
+                      const bookingStartStr = bookingStart.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      });
+                      const bookingEndStr = bookingEnd.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      });
+
+                      let errorTitle = "Booking doesn't cover event period";
+                      let errorDescription: React.ReactNode;
+
+                      if (bookingStart.getTime() > eventStart.getTime() && bookingEnd.getTime() < eventEnd.getTime()) {
+                        // Both conditions fail
+                        errorDescription = (
+                          <div className="space-y-1.5 mt-1">
+                            <p className="text-sm">Your booking period (<strong className="text-destructive">{bookingStartStr}</strong> - <strong className="text-destructive">{bookingEndStr}</strong>) doesn't cover the event period (<strong>{eventStartStr}</strong> - <strong>{eventEndStr}</strong>).</p>
+                            <p className="text-xs text-muted-foreground">Booking must start on or before event start and end on or after event end.</p>
+                          </div>
+                        );
+                      } else if (bookingStart.getTime() > eventStart.getTime()) {
+                        // Booking starts after event starts
+                        errorDescription = (
+                          <div className="space-y-1.5 mt-1">
+                            <p className="text-sm">Your booking starts <strong className="text-destructive">{bookingStartStr}</strong>, but the event starts <strong>{eventStartStr}</strong>.</p>
+                            <p className="text-xs text-muted-foreground">Booking must start on or before the event start time.</p>
+                          </div>
+                        );
+                      } else {
+                        // Booking ends before event ends
+                        errorDescription = (
+                          <div className="space-y-1.5 mt-1">
+                            <p className="text-sm">Your booking ends <strong className="text-destructive">{bookingEndStr}</strong>, but the event ends <strong>{eventEndStr}</strong>.</p>
+                            <p className="text-xs text-muted-foreground">Booking must end on or after the event end time.</p>
+                          </div>
+                        );
+                      }
+
+                      toast.error(errorTitle, {
+                        description: errorDescription,
+                        icon: <Clock className="h-4 w-4" />,
+                        duration: 10000,
+                      });
+                      // Clear invalid slots
+                      setSelectedSlots([]);
+                      return;
                     }
-                    
-                    toast.error(errorTitle, {
-                      description: errorDescription,
-                      icon: <Clock className="h-4 w-4" />,
-                      duration: 10000,
-                    });
-                    // Clear invalid slots
-                    setSelectedSlots([]);
-                    return;
                   }
-                }
-                
-                // Validate minimum duration per slot
-                if (displayLocation.bookingConfig?.minBookingDurationMinutes) {
-                  const minDurationMs = displayLocation.bookingConfig.minBookingDurationMinutes * 60 * 1000;
-                  const invalidSlots = selectedSlots.filter((slot) => {
-                    const slotDurationMs = slot.endDateTime.getTime() - slot.startDateTime.getTime();
-                    return slotDurationMs < minDurationMs;
-                  });
-                  
-                  if (invalidSlots.length > 0) {
-                    toast.error("Slot duration too short", {
-                      description: `Each booking slot must be at least ${displayLocation.bookingConfig.minBookingDurationMinutes} minutes long. Please adjust your selection.`,
-                      icon: <Clock className="h-4 w-4" />,
-                      duration: 5000,
-                    });
-                    return;
-                  }
-                }
-                
-                // Map slots to API format
-                const dates = collapsedSlotRanges.map((slot) => ({
-                  startDateTime: slot.start.toISOString(),
-                  endDateTime: slot.end.toISOString(),
-                }));
 
-                // Store booking data and show confirmation dialog (Step 2)
-                setPendingBookingData({
-                  locationId: displayLocation.id,
-                  dates,
-                });
-                setShowCalendar(false);
-                setShowConfirmDialog(true);
-              }}
+                  // Validate minimum duration per slot
+                  if (displayLocation.bookingConfig?.minBookingDurationMinutes) {
+                    const minDurationMs = displayLocation.bookingConfig.minBookingDurationMinutes * 60 * 1000;
+                    const invalidSlots = selectedSlots.filter((slot) => {
+                      const slotDurationMs = slot.endDateTime.getTime() - slot.startDateTime.getTime();
+                      return slotDurationMs < minDurationMs;
+                    });
+
+                    if (invalidSlots.length > 0) {
+                      toast.error("Slot duration too short", {
+                        description: `Each booking slot must be at least ${displayLocation.bookingConfig.minBookingDurationMinutes} minutes long. Please adjust your selection.`,
+                        icon: <Clock className="h-4 w-4" />,
+                        duration: 5000,
+                      });
+                      return;
+                    }
+                  }
+
+                  // Map slots to API format
+                  const dates = collapsedSlotRanges.map((slot) => ({
+                    startDateTime: slot.start.toISOString(),
+                    endDateTime: slot.end.toISOString(),
+                  }));
+
+                  // Store booking data and show confirmation dialog (Step 2)
+                  setPendingBookingData({
+                    locationId: displayLocation.id,
+                    dates,
+                  });
+                  setShowCalendar(false);
+                  setShowConfirmDialog(true);
+                }}
                 disabled={selectedSlots.length === 0 || addLocationBookingMutation.isPending}
                 size="sm"
                 className="min-w-[140px]"
@@ -902,7 +897,7 @@ function LocationDetailsOverlay({
               Review your booking details, wallet balance, and refund policy before confirming.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="flex-1 overflow-y-auto px-8 py-5">
             <div className="grid grid-cols-2 gap-4">
               {/* Booking Summary */}
@@ -953,26 +948,23 @@ function LocationDetailsOverlay({
               </div>
 
               {/* Wallet Balance */}
-              <div className={`p-5 rounded-xl border shadow-sm relative overflow-hidden ${
-                hasInsufficientBalance 
-                  ? 'bg-gradient-to-br from-red-50 via-red-50/80 to-red-100/50 border-red-300/60 dark:from-red-950/40 dark:via-red-950/30 dark:to-red-900/20 dark:border-red-800/60' 
+              <div className={`p-5 rounded-xl border shadow-sm relative overflow-hidden ${hasInsufficientBalance
+                  ? 'bg-gradient-to-br from-red-50 via-red-50/80 to-red-100/50 border-red-300/60 dark:from-red-950/40 dark:via-red-950/30 dark:to-red-900/20 dark:border-red-800/60'
                   : 'bg-gradient-to-br from-green-50 via-emerald-50/80 to-emerald-50 border-green-300/60 dark:from-green-950/40 dark:via-emerald-950/30 dark:to-emerald-950/20 dark:border-green-800/60'
-              }`}>
+                }`}>
                 <div className="absolute top-0 right-0 w-32 h-32 rounded-full -mr-16 -mt-16 opacity-20" style={{
                   backgroundColor: hasInsufficientBalance ? 'rgb(239 68 68)' : 'rgb(34 197 94)'
                 }}></div>
                 <div className="relative">
                   <div className="flex items-center gap-2 mb-4">
-                    <div className={`p-2 rounded-lg ${
-                      hasInsufficientBalance 
-                        ? 'bg-red-100 dark:bg-red-900/40' 
+                    <div className={`p-2 rounded-lg ${hasInsufficientBalance
+                        ? 'bg-red-100 dark:bg-red-900/40'
                         : 'bg-green-100 dark:bg-green-900/40'
-                    }`}>
-                      <Wallet className={`h-4 w-4 ${
-                        hasInsufficientBalance 
-                          ? 'text-red-600 dark:text-red-400' 
+                      }`}>
+                      <Wallet className={`h-4 w-4 ${hasInsufficientBalance
+                          ? 'text-red-600 dark:text-red-400'
                           : 'text-green-600 dark:text-green-500'
-                      }`} />
+                        }`} />
                     </div>
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                       Wallet Balance
@@ -981,11 +973,10 @@ function LocationDetailsOverlay({
                   <div className="space-y-3">
                     <div className="pb-3 border-b border-border/30">
                       <p className="text-sm text-muted-foreground mb-1.5">Current</p>
-                      <p className={`text-xl font-bold ${
-                        hasInsufficientBalance 
-                          ? 'text-red-600 dark:text-red-400' 
+                      <p className={`text-xl font-bold ${hasInsufficientBalance
+                          ? 'text-red-600 dark:text-red-400'
                           : 'text-green-600 dark:text-green-400'
-                      }`}>
+                        }`}>
                         {walletBalance.toLocaleString("vi-VN")} {walletCurrency}
                       </p>
                     </div>
@@ -1002,9 +993,12 @@ function LocationDetailsOverlay({
               </div>
 
               {/* Refund Policy */}
+              {/* Refund Policy - Simplified */}
               {refundInfo && (
                 <div className="col-span-2 bg-background p-5 rounded-xl border border-border/60 shadow-sm relative overflow-hidden">
+                  {/* Decorative background circle */}
                   <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/5 rounded-full -mr-20 -mt-20"></div>
+
                   <div className="relative">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/40">
@@ -1012,51 +1006,55 @@ function LocationDetailsOverlay({
                       </div>
                       <p className="text-xs font-bold text-foreground uppercase tracking-wider">Refund Policy</p>
                     </div>
-                    {refundInfo.cutoffTime && (
-                      <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20 rounded-lg border border-blue-200/50 dark:border-blue-800/40">
-                        <div className="flex items-start gap-3">
-                          <div className="p-1.5 rounded bg-blue-200/50 dark:bg-blue-900/50">
-                            <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs font-bold text-muted-foreground mb-1.5 uppercase tracking-wide">Cutoff Time</p>
-                            <p className="text-sm font-mono font-bold text-foreground mb-1">
-                              {format(refundInfo.cutoffTime, "MMM dd, yyyy 'at' h:mm a")}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {refundInfo.cutoffHours} hours before booking starts
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+
                     <div className="grid grid-cols-2 gap-4">
+                      {/* Before Date Box */}
                       <div className="p-4 bg-gradient-to-br from-green-50 via-emerald-50 to-green-50 dark:from-green-950/30 dark:via-emerald-950/20 dark:to-green-950/30 rounded-lg border-2 border-green-300/50 dark:border-green-800/40 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-20 h-20 bg-green-400/10 rounded-full -mr-10 -mt-10"></div>
                         <div className="relative">
-                          <div className="flex items-center gap-2 mb-3">
+                          <div className="flex items-center gap-2 mb-2">
                             <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Before Cutoff</p>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                              {refundInfo.cutoffTime
+                                ? `Before ${format(refundInfo.cutoffTime, "dd/MM/yyyy HH:mm")}`
+                                : "Before Cutoff"}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground mb-2">{Math.round(refundInfo.percentageBeforeCutoff * 100)}% refundable</p>
                           <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                            {Math.round(refundInfo.percentageBeforeCutoff * 100)}% Refund
+                          </p>
+                          <p className="text-xs text-muted-foreground">
                             {refundInfo.refundBeforeCutoff.toLocaleString("vi-VN")} {refundInfo.currency}
                           </p>
                         </div>
                       </div>
+
+                      {/* After Date Box */}
                       <div className="p-4 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-amber-950/30 rounded-lg border-2 border-amber-300/50 dark:border-amber-800/40 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-20 h-20 bg-amber-400/10 rounded-full -mr-10 -mt-10"></div>
                         <div className="relative">
-                          <div className="flex items-center gap-2 mb-3">
+                          <div className="flex items-center gap-2 mb-2">
                             <div className="h-2 w-2 rounded-full bg-amber-500"></div>
-                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">After Cutoff</p>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                              {refundInfo.cutoffTime
+                                ? `After ${format(refundInfo.cutoffTime, "dd/MM/yyyy HH:mm")}`
+                                : "After Cutoff"}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground mb-2">{Math.round(refundInfo.percentageAfterCutoff * 100)}% refundable</p>
                           <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
+                            {Math.round(refundInfo.percentageAfterCutoff * 100)}% Refund
+                          </p>
+                          <p className="text-xs text-muted-foreground">
                             {refundInfo.refundAfterCutoff.toLocaleString("vi-VN")} {refundInfo.currency}
                           </p>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Booking Started Warning */}
+                    <div className="mt-3 flex justify-between items-center p-3 bg-red-50 dark:bg-red-950/20 rounded border border-red-200 dark:border-red-800">
+                      <span className="text-xs text-muted-foreground font-medium">Cancel after booking start time</span>
+                      <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase">
+                        No refund
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1065,31 +1063,31 @@ function LocationDetailsOverlay({
               {/* Insufficient Balance Warning */}
               {hasInsufficientBalance && (
                 <div className="col-span-2">
-                <Alert className="bg-gradient-to-r from-red-50 via-orange-50 to-red-50 border-2 border-red-300/60 dark:from-red-950/40 dark:via-orange-950/30 dark:to-red-950/40 dark:border-red-800/60 shadow-sm rounded-lg py-3">
-                  <div className="p-1.5 rounded bg-red-100 dark:bg-red-900/50">
-                    <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                  </div>
-                  <AlertDescription className="text-red-900 dark:text-red-100">
-                    <p className="font-bold mb-1 text-sm">Insufficient Balance</p>
-                    <p className="text-xs leading-relaxed">
-                      You need <span className="font-bold text-red-700 dark:text-red-300">{estimatedCost?.totalCost.toLocaleString("vi-VN")} {estimatedCost?.currency}</span> but only have <span className="font-bold text-red-700 dark:text-red-300">{walletBalance.toLocaleString("vi-VN")} {walletCurrency}</span>. Please deposit funds to continue.
-                    </p>
-                  </AlertDescription>
-                </Alert>
+                  <Alert className="bg-gradient-to-r from-red-50 via-orange-50 to-red-50 border-2 border-red-300/60 dark:from-red-950/40 dark:via-orange-950/30 dark:to-red-950/40 dark:border-red-800/60 shadow-sm rounded-lg py-3">
+                    <div className="p-1.5 rounded bg-red-100 dark:bg-red-900/50">
+                      <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    </div>
+                    <AlertDescription className="text-red-900 dark:text-red-100">
+                      <p className="font-bold mb-1 text-sm">Insufficient Balance</p>
+                      <p className="text-xs leading-relaxed">
+                        You need <span className="font-bold text-red-700 dark:text-red-300">{estimatedCost?.totalCost.toLocaleString("vi-VN")} {estimatedCost?.currency}</span> but only have <span className="font-bold text-red-700 dark:text-red-300">{walletBalance.toLocaleString("vi-VN")} {walletCurrency}</span>. Please deposit funds to continue.
+                      </p>
+                    </AlertDescription>
+                  </Alert>
                 </div>
               )}
 
               {/* Info Alert */}
               {!hasInsufficientBalance && (
                 <div className="col-span-2">
-                <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800 rounded-lg py-3">
-                  <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <AlertDescription className="text-blue-900 dark:text-blue-100">
-                    <p className="text-xs">
-                      Your wallet balance will be reduced by <span className="font-semibold">{estimatedCost?.totalCost.toLocaleString("vi-VN")} {estimatedCost?.currency}</span> when you confirm this booking.
-                    </p>
-                  </AlertDescription>
-                </Alert>
+                  <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800 rounded-lg py-3">
+                    <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <AlertDescription className="text-blue-900 dark:text-blue-100">
+                      <p className="text-xs">
+                        Your wallet balance will be reduced by <span className="font-semibold">{estimatedCost?.totalCost.toLocaleString("vi-VN")} {estimatedCost?.currency}</span> when you confirm this booking.
+                      </p>
+                    </AlertDescription>
+                  </Alert>
                 </div>
               )}
             </div>
@@ -1161,8 +1159,8 @@ export default function BookLocationPage({
   const [debouncedPriceRange] = useDebounce(priceRange, 500);
   const [debouncedMaxCapacity] = useDebounce(maxCapacity, 500);
 
-  const { data: locationsData, isLoading } = useBookableLocations({ 
-    page: 1, 
+  const { data: locationsData, isLoading } = useBookableLocations({
+    page: 1,
     limit: 100,
     search: debouncedSearchQuery || undefined,
     minPrice: debouncedPriceRange[0] > 0 ? debouncedPriceRange[0] : undefined,
@@ -1206,7 +1204,7 @@ export default function BookLocationPage({
       })) as Array<BookableLocation & { latitude: number; longitude: number }>;
   }, [locationsData]);
 
-  const selectedLocation = selectedLocationId 
+  const selectedLocation = selectedLocationId
     ? locations.find(loc => loc.id === selectedLocationId) || null
     : null;
 
@@ -1316,13 +1314,13 @@ export default function BookLocationPage({
                     position: 1, // LEFT_TOP
                   } as google.maps.FullscreenControlOptions}
                 >
-                  <MapController 
-                    locations={validLocations} 
+                  <MapController
+                    locations={validLocations}
                     selectedLocationId={selectedLocationId || undefined}
                   />
                   {validLocations.map((location) => {
                     const isSelected = selectedLocationId === location.id;
-                    
+
                     return (
                       <AdvancedMarker
                         key={location.id}
