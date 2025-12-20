@@ -1101,6 +1101,7 @@ export interface OrderEventAttendance {
 }
 
 export interface EventAttendance {
+  checkInTime: any;
   id: string;
   createdAt: string;
   updatedAt: string;
