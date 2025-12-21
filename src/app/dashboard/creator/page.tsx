@@ -104,8 +104,8 @@ export default function CreatorDashboardPage() {
     const revenueChange = revenueData?.revenueChange || 0;
 
     const totalWithdrawals = revenueData?.pendingWithdraw || 0;
-    const availableRevenue = revenueData?.available || 0;
-    const pendingRevenue = revenueData?.pending || 0;
+    const availableRevenue = revenueData?.availableBalance || 0;
+    const pendingRevenue = revenueData?.pendingRevenue || 0;
 
     const thirtyDaysAgo = subDays(new Date(), 30);
     const recentEvents = events.filter((e) => {
@@ -458,7 +458,7 @@ export default function CreatorDashboardPage() {
                     Pending Revenue
                   </p>
                   <p className='text-2xl font-bold text-amber-600'>
-                    {formatCurrency(stats.pendingRevenue)}
+                    {formatCurrency(stats.pendingRevenue || 0)}
                   </p>
                 </div>
                 <div className='rounded-lg border border-border/60 bg-muted/30 p-4'>

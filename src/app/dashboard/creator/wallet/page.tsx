@@ -377,9 +377,7 @@ export default function BusinessWalletPage() {
       totalDeposits: revenueData?.data?.totalDeposits || 0,
       totalEarnings: revenueData?.data?.totalEarnings || 0,
       totalWithdrawals: revenueData?.data?.totalWithdrawals || 0,
-      totalTransactions: revenueData?.data?.totalTransactions || 0,
-      available: revenueData?.data?.available || 0,
-      pending: revenueData?.data?.pending || 0,
+      totalPendingRevenue: revenueData?.data?.totalPendingRevenue || 0,
     };
   }, [revenueData]);
 
@@ -758,10 +756,10 @@ export default function BusinessWalletPage() {
 
         <StatCard
           title='Total Pending Revenue'
-          value={stats.totalTransactions}
+          value={formatCurrency(stats.totalPendingRevenue)}
           icon={Activity}
           color='purple'
-          description='All time transactions'
+          description='All time pending revenue'
         />
       </div>
 
