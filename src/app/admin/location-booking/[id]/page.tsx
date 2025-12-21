@@ -22,6 +22,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Flag,
+  Gavel,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +59,17 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@/components/ui/tabs';
+import { ReportsPanel } from '@/components/admin/event/ReportsPanel';
+import { usePenaltiesByTarget } from '@/hooks/admin/usePenaltiesByTarget';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 
 const getStatusBadge = (status: string) => {
@@ -151,13 +164,16 @@ export default function LocationBookingDetail() {
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState('');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
-  const [activeTab, setActiveTab] = useState<'overview' | 'reports'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'reports' | 'penalties'>('overview');
 
   const {
     data: bookingDetail,
     isLoading,
     isError,
   } = useLocationBookingDetail(id as string);
+
+  const { data: penaltiesData, isLoading: isLoadingPenalties } =
+    usePenaltiesByTarget(id as string, 'booking');
   console.log('🚀 ~ LocationBookingDetail ~ bookingDetail:', bookingDetail);
 
   const handleImageClick = (src: string) => {
@@ -236,6 +252,13 @@ export default function LocationBookingDetail() {
           >
             <Flag className='h-4 w-4' />
             Reports
+          </TabsTrigger>
+          <TabsTrigger
+            value='penalties'
+            className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2 data-[state=active]:text-foreground after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent data-[state=active]:after:bg-primary"
+          >
+            <Gavel className='h-4 w-4' />
+            Penalty History
           </TabsTrigger>
         </TabsList>
 
@@ -865,7 +888,109 @@ export default function LocationBookingDetail() {
 
         {/* Reports Tab */}
         <TabsContent value='reports' className='mt-6'>
-          {/* Reports content will be added here */}
+          <ReportsPanel
+            targetId={id as string}
+            targetType='booking'
+            reportQueryTargetType='booking'
+            reportQueryTargetId={null}
+            denormSecondaryTargetId={bookingDetail.locationId}
+          />
+        </TabsContent>
+
+        {/* Penalties Tab */}
+        <TabsContent value='penalties' className='mt-6'>
+          <Card>
+            <CardHeader>
+              <CardTitle className='flex items-center gap-2'>
+                <Gavel className='h-5 w-5' />
+                Penalty History
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingPenalties ? (
+                <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                  Loading penalties...
+                </div>
+              ) : !penaltiesData || penaltiesData.length === 0 ? (
+                <p className='text-sm text-muted-foreground'>
+                  No penalties found for this booking.
+                </p>
+              ) : (
+                <div className='overflow-hidden rounded-lg border'>
+                  <Table>
+                    <TableHeader className='bg-muted/40'>
+                      <TableRow>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead>Issued By</TableHead>
+                        <TableHead>Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {penaltiesData.map((penalty) => (
+                        <TableRow
+                          key={penalty.id}
+                          className='hover:bg-muted/20'
+                        >
+                          <TableCell>
+                            <Badge variant='outline' className='w-fit text-xs'>
+                              {penalty.penaltyAction.replace(/_/g, ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className='text-sm'>
+                            {penalty.reason || (
+                              <span className='text-muted-foreground italic'>
+                                No reason provided
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className='text-sm'>
+                            {penalty.createdBy ? (
+                              <div className='flex items-center gap-2'>
+                                {penalty.createdBy.avatarUrl ? (
+                                  <Avatar className='h-8 w-8'>
+                                    <AvatarImage
+                                      src={penalty.createdBy.avatarUrl}
+                                      alt={`${penalty.createdBy.firstName} ${penalty.createdBy.lastName}`}
+                                    />
+                                    <AvatarFallback>
+                                      {penalty.createdBy.firstName[0]}
+                                      {penalty.createdBy.lastName[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                ) : (
+                                  <div className='w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20'>
+                                    <User className='h-4 w-4 text-primary' />
+                                  </div>
+                                )}
+                                <div className='min-w-0'>
+                                  <div className='font-medium truncate'>
+                                    {penalty.createdBy.firstName}{' '}
+                                    {penalty.createdBy.lastName}
+                                  </div>
+                                  <div className='text-xs text-muted-foreground truncate'>
+                                    {penalty.createdBy.email}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className='text-muted-foreground italic'>
+                                Unknown
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className='text-sm text-muted-foreground'>
+                            {format(new Date(penalty.createdAt), 'PPpp')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

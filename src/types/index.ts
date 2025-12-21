@@ -1348,7 +1348,7 @@ export interface GetReportsParams {
   denormSecondaryTargetId?: string;
 }
 
-export type ReportEntityType = 'post' | 'location' | 'event';
+export type ReportEntityType = 'post' | 'location' | 'event' | 'booking';
 
 export type ReportPenaltyActions =
   | 'WARN_USER'
