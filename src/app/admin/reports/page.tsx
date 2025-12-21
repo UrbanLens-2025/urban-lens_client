@@ -175,6 +175,7 @@ export default function ReportsPage() {
   const reports = useMemo(() => {
     if (typeFilter === 'all' && allReportsResponse?.data) {
       return allReportsResponse.data.map((report: Report) => ({
+        ...report,
         id: report.id,
         targetType: report.targetType,
         targetId: report.targetId,
@@ -184,10 +185,12 @@ export default function ReportsPage() {
         createdAt: report.createdAt,
         status: report.status,
         reportData: report,
+        denormSecondaryTargetId: report.denormSecondaryTargetId,
       }));
     }
     if (typeFilter === 'post' && postsResponse?.data) {
       return postsResponse.data.map((post: HighestReportedPost) => ({
+        ...post,
         id: post.postId,
         targetType: 'post' as ReportTargetType,
         targetId: post.postId,
@@ -201,6 +204,7 @@ export default function ReportsPage() {
     }
     if (typeFilter === 'location' && locationsResponse?.data) {
       return locationsResponse.data.map((location: HighestReportedLocation) => ({
+        ...location,
         id: location.id,
         targetType: 'location' as ReportTargetType,
         targetId: location.id,
@@ -214,6 +218,7 @@ export default function ReportsPage() {
     }
     if (typeFilter === 'event' && eventsResponse?.data) {
       return eventsResponse.data.map((event: HighestReportedEvent) => ({
+        ...event,
         id: event.id,
         targetType: 'event' as ReportTargetType,
         targetId: event.id,
@@ -501,12 +506,18 @@ export default function ReportsPage() {
                     const rowNumber = (page - 1) * itemsPerPage + index + 1;
                     const isEvent = item.targetType === 'event';
                     const isPost = item.targetType === 'post';
-                    const isClickable = isEvent || isPost;
+                    const isLocation = item.targetType === 'location';
+                    const isBooking = item.targetType === 'booking';
+                    const isClickable = isEvent || isPost || isLocation || isBooking;
                     const handleRowClick = () => {
                       if (isEvent) {
                         router.push(`/admin/events/${item.targetId}?tab=reports`);
                       } else if (isPost) {
                         router.push(`/admin/posts/${item.targetId}?tab=reports`);
+                      } else if (isLocation) {
+                        router.push(`/admin/locations/${item.targetId}?tab=reports`);
+                      } else if (isBooking) {
+                        router.push(`/admin/locations/${item.denormSecondaryTargetId}?tab=booking-reports`);
                       }
                     };
                     return (

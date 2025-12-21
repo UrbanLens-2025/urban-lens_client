@@ -1310,6 +1310,7 @@ export interface ReferencedTargetLocation {
 }
 
 export interface Report {
+  denormSecondaryTargetId: any;
   id: string;
   targetType: ReportTargetType;
   targetId: string;

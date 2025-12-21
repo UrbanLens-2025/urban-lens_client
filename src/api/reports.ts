@@ -289,3 +289,60 @@ export const getReportAnalytics = async (): Promise<ReportAnalytics> => {
   );
   return data.data;
 };
+
+// Get report reasons (public endpoint)
+export interface ReportReason {
+  key: string;
+  displayName: string;
+  description: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  forEvent: boolean;
+  forLocation: boolean;
+  forPost: boolean;
+  priority: number;
+}
+
+export interface ReportReasonsResponse {
+  data: ReportReason[];
+  meta: {
+    itemsPerPage: number;
+    totalItems: number;
+    currentPage: number;
+    totalPages: number;
+    sortBy: Array<[string, string]>;
+  };
+  links: {
+    current: string;
+  };
+}
+
+export const getReportReasons = async (): Promise<ReportReason[]> => {
+  const { data } = await axiosInstance.get<ApiResponse<ReportReasonsResponse>>(
+    '/v1/public/report-reason',
+    {
+      params: {
+        page: 1,
+        limit: 100,
+        sortBy: 'displayName:ASC',
+      },
+    }
+  );
+  return data.data.data;
+};
+
+// Report a booking
+export interface ReportBookingPayload {
+  bookingId: string;
+  reportedReason: string;
+  title: string;
+  description: string;
+  attachedImageUrls?: string[];
+}
+
+export const reportBooking = async (
+  payload: ReportBookingPayload
+): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>('/v1/private/report/booking', payload);
+};

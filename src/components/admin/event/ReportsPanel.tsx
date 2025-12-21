@@ -124,10 +124,10 @@ export function ReportsPanel({
   const [maliciousReason, setMaliciousReason] = useState("");
   const [apologyReason, setApologyReason] = useState("");
   const [refundReason, setRefundReason] = useState("");
-  const [refundPercentage, setRefundPercentage] = useState<string>("0");
+  const [refundPercentage, setRefundPercentage] = useState<string>("0.00");
   const [shouldCancelTickets, setShouldCancelTickets] = useState<boolean>(true);
   const [bookingRefundReason, setBookingRefundReason] = useState("");
-  const [bookingRefundPercentage, setBookingRefundPercentage] = useState<string>("0");
+  const [bookingRefundPercentage, setBookingRefundPercentage] = useState<string>("0.00");
   const [shouldCancelBooking, setShouldCancelBooking] = useState<boolean>(true);
 
   const {
@@ -436,7 +436,7 @@ export function ReportsPanel({
               onSuccess: () => {
                 setIsBookingRefundModalOpen(false);
                 setBookingRefundReason("");
-                setBookingRefundPercentage("0");
+                setBookingRefundPercentage("0.00");
                 setShouldCancelBooking(true);
                 setSelectedReportIds(new Set());
               },
@@ -1947,7 +1947,7 @@ const TicketRefundDialog = memo(function TicketRefundDialog({
 }: TicketRefundDialogProps) {
   const parsedPercentage = Number(refundPercentage);
   const isInvalidPercentage =
-    Number.isNaN(parsedPercentage) || parsedPercentage < 0 || parsedPercentage > 100;
+    Number.isNaN(parsedPercentage) || parsedPercentage < 0 || parsedPercentage > 1;
   const disabled =
     targetType !== "event" ||
     selectedCount === 0 ||
@@ -1972,7 +1972,7 @@ const TicketRefundDialog = memo(function TicketRefundDialog({
             rows={4}
           />
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
+            <div className="space-y-1 col-span-2">
               <Label htmlFor="refund-percentage" className="text-xs">
                 Refund percentage
               </Label>
@@ -1980,16 +1980,16 @@ const TicketRefundDialog = memo(function TicketRefundDialog({
                 id="refund-percentage"
                 type="number"
                 min={0}
-                max={100}
-                step={1}
+                max={1}
+                step={0.01}
                 value={refundPercentage}
                 onChange={(e) => onRefundPercentageChange(e.target.value)}
               />
               <p className="text-[11px] text-muted-foreground">
-                Enter a value between 0 and 100.
+                Enter a value between 0 and 1 (e.g., 0.80 for 80%).
               </p>
             </div>
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label className="text-xs">Cancel tickets</Label>
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -2001,7 +2001,7 @@ const TicketRefundDialog = memo(function TicketRefundDialog({
                   Also cancel existing tickets
                 </Label>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
         <DialogFooter className="flex items-center justify-end gap-2">
@@ -2068,7 +2068,7 @@ const BookingRefundDialog = memo(function BookingRefundDialog({
 }: BookingRefundDialogProps) {
   const parsedPercentage = Number(refundPercentage);
   const isInvalidPercentage =
-    Number.isNaN(parsedPercentage) || parsedPercentage < 0 || parsedPercentage > 100;
+    Number.isNaN(parsedPercentage) || parsedPercentage < 0 || parsedPercentage > 1;
 
   const disabled =
     targetType !== "location" ||
@@ -2102,13 +2102,13 @@ const BookingRefundDialog = memo(function BookingRefundDialog({
                 id="booking-refund-percentage"
                 type="number"
                 min={0}
-                max={100}
-                step={1}
+                max={1}
+                step={0.01}
                 value={refundPercentage}
                 onChange={(e) => onRefundPercentageChange(e.target.value)}
               />
               <p className="text-[11px] text-muted-foreground">
-                Enter a value between 0 and 100.
+                Enter a value between 0 and 1 (e.g., 0.80 for 80%).
               </p>
             </div>
             <div className="space-y-2">
