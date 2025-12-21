@@ -223,14 +223,6 @@ export default function CreatorEventsPage() {
           color='amber'
           description='Not published yet'
         />
-
-        <StatCard
-          title='Total Tags'
-          value={stats.totalTags}
-          icon={TagIcon}
-          color='purple'
-          description='Across all events'
-        />
       </div>
 
       {/* Events Table */}
