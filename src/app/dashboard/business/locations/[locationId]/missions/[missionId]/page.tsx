@@ -1,23 +1,25 @@
 'use client';
 
-import type React from 'react';
 import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useLocationMissionById } from '@/hooks/missions/useLocationMissionById';
 import { getMissionParticipants } from '@/api/missions';
 import { useLocationTabs } from '@/contexts/LocationTabContext';
+import { useGenerateOneTimeQRCode } from '@/hooks/missions/useGenerateOneTimeQRCode';
 
 // --- Import UI Components ---
 import {
   Loader2,
   CalendarDays as CalendarDaysIcon,
-  Layers,
   Zap,
   Star,
-  ImageIcon,
   Users,
   Search,
+  QrCode,
+  Copy,
+  Download,
+  RefreshCw,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,32 +41,14 @@ import LoadingCustom from '@/components/shared/LoadingCustom';
 import Image from 'next/image';
 import { formatDate } from '@/lib/utils';
 import { IconTarget } from '@tabler/icons-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
-// --- Component con: InfoRow ---
-function InfoRow({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: React.ReactNode;
-  icon?: React.ComponentType<{ className?: string }>;
-}) {
-  if (!value) return null;
-  return (
-    <div className='flex gap-3 mb-4'>
-      {Icon && (
-        <Icon className='h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5' />
-      )}
-      <div className='flex-1'>
-        <p className='text-sm font-semibold text-muted-foreground'>{label}</p>
-        <div className='text-base text-foreground break-words'>{value}</div>
-      </div>
-    </div>
-  );
-}
-
-// --- Component Trang Chính ---
 export default function MissionDetailsPage({
   params,
 }: {
@@ -78,35 +62,48 @@ export default function MissionDetailsPage({
   const [currentImageSrc, setCurrentImageSrc] = useState('');
   const [currentImageAlt, setCurrentImageAlt] = useState('');
 
+  // --- QR Code State ---
+  const [generatedQRCode, setGeneratedQRCode] = useState<{
+    qrCodeData: string;
+    qrCodeUrl: string;
+    expiresAt: string;
+    id: string;
+    isUsed: boolean;
+    missionId: string;
+  } | null>(null);
+
   const {
     data: mission,
     isLoading,
     isError,
   } = useLocationMissionById(missionId);
 
+  // --- QR Code Hook ---
+  const { mutate: generateQRCode, isPending: isGeneratingQR } =
+    useGenerateOneTimeQRCode(locationId);
+
   // --- Mission participants state & data ---
   const [participantsPage, setParticipantsPage] = useState(1);
   const [participantsSearch, setParticipantsSearch] = useState('');
   const participantsLimit = 20;
 
-  const { data: participantsResponse, isLoading: isLoadingParticipants } =
-    useQuery({
-      queryKey: [
-        'missionParticipants',
-        mission?.id,
-        participantsPage,
-        participantsSearch,
-      ],
-      queryFn: () =>
-        getMissionParticipants({
-          missionId,
-          page: participantsPage,
-          limit: participantsLimit,
-          sortBy: ['progress:DESC'],
-          search: participantsSearch || undefined,
-        }),
-      enabled: !!mission,
-    });
+  const { data: participantsResponse } = useQuery({
+    queryKey: [
+      'missionParticipants',
+      mission?.id,
+      participantsPage,
+      participantsSearch,
+    ],
+    queryFn: () =>
+      getMissionParticipants({
+        missionId,
+        page: participantsPage,
+        limit: participantsLimit,
+        sortBy: ['progress:DESC'],
+        search: participantsSearch || undefined,
+      }),
+    enabled: !!mission,
+  });
 
   const handleImageClick = (src: string, alt: string) => {
     setCurrentImageSrc(src);
@@ -114,19 +111,69 @@ export default function MissionDetailsPage({
     setIsImageViewerOpen(true);
   };
 
-  // Update tab name when mission data loads
+  // --- QR Code Handlers ---
+  const handleGenerateQRCode = () => {
+    generateQRCode(
+      { missionId },
+      {
+        onSuccess: (data) => {
+          setGeneratedQRCode({
+            qrCodeData: data.qrCodeData,
+            qrCodeUrl: data.qrCodeUrl,
+            expiresAt: data.expiresAt,
+            id: data.id,
+            isUsed: data.isUsed,
+            missionId: missionId,
+          });
+          toast.success('QR code generated successfully!');
+        },
+      }
+    );
+  };
+
+  const handleRegenerate = () => {
+    handleGenerateQRCode();
+  };
+
+  const handleCopyQRCode = () => {
+    if (generatedQRCode?.qrCodeData) {
+      navigator.clipboard.writeText(generatedQRCode.qrCodeData);
+      toast.success('QR code data copied to clipboard!');
+    }
+  };
+
+  const handleDownloadQRCode = () => {
+    if (!generatedQRCode) return;
+    const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+      generatedQRCode.qrCodeData
+    )}`;
+    const link = document.createElement('a');
+    link.href = qrCodeImageUrl;
+    link.download = `qr-code-${locationId}-${Date.now()}.png`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('QR code downloaded!');
+  };
+
+  const getQRCodeImageUrl = () => {
+    if (!generatedQRCode) return null;
+    if (generatedQRCode.qrCodeUrl) return generatedQRCode.qrCodeUrl;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+      generatedQRCode.qrCodeData
+    )}`;
+  };
+
+  // Update tab name
   useEffect(() => {
     if (mission && mission.title) {
       openMissionDetailTab(missionId, 'View Mission');
     }
   }, [mission, missionId, openMissionDetailTab]);
 
-  if (isLoading) {
-    return <LoadingCustom />;
-  }
-  if (isError || !mission) {
-    return <ErrorCustom />;
-  }
+  if (isLoading) return <LoadingCustom />;
+  if (isError || !mission) return <ErrorCustom />;
 
   const now = new Date();
   const isExpired = new Date(mission.endDate) < now;
@@ -149,45 +196,51 @@ export default function MissionDetailsPage({
       <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
         {/* Mission Info Card - Compact Sidebar */}
         <Card className='lg:col-span-1'>
-          <CardContent className='space-y-2'>
-            <CardTitle className='text-base font-semibold flex gap-2 items-center'>
+          <CardContent className='space-y-4 pt-6'>
+            <div className='flex items-center gap-2 mb-2'>
               <IconTarget className='h-5 w-5 text-primary' />
               <p className='text-base font-semibold'>Mission Information</p>
-            </CardTitle>
+            </div>
+            
             {/* Images */}
-            {mission.imageUrls.slice(0, 3).map((url, index) => (
-              <Image
-                key={index}
-                src={url}
-                alt={`Mission image ${index + 1}`}
-                width={100}
-                height={100}
-                className='w-36 h-36 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity'
-                onClick={() =>
-                  handleImageClick(url, `Mission image ${index + 1}`)
-                }
-              />
-            ))}
-            {/* Description */}
-            {mission.title && (
-              <p className='text-base text-foreground font-semibold'>
-                {mission.title}
-              </p>
+            {mission.imageUrls.length > 0 && (
+              <div className='grid grid-cols-2 gap-2'>
+                {mission.imageUrls.slice(0, 4).map((url, index) => (
+                  <div key={index} className='relative aspect-square'>
+                    <Image
+                      src={url}
+                      alt={`Mission image ${index + 1}`}
+                      fill
+                      className='object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity'
+                      onClick={() =>
+                        handleImageClick(url, `Mission image ${index + 1}`)
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
             )}
 
-            {/* Description */}
-            {mission.description && (
-              <p className='text-sm line-clamp-3 text-muted-foreground'>
-                {mission.description}
-              </p>
-            )}
+            {/* Title & Description */}
+            <div>
+              {mission.title && (
+                <p className='text-base text-foreground font-semibold mb-1'>
+                  {mission.title}
+                </p>
+              )}
+              {mission.description && (
+                <p className='text-sm text-muted-foreground line-clamp-4'>
+                  {mission.description}
+                </p>
+              )}
+            </div>
 
             {/* Key Stats */}
-            <div className='space-y-3 pt-2 border-t border-primary/10'>
+            <div className='space-y-3 pt-4 border-t border-border'>
               <div className='flex items-center justify-between'>
                 <div className='flex items-center gap-2'>
                   <Zap className='h-4 w-4 text-primary' />
-                  <span className='text-xs font-semibold text-muted-foreground'>
+                  <span className='text-xs font-medium text-muted-foreground'>
                     Target
                   </span>
                 </div>
@@ -198,7 +251,7 @@ export default function MissionDetailsPage({
               <div className='flex items-center justify-between'>
                 <div className='flex items-center gap-2'>
                   <Star className='h-4 w-4 text-primary' />
-                  <span className='text-xs font-semibold text-muted-foreground'>
+                  <span className='text-xs font-medium text-muted-foreground'>
                     Reward
                   </span>
                 </div>
@@ -209,7 +262,7 @@ export default function MissionDetailsPage({
               <div className='flex items-center justify-between'>
                 <div className='flex items-center gap-2'>
                   <CalendarDaysIcon className='h-4 w-4 text-primary' />
-                  <span className='text-xs font-semibold text-muted-foreground'>
+                  <span className='text-xs font-medium text-muted-foreground'>
                     Start Date
                   </span>
                 </div>
@@ -220,7 +273,7 @@ export default function MissionDetailsPage({
               <div className='flex items-center justify-between'>
                 <div className='flex items-center gap-2'>
                   <CalendarDaysIcon className='h-4 w-4 text-primary' />
-                  <span className='text-xs font-semibold text-muted-foreground'>
+                  <span className='text-xs font-medium text-muted-foreground'>
                     End Date
                   </span>
                 </div>
@@ -241,8 +294,24 @@ export default function MissionDetailsPage({
                 <span className='text-lg font-semibold'>Scan QR History</span>
               </CardTitle>
 
-              <div className='w-full md:w-auto'>
-                <div className='relative'>
+              {/* === NÚT GENERATE QR ĐƯỢC ĐẶT Ở ĐÂY === */}
+              <div className='flex flex-col sm:flex-row gap-3 w-full md:w-auto items-end sm:items-center'>
+                <Button
+                  variant='default'
+                  size="sm"
+                  onClick={handleGenerateQRCode}
+                  disabled={isGeneratingQR}
+                  className='h-12 flex items-center gap-2 border-primary/20 hover:border-primary/50'
+                >
+                  {isGeneratingQR ? (
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                  ) : (
+                    <QrCode className='h-4 w-4' />
+                  )}
+                  Generate QR
+                </Button>
+
+                <div className='relative w-full sm:w-auto'>
                   <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
                   <Input
                     placeholder='Search by name or email'
@@ -256,20 +325,20 @@ export default function MissionDetailsPage({
                 </div>
               </div>
             </div>
-        </CardHeader>
-        <CardContent>
-          <>
-            <Table>
-              <TableHeader className='bg-muted/40'>
-                <TableRow>
-                  <TableHead>Participant</TableHead>
-                  <TableHead>Progress</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Started At</TableHead>
-                  <TableHead>Completed At</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          </CardHeader>
+          <CardContent>
+            <div className='rounded-md border'>
+              <Table>
+                <TableHeader className='bg-muted/40'>
+                  <TableRow>
+                    <TableHead>Participant</TableHead>
+                    <TableHead>Progress</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Started At</TableHead>
+                    <TableHead>Completed At</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {participants.length === 0 ? (
                     <TableRow>
                       <TableCell
@@ -287,15 +356,21 @@ export default function MissionDetailsPage({
                         <TableRow key={p.id} className='hover:bg-muted/20'>
                           <TableCell>
                             <div className='flex items-center gap-2'>
-                              <Image
-                                src={user?.avatarUrl || ''}
-                                alt={user?.firstName || ''}
-                                width={32}
-                                height={32}
-                                className='w-8 h-8 rounded-md border'
-                              />
+                              {user?.avatarUrl ? (
+                                <Image
+                                  src={user.avatarUrl}
+                                  alt={user.firstName || 'User'}
+                                  width={32}
+                                  height={32}
+                                  className='w-8 h-8 rounded-full object-cover border'
+                                />
+                              ) : (
+                                <div className='w-8 h-8 rounded-full bg-muted flex items-center justify-center border'>
+                                  <Users className='h-4 w-4 text-muted-foreground' />
+                                </div>
+                              )}
                               <div className='flex flex-col'>
-                                <div className='font-medium'>
+                                <div className='font-medium text-sm'>
                                   {user?.firstName || ''} {user?.lastName || ''}
                                 </div>
                                 <div className='text-xs text-muted-foreground'>
@@ -333,54 +408,52 @@ export default function MissionDetailsPage({
                   )}
                 </TableBody>
               </Table>
+            </div>
 
-              {/* Pagination */}
-              {participantsMeta && participantsMeta.totalPages > 1 && (
-                <div className='flex items-center justify-between mt-6 px-4 py-4 border-t bg-background/40'>
-                  <div className='text-sm text-muted-foreground'>
-                    Showing{' '}
-                    {(participantsMeta.currentPage - 1) * participantsLimit + 1}{' '}
-                    to{' '}
-                    {Math.min(
-                      participantsMeta.currentPage * participantsLimit,
-                      participantsMeta.totalItems
-                    )}{' '}
-                    of {participantsMeta.totalItems} participants
-                  </div>
-                  <div className='flex items-center gap-2'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() =>
-                        setParticipantsPage((p) => Math.max(1, p - 1))
-                      }
-                      disabled={participantsMeta.currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <div className='text-sm text-muted-foreground px-2'>
-                      Page {participantsMeta.currentPage} of{' '}
-                      {participantsMeta.totalPages}
-                    </div>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() =>
-                        setParticipantsPage((p) =>
-                          Math.min(participantsMeta.totalPages, p + 1)
-                        )
-                      }
-                      disabled={
-                        participantsMeta.currentPage ===
-                        participantsMeta.totalPages
-                      }
-                    >
-                      Next
-                    </Button>
-                  </div>
+            {/* Pagination */}
+            {participantsMeta && participantsMeta.totalPages > 1 && (
+              <div className='flex items-center justify-between mt-4'>
+                <div className='text-sm text-muted-foreground'>
+                  Showing{' '}
+                  {(participantsMeta.currentPage - 1) * participantsLimit + 1}{' '}
+                  to{' '}
+                  {Math.min(
+                    participantsMeta.currentPage * participantsLimit,
+                    participantsMeta.totalItems
+                  )}{' '}
+                  of {participantsMeta.totalItems} participants
                 </div>
-              )}
-            </>
+                <div className='flex items-center gap-2'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setParticipantsPage((p) => Math.max(1, p - 1))}
+                    disabled={participantsMeta.currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <div className='text-sm text-muted-foreground px-2'>
+                    Page {participantsMeta.currentPage} of{' '}
+                    {participantsMeta.totalPages}
+                  </div>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      setParticipantsPage((p) =>
+                        Math.min(participantsMeta.totalPages, p + 1)
+                      )
+                    }
+                    disabled={
+                      participantsMeta.currentPage ===
+                      participantsMeta.totalPages
+                    }
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -411,6 +484,109 @@ export default function MissionDetailsPage({
         open={isImageViewerOpen}
         onOpenChange={setIsImageViewerOpen}
       />
+
+      {/* QR Code Dialog */}
+      <Dialog
+        open={!!generatedQRCode}
+        onOpenChange={(open) => !open && setGeneratedQRCode(null)}
+      >
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <QrCode className='h-5 w-5' />
+              One-Time QR Code
+            </DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            <div className='relative flex justify-center p-4 bg-muted/30 rounded-lg'>
+              {/* Overlay loading when regenerating */}
+              {isGeneratingQR && (
+                <div className='absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center rounded-lg z-10'>
+                  <Loader2 className='h-8 w-8 animate-spin text-primary' />
+                </div>
+              )}
+              {generatedQRCode && getQRCodeImageUrl() && (
+                <img
+                  src={getQRCodeImageUrl() || ''}
+                  alt='QR Code'
+                  className='w-64 h-64 object-contain'
+                />
+              )}
+            </div>
+            {generatedQRCode && (
+              <>
+                <div className='space-y-2'>
+                  <label className='text-xs font-medium text-muted-foreground'>
+                    Mission Code
+                  </label>
+                  <div className='flex items-center gap-2 p-2 bg-muted/30 rounded-md'>
+                    <code className='flex-1 text-xs break-all'>
+                      {generatedQRCode.qrCodeData}
+                    </code>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      className='h-8 w-8'
+                      onClick={handleCopyQRCode}
+                    >
+                      <Copy className='h-4 w-4' />
+                    </Button>
+                  </div>
+                </div>
+                <div className='space-y-2 text-xs'>
+                  <div className='flex justify-between'>
+                    <span className='text-muted-foreground'>Expires at:</span>
+                    <span className='font-medium'>
+                      {new Date(generatedQRCode.expiresAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className='flex justify-between'>
+                    <span className='text-muted-foreground'>Status:</span>
+                    <Badge
+                      variant={
+                        generatedQRCode.isUsed ? 'destructive' : 'default'
+                      }
+                    >
+                      {generatedQRCode.isUsed ? 'Used' : 'Active'}
+                    </Badge>
+                  </div>
+                </div>
+              </>
+            )}
+            <div className='grid grid-cols-2 gap-2'>
+              <Button
+                variant='default'
+                className='col-span-2'
+                onClick={handleRegenerate}
+                disabled={isGeneratingQR}
+              >
+                {isGeneratingQR ? (
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                ) : (
+                  <RefreshCw className='mr-2 h-4 w-4' />
+                )}
+                Re-generate QR
+              </Button>
+              <Button
+                variant='outline'
+                onClick={handleDownloadQRCode}
+                disabled={isGeneratingQR}
+              >
+                <Download className='mr-2 h-4 w-4' />
+                Download
+              </Button>
+              <Button
+                variant='outline'
+                onClick={handleCopyQRCode}
+                disabled={isGeneratingQR}
+              >
+                <Copy className='mr-2 h-4 w-4' />
+                Copy Data
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
