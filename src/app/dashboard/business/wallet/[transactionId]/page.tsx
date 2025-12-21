@@ -1,13 +1,12 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useWalletExternalTransactionById } from "@/hooks/wallet/useWalletExternalTransactionById";
 import { useWalletInternalTransactionById } from "@/hooks/wallet/useWalletInternalTransactionById";
+import { useWalletExternalTransactionById } from "@/hooks/wallet/useWalletExternalTransactionById";
 import { useCancelWithdrawTransaction } from "@/hooks/wallet/useCancelWithdrawTransaction";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -16,148 +15,73 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft, Copy, ExternalLink, CheckCircle2, Clock, XCircle, AlertCircle, Building2, CreditCard, Calendar, DollarSign, Hash, FileText, History, User, Activity, X, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { 
+  Loader2, ArrowLeft, Copy, CheckCircle2, 
+  Clock, XCircle, AlertCircle, Building2, 
+  Receipt, Image as ImageIcon, Activity, User, Maximize2, X, ZoomIn
+} from "lucide-react";
 import { useState } from "react";
+import Image from "next/image";
 
-function mapStatus(status: string): string {
-  const statusMap: Record<string, string> = {
-    COMPLETED: "completed",
-    PENDING: "pending",
-    FAILED: "failed",
-    CANCELLED: "cancelled",
-    READY_FOR_PAYMENT: "ready",
-    PROCESSING: "processing",
-    TRANSFER_FAILED: "failed",
-    TRANSFERRED: "transferred",
+// --- Utility Components ---
+
+const CopyButton = ({ text, label }: { text: string; label?: string }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
-  return statusMap[status?.toUpperCase()] || status?.toLowerCase() || "pending";
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-6 w-6 ml-1 text-muted-foreground hover:text-foreground"
+      onClick={handleCopy}
+      title={`Copy ${label || 'text'}`}
+    >
+      {copied ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+    </Button>
+  );
+};
+
+const DetailRow = ({ label, value, copyable = false, mono = false }: { label: string; value?: string | number | null; copyable?: boolean; mono?: boolean }) => {
+  if (!value) return null;
+  return (
+    <div className="flex items-center justify-between py-3 text-sm border-b last:border-0">
+      <span className="text-muted-foreground">{label}</span>
+      <div className="flex items-center font-medium">
+        <span className={`${mono ? "font-mono" : ""} truncate max-w-[200px] md:max-w-[300px]`}>
+          {value}
+        </span>
+        {copyable && <CopyButton text={value.toString()} label={label} />}
+      </div>
+    </div>
+  );
+};
+
+// --- Helper Functions ---
+
+function mapStatus(status: string) {
+  const s = status?.toUpperCase() || "";
+  if (["COMPLETED", "TRANSFERRED", "SUCCESS"].includes(s)) return "completed";
+  if (["FAILED", "TRANSFER_FAILED"].includes(s)) return "failed";
+  if (["CANCELLED"].includes(s)) return "cancelled";
+  if (["PROCESSING"].includes(s)) return "processing";
+  return "pending";
 }
 
-function getStatusColor(status: string) {
-  const normalizedStatus = mapStatus(status);
-  switch (normalizedStatus) {
-    case "completed":
-      return "default";
-    case "ready":
-    case "processing":
-      return "secondary";
-    case "failed":
-      return "destructive";
-    case "pending":
-      return "secondary";
-    default:
-      return "secondary";
-  }
-}
-
-function getStatusLabel(status: string) {
-  const normalizedStatus = mapStatus(status);
-  const labelMap: Record<string, string> = {
-    completed: "Completed",
-    pending: "Pending",
-    failed: "Failed",
-    cancelled: "Cancelled",
-    ready: "Ready for Payment",
-    processing: "Processing",
-    transferred: "Transferred",
+function getStatusConfig(status: string) {
+  const s = mapStatus(status);
+  const config = {
+    completed: { color: "text-green-600 bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400", icon: CheckCircle2, label: "Completed" },
+    failed: { color: "text-red-600 bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400", icon: XCircle, label: "Failed" },
+    cancelled: { color: "text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400", icon: XCircle, label: "Cancelled" },
+    processing: { color: "text-blue-600 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400", icon: Activity, label: "Processing" },
+    pending: { color: "text-yellow-600 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-400", icon: Clock, label: "Pending" },
   };
-  return labelMap[normalizedStatus] || status.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ');
-}
-
-function getStatusIcon(status: string) {
-  const normalizedStatus = mapStatus(status);
-  switch (normalizedStatus) {
-    case "completed":
-      return <CheckCircle2 className="h-4 w-4" />;
-    case "failed":
-      return <XCircle className="h-4 w-4" />;
-    case "ready":
-    case "processing":
-      return <Clock className="h-4 w-4" />;
-    default:
-      return <AlertCircle className="h-4 w-4" />;
-  }
-}
-
-function getStatusColorClasses(status: string) {
-  const normalizedStatus = mapStatus(status);
-  switch (normalizedStatus) {
-    case "completed":
-    case "transferred":
-      return {
-        iconBg: "bg-green-100 dark:bg-green-900/30",
-        iconBorder: "border-green-300 dark:border-green-700",
-        iconText: "text-green-600 dark:text-green-400",
-        connector: "bg-green-200 dark:bg-green-800",
-        cardBg: "bg-green-50/50 dark:bg-green-950/20",
-        cardBorder: "border-green-200 dark:border-green-800",
-      };
-    case "failed":
-      return {
-        iconBg: "bg-red-100 dark:bg-red-900/30",
-        iconBorder: "border-red-300 dark:border-red-700",
-        iconText: "text-red-600 dark:text-red-400",
-        connector: "bg-red-200 dark:bg-red-800",
-        cardBg: "bg-red-50/50 dark:bg-red-950/20",
-        cardBorder: "border-red-200 dark:border-red-800",
-      };
-    case "ready":
-    case "processing":
-      return {
-        iconBg: "bg-blue-100 dark:bg-blue-900/30",
-        iconBorder: "border-blue-300 dark:border-blue-700",
-        iconText: "text-blue-600 dark:text-blue-400",
-        connector: "bg-blue-200 dark:bg-blue-800",
-        cardBg: "bg-blue-50/50 dark:bg-blue-950/20",
-        cardBorder: "border-blue-200 dark:border-blue-800",
-      };
-    case "pending":
-      return {
-        iconBg: "bg-amber-100 dark:bg-amber-900/30",
-        iconBorder: "border-amber-300 dark:border-amber-700",
-        iconText: "text-amber-600 dark:text-amber-400",
-        connector: "bg-amber-200 dark:bg-amber-800",
-        cardBg: "bg-amber-50/50 dark:bg-amber-950/20",
-        cardBorder: "border-amber-200 dark:border-amber-800",
-      };
-    default:
-      return {
-        iconBg: "bg-gray-100 dark:bg-gray-800",
-        iconBorder: "border-gray-300 dark:border-gray-700",
-        iconText: "text-gray-600 dark:text-gray-400",
-        connector: "bg-gray-200 dark:bg-gray-700",
-        cardBg: "bg-gray-50/50 dark:bg-gray-950/20",
-        cardBorder: "border-gray-200 dark:border-gray-800",
-      };
-  }
-}
-
-function getActionIcon(action: string) {
-  if (action.includes('CREATE')) return <FileText className="h-4 w-4" />;
-  if (action.includes('CONFIRM')) return <CheckCircle2 className="h-4 w-4" />;
-  if (action.includes('BALANCE')) return <DollarSign className="h-4 w-4" />;
-  if (action.includes('PROCESSING')) return <Activity className="h-4 w-4" />;
-  return <History className="h-4 w-4" />;
-}
-
-function getActorIcon(actorType: string) {
-  if (actorType === 'EXTERNAL_SYSTEM' || actorType === 'SYSTEM') return <Activity className="h-4 w-4" />;
-  return <User className="h-4 w-4" />;
-}
-
-function getBankName(bankCode: string): string {
-  const bankMap: Record<string, string> = {
-    VNP: "Vietnam Payment",
-    VNB: "Vietcombank",
-    TCB: "Techcombank",
-    BID: "BIDV",
-    ACB: "ACB",
-    VCB: "Vietcombank",
-    CTG: "Vietinbank",
-    NCB: "NCB Bank",
-    VNPAY: "VNPay",
-  };
-  return bankMap[bankCode?.toUpperCase()] || bankCode || "Unknown Bank";
+  return config[s];
 }
 
 export default function BusinessWalletTransactionDetailPage() {
@@ -165,533 +89,296 @@ export default function BusinessWalletTransactionDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const transactionId = params?.transactionId || "";
-  const transactionType = searchParams.get('type') || 'external'; // default to external for backward compatibility
+  const transactionType = searchParams.get('type') || 'internal';
 
-  // Use the appropriate hook based on transaction type
   const externalTransaction = useWalletExternalTransactionById(transactionType === 'external' ? transactionId : null);
   const internalTransaction = useWalletInternalTransactionById(transactionType === 'internal' ? transactionId : null);
   const cancelWithdraw = useCancelWithdrawTransaction();
 
-  const transaction = transactionType === 'internal' ? internalTransaction.data : externalTransaction.data;
+  const transaction: any = transactionType === 'internal' ? internalTransaction.data : externalTransaction.data;
   const isLoading = transactionType === 'internal' ? internalTransaction.isLoading : externalTransaction.isLoading;
-
+  
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedProofImage, setSelectedProofImage] = useState<string | null>(null);
 
-  const isWithdraw = transaction && 'direction' in transaction && transaction.direction?.toUpperCase() === 'WITHDRAW';
-  const isPending = transaction && 'status' in transaction && transaction.status?.toUpperCase() === 'PENDING';
-  const canCancel = isWithdraw && isPending;
+  if (isLoading) return <div className="h-[50vh] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary/50" /></div>;
+  if (!transaction) return <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground"><AlertCircle className="h-10 w-10 mb-2" /> Transaction not found</div>;
 
-  const handleCancel = () => {
-    cancelWithdraw.mutate(transactionId);
-    setCancelDialogOpen(false);
+  const isWithdraw = transaction.direction?.toUpperCase() === 'WITHDRAW';
+  const isPending = transaction.status?.toUpperCase() === 'PENDING';
+  const statusConfig = getStatusConfig(transaction.status);
+  const StatusIcon = statusConfig.icon;
+
+  const formatCurrency = (amount: number | string, currency = "VND") => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency }).format(Number(amount));
   };
 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
     });
   };
 
-  const formatCurrency = (amount: number, currency = "VND") => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
+  const proofImages: string[] = [];
+  if (transaction.proofOfTransferImages) {
+    if (Array.isArray(transaction.proofOfTransferImages)) {
+      transaction.proofOfTransferImages.forEach((p: string) => proofImages.push(p));
+    } else if (typeof transaction.proofOfTransferImages === 'object') {
+      Object.values(transaction.proofOfTransferImages).forEach((p: any) => proofImages.push(p as string));
+    }
+  }
 
   return (
-    <div className="space-y-4 pb-6 overflow-x-hidden">
-      <div className="flex justify-end">
-        <Button variant="outline" onClick={() => router.back()} className="shadow-sm shrink-0" size="sm">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+    <div className="max-w-8xl mx-auto space-y-6 pb-20">
+      {/* Top Navigation */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="sm" onClick={() => router.back()} className="-ml-2 text-muted-foreground">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Wallet
         </Button>
       </div>
 
-      <Card className="shadow-md border">
-        <CardHeader className="border-b bg-muted/20 py-3">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Activity className="h-4 w-4 text-primary" />
-            Overview
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          {isLoading || !transaction ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Loading transaction details...</p>
-              </div>
-            </div>
-          ) : 'direction' in transaction ? (
-            // External transaction
-            <div className="space-y-4">
-              {/* Amount and Status Card */}
-              <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/30 dark:via-indigo-950/30 dark:to-purple-950/30 border border-blue-200/50 dark:border-blue-800/50 shadow-sm">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="space-y-2 flex-1 min-w-0">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Transaction Amount</p>
-                      <p className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent break-words">
-                        {formatCurrency(parseFloat(transaction.amount), transaction.currency)}
-                      </p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant={getStatusColor(mapStatus(transaction.status))} className="gap-1 px-2 py-0.5 text-xs font-medium">
-                          {getStatusIcon(transaction.status)}
-                          {getStatusLabel(transaction.status)}
-                        </Badge>
-                        <Badge variant="outline" className="gap-1 px-2 py-0.5 text-xs">
-                          {transaction.direction?.toUpperCase() === 'DEPOSIT' ? (
-                            <>
-                              <ArrowDownLeft className="h-3 w-3 text-green-600" />
-                              Deposit
-                            </>
-                          ) : (
-                            <>
-                              <ArrowUpRight className="h-3 w-3 text-orange-600" />
-                              Withdrawal
-                            </>
-                          )}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap shrink-0">
-                      {transaction.paymentUrl && transaction.status !== 'COMPLETED' && (
-                        <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all" size="sm">
-                          <a href={transaction.paymentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5">
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Complete Payment</span>
-                            <span className="sm:hidden">Pay</span>
-                          </a>
-                        </Button>
-                      )}
-                      {canCancel && (
-                        <Button
-                          variant="destructive"
-                          onClick={() => setCancelDialogOpen(true)}
-                          disabled={cancelWithdraw.isPending}
-                          className="shadow-sm hover:shadow-md transition-all"
-                          size="sm"
-                        >
-                          {cancelWithdraw.isPending ? (
-                            <>
-                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                              <span className="hidden sm:inline">Cancelling...</span>
-                              <span className="sm:hidden">...</span>
-                            </>
-                          ) : (
-                            <>
-                              <X className="h-3.5 w-3.5 mr-1.5" />
-                              <span className="hidden sm:inline">Cancel</span>
-                              <span className="sm:hidden">X</span>
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+      {/* Header Section */}
+      <div className={`rounded-xl border p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 ${statusConfig.color}`}>
+        <div className="flex items-start gap-4">
+          <div className={`p-3 rounded-full bg-white/50 dark:bg-black/20 backdrop-blur-sm shadow-sm`}>
+            <StatusIcon className="h-8 w-8" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold opacity-90">{isWithdraw ? 'Withdrawal' : 'Transaction'} {statusConfig.label}</h1>
+            <p className="text-sm opacity-75">
+              Updated {formatDateTime(transaction.updatedAt)}
+            </p>
+          </div>
+        </div>
+        
+        <div className="text-right">
+          <p className="text-sm font-medium opacity-75 mb-1 uppercase tracking-wide">Total Amount</p>
+          <div className="text-3xl font-bold tracking-tight">
+            {formatCurrency(transaction.amount, transaction.currency)}
+          </div>
+        </div>
+      </div>
 
-              {/* Transaction Details */}
-              <Card className="shadow-sm border">
-                <CardHeader className="border-b bg-muted/20 py-3">
-                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                    <Hash className="h-4 w-4 text-primary" />
-                    Transaction Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Transaction ID</p>
-                        <div className="flex items-center gap-2">
-                          <p className="font-mono text-xs font-medium flex-1 break-all">{transaction.id}</p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 hover:bg-muted"
-                            onClick={() => copyToClipboard(transaction.id)}
-                            title="Copy Transaction ID"
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Provider</p>
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />
-                          <p className="text-xs font-medium">{transaction.provider || '-'}</p>
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Provider Transaction ID</p>
-                        <div className="flex items-center gap-2">
-                          <p className="font-mono text-xs font-medium flex-1 break-all">{transaction.providerTransactionId || '-'}</p>
-                          {transaction.providerTransactionId && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 hover:bg-muted"
-                              onClick={() => copyToClipboard(transaction.providerTransactionId!)}
-                              title="Copy Provider Transaction ID"
-                            >
-                              <Copy className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Created At</p>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                          <p className="text-xs font-medium">{formatDateTime(transaction.createdAt)}</p>
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Updated At</p>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                          <p className="text-xs font-medium">{formatDateTime(transaction.updatedAt)}</p>
-                        </div>
-                      </div>
-                      {transaction.expiresAt && (
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Expires At</p>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                            <p className="text-xs font-medium">{formatDateTime(transaction.expiresAt)}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Payment Information */}
-              {transaction.providerResponse && (
-                <Card className="shadow-sm border">
-                  <CardHeader className="border-b bg-muted/20 py-3">
-                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                      <Building2 className="h-4 w-4 text-primary" />
-                      Payment Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-3">
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Bank</p>
-                          <p className="text-xs font-medium">{getBankName(transaction.providerResponse.vnp_BankCode || transaction.provider || '')}</p>
-                        </div>
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Bank Transaction Number</p>
-                          <div className="flex items-center gap-2">
-                            <p className="font-mono text-xs font-medium flex-1 break-all">{transaction.providerResponse.vnp_BankTranNo || '-'}</p>
-                            {transaction.providerResponse.vnp_BankTranNo && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 hover:bg-muted"
-                                onClick={() => copyToClipboard(transaction.providerResponse!.vnp_BankTranNo!)}
-                                title="Copy Bank Transaction Number"
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">VNPay Transaction Reference</p>
-                          <div className="flex items-center gap-2">
-                            <p className="font-mono text-xs font-medium flex-1 break-all">{transaction.providerResponse.vnp_TxnRef || '-'}</p>
-                            {transaction.providerResponse.vnp_TxnRef && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 hover:bg-muted"
-                                onClick={() => copyToClipboard(transaction.providerResponse!.vnp_TxnRef!)}
-                                title="Copy VNPay Transaction Reference"
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">VNPay Transaction Number</p>
-                          <p className="font-mono text-xs font-medium">{transaction.providerResponse.vnp_TransactionNo || '-'}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Order Information</p>
-                          <p className="text-xs font-medium break-words">{transaction.providerResponse.vnp_OrderInfo || '-'}</p>
-                        </div>
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Payment Date</p>
-                          <p className="text-xs font-medium">
-                            {transaction.providerResponse.vnp_PayDate 
-                              ? new Date(transaction.providerResponse.vnp_PayDate.toString().replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6')).toLocaleString()
-                              : '-'
-                            }
-                          </p>
-                        </div>
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Response Code</p>
-                          <Badge variant={transaction.providerResponse.vnp_ResponseCode === 0 ? "default" : "destructive"} className="text-xs font-medium">
-                            {transaction.providerResponse.vnp_ResponseCode}
-                          </Badge>
-                        </div>
-                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Transaction Status</p>
-                          <Badge variant={transaction.providerResponse.vnp_TransactionStatus === 0 ? "default" : "destructive"} className="text-xs font-medium">
-                            {transaction.providerResponse.vnp_TransactionStatus === 0 ? 'Success' : 'Failed'}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                    {transaction.paymentUrl && (
-                      <div className="mt-4 pt-4 border-t">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Payment URL</p>
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border/50">
-                          <p className="font-mono text-xs flex-1 break-all font-medium min-w-0">{transaction.paymentUrl}</p>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 hover:bg-muted shrink-0"
-                              onClick={() => copyToClipboard(transaction.paymentUrl!)}
-                              title="Copy Payment URL"
-                            >
-                              <Copy className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              asChild
-                              className="shadow-sm shrink-0"
-                            >
-                              <a href={transaction.paymentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5">
-                                <ExternalLink className="h-3.5 w-3.5" />
-                                Open
-                              </a>
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Withdrawal Bank Info (if available) */}
-              {((transaction as any).withdrawBankName || (transaction as any).withdrawBankAccountNumber) && (
-                <Card className="shadow-sm border">
-                  <CardHeader className="border-b bg-muted/20 py-3">
-                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                      <Building2 className="h-4 w-4 text-primary" />
-                      Withdrawal Bank Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50 min-w-0">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Bank Name</p>
-                        <p className="text-xs font-medium break-words">{(transaction as any).withdrawBankName || '-'}</p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50 min-w-0">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Account Number</p>
-                        <p className="font-mono text-xs font-medium break-all">{(transaction as any).withdrawBankAccountNumber || '-'}</p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50 min-w-0 sm:col-span-2 md:col-span-1">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Account Name</p>
-                        <p className="text-xs font-medium break-words">{(transaction as any).withdrawBankAccountName || '-'}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Timeline */}
-              <Card className="shadow-sm border">
-                <CardHeader className="border-b bg-muted/20 py-3">
-                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                    <History className="h-4 w-4 text-primary" />
-                    Transaction Timeline
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  {transaction.timeline && transaction.timeline.length > 0 ? (
-                    <div className="space-y-4">
-                      {transaction.timeline.map((e, index) => {
-                        const statusColors = getStatusColorClasses(e.statusChangedTo);
-                        const isLast = index === (transaction.timeline?.length ?? 0) - 1;
-                        return (
-                          <div key={e.id} className="flex gap-3 relative">
-                            <div className="flex flex-col items-center">
-                              <div className={`rounded-full ${statusColors.iconBg} p-2 border-2 ${statusColors.iconBorder} shadow-sm transition-all`}>
-                                <div className={statusColors.iconText}>
-                                  {getActionIcon(e.action)}
-                                </div>
-                              </div>
-                              {!isLast && (
-                                <div className={`w-0.5 h-full ${statusColors.connector} mt-1.5 min-h-[50px]`} />
-                              )}
-                            </div>
-                            <div className="flex-1 pb-4">
-                              <div className={`p-3 rounded-lg ${statusColors.cardBg} border ${statusColors.cardBorder} shadow-sm transition-all hover:shadow-md`}>
-                                <div className="flex items-start justify-between gap-3 mb-2">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                                      <Badge variant={getStatusColor(mapStatus(e.statusChangedTo))} className="gap-1 px-2 py-0.5 text-xs font-medium">
-                                        {getStatusIcon(e.statusChangedTo)}
-                                        {getStatusLabel(e.statusChangedTo)}
-                                      </Badge>
-                                      <span className="text-xs text-muted-foreground font-medium">{formatDateTime(e.createdAt)}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1.5">
-                                  {getActorIcon(e.actorType)}
-                                  <span className="font-medium">{e.actorName}</span>
-                                  {e.actorType && (
-                                    <Badge variant="outline" className="text-xs font-medium">
-                                      {e.actorType.replace(/_/g, ' ')}
-                                    </Badge>
-                                  )}
-                                </div>
-                                {e.note && (
-                                  <p className="text-xs text-muted-foreground mt-1.5 pt-1.5 border-t border-border/50">{e.note}</p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <History className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
-                      <p className="text-xs text-muted-foreground font-medium">No timeline events</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            // Internal transaction - show basic info
-            <div className="space-y-4">
-              <Card className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/30 dark:via-emerald-950/30 dark:to-teal-950/30 border border-green-200/50 dark:border-green-800/50 shadow-sm">
-                <CardContent className="pt-4 pb-4">
-                  <div className="space-y-2 min-w-0">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Transaction Amount</p>
-                    <p className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent break-words">
-                      {formatCurrency(parseFloat(transaction.amount), transaction.currency)}
-                    </p>
-                    <Badge variant={getStatusColor(mapStatus(transaction.status))} className="gap-1 px-2 py-0.5 text-xs font-medium w-fit">
-                      {getStatusIcon(transaction.status)}
-                      {getStatusLabel(transaction.status)}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="shadow-sm border">
-                <CardHeader className="border-b bg-muted/20 py-3">
-                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                    <Hash className="h-4 w-4 text-primary" />
-                    Transaction Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Transaction ID</p>
-                        <p className="font-mono text-xs font-medium break-all">{transaction.id}</p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Type</p>
-                        <p className="text-xs font-medium">{transaction.type}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Status</p>
-                        <Badge variant={getStatusColor(mapStatus(transaction.status))} className="text-xs font-medium">
-                          {getStatusLabel(mapStatus(transaction.status))}
-                        </Badge>
-                      </div>
-                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Created At</p>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                          <p className="text-xs font-medium">{formatDateTime(transaction.createdAt)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        {/* LEFT COLUMN */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* Action Area */}
+          {isWithdraw && isPending && (
+             <Card className="border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/10">
+               <CardContent className="p-6 flex items-center justify-between">
+                 <div className="text-sm text-orange-800 dark:text-orange-300">
+                    <span className="font-semibold">Pending Approval:</span> You can cancel this request while it is still pending.
+                 </div>
+                 <Button size="sm" variant="destructive" onClick={() => setCancelDialogOpen(true)}>
+                   Cancel Withdrawal
+                 </Button>
+               </CardContent>
+             </Card>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Cancel Withdrawal Dialog */}
+          {/* Timeline - Sorted Increasing */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                Transaction Timeline
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="relative pl-6 border-l-2 border-muted space-y-8">
+                {transaction.timeline && transaction.timeline.length > 0 ? (
+                  [...transaction.timeline]
+                    .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                    .map((event: any, index: number, arr: any[]) => {
+                      const isLatest = index === arr.length - 1;
+                      return (
+                        <div key={event.id || index} className="relative">
+                          <span className={`absolute -left-[31px] top-1 h-4 w-4 rounded-full border-2 bg-background transition-all ${isLatest ? 'border-primary ring-4 ring-primary/10 scale-110' : 'border-muted-foreground/30'}`} />
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1">
+                            <div>
+                              <p className={`text-sm ${isLatest ? 'font-semibold text-foreground' : 'font-medium text-foreground/80'}`}>
+                                {event.action.replace(/_/g, ' ')}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-0.5">
+                                {event.note || `Status changed to ${event.statusChangedTo}`}
+                              </p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-muted-foreground">
+                                  {event.actorType === 'SYSTEM' ? <Activity className="h-3 w-3 mr-1" /> : <User className="h-3 w-3 mr-1" />}
+                                  {event.actorName || event.actorType}
+                                </Badge>
+                              </div>
+                            </div>
+                            <time className={`text-xs font-mono whitespace-nowrap pt-1 ${isLatest ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                              {new Date(event.createdAt).toLocaleString()}
+                            </time>
+                          </div>
+                        </div>
+                      );
+                    })
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No timeline events recorded.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+           {/* Proof of Transfer Images */}
+           {proofImages.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                  Proof of Transfer
+                </CardTitle>
+                <CardDescription>Evidence of transfer uploaded by admin</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {proofImages.map((img, i) => (
+                    <div 
+                      key={i} 
+                      className="group relative aspect-[3/4] rounded-lg overflow-hidden border bg-muted cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all shadow-sm"
+                      onClick={() => setSelectedProofImage(img)}
+                    >
+                      <Image 
+                        src={img} 
+                        alt="Proof of transfer" 
+                        fill 
+                        className="object-cover object-top"
+                      />
+                      {/* Hover Overlay */}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                         <div className="bg-background/90 text-foreground px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 shadow-lg">
+                           <ZoomIn className="h-3 w-3" /> Click to view
+                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xs font-bold uppercase text-muted-foreground tracking-widest">
+                References
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+               <DetailRow label="Transaction ID" value={transaction.id} copyable mono />
+               <DetailRow label="Wallet ID" value={transaction.walletId} copyable mono />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xs font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-2">
+                <Receipt className="h-4 w-4" /> Transfer Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {transaction.transferBankTransactionId ? (
+                <DetailRow label="Bank Transfer Ref" value={transaction.transferBankTransactionId} copyable mono />
+              ) : (
+                transaction.provider && (
+                  <DetailRow label="Provider Ref" value={transaction.providerTransactionId || transaction.providerResponse?.vnp_TxnRef || "N/A"} copyable mono />
+                )
+              )}
+              <DetailRow label="Provider" value={transaction.provider || "Manual Transfer"} />
+              <DetailRow label="Created" value={formatDateTime(transaction.createdAt)} />
+            </CardContent>
+          </Card>
+
+          {(transaction.withdrawBankName || transaction.withdrawBankAccountNumber) && (
+            <Card>
+               <CardHeader className="pb-3">
+                <CardTitle className="text-xs font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-2">
+                  <Building2 className="h-4 w-4" /> Beneficiary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="bg-muted/30 pt-4 rounded-b-lg space-y-1">
+                <div className="pb-2">
+                  <p className="text-xs text-muted-foreground">Bank Name</p>
+                  <p className="font-medium text-sm">{transaction.withdrawBankName}</p>
+                </div>
+                <div className="pb-2">
+                  <p className="text-xs text-muted-foreground">Account Number</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono text-lg font-semibold tracking-wide">{transaction.withdrawBankAccountNumber}</p>
+                    <CopyButton text={transaction.withdrawBankAccountNumber} label="Account Number" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Account Name</p>
+                  <p className="font-medium text-sm">{transaction.withdrawBankAccountName}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Cancel Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">Cancel Withdrawal Transaction</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground pt-2">
-              Are you sure you want to cancel this withdrawal transaction? This will move it to CANCELLED status and unlock the funds in your wallet.
+            <DialogTitle>Cancel Withdrawal</DialogTitle>
+            <DialogDescription>
+              Are you sure? The funds ({formatCurrency(transaction.amount, transaction.currency)}) will be returned to your wallet.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => setCancelDialogOpen(false)}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>No, Keep It</Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => { cancelWithdraw.mutate(transactionId); setCancelDialogOpen(false); }}
               disabled={cancelWithdraw.isPending}
-              className="shadow-sm"
             >
-              No, Keep It
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCancel}
-              disabled={cancelWithdraw.isPending}
-              className="shadow-md hover:shadow-lg transition-all"
-            >
-              {cancelWithdraw.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Cancelling...
-                </>
-              ) : (
-                <>
-                  <X className="mr-2 h-4 w-4" />
-                  Yes, Cancel Withdrawal
-                </>
-              )}
+              {cancelWithdraw.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Yes, Cancel"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* FIXED: Full Screen Image Lightbox Modal */}
+      {/* FIXED: iOS Glass Style Lightbox with Accessibility Fixes */}
+      <Dialog open={!!selectedProofImage} onOpenChange={(open) => !open && setSelectedProofImage(null)}>
+        <DialogContent 
+          className="max-w-none w-100 h-auto p-0 backdrop-blur-sm bg-white/90 hover:bg-white border-none shadow-none z-[9999] flex flex-col justify-center items-center data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-300"
+        >
+          {/* ACCESSIBILITY FIX: 
+              Radix UI requires these components to exist. 
+              We use 'sr-only' to hide them visually but keep them accessible for screen readers. 
+          */}
+          <DialogTitle className="sr-only">Proof of Transfer Image Preview</DialogTitle>
+          <DialogDescription className="sr-only">
+            A full-screen view of the transfer proof image uploaded for this transaction.
+          </DialogDescription>
+
+
+          {/* Image Container with smooth scale animation */}
+          <div 
+            className="relative w-full h-full flex items-center justify-center p-4 animate-in zoom-in-95 duration-300"
+            onClick={() => setSelectedProofImage(null)} // Click outside image to close
+          >
+            {selectedProofImage && (
+              <img 
+                src={selectedProofImage} 
+                alt="Proof Full View" 
+                className="max-h-[85vh] max-w-[90vw] object-contain shadow-2xl rounded-2xl ring-1 ring-white/10"
+                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image itself
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
-
-

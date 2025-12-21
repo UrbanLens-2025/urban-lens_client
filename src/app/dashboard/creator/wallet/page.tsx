@@ -1206,7 +1206,7 @@ export default function BusinessWalletPage() {
                                 <DropdownMenuContent align='end'>
                                   <DropdownMenuItem asChild>
                                     <Link
-                                      href={`/dashboard/business/wallet/${transaction.id}?type=external`}
+                                      href={`/dashboard/creator/wallet/${transaction.id}?type=external`}
                                       className='cursor-pointer'
                                     >
                                       <Eye className='h-4 w-4 mr-2' />
