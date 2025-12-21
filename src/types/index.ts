@@ -1408,3 +1408,11 @@ export interface TopRevenueLocation {
   locationName: string;
   revenue: number;
 }
+
+export interface LocationGeneralAnalytics {
+  checkIns: number;
+  revenue: number;
+  announcements: number;
+  vouchers: number;
+  missions: number;
+}
