@@ -39,6 +39,7 @@ import {
   format,
   formatDistanceToNow
 } from 'date-fns';
+import { useLocationGeneralAnalytics } from '@/hooks/locations/useLocationGeneralAnalytics';
 
 export default function LocationDetailsPage({
   params,
@@ -74,19 +75,13 @@ export default function LocationDetailsPage({
   const allVouchers = allVouchersResponse?.data || [];
   const allMissions = allMissionsResponse?.data || [];
 
-  // Fetch announcements for overview statistics (use meta totalItems for count)
-  const { data: announcementsOverviewData } = useAnnouncements(
-    {
-      page: 1,
-      limit: 1,
-      sortBy: 'createdAt:DESC',
-      search: '',
-      locationId,
-    },
-    { enabled: Boolean(locationId) }
-  );
+  const { data: generalAnalytics } = useLocationGeneralAnalytics(locationId);
 
-  const totalAnnouncements = announcementsOverviewData?.meta?.totalItems ?? 0;
+  const totalAnnouncements = generalAnalytics?.announcements ?? 0;
+  const totalVouchers = generalAnalytics?.vouchers ?? 0;
+  const totalMissions = generalAnalytics?.missions ?? 0;
+  const totalCheckIns = generalAnalytics?.checkIns ?? 0;
+  const totalRevenue = generalAnalytics?.revenue ?? 0;
 
   useEffect(() => {
     if (pathname.includes('/vouchers')) setActiveTab('vouchers');
@@ -101,11 +96,6 @@ export default function LocationDetailsPage({
     else if (pathname.includes('/edit')) setActiveTab('edit');
     else setActiveTab('overview');
   }, [pathname]);
-
-  const totalCheckIns = useMemo(() => {
-    const parsed = Number(location?.totalCheckIns ?? '0');
-    return Number.isNaN(parsed) ? 0 : parsed;
-  }, [location?.totalCheckIns]);
 
   // Get bookings data for calculations
   const { data: bookingsData } = useOwnerLocationBookings({
@@ -126,40 +116,7 @@ export default function LocationDetailsPage({
   const recentCheckIns = checkInsData?.data || [];
 
   // Calculate revenue from bookings
-  const revenueData = useMemo(() => {
-    const allBookings = bookingsData?.data || [];
-    const locationBookings = allBookings.filter(
-      (b: any) => b.locationId === location?.id
-    );
-
-    const totalRevenue = locationBookings.reduce(
-      (sum: number, booking: any) => {
-        const amount = parseFloat(booking.amountToPay || '0');
-        return sum + (isNaN(amount) ? 0 : amount);
-      },
-      0
-    );
-
-    const thisMonthRevenue = locationBookings
-      .filter((booking: any) => {
-        const bookingDate = new Date(booking.createdAt);
-        const now = new Date();
-        return (
-          bookingDate.getMonth() === now.getMonth() &&
-          bookingDate.getFullYear() === now.getFullYear()
-        );
-      })
-      .reduce((sum: number, booking: any) => {
-        const amount = parseFloat(booking.amountToPay || '0');
-        return sum + (isNaN(amount) ? 0 : amount);
-      }, 0);
-
-    return {
-      total: totalRevenue,
-      thisMonth: thisMonthRevenue,
-      change: 12.3,
-    };
-  }, [bookingsData, location?.id]);
+  const revenueData = generalAnalytics?.revenue ?? 0;
 
   // Get upcoming bookings
   const upcomingBookings = useMemo(() => {
@@ -221,14 +178,14 @@ export default function LocationDetailsPage({
               {/* Row 1 */}
               <StatCard
                 title='Check-ins'
-                value={totalCheckIns.toLocaleString()}
+                value={totalCheckIns}
                 icon={Users}
                 color='red'
               />
 
               <StatCard
                 title='Revenue'
-                value={formatCurrencyOverview(revenueData.total)}
+                value={formatCurrencyOverview(totalRevenue)}
                 icon={DollarSign}
                 color='emerald'
               />
@@ -242,14 +199,14 @@ export default function LocationDetailsPage({
 
               <StatCard
                 title='Vouchers'
-                value={allVouchers.length}
+                value={totalVouchers}
                 icon={Ticket}
                 color='orange'
               />
 
               <StatCard
                 title='Missions'
-                value={allMissions.length}
+                value={totalMissions}
                 icon={Rocket}
                 color='purple'
               />

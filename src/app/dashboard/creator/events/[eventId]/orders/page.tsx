@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/tooltip";
 import Image from "next/image";
 import { format } from "date-fns";
+import { useRouter } from "next/navigation";
 
 export default function EventOrdersPage({
   params,
@@ -48,6 +49,7 @@ export default function EventOrdersPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = use(params);
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
@@ -69,7 +71,12 @@ export default function EventOrdersPage({
     sortBy: "createdAt:DESC",
     search: debouncedSearchQuery.trim() || undefined,
     searchBy: debouncedSearchQuery.trim()
-      ? ["orderNumber", "createdBy.firstName", "createdBy.lastName", "createdBy.email"]
+      ? [
+          "orderNumber",
+          "createdBy.firstName",
+          "createdBy.lastName",
+          "createdBy.email",
+        ]
       : undefined,
     status: statusFilter !== "all" ? statusFilter : undefined,
   });
@@ -170,7 +177,8 @@ export default function EventOrdersPage({
           {/* Results count */}
           {(searchQuery || statusFilter !== "all") && (
             <div className="text-sm text-muted-foreground">
-              Showing {orders.length} of {totalItems} order{totalItems !== 1 ? "s" : ""}
+              Showing {orders.length} of {totalItems} order
+              {totalItems !== 1 ? "s" : ""}
             </div>
           )}
 
@@ -191,84 +199,84 @@ export default function EventOrdersPage({
                 <Table>
                   <TableHeader className="bg-muted/40">
                     <TableRow>
-                      <TableHead className="w-[50px]">#</TableHead>
+                      <TableHead className="w-[50px] text-center">#</TableHead>
                       <TableHead>Order Number</TableHead>
                       <TableHead>Customer</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Tickets</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
+                      <TableHead>Tickets Purchased</TableHead>
+                      <TableHead>Amount Paid</TableHead>
+                      <TableHead>Paid At</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {orders.map((order, index) => (
                       <TableRow key={order.id} className="hover:bg-muted/20">
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium text-center">
                           {(currentPage - 1) * limit + index + 1}
                         </TableCell>
                         <TableCell>
-                          <div className="font-semibold text-sm truncate max-w-[200px]">
+                          <button
+                            onClick={() =>
+                              router.push(
+                                `/dashboard/creator/events/${eventId}/orders/${order.id}`
+                              )
+                            }
+                            className="font-semibold text-sm truncate max-w-[200px] text-left hover:text-primary hover:underline transition-colors"
+                          >
                             {order.orderNumber}
-                          </div>
+                          </button>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            {order.createdBy.avatarUrl ? (
-                              <Image
-                                src={order.createdBy.avatarUrl}
-                                alt={order.createdBy.firstName}
-                                width={32}
-                                height={32}
-                                className="rounded-full border"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border">
-                                <User className="h-4 w-4 text-primary" />
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <div className="flex items-center gap-2">
+                                {order.createdBy.avatarUrl ? (
+                                  <Image
+                                    src={order.createdBy.avatarUrl}
+                                    alt={order.createdBy.firstName}
+                                    width={32}
+                                    height={32}
+                                    className="rounded-full border"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border">
+                                    <User className="h-4 w-4 text-primary" />
+                                  </div>
+                                )}
+                                <div>
+                                  <div className="font-medium text-sm">
+                                    {order.createdBy.firstName}{" "}
+                                    {order.createdBy.lastName}
+                                  </div>
+                                </div>
                               </div>
-                            )}
-                            <div>
-                              <div className="font-medium text-sm">
-                                {order.createdBy.firstName}{" "}
-                                {order.createdBy.lastName}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  <span className="text-xs">
+                                    {order.createdBy.email}
+                                  </span>
+                                </div>
+                                {order.createdBy.phoneNumber && (
+                                  <div className="flex items-center gap-1">
+                                    <Phone className="h-3 w-3" />
+                                    <span className="text-xs">
+                                      {order.createdBy.phoneNumber}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          </div>
+                            </TooltipContent>
+                          </Tooltip>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1 text-sm">
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Mail className="h-3 w-3" />
-                              <span className="text-xs">{order.createdBy.email}</span>
-                            </div>
-                            {order.createdBy.phoneNumber && (
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <Phone className="h-3 w-3" />
-                                <span className="text-xs">
-                                  {order.createdBy.phoneNumber}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {order.orderDetails.map((detail) => (
-                              <div key={detail.id} className="text-sm">
-                                <div className="font-medium">
-                                  {detail.ticketSnapshot?.displayName ||
-                                    detail.ticket?.displayName ||
-                                    "Unknown Ticket"}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  Qty: {detail.quantity} ×{" "}
-                                  {formatCurrency(
-                                    detail.unitPrice,
-                                    detail.currency
-                                  )}
-                                </div>
-                              </div>
-                            ))}
+                            {order.orderDetails.reduce(
+                              (acc, detail) => acc + detail.quantity,
+                              0
+                            )}{" "}
+                            ticket(s)
                           </div>
                         </TableCell>
                         <TableCell>
@@ -278,39 +286,17 @@ export default function EventOrdersPage({
                               order.currency
                             )}
                           </div>
-                          {((order.status === "REFUNDED" || order.refundedAt) && order.refundedAmount && order.refundedAmount > 0) ? (
+                          {(order.status === "REFUNDED" || order.refundedAt) &&
+                          order.refundedAmount &&
+                          order.refundedAmount > 0 ? (
                             <div className="text-xs text-destructive">
-                              Refunded: {formatCurrency(order.refundedAmount, order.currency)}
+                              Refunded:{" "}
+                              {formatCurrency(
+                                order.refundedAmount,
+                                order.currency
+                              )}
                             </div>
                           ) : null}
-                        </TableCell>
-                        <TableCell>
-                          {order.refundReason ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div>
-                                    <Badge
-                                      variant={getOrderStatusVariant(order.status)}
-                                      className="w-fit text-xs"
-                                    >
-                                      {order.status}
-                                    </Badge>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="max-w-xs">{order.refundReason}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : (
-                            <Badge
-                              variant={getOrderStatusVariant(order.status)}
-                              className="w-fit text-xs"
-                            >
-                              {order.status}
-                            </Badge>
-                          )}
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1 text-sm">
@@ -318,11 +304,13 @@ export default function EventOrdersPage({
                               <Calendar className="h-3 w-3" />
                               <span>{formatDateTime(order.createdAt)}</span>
                             </div>
-                            {(order.status === "REFUNDED" || order.refundedAt) && order.refundedAt && (
-                              <div className="text-xs text-destructive">
-                                Refunded: {formatDateTime(order.refundedAt)}
-                              </div>
-                            )}
+                            {(order.status === "REFUNDED" ||
+                              order.refundedAt) &&
+                              order.refundedAt && (
+                                <div className="text-xs text-destructive">
+                                  Refunded: {formatDateTime(order.refundedAt)}
+                                </div>
+                              )}
                           </div>
                         </TableCell>
                       </TableRow>

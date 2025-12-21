@@ -956,53 +956,100 @@ export default function QRScanPage({
                                 attendance.checkedInAt
                               );
                               const isSelected = selectedAttendances.has(attendance.id);
+                              const canCheckIn = attendance.status === "CREATED";
+                              const isCancelled = attendance.status?.toUpperCase() === "CANCELLED";
+                              const isCheckedIn = attendance.status?.toUpperCase() === "CHECKED_IN" || statusInfo.isCheckedIn;
 
                               return (
                                 <div
                                   key={attendance.id}
-                                  className={`flex items-center gap-3 py-2 px-2 rounded-md transition-colors ${isSelected ? "bg-green-50 dark:bg-green-950/20" : "hover:bg-muted/30"
-                                    }`}
+                                  className={`flex items-center gap-3 py-2 px-2 rounded-md transition-colors ${
+                                    isCancelled
+                                      ? "opacity-60 bg-red-50/50 dark:bg-red-950/10"
+                                      : isSelected
+                                      ? "bg-green-50 dark:bg-green-950/20"
+                                      : "hover:bg-muted/30"
+                                  }`}
                                 >
                                   {/* Checkbox or status indicator */}
-                                  {!statusInfo.isCheckedIn ? (
-                                    <Checkbox
-                                      checked={isSelected}
-                                      onCheckedChange={() => toggleAttendanceSelection(attendance.id)}
-                                      className="flex-shrink-0"
-                                    />
-                                  ) : (
+                                  {isCancelled ? (
+                                    <div className="h-4 w-4 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                                      <XCircle className="h-3 w-3 text-white" />
+                                    </div>
+                                  ) : isCheckedIn ? (
                                     <div className="h-4 w-4 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
                                       <CheckCircle className="h-3 w-3 text-white" />
                                     </div>
+                                  ) : (
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() => {
+                                        if (canCheckIn) {
+                                          toggleAttendanceSelection(attendance.id);
+                                        }
+                                      }}
+                                      disabled={!canCheckIn}
+                                      className="flex-shrink-0"
+                                    />
                                   )}
 
                                   {/* Number */}
-                                  <span className="text-xs text-muted-foreground font-mono w-5 flex-shrink-0">
+                                  <span
+                                    className={`text-xs font-mono w-5 flex-shrink-0 ${
+                                      isCancelled
+                                        ? "text-muted-foreground line-through"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  >
                                     #{index + 1}
                                   </span>
 
                                   {/* Content */}
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 text-sm">
-                                      <span className={`font-medium ${statusInfo.isCheckedIn
-                                        ? "text-green-700 dark:text-green-400"
-                                        : "text-foreground"
-                                        }`}>
-                                        {statusInfo.label}
+                                      <span
+                                        className={`font-medium ${
+                                          isCancelled
+                                            ? "text-red-600 dark:text-red-400 line-through"
+                                            : isCheckedIn
+                                            ? "text-green-700 dark:text-green-400"
+                                            : "text-foreground"
+                                        }`}
+                                      >
+                                        {isCancelled
+                                          ? "Cancelled"
+                                          : isCheckedIn
+                                          ? "Checked In"
+                                          : "Take Attendance"}
                                       </span>
-                                      {statusInfo.isCheckedIn && attendance.checkedInAt && (
+                                      {isCheckedIn && attendance.checkedInAt && (
                                         <span className="text-xs text-muted-foreground">
                                           · {formatDate(attendance.checkedInAt)} ({getRelativeTime(attendance.checkedInAt)})
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-xs text-muted-foreground">
+                                    <p
+                                      className={`text-xs ${
+                                        isCancelled
+                                          ? "text-muted-foreground line-through"
+                                          : "text-muted-foreground"
+                                      }`}
+                                    >
                                       Member {index + 1}
                                     </p>
                                   </div>
 
+                                  {/* Status badge for cancelled */}
+                                  {isCancelled && (
+                                    <div className="flex-shrink-0">
+                                      <Badge variant="destructive" className="text-xs">
+                                        Cancelled
+                                      </Badge>
+                                    </div>
+                                  )}
+
                                   {/* Uncheck button placeholder for checked-in items */}
-                                  {statusInfo.isCheckedIn && (
+                                  {isCheckedIn && !isCancelled && (
                                     <div className="flex-shrink-0">
                                       {/* Uncheck button will go here */}
                                     </div>

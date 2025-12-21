@@ -272,6 +272,75 @@ export const getHighestReportedEvents = async (
   return data.data;
 };
 
+// Get highest reported bookings
+export interface HighestReportedBookingLocation {
+  id: string;
+  type: string;
+  ownershipType: string;
+  name: string;
+  description: string;
+  latitude: string;
+  longitude: string;
+  addressLine: string;
+  addressLevel1: string;
+  addressLevel2: string;
+  radiusMeters: number;
+  imageUrl: string[];
+  createdAt: string;
+  updatedAt: string;
+  isVisibleOnMap: boolean;
+  businessId: string;
+  averageRating: number;
+  totalReviews: number;
+  totalCheckIns: number;
+}
+
+export interface HighestReportedBooking {
+  id: string;
+  bookingObject: string;
+  status: string;
+  amountToPay: number;
+  refundedAmount: number | null;
+  dates: Array<{
+    startDateTime: string;
+    endDateTime: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  locationId: string;
+  targetId: string;
+  referencedTransactionId: string | null;
+  softLockedUntil: string | null;
+  scheduledPayoutJobId: string | null;
+  paidOutAt: string | null;
+  systemCutPercentage: string;
+  amountToReceive: number;
+  businessPayoutTransactionId: string | null;
+  systemPayoutTransactionId: string | null;
+  location: HighestReportedBookingLocation;
+  reports: Report[];
+}
+
+export interface HighestReportedBookingsResponse {
+  data: HighestReportedBooking[];
+  count: number;
+  page: number;
+  limit: number;
+}
+
+export const getHighestReportedBookings = async (
+  page: number = 1,
+  limit: number = 10
+): Promise<HighestReportedBookingsResponse> => {
+  const { data } = await axiosInstance.get<
+    ApiResponse<HighestReportedBookingsResponse>
+  >('/v1/admin/report/highest-reported-bookings', {
+    params: { page, limit },
+  });
+  return data.data;
+};
+
 // Get report analytics
 export interface ReportAnalytics {
   totalReports: number;
@@ -288,4 +357,61 @@ export const getReportAnalytics = async (): Promise<ReportAnalytics> => {
     '/v1/admin/report/analytics/general'
   );
   return data.data;
+};
+
+// Get report reasons (public endpoint)
+export interface ReportReason {
+  key: string;
+  displayName: string;
+  description: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  forEvent: boolean;
+  forLocation: boolean;
+  forPost: boolean;
+  priority: number;
+}
+
+export interface ReportReasonsResponse {
+  data: ReportReason[];
+  meta: {
+    itemsPerPage: number;
+    totalItems: number;
+    currentPage: number;
+    totalPages: number;
+    sortBy: Array<[string, string]>;
+  };
+  links: {
+    current: string;
+  };
+}
+
+export const getReportReasons = async (): Promise<ReportReason[]> => {
+  const { data } = await axiosInstance.get<ApiResponse<ReportReasonsResponse>>(
+    '/v1/public/report-reason',
+    {
+      params: {
+        page: 1,
+        limit: 100,
+        sortBy: 'displayName:ASC',
+      },
+    }
+  );
+  return data.data.data;
+};
+
+// Report a booking
+export interface ReportBookingPayload {
+  bookingId: string;
+  reportedReason: string;
+  title: string;
+  description: string;
+  attachedImageUrls?: string[];
+}
+
+export const reportBooking = async (
+  payload: ReportBookingPayload
+): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>('/v1/private/report/booking', payload);
 };

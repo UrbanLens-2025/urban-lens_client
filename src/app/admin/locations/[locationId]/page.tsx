@@ -23,7 +23,6 @@ import {
   CheckCircle2,
   Flag,
   Gavel,
-  Receipt,
   User,
   Users,
   Ruler,
@@ -109,7 +108,6 @@ export default function AdminLocationDetailsPage({
     | 'overview'
     | 'bookings'
     | 'reports'
-    | 'booking-reports'
     | 'penalties'
     | 'announcements'
     | 'review' => {
@@ -117,7 +115,6 @@ export default function AdminLocationDetailsPage({
       tab === 'overview' ||
       tab === 'bookings' ||
       tab === 'reports' ||
-      tab === 'booking-reports' ||
       tab === 'penalties' ||
       tab === 'announcements' ||
       tab === 'review'
@@ -131,7 +128,6 @@ export default function AdminLocationDetailsPage({
     | 'overview'
     | 'bookings'
     | 'reports'
-    | 'booking-reports'
     | 'penalties'
     | 'announcements'
     | 'review'
@@ -349,13 +345,6 @@ export default function AdminLocationDetailsPage({
           >
             <Flag className='h-4 w-4' />
             Location Reports
-          </TabsTrigger>
-          <TabsTrigger
-            value='booking-reports'
-            className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2 data-[state=active]:text-foreground after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent data-[state=active]:after:bg-primary"
-          >
-            <Receipt className='h-4 w-4' />
-            Booking Reports
           </TabsTrigger>
           <TabsTrigger
             value='penalties'
@@ -600,16 +589,6 @@ export default function AdminLocationDetailsPage({
         </TabsContent>
         <TabsContent value='reports'>
           <ReportsPanel targetId={locationId} targetType='location' />
-        </TabsContent>
-
-        <TabsContent value='booking-reports'>
-          <ReportsPanel
-            targetId={locationId}
-            targetType='location'
-            reportQueryTargetType='booking'
-            reportQueryTargetId={null}
-            denormSecondaryTargetId={locationId}
-          />
         </TabsContent>
 
         <TabsContent value='penalties'>

@@ -58,6 +58,7 @@ import {
   BarChart3,
   FileDown,
   RefreshCw,
+  CreditCard,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -107,6 +108,7 @@ import {
   ChartTooltipContent,
   ChartConfig,
 } from '@/components/ui/chart';
+import { useRevenueSummary } from '@/hooks/dashboard/useDashboardOwner';
 
 // Helper mappers
 const getInternalTransactionIcon = (mappedType: string) => {
@@ -369,89 +371,7 @@ export default function BusinessWalletPage() {
     };
   };
 
-  const stats = useMemo(() => {
-    const now = new Date();
-    const thisMonth = now.getMonth();
-    const lastMonth = subMonths(now, 1).getMonth();
-
-    // Real data from transactions
-    const totalDeposits = externalTransactions
-      .filter(
-        (t) =>
-          t.direction.toUpperCase() === 'DEPOSIT' &&
-          t.status.toUpperCase() === 'COMPLETED'
-      )
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const totalWithdrawals = externalTransactions
-      .filter(
-        (t) =>
-          t.direction.toUpperCase() === 'WITHDRAWAL' &&
-          t.status.toUpperCase() === 'COMPLETED'
-      )
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const totalEarnings = internalTransactions
-      .filter((t) => {
-        const mappedType = mapInternalType(t.type);
-        return (
-          mappedType === 'transfer_in' && t.status.toUpperCase() === 'COMPLETED'
-        );
-      })
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    // Calculate this month vs last month
-    const thisMonthDeposits = externalTransactions
-      .filter((t) => {
-        const date = new Date(t.createdAt);
-        return (
-          isSameMonth(date, now) &&
-          t.direction.toUpperCase() === 'DEPOSIT' &&
-          t.status.toUpperCase() === 'COMPLETED'
-        );
-      })
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const lastMonthDeposits = externalTransactions
-      .filter((t) => {
-        const date = new Date(t.createdAt);
-        return (
-          isSameMonth(date, subMonths(now, 1)) &&
-          t.direction.toUpperCase() === 'DEPOSIT' &&
-          t.status.toUpperCase() === 'COMPLETED'
-        );
-      })
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const depositsChange =
-      lastMonthDeposits > 0
-        ? ((thisMonthDeposits - lastMonthDeposits) / lastMonthDeposits) * 100
-        : thisMonthDeposits > 0
-          ? 100
-          : 0;
-
-    const thisMonthEarnings = 0;
-    const lastMonthEarnings = 0;
-    const earningsChange =
-      lastMonthEarnings > 0
-        ? ((thisMonthEarnings - lastMonthEarnings) / lastMonthEarnings) * 100
-        : thisMonthEarnings > 0
-          ? 100
-          : 0;
-
-    return {
-      totalDeposits,
-      totalWithdrawals,
-      totalEarnings,
-      totalTransactions:
-        walletData?.totalTransactions ||
-        externalTransactions.length + internalTransactions.length,
-      thisMonthDeposits,
-      depositsChange,
-      thisMonthEarnings,
-      earningsChange,
-    };
-  }, [externalTransactions, internalTransactions, walletData]);
+  const { data: revenueData } = useRevenueSummary();
 
   // Mock earnings breakdown based on selected period
   const monthlyEarnings = useMemo(() => {
@@ -804,7 +724,7 @@ export default function BusinessWalletPage() {
       <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
         <StatCard
           title='Total Deposits'
-          value={formatCurrency(stats.totalDeposits)}
+          value={formatCurrency(revenueData?.totalDeposits || 0)}
           icon={Download}
           color='blue'
           description='All time deposits'
@@ -812,7 +732,7 @@ export default function BusinessWalletPage() {
 
         <StatCard
           title='Total Earnings'
-          value={formatCurrency(stats.totalEarnings)}
+          value={formatCurrency(revenueData?.totalEarnings || 0)}
           icon={TrendingUp}
           color='emerald'
           description='All time earnings'
@@ -820,18 +740,18 @@ export default function BusinessWalletPage() {
 
         <StatCard
           title='Total Withdrawals'
-          value={formatCurrency(stats.totalWithdrawals)}
+          value={formatCurrency(revenueData?.totalWithdrawals || 0)}
           icon={Upload}
           color='amber'
           description='To bank account'
         />
 
         <StatCard
-          title='Total Transactions'
-          value={stats.totalTransactions}
-          icon={Activity}
+          title='Total Pending Revenue'
+          value={formatCurrency(revenueData?.totalPendingRevenue || 0)}
+          icon={CreditCard}
           color='purple'
-          description='All time transactions'
+          description='All time pending revenue'
         />
       </div>
 

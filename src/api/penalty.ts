@@ -104,3 +104,15 @@ export const suspendLocationPenalty = async (params: {
   await axiosInstance.post<ApiResponse<void>>("/v1/admin/penalty/suspend-location", params);
 };
 
+export const fineLocationBookingPenalty = async (params: {
+  targetEntityId: string;
+  targetEntityType: "booking";
+  fineAmount: number;
+  fineReason: string;
+}): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>(
+    "/v1/admin/penalty/fine-location-booking",
+    params
+  );
+};
+

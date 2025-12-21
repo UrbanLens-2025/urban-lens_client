@@ -340,12 +340,6 @@ export default function EventTicketsPage({
                                 {formatDate(ticket.saleStartDate)}
                               </span>
                             </div>
-
-                            {ticket.isActive && !isSaleActive && (
-                              <Badge variant="outline" className="text-xs">
-                                Coming Soon
-                              </Badge>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -356,12 +350,6 @@ export default function EventTicketsPage({
                                 {formatDate(ticket.saleEndDate)}
                               </span>
                             </div>
-
-                            {ticket.isActive && !isSaleActive && (
-                              <Badge variant="outline" className="text-xs">
-                                Coming Soon
-                              </Badge>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell>

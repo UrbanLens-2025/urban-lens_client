@@ -6,8 +6,6 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,14 +30,35 @@ import {
 import { useHighestReportedPosts } from '@/hooks/admin/useHighestReportedPosts';
 import { useHighestReportedLocations } from '@/hooks/admin/useHighestReportedLocations';
 import { useHighestReportedEvents } from '@/hooks/admin/useHighestReportedEvents';
+import { useHighestReportedBookings } from '@/hooks/admin/useHighestReportedBookings';
 import { useReports } from '@/hooks/admin/useReports';
 import { useReportAnalytics } from '@/hooks/admin/useReportAnalytics';
 
 type ReportFilterType = ReportTargetType | 'all';
+
+type TransformedReportItem = {
+  id: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  name: string;
+  description: string;
+  reportCount: number;
+  createdAt: string;
+  reports?: Report[];
+  denormSecondaryTargetId?: string;
+  postData?: HighestReportedPost;
+  locationData?: HighestReportedLocation;
+  eventData?: HighestReportedEvent;
+  bookingData?: HighestReportedBooking;
+  reportData?: Report;
+  status?: string;
+};
+
 import type {
   HighestReportedPost,
   HighestReportedLocation,
   HighestReportedEvent,
+  HighestReportedBooking,
 } from '@/api/reports';
 import { useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
@@ -62,6 +81,8 @@ function getTypeBadge(type: ReportTargetType) {
       'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300',
     event:
       'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950 dark:text-orange-300',
+    booking:
+      'bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300',
   };
 
   return (
@@ -136,6 +157,12 @@ export default function ReportsPage() {
     isFetching: isFetchingEvents,
   } = useHighestReportedEvents(page, itemsPerPage);
 
+  const {
+    data: bookingsResponse,
+    isLoading: isLoadingBookings,
+    isFetching: isFetchingBookings,
+  } = useHighestReportedBookings(page, itemsPerPage);
+
   // All reports data fetching
   const {
     data: allReportsResponse,
@@ -161,7 +188,9 @@ export default function ReportsPage() {
         ? isLoadingPosts
         : typeFilter === 'location'
           ? isLoadingLocations
-          : isLoadingEvents;
+          : typeFilter === 'event'
+            ? isLoadingEvents
+            : isLoadingBookings;
   const isFetching =
     typeFilter === 'all'
       ? isFetchingAllReports
@@ -169,12 +198,15 @@ export default function ReportsPage() {
         ? isFetchingPosts
         : typeFilter === 'location'
           ? isFetchingLocations
-          : isFetchingEvents;
+          : typeFilter === 'event'
+            ? isFetchingEvents
+            : isFetchingBookings;
 
   // Transform data to a common format for rendering
   const reports = useMemo(() => {
     if (typeFilter === 'all' && allReportsResponse?.data) {
       return allReportsResponse.data.map((report: Report) => ({
+        ...report,
         id: report.id,
         targetType: report.targetType,
         targetId: report.targetId,
@@ -184,10 +216,12 @@ export default function ReportsPage() {
         createdAt: report.createdAt,
         status: report.status,
         reportData: report,
+        denormSecondaryTargetId: report.denormSecondaryTargetId,
       }));
     }
     if (typeFilter === 'post' && postsResponse?.data) {
       return postsResponse.data.map((post: HighestReportedPost) => ({
+        ...post,
         id: post.postId,
         targetType: 'post' as ReportTargetType,
         targetId: post.postId,
@@ -201,6 +235,7 @@ export default function ReportsPage() {
     }
     if (typeFilter === 'location' && locationsResponse?.data) {
       return locationsResponse.data.map((location: HighestReportedLocation) => ({
+        ...location,
         id: location.id,
         targetType: 'location' as ReportTargetType,
         targetId: location.id,
@@ -214,6 +249,7 @@ export default function ReportsPage() {
     }
     if (typeFilter === 'event' && eventsResponse?.data) {
       return eventsResponse.data.map((event: HighestReportedEvent) => ({
+        ...event,
         id: event.id,
         targetType: 'event' as ReportTargetType,
         targetId: event.id,
@@ -225,8 +261,23 @@ export default function ReportsPage() {
         eventData: event,
       }));
     }
+    if (typeFilter === 'booking' && bookingsResponse?.data) {
+      return bookingsResponse.data.map((booking: HighestReportedBooking) => ({
+        ...booking,
+        id: booking.id,
+        targetType: 'booking' as ReportTargetType,
+        targetId: booking.id,
+        name: booking.location?.name || 'Unknown Location',
+        description: `Status: ${booking.status} | Amount: ${booking.amountToPay}`,
+        reports: booking.reports,
+        reportCount: booking.reports.length,
+        createdAt: booking.reports[0]?.createdAt || booking.createdAt,
+        bookingData: booking,
+        denormSecondaryTargetId: booking.locationId,
+      }));
+    }
     return [];
-  }, [typeFilter, allReportsResponse, postsResponse, locationsResponse, eventsResponse]);
+  }, [typeFilter, allReportsResponse, postsResponse, locationsResponse, eventsResponse, bookingsResponse]);
 
   const meta = useMemo(() => {
     if (typeFilter === 'all' && allReportsResponse?.meta) {
@@ -261,14 +312,23 @@ export default function ReportsPage() {
         itemsPerPage: eventsResponse.limit,
       };
     }
+    if (typeFilter === 'booking' && bookingsResponse) {
+      return {
+        totalItems: bookingsResponse.count,
+        totalPages: Math.ceil(bookingsResponse.count / itemsPerPage),
+        currentPage: bookingsResponse.page,
+        itemsPerPage: bookingsResponse.limit,
+      };
+    }
     return undefined;
-  }, [typeFilter, allReportsResponse, postsResponse, locationsResponse, eventsResponse, itemsPerPage]);
+  }, [typeFilter, allReportsResponse, postsResponse, locationsResponse, eventsResponse, bookingsResponse, itemsPerPage]);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['adminReports'] });
     queryClient.invalidateQueries({ queryKey: ['highestReportedPosts'] });
     queryClient.invalidateQueries({ queryKey: ['highestReportedLocations'] });
     queryClient.invalidateQueries({ queryKey: ['highestReportedEvents'] });
+    queryClient.invalidateQueries({ queryKey: ['highestReportedBookings'] });
     queryClient.invalidateQueries({ queryKey: ['reportAnalytics'] });
   };
 
@@ -317,9 +377,10 @@ export default function ReportsPage() {
       post: postsResponse?.count ?? 0,
       location: locationsResponse?.count ?? 0,
       event: eventsResponse?.count ?? 0,
+      booking: bookingsResponse?.count ?? 0,
       all: allReportsResponse?.meta?.totalItems ?? 0,
     };
-  }, [postsResponse?.count, locationsResponse?.count, eventsResponse?.count, allReportsResponse?.meta?.totalItems]);
+  }, [postsResponse?.count, locationsResponse?.count, eventsResponse?.count, bookingsResponse?.count, allReportsResponse?.meta?.totalItems]);
 
   return (
     <PageContainer>
@@ -393,7 +454,7 @@ export default function ReportsPage() {
               <div>
                 <h2 className='text-2xl font-bold'>Reports</h2>
                 <p className='text-sm text-muted-foreground mt-1'>
-                  Found {meta?.totalItems || 0} {typeFilter === 'all' ? 'reports' : typeFilter === 'post' ? 'posts' : typeFilter === 'location' ? 'locations' : 'events'} with Pending Reports
+                  Found {meta?.totalItems || 0} {typeFilter === 'all' ? 'reports' : typeFilter === 'post' ? 'posts' : typeFilter === 'location' ? 'locations' : typeFilter === 'event' ? 'events' : 'bookings'} with Pending Reports
                 </p>
               </div>
               <div className='flex items-center gap-2'>
@@ -459,6 +520,14 @@ export default function ReportsPage() {
                     </Badge>
                   )}
                 </TabsTrigger>
+                <TabsTrigger value='booking'>
+                  Bookings
+                  {tabCounts.booking > 0 && (
+                    <Badge variant='secondary' className='ml-2'>
+                      {tabCounts.booking}
+                    </Badge>
+                  )}
+                </TabsTrigger>
                 <div className='mx-2 h-4 w-px bg-border' />
                 <TabsTrigger value='all'>
                   All Reports
@@ -482,7 +551,7 @@ export default function ReportsPage() {
               <div className='flex items-center justify-center h-64 text-muted-foreground'>
                 <div className='text-center'>
                   <FlagOffIcon className='h-12 w-12 mx-auto mb-2 opacity-50' />
-                  <p>No {typeFilter === 'all' ? 'reports' : `${typeFilter}s`} found</p>
+                  <p>No {typeFilter === 'all' ? 'reports' : typeFilter === 'booking' ? 'bookings' : `${typeFilter}s`} found</p>
                 </div>
               </div>
             ) : (
@@ -497,16 +566,22 @@ export default function ReportsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredReports.map((item: any, index: number) => {
+                  {filteredReports.map((item: TransformedReportItem, index: number) => {
                     const rowNumber = (page - 1) * itemsPerPage + index + 1;
                     const isEvent = item.targetType === 'event';
                     const isPost = item.targetType === 'post';
-                    const isClickable = isEvent || isPost;
+                    const isLocation = item.targetType === 'location';
+                    const isBooking = item.targetType === 'booking';
+                    const isClickable = isEvent || isPost || isLocation || isBooking;
                     const handleRowClick = () => {
                       if (isEvent) {
                         router.push(`/admin/events/${item.targetId}?tab=reports`);
                       } else if (isPost) {
                         router.push(`/admin/posts/${item.targetId}?tab=reports`);
+                      } else if (isLocation) {
+                        router.push(`/admin/locations/${item.targetId}?tab=reports`);
+                      } else if (isBooking) {
+                        router.push(`/admin/locations/${item.denormSecondaryTargetId}?tab=booking-reports`);
                       }
                     };
                     return (

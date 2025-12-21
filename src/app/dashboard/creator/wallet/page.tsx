@@ -107,6 +107,7 @@ import {
   ChartTooltipContent,
   ChartConfig,
 } from '@/components/ui/chart';
+import { useRevenueSummary } from '@/hooks/dashboard/useDashboardCreator';
 
 // Helper mappers
 const getInternalTransactionIcon = (mappedType: string) => {
@@ -369,89 +370,16 @@ export default function BusinessWalletPage() {
     };
   };
 
+  const revenueData = useRevenueSummary();
+
   const stats = useMemo(() => {
-    const now = new Date();
-    const thisMonth = now.getMonth();
-    const lastMonth = subMonths(now, 1).getMonth();
-
-    // Real data from transactions
-    const totalDeposits = externalTransactions
-      .filter(
-        (t) =>
-          t.direction.toUpperCase() === 'DEPOSIT' &&
-          t.status.toUpperCase() === 'COMPLETED'
-      )
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const totalWithdrawals = externalTransactions
-      .filter(
-        (t) =>
-          t.direction.toUpperCase() === 'WITHDRAWAL' &&
-          t.status.toUpperCase() === 'COMPLETED'
-      )
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const totalEarnings = internalTransactions
-      .filter((t) => {
-        const mappedType = mapInternalType(t.type);
-        return (
-          mappedType === 'transfer_in' && t.status.toUpperCase() === 'COMPLETED'
-        );
-      })
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    // Calculate this month vs last month
-    const thisMonthDeposits = externalTransactions
-      .filter((t) => {
-        const date = new Date(t.createdAt);
-        return (
-          isSameMonth(date, now) &&
-          t.direction.toUpperCase() === 'DEPOSIT' &&
-          t.status.toUpperCase() === 'COMPLETED'
-        );
-      })
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const lastMonthDeposits = externalTransactions
-      .filter((t) => {
-        const date = new Date(t.createdAt);
-        return (
-          isSameMonth(date, subMonths(now, 1)) &&
-          t.direction.toUpperCase() === 'DEPOSIT' &&
-          t.status.toUpperCase() === 'COMPLETED'
-        );
-      })
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const depositsChange =
-      lastMonthDeposits > 0
-        ? ((thisMonthDeposits - lastMonthDeposits) / lastMonthDeposits) * 100
-        : thisMonthDeposits > 0
-          ? 100
-          : 0;
-
-    const thisMonthEarnings = 0;
-    const lastMonthEarnings = 0;
-    const earningsChange =
-      lastMonthEarnings > 0
-        ? ((thisMonthEarnings - lastMonthEarnings) / lastMonthEarnings) * 100
-        : thisMonthEarnings > 0
-          ? 100
-          : 0;
-
     return {
-      totalDeposits,
-      totalWithdrawals,
-      totalEarnings,
-      totalTransactions:
-        walletData?.totalTransactions ||
-        externalTransactions.length + internalTransactions.length,
-      thisMonthDeposits,
-      depositsChange,
-      thisMonthEarnings,
-      earningsChange,
+      totalDeposits: revenueData?.data?.totalDeposits || 0,
+      totalEarnings: revenueData?.data?.totalEarnings || 0,
+      totalWithdrawals: revenueData?.data?.totalWithdrawals || 0,
+      totalPendingRevenue: revenueData?.data?.totalPendingRevenue || 0,
     };
-  }, [externalTransactions, internalTransactions, walletData]);
+  }, [revenueData]);
 
   // Mock earnings breakdown based on selected period
   const monthlyEarnings = useMemo(() => {
@@ -827,11 +755,11 @@ export default function BusinessWalletPage() {
         />
 
         <StatCard
-          title='Total Transactions'
-          value={stats.totalTransactions}
+          title='Total Pending Revenue'
+          value={formatCurrency(stats.totalPendingRevenue)}
           icon={Activity}
           color='purple'
-          description='All time transactions'
+          description='All time pending revenue'
         />
       </div>
 
@@ -1278,7 +1206,7 @@ export default function BusinessWalletPage() {
                                 <DropdownMenuContent align='end'>
                                   <DropdownMenuItem asChild>
                                     <Link
-                                      href={`/dashboard/business/wallet/${transaction.id}?type=external`}
+                                      href={`/dashboard/creator/wallet/${transaction.id}?type=external`}
                                       className='cursor-pointer'
                                     >
                                       <Eye className='h-4 w-4 mr-2' />

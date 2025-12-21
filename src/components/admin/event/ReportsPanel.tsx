@@ -74,6 +74,7 @@ import { useSuspendEventCreationPenalty } from "@/hooks/admin/useSuspendEventCre
 import { useForceCancelEventPenalty } from "@/hooks/admin/useForceCancelEventPenalty";
 import { useSuspendLocationBookingPenalty } from "@/hooks/admin/useSuspendLocationBookingPenalty";
 import { useSuspendLocationPenalty } from "@/hooks/admin/useSuspendLocationPenalty";
+import { useFineLocationBookingPenalty } from "@/hooks/admin/useFineLocationBookingPenalty";
 
 type ReportsPanelProps = {
   targetId: string;
@@ -112,6 +113,7 @@ export function ReportsPanel({
     | "force_cancel_event"
     | "suspend_location_booking"
     | "suspend_location"
+    | "fine_location_booking"
   >(
     targetType === "post" ? "ban_post" : "warn_user"
   );
@@ -124,11 +126,13 @@ export function ReportsPanel({
   const [maliciousReason, setMaliciousReason] = useState("");
   const [apologyReason, setApologyReason] = useState("");
   const [refundReason, setRefundReason] = useState("");
-  const [refundPercentage, setRefundPercentage] = useState<string>("0");
+  const [refundPercentage, setRefundPercentage] = useState<string>("0.00");
   const [shouldCancelTickets, setShouldCancelTickets] = useState<boolean>(true);
   const [bookingRefundReason, setBookingRefundReason] = useState("");
-  const [bookingRefundPercentage, setBookingRefundPercentage] = useState<string>("0");
+  const [bookingRefundPercentage, setBookingRefundPercentage] = useState<string>("0.00");
   const [shouldCancelBooking, setShouldCancelBooking] = useState<boolean>(true);
+  const [fineAmount, setFineAmount] = useState<string>("");
+  const [fineReason, setFineReason] = useState("");
 
   const {
     data: reportsData,
@@ -168,6 +172,8 @@ export function ReportsPanel({
   } = useSuspendLocationBookingPenalty();
   const { mutate: suspendLocationPenalty, isPending: isSuspendingLocation } =
     useSuspendLocationPenalty();
+  const { mutate: fineLocationBookingPenalty, isPending: isFiningLocationBooking } =
+    useFineLocationBookingPenalty();
   const { mutate: processTicketRefund, isPending: isProcessingRefund } = useProcessReportsTicketRefund();
   const { user: currentUser } = useUser();
 
@@ -278,7 +284,7 @@ export function ReportsPanel({
                   </div>
                 </SelectItem>
               )}
-              {targetType === "location" && (
+              {targetType === "booking" && (
                 <SelectItem value="booking_refund" className="text-xs py-1.5">
                   <div className="flex items-center gap-2">
                     <Receipt className="h-4 w-4 text-sky-600" />
@@ -299,7 +305,7 @@ export function ReportsPanel({
                 setIsApologyModalOpen(true);
               } else if (resolutionAction === "ticket_refund" && targetType === "event") {
                 setIsRefundModalOpen(true);
-              } else if (resolutionAction === "booking_refund" && targetType === "location") {
+              } else if (resolutionAction === "booking_refund" && targetType === "booking") {
                 setIsBookingRefundModalOpen(true);
               }
             }}
@@ -436,7 +442,7 @@ export function ReportsPanel({
               onSuccess: () => {
                 setIsBookingRefundModalOpen(false);
                 setBookingRefundReason("");
-                setBookingRefundPercentage("0");
+                setBookingRefundPercentage("0.00");
                 setShouldCancelBooking(true);
                 setSelectedReportIds(new Set());
               },
@@ -570,6 +576,10 @@ export function ReportsPanel({
         onSuspensionReasonChange={setSuspensionReason}
         suspendUntil={suspendUntil}
         onSuspendUntilChange={setSuspendUntil}
+        fineAmount={fineAmount}
+        onFineAmountChange={setFineAmount}
+        fineReason={fineReason}
+        onFineReasonChange={setFineReason}
         isBanningPost={isBanningPost}
         isWarningUser={isWarningUser}
         isSuspendingAccount={isSuspendingAccount}
@@ -578,6 +588,8 @@ export function ReportsPanel({
         isForceCancelingEvent={isForceCancelingEvent}
         isSuspendingLocationBooking={isSuspendingLocationBooking}
         isSuspendingLocation={isSuspendingLocation}
+        isFiningLocationBooking={isFiningLocationBooking}
+        reportQueryTargetType={reportQueryTargetType}
         targetType={targetType}
         selectedCount={selectedReportIds.size}
         onConfirm={(payload) => {
@@ -690,6 +702,22 @@ export function ReportsPanel({
                 onSuccess: () => {
                   setSuspensionReason("");
                   setSuspendUntil("");
+                  setIsAddPenaltyModalOpen(false);
+                },
+              }
+            );
+          } else if (payload.type === "fine_location_booking") {
+            // For booking reports, use targetId (booking ID) as targetEntityId
+            fineLocationBookingPenalty(
+              {
+                targetEntityId: targetId,
+                fineAmount: payload.fineAmount,
+                fineReason: payload.fineReason,
+              },
+              {
+                onSuccess: () => {
+                  setFineAmount("");
+                  setFineReason("");
                   setIsAddPenaltyModalOpen(false);
                 },
               }
@@ -1162,7 +1190,8 @@ type AddPenaltyDialogProps = {
     | "suspend_event_creation"
     | "force_cancel_event"
     | "suspend_location_booking"
-    | "suspend_location";
+    | "suspend_location"
+    | "fine_location_booking";
   onPenaltyActionChange: (
     action:
       | "ban_post"
@@ -1173,6 +1202,7 @@ type AddPenaltyDialogProps = {
       | "force_cancel_event"
       | "suspend_location_booking"
       | "suspend_location"
+      | "fine_location_booking"
   ) => void;
   penaltyReason: string;
   onPenaltyReasonChange: (reason: string) => void;
@@ -1184,6 +1214,10 @@ type AddPenaltyDialogProps = {
   onSuspensionReasonChange: (reason: string) => void;
   suspendUntil: string;
   onSuspendUntilChange: (value: string) => void;
+  fineAmount: string;
+  onFineAmountChange: (value: string) => void;
+  fineReason: string;
+  onFineReasonChange: (reason: string) => void;
   isBanningPost: boolean;
   isWarningUser: boolean;
   isSuspendingAccount: boolean;
@@ -1192,6 +1226,8 @@ type AddPenaltyDialogProps = {
   isForceCancelingEvent: boolean;
   isSuspendingLocationBooking: boolean;
   isSuspendingLocation: boolean;
+  isFiningLocationBooking: boolean;
+  reportQueryTargetType?: ReportTargetType;
   targetType: ReportTargetType;
   selectedCount: number;
   onConfirm: (
@@ -1212,6 +1248,11 @@ type AddPenaltyDialogProps = {
           suspendedUntil: string;
           suspensionReason: string;
         }
+      | {
+          type: "fine_location_booking";
+          fineAmount: number;
+          fineReason: string;
+        }
   ) => void;
 };
 
@@ -1230,6 +1271,10 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
   onSuspensionReasonChange,
   suspendUntil,
   onSuspendUntilChange,
+  fineAmount,
+  onFineAmountChange,
+  fineReason,
+  onFineReasonChange,
   isBanningPost,
   isWarningUser,
   isSuspendingAccount,
@@ -1238,6 +1283,8 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
   isForceCancelingEvent,
   isSuspendingLocationBooking,
   isSuspendingLocation,
+  isFiningLocationBooking,
+  reportQueryTargetType,
   targetType,
   selectedCount,
   onConfirm,
@@ -1315,12 +1362,11 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
   const isForceCancelEventDisabled =
     targetType !== "event" ||
     penaltyAction !== "force_cancel_event" ||
-    selectedCount === 0 ||
     !forceCancelEventReason.trim() ||
     isForceCancelingEvent;
 
   const isSuspendLocationBookingDisabled =
-    targetType !== "location" ||
+    targetType !== "booking" ||
     penaltyAction !== "suspend_location_booking" ||
     !suspensionReason.trim() ||
     !suspendUntil.trim() ||
@@ -1341,6 +1387,16 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
     !banAccountReason.trim() ||
     selectedCount === 0 ||
     isBanningAccount;
+
+  const parsedFineAmount = Number(fineAmount);
+  const isInvalidFineAmount =
+    Number.isNaN(parsedFineAmount) || parsedFineAmount <= 0;
+  const isFineLocationBookingDisabled =
+    reportQueryTargetType !== "booking" ||
+    penaltyAction !== "fine_location_booking" ||
+    !fineReason.trim() ||
+    isInvalidFineAmount ||
+    isFiningLocationBooking;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1374,6 +1430,7 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
                     | "force_cancel_event"
                     | "suspend_location_booking"
                     | "suspend_location"
+                    | "fine_location_booking"
                 )
               }
             >
@@ -1409,7 +1466,7 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
                     Force cancel event
                   </SelectItem>
                 )}
-                {targetType === "location" && (
+                {targetType === "booking" && (
                   <SelectItem value="suspend_location_booking" className="text-sm">
                     Suspend booking ability
                   </SelectItem>
@@ -1417,6 +1474,11 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
                 {targetType === "location" && (
                   <SelectItem value="suspend_location" className="text-sm">
                     Suspend location
+                  </SelectItem>
+                )}
+                {reportQueryTargetType === "booking" && (
+                  <SelectItem value="fine_location_booking" className="text-sm">
+                    Fine location booking
                   </SelectItem>
                 )}
               </SelectContent>
@@ -1791,6 +1853,42 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
                 rows={4}
               />
             )}
+
+            {penaltyAction === "fine_location_booking" && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="fine-amount" className="text-xs">
+                    Fine Amount (VND)
+                  </Label>
+                  <Input
+                    id="fine-amount"
+                    type="number"
+                    min={0}
+                    step={1000}
+                    value={fineAmount}
+                    onChange={(e) => onFineAmountChange(e.target.value)}
+                    placeholder="Enter fine amount"
+                  />
+                  {isInvalidFineAmount && fineAmount.trim() && (
+                    <p className="text-[11px] text-destructive">
+                      Fine amount must be greater than 0.
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="fine-reason" className="text-xs">
+                    Fine Reason
+                  </Label>
+                  <Textarea
+                    id="fine-reason"
+                    value={fineReason}
+                    onChange={(e) => onFineReasonChange(e.target.value)}
+                    placeholder="Enter the reason for the fine..."
+                    rows={4}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <DialogFooter className="flex items-center justify-end gap-2">
@@ -1814,7 +1912,9 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
                           ? isForceCancelEventDisabled
                           : penaltyAction === "suspend_location_booking"
                             ? isSuspendLocationBookingDisabled
-                            : isSuspendLocationDisabled
+                            : penaltyAction === "fine_location_booking"
+                              ? isFineLocationBookingDisabled
+                              : isSuspendLocationDisabled
             }
             onClick={() => {
               if (penaltyAction === "ban_post") {
@@ -1872,6 +1972,14 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
                   suspensionReason: suspensionReason.trim(),
                 });
               }
+              if (penaltyAction === "fine_location_booking") {
+                if (isFineLocationBookingDisabled) return;
+                onConfirm({
+                  type: "fine_location_booking",
+                  fineAmount: parsedFineAmount,
+                  fineReason: fineReason.trim(),
+                });
+              }
             }}
           >
             {penaltyAction === "ban_post"
@@ -1902,9 +2010,13 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
                         ? isSuspendingLocationBooking
                           ? "Suspending..."
                           : "Suspend booking ability"
-                        : isSuspendingLocation
-                          ? "Suspending..."
-                          : "Suspend location"}
+                        : penaltyAction === "fine_location_booking"
+                          ? isFiningLocationBooking
+                            ? "Applying fine..."
+                            : "Apply fine"
+                          : isSuspendingLocation
+                            ? "Suspending..."
+                            : "Suspend location"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1947,7 +2059,7 @@ const TicketRefundDialog = memo(function TicketRefundDialog({
 }: TicketRefundDialogProps) {
   const parsedPercentage = Number(refundPercentage);
   const isInvalidPercentage =
-    Number.isNaN(parsedPercentage) || parsedPercentage < 0 || parsedPercentage > 100;
+    Number.isNaN(parsedPercentage) || parsedPercentage < 0 || parsedPercentage > 1;
   const disabled =
     targetType !== "event" ||
     selectedCount === 0 ||
@@ -1972,7 +2084,7 @@ const TicketRefundDialog = memo(function TicketRefundDialog({
             rows={4}
           />
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
+            <div className="space-y-1 col-span-2">
               <Label htmlFor="refund-percentage" className="text-xs">
                 Refund percentage
               </Label>
@@ -1980,16 +2092,16 @@ const TicketRefundDialog = memo(function TicketRefundDialog({
                 id="refund-percentage"
                 type="number"
                 min={0}
-                max={100}
-                step={1}
+                max={1}
+                step={0.01}
                 value={refundPercentage}
                 onChange={(e) => onRefundPercentageChange(e.target.value)}
               />
               <p className="text-[11px] text-muted-foreground">
-                Enter a value between 0 and 100.
+                Enter a value between 0 and 1 (e.g., 0.80 for 80%).
               </p>
             </div>
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label className="text-xs">Cancel tickets</Label>
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -2001,7 +2113,7 @@ const TicketRefundDialog = memo(function TicketRefundDialog({
                   Also cancel existing tickets
                 </Label>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
         <DialogFooter className="flex items-center justify-end gap-2">
@@ -2068,10 +2180,10 @@ const BookingRefundDialog = memo(function BookingRefundDialog({
 }: BookingRefundDialogProps) {
   const parsedPercentage = Number(refundPercentage);
   const isInvalidPercentage =
-    Number.isNaN(parsedPercentage) || parsedPercentage < 0 || parsedPercentage > 100;
+    Number.isNaN(parsedPercentage) || parsedPercentage < 0 || parsedPercentage > 1;
 
   const disabled =
-    targetType !== "location" ||
+    targetType !== "booking" ||
     selectedCount !== 1 ||
     isProcessingRefund ||
     !refundReason.trim() ||
@@ -2083,7 +2195,7 @@ const BookingRefundDialog = memo(function BookingRefundDialog({
         <DialogHeader>
           <DialogTitle>Refund booking</DialogTitle>
           <DialogDescription>
-            Submit a booking refund request for the selected report. Available for locations only.
+            Submit a booking refund request for the selected report. Available for bookings only.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -2102,13 +2214,13 @@ const BookingRefundDialog = memo(function BookingRefundDialog({
                 id="booking-refund-percentage"
                 type="number"
                 min={0}
-                max={100}
-                step={1}
+                max={1}
+                step={0.01}
                 value={refundPercentage}
                 onChange={(e) => onRefundPercentageChange(e.target.value)}
               />
               <p className="text-[11px] text-muted-foreground">
-                Enter a value between 0 and 100.
+                Enter a value between 0 and 1 (e.g., 0.80 for 80%).
               </p>
             </div>
             <div className="space-y-2">
@@ -2125,7 +2237,7 @@ const BookingRefundDialog = memo(function BookingRefundDialog({
               </div>
             </div>
           </div>
-          {targetType === "location" && selectedCount !== 1 && (
+          {targetType === "booking" && selectedCount !== 1 && (
             <p className="text-[11px] text-muted-foreground">
               Select exactly 1 report to refund a booking.
             </p>

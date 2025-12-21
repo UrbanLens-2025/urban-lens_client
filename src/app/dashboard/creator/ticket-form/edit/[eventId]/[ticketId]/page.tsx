@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEventTickets } from "@/hooks/events/useEventTickets";
 import { useUpdateTicket } from "@/hooks/events/useUpdateTicket";
+import { useEventById } from "@/hooks/events/useEventById";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import type { UpdateTicketPayload } from "@/types";
+import { format } from "date-fns";
 
 const updateTicketSchema = z.object({
   displayName: z
@@ -154,11 +156,64 @@ export default function EditTicketFormPage({
   const updateTicket = useUpdateTicket();
 
   const { data: tickets, isLoading } = useEventTickets(eventId);
+  const { data: event, isLoading: isLoadingEvent } = useEventById(eventId);
   const ticket = tickets?.find(t => t.id === ticketId);
+
+  // Create a dynamic schema with event date constraints
+  const schemaWithEventDates = updateTicketSchema.superRefine((data, ctx) => {
+    if (!event) return;
+    
+    const eventStartDate = event.startDate ? new Date(event.startDate) : null;
+    const eventEndDate = event.endDate ? new Date(event.endDate) : null;
+    
+    if (data.saleStartDate && eventStartDate) {
+      const saleStart = new Date(data.saleStartDate);
+      if (saleStart < eventStartDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Sale start date must be on or after event start date (${format(new Date(eventStartDate), "MMM dd, yyyy")})`,
+          path: ["saleStartDate"],
+        });
+      }
+    }
+    
+    if (data.saleEndDate && eventEndDate) {
+      const saleEnd = new Date(data.saleEndDate);
+      if (saleEnd > eventEndDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Sale end date must be on or before event end date (${format(new Date(eventEndDate), "MMM dd, yyyy")})`,
+          path: ["saleEndDate"],
+        });
+      }
+    }
+    
+    if (data.saleStartDate && eventEndDate) {
+      const saleStart = new Date(data.saleStartDate);
+      if (saleStart > eventEndDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Sale start date must be on or before event end date (${format(new Date(eventEndDate), "MMM dd, yyyy")})`,
+          path: ["saleStartDate"],
+        });
+      }
+    }
+    
+    if (data.saleEndDate && eventStartDate) {
+      const saleEnd = new Date(data.saleEndDate);
+      if (saleEnd < eventStartDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Sale end date must be on or after event start date (${format(new Date(eventStartDate), "MMM dd, yyyy")})`,
+          path: ["saleEndDate"],
+        });
+      }
+    }
+  });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<UpdateTicketForm>({
-    resolver: zodResolver(updateTicketSchema) as any,
+    resolver: zodResolver(schemaWithEventDates) as any,
     mode: "onBlur",
     reValidateMode: "onChange",
   });
@@ -213,7 +268,7 @@ export default function EditTicketFormPage({
     updateTicket.mutate({ eventId, ticketId, payload });
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingEvent) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
@@ -294,8 +349,8 @@ export default function EditTicketFormPage({
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Basic Information */}
-              <Card className="border-t-4 border-t-purple-500">
-                <CardHeader className="bg-purple-500/10 dark:bg-purple-500/20">
+              <Card className="border-t-4 border-t-purple-500 pt-0">
+                <CardHeader className="bg-purple-500/10 dark:bg-purple-500/20 pb-3 pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
@@ -414,8 +469,8 @@ export default function EditTicketFormPage({
               </Card>
 
               {/* Pricing */}
-              <Card className="border-t-4 border-t-green-500">
-                <CardHeader className="bg-green-500/10 dark:bg-green-500/20">
+              <Card className="border-t-4 border-t-green-500 pt-0">
+                <CardHeader className="bg-green-500/10 dark:bg-green-500/20 pb-3 pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-400">
@@ -501,8 +556,8 @@ export default function EditTicketFormPage({
               </Card>
 
               {/* Quantity & Availability */}
-              <Card className="border-t-4 border-t-orange-500">
-                <CardHeader className="bg-orange-500/10 dark:bg-orange-500/20">
+              <Card className="border-t-4 border-t-orange-500 pt-0">
+                <CardHeader className="bg-orange-500/10 dark:bg-orange-500/20 pb-3 pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
@@ -630,8 +685,8 @@ export default function EditTicketFormPage({
               </Card>
 
               {/* Sale Period */}
-              <Card className="border-t-4 border-t-blue-500">
-                <CardHeader className="bg-blue-500/10 dark:bg-blue-500/20">
+              <Card className="border-t-4 border-t-blue-500 pt-0">
+                <CardHeader className="bg-blue-500/10 dark:bg-blue-500/20 pb-3 pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
@@ -678,12 +733,15 @@ export default function EditTicketFormPage({
                               onChange={(value) => {
                                 field.onChange(value);
                                 void form.trigger("saleStartDate");
+                                void form.trigger("saleEndDate");
                               }}
                               error={fieldState.error?.message}
                               disabled={updateTicket.isPending}
                               placeholder="Pick a start date & time"
                               showTime
                               defaultTime="00:00"
+                              minDate={event?.startDate ? new Date(event.startDate) : undefined}
+                              maxDate={event?.endDate ? new Date(event.endDate) : undefined}
                             />
                           </FormControl>
                           <FormMessage />
@@ -713,12 +771,15 @@ export default function EditTicketFormPage({
                               onChange={(value) => {
                                 field.onChange(value);
                                 void form.trigger("saleEndDate");
+                                void form.trigger("saleStartDate");
                               }}
                               error={fieldState.error?.message}
                               disabled={updateTicket.isPending}
                               placeholder="Pick an end date & time"
                               showTime
                               defaultTime="23:59"
+                              minDate={event?.startDate ? new Date(event.startDate) : undefined}
+                              maxDate={event?.endDate ? new Date(event.endDate) : undefined}
                             />
                           </FormControl>
                           <FormMessage />
@@ -730,8 +791,8 @@ export default function EditTicketFormPage({
               </Card>
 
               {/* Refund Settings */}
-              <Card className="border-t-4 border-t-amber-500">
-                <CardHeader className="bg-amber-500/10 dark:bg-amber-500/20">
+              <Card className="border-t-4 border-t-amber-500 pt-0">
+                <CardHeader className="bg-amber-500/10 dark:bg-amber-500/20 pb-3 pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
@@ -895,8 +956,8 @@ export default function EditTicketFormPage({
               </Card>
 
               {/* Additional Settings */}
-              <Card className="border-t-4 border-t-gray-500">
-                <CardHeader className="bg-gray-500/10 dark:bg-gray-500/20">
+              <Card className="border-t-4 border-t-gray-500 pt-0">
+                <CardHeader className="bg-gray-500/10 dark:bg-gray-500/20 pb-3 pt-6">
                   <CardTitle className="text-gray-700 dark:text-gray-400">Additional Settings</CardTitle>
                   <CardDescription className="mt-1 text-gray-600 dark:text-gray-300">
                     Advanced options and terms

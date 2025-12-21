@@ -21,6 +21,7 @@ interface FileUploadProps {
   onChange: (urls: string[]) => void;
   disabled?: boolean;
   onUploadingChange?: (isUploading: boolean) => void;
+  maxFiles?: number;
 }
 
 export function FileUpload({
@@ -28,6 +29,7 @@ export function FileUpload({
   onChange,
   disabled = false,
   onUploadingChange,
+  maxFiles = 5,
 }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [previews, setPreviews] = useState<string[]>(value || []);
@@ -52,7 +54,9 @@ export function FileUpload({
         );
 
         if (isTooManyFiles) {
-          toast.error('Lỗi: Bạn chỉ được tải lên tối đa 5 hình ảnh một lần.');
+          toast.error(
+            `Error: You can only upload up to ${maxFiles} images at once.`
+          );
           return;
         }
 
@@ -69,15 +73,21 @@ export function FileUpload({
             `Lỗi: File "${firstRejection.file.name}" quá lớn (Max 10MB).`
           );
         } else {
-          toast.error(`Lỗi: ${firstError.message}`);
+          toast.error(`Error: ${firstError.message}`);
         }
 
         return;
       }
 
       // 2. Kiểm tra thủ công (Fallback)
-      if (acceptedFiles.length > 5) {
-        toast.error('Bạn chỉ có thể tải lên tối đa 5 hình ảnh cùng một lúc.');
+      const currentCount = (value || []).length;
+      const remainingSlots = maxFiles - currentCount;
+      if (acceptedFiles.length > remainingSlots) {
+        toast.error(
+          `You can only upload up to ${maxFiles} images. You currently have ${currentCount} image${
+            currentCount !== 1 ? 's' : ''
+          }.`
+        );
         return;
       }
 
@@ -113,16 +123,19 @@ export function FileUpload({
         tempUrls.forEach((url) => URL.revokeObjectURL(url));
       }
     },
-    [onChange, value]
+    [onChange, value, maxFiles]
   );
+
+  const currentCount = (value || []).length;
+  const remainingSlots = maxFiles - currentCount;
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: true,
-    maxFiles: 5, // Quan trọng: Prop này báo cho thư viện biết giới hạn
+    maxFiles: remainingSlots, // Quan trọng: Prop này báo cho thư viện biết giới hạn
     maxSize: 10 * 1024 * 1024, // 10MB (Khớp với text hiển thị)
     accept: { 'image/*': ['.png', '.gif', '.jpeg', '.jpg'] },
-    disabled: disabled || isUploading,
+    disabled: disabled || isUploading || remainingSlots <= 0,
   });
 
   const handleRemove = (urlToRemove: string) => {
@@ -215,7 +228,7 @@ export function FileUpload({
       )}
 
       {/* Phần Dropzone */}
-      {!disabled && (
+      {!disabled && remainingSlots > 0 && (
         <div
           {...getRootProps()}
           className={cn(
@@ -258,7 +271,8 @@ export function FileUpload({
                   drag and drop
                 </p>
                 <p className='text-xs text-muted-foreground'>
-                  PNG, JPG, GIF up to 10MB (Max 5 images per upload)
+                  PNG, JPG, GIF up to 10MB (Max {maxFiles} images
+                  {currentCount > 0 && `, ${remainingSlots} remaining`})
                 </p>
               </div>
             </div>

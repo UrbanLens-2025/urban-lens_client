@@ -855,6 +855,8 @@ export interface LocationBooking {
 
 export interface LocationBookingDetail
   extends Omit<LocationBooking, 'createdBy'> {
+  businessPayoutTransactionId: any;
+  paidOutAt: any;
   createdBy: UserWithCreatorProfile;
   referencedTransaction: ReferencedTransaction | null;
 }
@@ -1106,7 +1108,8 @@ export interface OrderEventAttendance {
 }
 
 export interface EventAttendance {
-  checkInTime: any;
+  checkedInAt: string;
+  refundedAmount: string | number;
   id: string;
   createdAt: string;
   updatedAt: string;
@@ -1307,6 +1310,7 @@ export interface ReferencedTargetLocation {
 }
 
 export interface Report {
+  denormSecondaryTargetId: any;
   id: string;
   targetType: ReportTargetType;
   targetId: string;
@@ -1344,7 +1348,7 @@ export interface GetReportsParams {
   denormSecondaryTargetId?: string;
 }
 
-export type ReportEntityType = 'post' | 'location' | 'event';
+export type ReportEntityType = 'post' | 'location' | 'event' | 'booking';
 
 export type ReportPenaltyActions =
   | 'WARN_USER'
@@ -1407,4 +1411,12 @@ export interface TopRevenueLocation {
   locationId: string;
   locationName: string;
   revenue: number;
+}
+
+export interface LocationGeneralAnalytics {
+  checkIns: number;
+  revenue: number;
+  announcements: number;
+  vouchers: number;
+  missions: number;
 }

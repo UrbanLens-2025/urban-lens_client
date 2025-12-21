@@ -38,6 +38,7 @@ import {
   Copy,
   Download,
   Rocket,
+  RefreshCw, // Import icon mới
 } from 'lucide-react';
 import Image from 'next/image';
 import {
@@ -63,6 +64,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
+// ... (Giữ nguyên component MissionActions)
 function MissionActions({
   mission,
   onDeleteClick,
@@ -125,15 +127,19 @@ export default function ManageMissionsPage({
     column: 'createdAt',
     direction: 'DESC',
   });
+  const [generatingMissionId, setGeneratingMissionId] = useState<string | null>(null);
 
   const [missionToDelete, setMissionToDelete] =
     useState<LocationMission | null>(null);
+  
+  // CẬP NHẬT 1: Thêm missionId vào state để biết đang regenerate cho cái nào
   const [generatedQRCode, setGeneratedQRCode] = useState<{
     qrCodeData: string;
     qrCodeUrl: string;
     expiresAt: string;
     id: string;
     isUsed: boolean;
+    missionId: string; // Thêm trường này
   } | null>(null);
 
   const {
@@ -155,6 +161,7 @@ export default function ManageMissionsPage({
   const missions = response?.data || [];
   const meta = response?.meta;
 
+  // ... (Giữ nguyên các hàm helper: getStatusBadge, formatDateRange, v.v.)
   const getStatusBadge = (startDate: string, endDate: string) => {
     const now = new Date();
     const start = new Date(startDate);
@@ -180,24 +187,6 @@ export default function ManageMissionsPage({
     }
 
     return <Badge className='bg-emerald-500/90 text-white'>Active</Badge>;
-  };
-
-  const formatDateRange = (startDate: string, endDate: string) => {
-    try {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      return `${format(start, 'MMM d, yyyy')} → ${format(end, 'MMM d, yyyy')}`;
-    } catch {
-      return `${startDate} → ${endDate}`;
-    }
-  };
-
-  const missionMetricLabel = (metric: string | null | undefined) => {
-    if (!metric) return 'Metric';
-    return metric
-      .split('_')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
   };
 
   const handleSort = (columnName: string) => {
@@ -229,7 +218,9 @@ export default function ManageMissionsPage({
     });
   };
 
+  // CẬP NHẬT 2: Lưu missionId khi generate thành công
   const handleGenerateQRCode = (missionId: string) => {
+    setGeneratingMissionId(missionId); // Đánh dấu mission này đang xử lý
     generateQRCode(
       { missionId },
       {
@@ -240,11 +231,22 @@ export default function ManageMissionsPage({
             expiresAt: data.expiresAt,
             id: data.id,
             isUsed: data.isUsed,
+            missionId: missionId,
           });
           toast.success('QR code generated successfully!');
+          setGeneratingMissionId(null); // Xong thì reset
+        },
+        onError: () => {
+          setGeneratingMissionId(null); // Lỗi cũng reset để tắt loading
         },
       }
     );
+  };
+
+  // CẬP NHẬT 3: Hàm Regenerate gọi từ trong Dialog
+  const handleRegenerate = () => {
+    if (!generatedQRCode?.missionId) return;
+    handleGenerateQRCode(generatedQRCode.missionId);
   };
 
   const handleCopyQRCode = () => {
@@ -257,7 +259,6 @@ export default function ManageMissionsPage({
   const handleDownloadQRCode = () => {
     if (!generatedQRCode) return;
 
-    // Generate QR code image from data using a QR code API service
     const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
       generatedQRCode.qrCodeData
     )}`;
@@ -274,13 +275,9 @@ export default function ManageMissionsPage({
 
   const getQRCodeImageUrl = () => {
     if (!generatedQRCode) return null;
-
-    // If qrCodeUrl is provided, use it; otherwise generate from qrCodeData
     if (generatedQRCode.qrCodeUrl) {
       return generatedQRCode.qrCodeUrl;
     }
-
-    // Generate QR code image from data using a QR code API service
     return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
       generatedQRCode.qrCodeData
     )}`;
@@ -291,6 +288,7 @@ export default function ManageMissionsPage({
       {/* --- Missions Table --- */}
       <Card className='border-border/60 shadow-sm'>
         <CardHeader>
+          {/* ... (Giữ nguyên phần Header của Card) ... */}
           <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
             <div>
               <CardTitle className='text-xl font-semibold'>
@@ -320,6 +318,7 @@ export default function ManageMissionsPage({
           </div>
         </CardHeader>
         <CardContent>
+          {/* ... (Giữ nguyên phần Table) ... */}
           {isLoading && !response ? (
             <div className='flex justify-center items-center py-12'>
               <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
@@ -333,15 +332,9 @@ export default function ManageMissionsPage({
               <Table>
                 <TableHeader className='bg-muted/40'>
                   <TableRow>
-                    <TableHead className='w-max px-3 flex justify-center items-center'>
-                      #
-                    </TableHead>
+                    <TableHead className='w-max px-3 flex justify-center items-center'>#</TableHead>
                     <TableHead className='min-w-[220px]'>
-                      <Button
-                        variant='ghost'
-                        className='px-0'
-                        onClick={() => handleSort('title')}
-                      >
+                      <Button variant='ghost' className='px-0' onClick={() => handleSort('title')}>
                         Title <SortIcon column='title' />
                       </Button>
                     </TableHead>
@@ -349,11 +342,7 @@ export default function ManageMissionsPage({
                     <TableHead>End Date</TableHead>
                     <TableHead>Target</TableHead>
                     <TableHead>
-                      <Button
-                        variant='ghost'
-                        className='px-0'
-                        onClick={() => handleSort('reward')}
-                      >
+                      <Button variant='ghost' className='px-0' onClick={() => handleSort('reward')}>
                         Reward <SortIcon column='reward' />
                       </Button>
                     </TableHead>
@@ -364,31 +353,15 @@ export default function ManageMissionsPage({
                 <TableBody>
                   {missions.length > 0 ? (
                     missions.map((mission, index) => {
-                      const orderNumber =
-                        (meta?.currentPage ? meta.currentPage - 1 : 0) *
-                          (meta?.itemsPerPage || 10) +
-                        index +
-                        1;
+                      const orderNumber = (meta?.currentPage ? meta.currentPage - 1 : 0) * (meta?.itemsPerPage || 10) + index + 1;
                       return (
-                        <TableRow
-                          key={mission.id}
-                          className='hover:bg-muted/20'
-                        >
-                          <TableCell className='text-muted-foreground font-medium'>
-                            {orderNumber}
-                          </TableCell>
+                        <TableRow key={mission.id} className='hover:bg-muted/20'>
+                          <TableCell className='text-muted-foreground font-medium'>{orderNumber}</TableCell>
                           <TableCell>
                             <div className='flex items-center gap-3 min-w-[300px] max-w-[400px]'>
-                              {mission.imageUrls &&
-                              mission.imageUrls.length > 0 ? (
+                              {mission.imageUrls && mission.imageUrls.length > 0 ? (
                                 <div className='relative h-12 w-12 flex-shrink-0 rounded-md overflow-hidden border border-border'>
-                                  <Image
-                                    src={mission.imageUrls[0]}
-                                    alt={mission.title}
-                                    fill
-                                    className='object-cover'
-                                    sizes='48px'
-                                  />
+                                  <Image src={mission.imageUrls[0]} alt={mission.title} fill className='object-cover' sizes='48px' />
                                 </div>
                               ) : (
                                 <div className='h-12 w-12 flex-shrink-0 rounded-md bg-muted border border-border flex items-center justify-center'>
@@ -396,61 +369,36 @@ export default function ManageMissionsPage({
                                 </div>
                               )}
                               <div className='space-y-1 flex-1 min-w-0'>
-                                <div className='flex items-start gap-2'>
-                                  <Link
-                                    href={`/dashboard/business/locations/${mission.locationId}/missions/${mission.id}`}
-                                    className='font-semibold text-sm leading-tight hover:text-primary transition-colors cursor-pointer'
-                                  >
-                                    {mission.title}
-                                  </Link>
-                                </div>
+                                <Link href={`/dashboard/business/locations/${mission.locationId}/missions/${mission.id}`} className='font-semibold text-sm leading-tight hover:text-primary transition-colors'>
+                                  {mission.title}
+                                </Link>
                                 {mission.description && (
-                                  <p className='text-xs text-muted-foreground line-clamp-2 leading-relaxed'>
-                                    {mission.description}
-                                  </p>
+                                  <p className='text-xs text-muted-foreground line-clamp-2 leading-relaxed'>{mission.description}</p>
                                 )}
                               </div>
                             </div>
                           </TableCell>
                           <TableCell className='text-xs text-muted-foreground'>
                             <div className='flex items-center gap-2'>
-                              <CalendarDays className='h-3 w-3 text-muted-foreground' />
-                              <span>
-                                {format(
-                                  new Date(mission.startDate),
-                                  'MMM d, yyyy'
-                                )}
-                              </span>
+                              <CalendarDays className='h-3 w-3' />
+                              <span>{format(new Date(mission.startDate), 'MMM d, yyyy')}</span>
                             </div>
                           </TableCell>
                           <TableCell className='text-xs text-muted-foreground'>
                             <div className='flex items-center gap-2'>
-                              <CalendarDays className='h-3 w-3 text-muted-foreground' />
-                              <span>
-                                {format(
-                                  new Date(mission.endDate),
-                                  'MMM d, yyyy'
-                                )}
-                              </span>
+                              <CalendarDays className='h-3 w-3' />
+                              <span>{format(new Date(mission.endDate), 'MMM d, yyyy')}</span>
                             </div>
                           </TableCell>
-                          <TableCell className='font-center'>
-                            {mission.target}
-                          </TableCell>
-                          <TableCell className='font-medium'>
-                            {mission.reward} pts
-                          </TableCell>
-                          <TableCell>
-                            {getStatusBadge(mission.startDate, mission.endDate)}
-                          </TableCell>
+                          <TableCell className='font-center'>{mission.target}</TableCell>
+                          <TableCell className='font-medium'>{mission.reward} pts</TableCell>
+                          <TableCell>{getStatusBadge(mission.startDate, mission.endDate)}</TableCell>
                           <TableCell className='text-right'>
                             <MissionActions
                               mission={mission}
                               onDeleteClick={() => setMissionToDelete(mission)}
-                              onGenerateQRCode={() =>
-                                handleGenerateQRCode(mission.id)
-                              }
-                              isGeneratingQR={isGeneratingQR}
+                              onGenerateQRCode={() => handleGenerateQRCode(mission.id)}
+                              isGeneratingQR={isGeneratingQR && generatingMissionId === mission.id}
                             />
                           </TableCell>
                         </TableRow>
@@ -460,19 +408,10 @@ export default function ManageMissionsPage({
                     <TableRow>
                       <TableCell colSpan={9} className='h-32'>
                         <div className='flex flex-col items-center justify-center gap-2 py-6 text-center'>
-                          <div className='text-base font-semibold'>
-                            No missions yet
-                          </div>
-                          <p className='text-sm text-muted-foreground max-w-sm'>
-                            Launch a mission to engage creators with challenges
-                            and rewards for this location.
-                          </p>
+                          <div className='text-base font-semibold'>No missions yet</div>
                           <Button asChild size='sm'>
-                            <Link
-                              href={`/dashboard/business/locations/${locationId}/missions/create`}
-                            >
-                              <PlusCircle className='mr-2 h-4 w-4' />
-                              Create your first mission
+                            <Link href={`/dashboard/business/locations/${locationId}/missions/create`}>
+                              <PlusCircle className='mr-2 h-4 w-4' /> Create your first mission
                             </Link>
                           </Button>
                         </div>
@@ -486,47 +425,22 @@ export default function ManageMissionsPage({
         </CardContent>
       </Card>
 
+      {/* ... (Pagination & AlertDialog giữ nguyên) ... */}
       <div className='flex items-center justify-end space-x-2 py-4'>
-        <Button
-          variant='outline'
-          size='sm'
-          onClick={() => setPage(page - 1)}
-          disabled={!meta || meta.currentPage <= 1}
-        >
-          Previous
-        </Button>
-        <Button
-          variant='outline'
-          size='sm'
-          onClick={() => setPage(page + 1)}
-          disabled={!meta || meta.currentPage >= meta.totalPages}
-        >
-          Next
-        </Button>
+        <Button variant='outline' size='sm' onClick={() => setPage(page - 1)} disabled={!meta || meta.currentPage <= 1}>Previous</Button>
+        <Button variant='outline' size='sm' onClick={() => setPage(page + 1)} disabled={!meta || meta.currentPage >= meta.totalPages}>Next</Button>
       </div>
 
-      <AlertDialog
-        open={!!missionToDelete}
-        onOpenChange={() => setMissionToDelete(null)}
-      >
+      <AlertDialog open={!!missionToDelete} onOpenChange={() => setMissionToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Are you sure you want to delete this mission?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the mission:
-              <strong className='ml-1'>
-                &quot;{missionToDelete?.title}&quot;
-              </strong>
-              . This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Are you sure you want to delete this mission?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={onConfirmDelete} disabled={isDeleting}>
-              {isDeleting && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
-              Yes, Delete Mission
+              {isDeleting && <Loader2 className='mr-2 h-4 w-4 animate-spin' />} Yes, Delete Mission
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -545,7 +459,13 @@ export default function ManageMissionsPage({
             </DialogTitle>
           </DialogHeader>
           <div className='space-y-4'>
-            <div className='flex justify-center p-4 bg-muted/30 rounded-lg'>
+            <div className='relative flex justify-center p-4 bg-muted/30 rounded-lg'>
+              {/* Overlay loading khi regenerate */}
+              {isGeneratingQR && (
+                <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center rounded-lg z-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              )}
               {generatedQRCode && getQRCodeImageUrl() && (
                 <img
                   src={getQRCodeImageUrl() || ''}
@@ -594,19 +514,34 @@ export default function ManageMissionsPage({
                 </div>
               </>
             )}
-            <div className='flex gap-2'>
+            
+            {/* CẬP NHẬT 4: Nút Re-generate và các nút actions */}
+            <div className='grid grid-cols-2 gap-2'>
+              <Button
+                variant='default'
+                className='col-span-2'
+                onClick={handleRegenerate}
+                disabled={isGeneratingQR}
+              >
+                {isGeneratingQR ? (
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                ) : (
+                  <RefreshCw className='mr-2 h-4 w-4' />
+                )}
+                Re-generate QR
+              </Button>
               <Button
                 variant='outline'
-                className='flex-1'
                 onClick={handleDownloadQRCode}
+                disabled={isGeneratingQR}
               >
                 <Download className='mr-2 h-4 w-4' />
                 Download
               </Button>
               <Button
                 variant='outline'
-                className='flex-1'
                 onClick={handleCopyQRCode}
+                disabled={isGeneratingQR}
               >
                 <Copy className='mr-2 h-4 w-4' />
                 Copy Data

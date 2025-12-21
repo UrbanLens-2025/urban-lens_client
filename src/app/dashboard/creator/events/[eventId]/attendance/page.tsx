@@ -129,6 +129,7 @@ export default function EventAttendancePage({
 
     const status = attendance.status?.toUpperCase();
 
+
     // Logic lọc trạng thái chi tiết
     let matchesStatus = false;
     if (statusFilter === 'all') {
@@ -197,7 +198,7 @@ export default function EventAttendancePage({
             </div>
             <Select
               value={statusFilter}
-              onValueChange={(value: any) => setStatusFilter(value)}
+              onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}
             >
               <SelectTrigger className='w-full md:w-[220px]'>
                 <SelectValue placeholder='Filter by status' />
@@ -240,6 +241,7 @@ export default function EventAttendancePage({
                     <TableHead>Price</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Check-in Time</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -309,6 +311,11 @@ export default function EventAttendancePage({
                               attendance.status
                             )}
                           >
+                          <Badge
+                            variant={getAttendanceStatusVariant(
+                              attendance.status
+                            )}
+                          >
                             {getAttendanceStatusLabel(attendance.status)}
                           </Badge>
                         </TableCell>
@@ -320,8 +327,38 @@ export default function EventAttendancePage({
                               </span>
                             ) : (
                               <span>-</span>
+                              <span>-</span>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                disabled={attendance.status?.toUpperCase() !== "CREATED"}
+                                onClick={() => {
+                                  setSelectedAttendance({
+                                    id: attendance.id,
+                                    orderId: attendance.order.id,
+                                    ownerName: `${attendance.order.createdBy.firstName} ${attendance.order.createdBy.lastName}`,
+                                  });
+                                  setIsCheckInDialogOpen(true);
+                                }}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Check In
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     );
@@ -368,6 +405,50 @@ export default function EventAttendancePage({
           )}
         </CardContent>
       </Card>
+
+      {/* Check In Confirmation Dialog */}
+      <AlertDialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Check In</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to check in {selectedAttendance?.ownerName}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isConfirming}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedAttendance) {
+                  confirmAttendance(
+                    {
+                      eventAttendanceIds: [selectedAttendance.id],
+                      ticketOrderId: selectedAttendance.orderId,
+                    },
+                    {
+                      onSuccess: () => {
+                        setIsCheckInDialogOpen(false);
+                        setSelectedAttendance(null);
+                      },
+                    }
+                  );
+                }
+              }}
+              disabled={isConfirming}
+            >
+              {isConfirming ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Checking In...
+                </>
+              ) : (
+                "Check In"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+

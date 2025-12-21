@@ -273,7 +273,7 @@ export const getEventAttendance = async (
   const queryParams: any = {
     page: params?.page || 1,
     limit: params?.limit || 20,
-    sortBy: params?.sortBy || 'createdAt:DESC',
+    sortBy: params?.sortBy || 'updatedAt:DESC',
   };
 
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<EventAttendance>>>(
@@ -447,4 +447,9 @@ export const confirmAttendanceV2 = async (
     `/v1/creator/events/${eventId}/attendance/confirm-usage-v2`,
     payload
   );
+};
+
+export const getEventGeneralAnalytics = async (eventId: string) => {
+  const { data } = await axiosInstance.get(`/v1/creator/dashboard/events/general-analytics/${eventId}`);
+  return data.data;
 };

@@ -16,6 +16,7 @@ import type {
   TagCategory,
   UpdateLocationBookingConfigPayload,
   UpdateLocationPayload,
+  LocationGeneralAnalytics,
 } from '@/types';
 
 export const getMyLocations = async ({
@@ -421,4 +422,13 @@ export const forceCancelLocationBooking = async (
     { data: payload }
   );
   return data;
+};
+
+export const getGeneralAnalyticsForLocation = async (
+  locationId: string
+): Promise<LocationGeneralAnalytics> => {
+  const { data } = await axiosInstance.get<ApiResponse<LocationGeneralAnalytics>>(
+    `/v1/owner/dashboard/general-analytics-for-location/${locationId}`
+  );
+  return data.data;
 };

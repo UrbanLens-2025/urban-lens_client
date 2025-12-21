@@ -199,7 +199,7 @@ export default function CreatorEventsPage() {
       />
 
       {/* Quick Statistics */}
-      <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
+      <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
         <StatCard
           title='Total Events'
           value={stats.totalEvents}
@@ -222,14 +222,6 @@ export default function CreatorEventsPage() {
           icon={FileText}
           color='amber'
           description='Not published yet'
-        />
-
-        <StatCard
-          title='Total Tags'
-          value={stats.totalTags}
-          icon={TagIcon}
-          color='purple'
-          description='Across all events'
         />
       </div>
 
