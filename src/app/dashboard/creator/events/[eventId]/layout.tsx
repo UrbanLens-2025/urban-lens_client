@@ -47,6 +47,7 @@ import {
   AlertCircle,
   ShoppingCart,
   Scale,
+  MoreHorizontal,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -67,6 +68,7 @@ import {
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 function EventDetailLayoutContent({
   eventId,
@@ -818,11 +820,11 @@ function EventDetailLayoutContent({
                   </div>
                   {/* Finish Event Button - Show only if PUBLISHED */}
                   {isPublished && (
-                    <div className='pt-4'>
+                    <div className='pt-4 flex gap-2'>
                       <Button
                         onClick={handleFinishClick}
-                        disabled={finishEvent.isPending}
-                        variant='outline'
+                        disabled={finishEvent.isPending || !!(event.endDate && new Date(event.endDate) > new Date())}
+                        variant='default'
                         size='lg'
                         className='w-full sm:w-auto'
                       >
@@ -838,13 +840,19 @@ function EventDetailLayoutContent({
                           </>
                         )}
                       </Button>
-                      {/* TODO: Re-add this message once validation is restored */}
-                      {!isEventEnded && (
-                        <p className='text-xs text-muted-foreground mt-2'>
-                          You can finish the event after the end date has
-                          passed.
-                        </p>
-                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button variant='outline' size='lg' className='sm:w-auto'>
+                            <MoreHorizontal className='h-4 w-4' />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={handleFinishClick}>
+                            <CheckCircle2 className='h-4 w-4' />
+                            Demo: Finish Event
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   )}
                 </div>

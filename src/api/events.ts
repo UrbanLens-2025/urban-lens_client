@@ -273,7 +273,7 @@ export const getEventAttendance = async (
   const queryParams: any = {
     page: params?.page || 1,
     limit: params?.limit || 20,
-    sortBy: params?.sortBy || 'createdAt:DESC',
+    sortBy: params?.sortBy || 'updatedAt:DESC',
   };
 
   const { data } = await axiosInstance.get<ApiResponse<PaginatedData<EventAttendance>>>(

@@ -146,12 +146,13 @@ export default function EventOverviewPage({
       <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
         {/* Total Revenue */}
         <StatCard
-          title='Total Revenue'
+          title='Net Revenue'
           value={formatCurrency(totalRevenue)}
           icon={DollarSign}
           color='emerald'
-          description={`From ${formatCurrency(totalRevenueBeforeTax)} before tax`}
+          description={`From gross ${formatCurrency(totalRevenueBeforeTax)}`}
           isLoading={isLoadingGeneralAnalytics}
+          className="p-0 h-min"
         />
 
         {/* Tickets Sold */}
@@ -162,11 +163,7 @@ export default function EventOverviewPage({
           color='blue'
           description={`${(ticketsSold / totalTickets * 100).toFixed(1)}% sold`}
           isLoading={isLoadingGeneralAnalytics}
-          footer={
-            !isLoadingGeneralAnalytics && (
-              <Progress value={(ticketsSold / totalTickets * 100)} className='mt-2' />
-            )
-          }
+          className="p-0 h-min"
         />
 
         {/* Total Attendees */}
@@ -179,6 +176,7 @@ export default function EventOverviewPage({
             paidOrders !== 1 ? 's' : ''
           }`}
           isLoading={isLoadingGeneralAnalytics}
+          className="p-0 h-min"
         />
 
         {/* Ticket Types */}
@@ -189,6 +187,7 @@ export default function EventOverviewPage({
           color='amber'
           description={`${ticketTypesCount} active`}
           isLoading={isLoadingGeneralAnalytics}
+          className="p-0 h-min"
         />
       </div>
 

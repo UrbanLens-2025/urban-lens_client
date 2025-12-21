@@ -15,7 +15,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Loader2,
   Users,
@@ -40,8 +46,10 @@ export default function EventAttendancePage({
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   // Cập nhật state filter để hỗ trợ tách biệt Cancelled và Refunded
-  const [statusFilter, setStatusFilter] = useState<"all" | "checked_in" | "not_checked_in" | "cancelled" | "refunded">("all");
-  const limit = 20;
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "checked_in" | "not_checked_in" | "cancelled" | "refunded"
+  >("all");
+  const limit = 1000;
 
   const {
     data: attendanceData,
@@ -50,7 +58,7 @@ export default function EventAttendancePage({
   } = useEventAttendance(eventId, {
     page: currentPage,
     limit,
-    sortBy: "createdAt:DESC",
+    sortBy: "checkedInAt:DESC",
   });
 
   const formatDateTime = (iso: string) => {
@@ -68,7 +76,8 @@ export default function EventAttendancePage({
 
   const getAttendanceStatusVariant = (status: string) => {
     const s = status?.toUpperCase();
-    if (s === "CONFIRMED" || s === "CHECKED_IN" || s === "ATTENDED") return "default" as const; // Green/Black
+    if (s === "CONFIRMED" || s === "CHECKED_IN" || s === "ATTENDED")
+      return "default" as const; // Green/Black
     if (s === "CREATED" || s === "PENDING") return "secondary" as const; // Gray
     if (s === "CANCELLED") return "destructive" as const; // Red
     if (s === "REFUNDED") return "outline" as const; // Outline (hoặc destructive nếu muốn đỏ)
@@ -106,7 +115,8 @@ export default function EventAttendancePage({
 
   // Filter at attendance level (per ticket/person)
   const filteredAttendances = attendances.filter((attendance) => {
-    const fullName = `${attendance.order.createdBy.firstName} ${attendance.order.createdBy.lastName}`.toLowerCase();
+    const fullName =
+      `${attendance.order.createdBy.firstName} ${attendance.order.createdBy.lastName}`.toLowerCase();
     const email = attendance.order.createdBy.email?.toLowerCase() || "";
     const orderNumber = attendance.order.orderNumber?.toLowerCase() || "";
     const query = searchQuery.toLowerCase().trim();
@@ -118,20 +128,23 @@ export default function EventAttendancePage({
       orderNumber.includes(query);
 
     const status = attendance.status?.toUpperCase();
-    
+
     // Logic lọc trạng thái chi tiết
     let matchesStatus = false;
     if (statusFilter === "all") {
-        matchesStatus = true;
+      matchesStatus = true;
     } else if (statusFilter === "checked_in") {
-        matchesStatus = status === "ATTENDED" || status === "CHECKED_IN" || status === "CONFIRMED";
+      matchesStatus =
+        status === "ATTENDED" ||
+        status === "CHECKED_IN" ||
+        status === "CONFIRMED";
     } else if (statusFilter === "not_checked_in") {
-        // Chỉ lấy những vé chưa check-in VÀ chưa bị hủy/refund
-        matchesStatus = (status === "CREATED" || status === "PENDING");
+      // Chỉ lấy những vé chưa check-in VÀ chưa bị hủy/refund
+      matchesStatus = status === "CREATED" || status === "PENDING";
     } else if (statusFilter === "cancelled") {
-        matchesStatus = status === "CANCELLED";
+      matchesStatus = status === "CANCELLED";
     } else if (statusFilter === "refunded") {
-        matchesStatus = status === "REFUNDED";
+      matchesStatus = status === "REFUNDED";
     }
 
     return matchesQuery && matchesStatus;
@@ -142,7 +155,9 @@ export default function EventAttendancePage({
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Attendance Overview</h2>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Attendance Overview
+          </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Monitor individual tickets, check-in status, and cancellations.
           </p>
@@ -202,7 +217,9 @@ export default function EventAttendancePage({
             <div className="text-center py-12 text-muted-foreground">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium">
-                {attendances.length === 0 ? "No tickets yet" : "No tickets match your filters"}
+                {attendances.length === 0
+                  ? "No tickets yet"
+                  : "No tickets match your filters"}
               </p>
               <p className="text-sm mt-1">
                 {attendances.length === 0
@@ -215,33 +232,28 @@ export default function EventAttendancePage({
               <Table>
                 <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className="w-[180px]">Order & Ticket ID</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Ticket Type</TableHead>
-                    <TableHead>Price</TableHead>
+                    <TableHead className='text-center'>#</TableHead>
+                    <TableHead>Ticket Owner</TableHead>
+                    <TableHead>Held Ticket</TableHead>
+                    <TableHead>Price Paid</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Check-in Time</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAttendances.map((attendance) => {
-                    const ticketName = attendance.ticketSnapshot?.displayName || "Unknown Ticket";
+                  {filteredAttendances.map((attendance, index) => {
+                    const ticketName =
+                      attendance.ticketSnapshot?.displayName ||
+                      "Unknown Ticket";
                     const price = attendance.ticketSnapshot?.price || 0;
                     const currency = attendance.order.currency || "VND";
-                    
+
                     return (
-                      <TableRow key={attendance.id} className="hover:bg-muted/20">
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="font-semibold text-sm">
-                              {attendance.order.orderNumber.slice(0, 16)}...
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-                                <Ticket className="h-3 w-3" />
-                                {attendance.id.slice(0, 8)}...
-                            </div>
-                          </div>
-                        </TableCell>
+                      <TableRow
+                        key={attendance.id}
+                        className="hover:bg-muted/20"
+                      >
+                        <TableCell className="w-[50px] text-center">{index + 1}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {attendance.order.createdBy.avatarUrl ? (
@@ -259,7 +271,8 @@ export default function EventAttendancePage({
                             )}
                             <div>
                               <div className="font-medium text-sm">
-                                {attendance.order.createdBy.firstName} {attendance.order.createdBy.lastName}
+                                {attendance.order.createdBy.firstName}{" "}
+                                {attendance.order.createdBy.lastName}
                               </div>
                               <div className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Mail className="h-3 w-3" />
@@ -274,23 +287,36 @@ export default function EventAttendancePage({
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="font-medium text-sm">
-                            {formatCurrency(price, currency)}
+                          <div className="flex gap-1 flex-col">
+                            <div className="font-medium text-sm font-medium">
+                              {formatCurrency(price, currency)}
+                            </div>
+                            <div className="text-xs text-gray-400 font-mono">
+                              Refunded:{" "}
+                              {formatCurrency(
+                                attendance.refundedAmount,
+                                currency
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getAttendanceStatusVariant(attendance.status)}>
+                          <Badge
+                            variant={getAttendanceStatusVariant(
+                              attendance.status
+                            )}
+                          >
                             {getAttendanceStatusLabel(attendance.status)}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm text-muted-foreground">
-                            {attendance.checkInTime ? (
-                                <span className="text-green-600 font-medium">
-                                    {formatDateTime(attendance.checkInTime)}
-                                </span>
+                            {attendance.checkedInAt ? (
+                              <span className="font-medium">
+                                {formatDateTime(attendance.checkedInAt)}
+                              </span>
                             ) : (
-                                <span>-</span>
+                              <span>-</span>
                             )}
                           </div>
                         </TableCell>
@@ -306,7 +332,7 @@ export default function EventAttendancePage({
           {meta.totalPages > 1 && (
             <div className="flex items-center justify-between mt-6 pt-6 border-t">
               <div className="text-sm text-muted-foreground">
-                Showing {((currentPage - 1) * limit) + 1} to{" "}
+                Showing {(currentPage - 1) * limit + 1} to{" "}
                 {Math.min(currentPage * limit, meta.totalItems)} of{" "}
                 {meta.totalItems} tickets
               </div>

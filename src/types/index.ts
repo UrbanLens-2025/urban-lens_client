@@ -1108,7 +1108,8 @@ export interface OrderEventAttendance {
 }
 
 export interface EventAttendance {
-  checkInTime: any;
+  checkedInAt: string;
+  refundedAmount: string | number;
   id: string;
   createdAt: string;
   updatedAt: string;
