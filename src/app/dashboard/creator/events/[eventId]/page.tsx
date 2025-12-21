@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { useEventGeneralAnalytics } from '@/hooks/events/useEventGeneralAnalytics';
 
 function InfoRow({
   label,
@@ -73,14 +74,16 @@ export default function EventOverviewPage({
   const [visibleTagsCount, setVisibleTagsCount] = useState(10);
 
   const { data: event, isLoading: isLoadingEvent } = useEventById(eventId);
-  const { data: tickets, isLoading: isLoadingTickets } =
-    useEventTickets(eventId);
-  const { data: attendanceData, isLoading: isLoadingAttendance } =
-    useEventAttendance(eventId, {
-      page: 1,
-      limit: 100,
-      sortBy: 'createdAt:DESC',
-    });
+  const { data: generalAnalytics, isLoading: isLoadingGeneralAnalytics } = useEventGeneralAnalytics(eventId);
+  const totalRevenue = generalAnalytics?.totalRevenue || 0;
+  const totalRevenueBeforeTax = generalAnalytics?.totalRevenueBeforeTax || 0;
+  const paidOrders = generalAnalytics?.totalPaidOrders || 0;
+  const ticketsSold = generalAnalytics?.ticketsSold || 0;
+  const totalTickets = generalAnalytics?.totalTickets || 0;
+  const ticketTypesCount = generalAnalytics?.ticketTypes || 0;
+  const totalAttendees = generalAnalytics?.totalAttendees || 0;
+  const totalCheckedInAttendees = generalAnalytics?.totalCheckedInAttendees || 0;
+
 
   const formatCurrency = (
     amount: string | number,
@@ -118,38 +121,6 @@ export default function EventOverviewPage({
     );
   }
 
-  // Calculate statistics
-  const attendances = attendanceData?.data || [];
-
-  // Only count paid orders when calculating revenue & order count
-  const paidAttendances = attendances.filter(
-    (a) => a.order.status?.toUpperCase() === 'PAID'
-  );
-
-  const totalRevenue = paidAttendances.reduce(
-    (sum, attendance) =>
-      sum + parseFloat(attendance.order.totalPaymentAmount || '0'),
-    0
-  );
-
-  const paidOrders = paidAttendances.length;
-
-  // Tickets sold should be based on ticket inventory, not attendance records
-  const totalTicketsCapacity =
-    tickets?.reduce((sum, ticket) => sum + ticket.totalQuantity, 0) || 0;
-
-  const totalTicketsSold =
-    tickets?.reduce(
-      (sum, ticket) =>
-        sum + (ticket.totalQuantity - ticket.totalQuantityAvailable),
-      0
-    ) || 0;
-
-  const ticketsSoldPercentage =
-    totalTicketsCapacity > 0
-      ? (totalTicketsSold / totalTicketsCapacity) * 100
-      : 0;
-
   const isEventPast = event.endDate
     ? new Date(event.endDate) < new Date()
     : false;
@@ -179,23 +150,21 @@ export default function EventOverviewPage({
           value={formatCurrency(totalRevenue)}
           icon={DollarSign}
           color='emerald'
-          description={`From ${paidOrders} paid order${
-            paidOrders !== 1 ? 's' : ''
-          }`}
-          isLoading={isLoadingAttendance}
+          description={`From ${formatCurrency(totalRevenueBeforeTax)} before tax`}
+          isLoading={isLoadingGeneralAnalytics}
         />
 
         {/* Tickets Sold */}
         <StatCard
           title='Tickets Sold'
-          value={`${totalTicketsSold} / ${totalTicketsCapacity}`}
+          value={`${ticketsSold} / ${totalTickets}`}
           icon={Ticket}
           color='blue'
-          description={`${ticketsSoldPercentage.toFixed(1)}% sold`}
-          isLoading={isLoadingAttendance}
+          description={`${(ticketsSold / totalTickets * 100).toFixed(1)}% sold`}
+          isLoading={isLoadingGeneralAnalytics}
           footer={
-            !isLoadingAttendance && (
-              <Progress value={ticketsSoldPercentage} className='mt-2' />
+            !isLoadingGeneralAnalytics && (
+              <Progress value={(ticketsSold / totalTickets * 100)} className='mt-2' />
             )
           }
         />
@@ -203,25 +172,23 @@ export default function EventOverviewPage({
         {/* Total Attendees */}
         <StatCard
           title='Attendees'
-          value={totalTicketsSold}
+          value={`${totalCheckedInAttendees} / ${totalAttendees}`}
           icon={Users}
           color='purple'
-          description={`${attendances.length} total order${
-            attendances.length !== 1 ? 's' : ''
+          description={`${paidOrders} total order${
+            paidOrders !== 1 ? 's' : ''
           }`}
-          isLoading={isLoadingAttendance}
+          isLoading={isLoadingGeneralAnalytics}
         />
 
         {/* Ticket Types */}
         <StatCard
           title='Ticket Types'
-          value={tickets?.length || 0}
+          value={ticketTypesCount}
           icon={Target}
           color='amber'
-          description={`${
-            tickets?.filter((t) => t.isActive).length || 0
-          } active`}
-          isLoading={isLoadingTickets}
+          description={`${ticketTypesCount} active`}
+          isLoading={isLoadingGeneralAnalytics}
         />
       </div>
 

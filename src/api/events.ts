@@ -448,3 +448,8 @@ export const confirmAttendanceV2 = async (
     payload
   );
 };
+
+export const getEventGeneralAnalytics = async (eventId: string) => {
+  const { data } = await axiosInstance.get(`/v1/creator/dashboard/events/general-analytics/${eventId}`);
+  return data.data;
+};
