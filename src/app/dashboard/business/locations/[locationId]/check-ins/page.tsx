@@ -8,6 +8,7 @@ import {
   Users,
   Clock,
   Search,
+  Map, // Import thêm icon Map
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,13 @@ import { useLocationCheckIns } from '@/hooks/locations/useLocationCheckIns';
 import { useLocationById } from '@/hooks/locations/useLocationById';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+// Import Dialog components
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function LocationCheckInsPage({
   params,
@@ -48,6 +56,13 @@ export default function LocationCheckInsPage({
   const [limit] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('createdAt:DESC');
+
+  // State lưu thông tin check-in đang được chọn để xem bản đồ
+  const [selectedCheckInLocation, setSelectedCheckInLocation] = useState<{
+    lat: number;
+    lng: number;
+    userName: string;
+  } | null>(null);
 
   const [debouncedSearch] = useDebounce(searchTerm, 400);
 
@@ -67,7 +82,6 @@ export default function LocationCheckInsPage({
   const checkIns = data?.data ?? [];
   const meta = data?.meta;
 
-  // Filter check-ins by search term (user name or email)
   const filteredCheckIns = useMemo(() => {
     if (!debouncedSearch) return checkIns;
     const searchLower = debouncedSearch.toLowerCase();
@@ -205,12 +219,20 @@ export default function LocationCheckInsPage({
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-                              <MapPin className='h-3 w-3' />
-                              <span>
-                                {checkIn.latitudeAtCheckIn?.toFixed(6)}, {checkIn.longitudeAtCheckIn?.toFixed(6)}
-                              </span>
-                            </div>
+                            {/* --- THAY ĐỔI Ở ĐÂY: Dùng Button thay vì hiện text Lat/Long --- */}
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 gap-2 text-muted-foreground hover:text-primary border border-transparent hover:border-border"
+                              onClick={() => setSelectedCheckInLocation({
+                                lat: checkIn.latitudeAtCheckIn,
+                                lng: checkIn.longitudeAtCheckIn,
+                                userName: userName
+                              })}
+                            >
+                              <Map className="h-4 w-4" />
+                              <span className="text-xs">View Map</span>
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
@@ -249,7 +271,46 @@ export default function LocationCheckInsPage({
           )}
         </CardContent>
       </Card>
+
+      {/* --- DIALOG BẢN ĐỒ --- */}
+      <Dialog 
+        open={!!selectedCheckInLocation} 
+        onOpenChange={(open) => !open && setSelectedCheckInLocation(null)}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              Location Check-in
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              User <strong>{selectedCheckInLocation?.userName}</strong> checked in at:
+            </p>
+            
+            <div className="aspect-video w-full rounded-lg overflow-hidden border border-border shadow-sm bg-muted/50 relative">
+              {selectedCheckInLocation && (
+                <iframe
+                  width="100%"
+                  height="100%"
+                  // Sử dụng Google Maps Embed API đơn giản, không cần key cho mode cơ bản này
+                  src={`https://maps.google.com/maps?q=${selectedCheckInLocation.lat},${selectedCheckInLocation.lng}&z=15&output=embed`}
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                ></iframe>
+              )}
+            </div>
+            
+            <div className="text-xs text-muted-foreground text-center">
+              Coordinates: {selectedCheckInLocation?.lat.toFixed(6)}, {selectedCheckInLocation?.lng.toFixed(6)}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
