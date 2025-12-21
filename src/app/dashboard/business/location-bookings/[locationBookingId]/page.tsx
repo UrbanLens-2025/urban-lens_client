@@ -53,6 +53,8 @@ import {
   ExternalLink,
   Star,
   Calendar,
+  Wallet,
+  AlertTriangle,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -192,6 +194,7 @@ import {
 import { useForceCancelBooking } from '@/hooks/locations/useForceCancelBooking';
 import { toast } from 'sonner';
 import ErrorCustom from '@/components/shared/ErrorCustom';
+import { useRevenueSummary } from '@/hooks/dashboard/useDashboardOwner';
 
 // Keep local formatCurrency for backward compatibility
 const formatCurrency = (amount: string, currency: string = 'VND') => {
@@ -238,6 +241,9 @@ export default function LocationBookingDetailPage({
   const forceCancel = useForceCancelBooking();
   const [isForceCancelOpen, setIsForceCancelOpen] = useState(false);
   const [reason, setReason] = useState('');
+
+  const { data: revenueData, isLoading: isLoadingRevenue } = useRevenueSummary();
+  const currentBalance = revenueData?.available || 0;
 
   const {
     data: booking,
@@ -304,9 +310,15 @@ export default function LocationBookingDetailPage({
   }, [configData]);
 
   // Calculate fee based on dynamic percentage
-  const cancellationFee =
-    Number(booking?.amountToPay || 0) * cancellationPercentage;
-  const refundAmount = Number(booking?.amountToPay || 0) - cancellationFee;
+  const orderAmount = Number(booking?.amountToPay || 0);
+  const cancellationFee = orderAmount * cancellationPercentage;
+
+  // Logic: Tổng tiền bị trừ = Tiền hoàn khách + Tiền phạt
+  const totalDeduction = orderAmount + cancellationFee;
+
+  // Số dư còn lại
+  const remainingBalance = currentBalance - totalDeduction;
+  const isInsufficientBalance = remainingBalance < 0;
 
   const bookingWindow = useMemo(() => {
     if (!booking?.dates || booking.dates.length === 0) return null;
@@ -484,11 +496,11 @@ export default function LocationBookingDetailPage({
         coverUrl: fetchedEventData.coverUrl,
         organizer: fetchedEventData.createdBy
           ? {
-              name: `${fetchedEventData.createdBy.firstName} ${fetchedEventData.createdBy.lastName}`,
-              email: fetchedEventData.createdBy.email,
-              phoneNumber: fetchedEventData.createdBy.phoneNumber,
-              avatarUrl: fetchedEventData.createdBy.avatarUrl,
-            }
+            name: `${fetchedEventData.createdBy.firstName} ${fetchedEventData.createdBy.lastName}`,
+            email: fetchedEventData.createdBy.email,
+            phoneNumber: fetchedEventData.createdBy.phoneNumber,
+            avatarUrl: fetchedEventData.createdBy.avatarUrl,
+          }
           : null,
         socialLinks: fetchedEventData.social || [],
         eventSocialLinks: fetchedEventData.social || [],
@@ -512,11 +524,11 @@ export default function LocationBookingDetailPage({
           booking.referencedEventRequest.specialRequirements || '',
         organizer: booking?.createdBy
           ? {
-              name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
-              email: booking.createdBy.email,
-              phoneNumber: booking.createdBy.phoneNumber,
-              avatarUrl: booking.createdBy.avatarUrl,
-            }
+            name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
+            email: booking.createdBy.email,
+            phoneNumber: booking.createdBy.phoneNumber,
+            avatarUrl: booking.createdBy.avatarUrl,
+          }
           : null,
         socialLinks: [],
         eventSocialLinks: [],
@@ -534,11 +546,11 @@ export default function LocationBookingDetailPage({
         specialRequirements: '',
         organizer: booking.createdBy
           ? {
-              name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
-              email: booking.createdBy.email,
-              phoneNumber: booking.createdBy.phoneNumber,
-              avatarUrl: booking.createdBy.avatarUrl,
-            }
+            name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
+            email: booking.createdBy.email,
+            phoneNumber: booking.createdBy.phoneNumber,
+            avatarUrl: booking.createdBy.avatarUrl,
+          }
           : null,
         socialLinks: booking.createdBy.creatorProfile.social || [],
         eventSocialLinks: booking.createdBy.creatorProfile.social || [],
@@ -560,11 +572,11 @@ export default function LocationBookingDetailPage({
       specialRequirements: '',
       organizer: booking?.createdBy
         ? {
-            name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
-            email: booking.createdBy.email,
-            phoneNumber: booking.createdBy.phoneNumber,
-            avatarUrl: booking.createdBy.avatarUrl,
-          }
+          name: `${booking.createdBy.firstName} ${booking.createdBy.lastName}`,
+          email: booking.createdBy.email,
+          phoneNumber: booking.createdBy.phoneNumber,
+          avatarUrl: booking.createdBy.avatarUrl,
+        }
         : null,
       socialLinks: [],
       eventSocialLinks: [],
@@ -619,6 +631,47 @@ export default function LocationBookingDetailPage({
     }
   };
 
+  const handleConfirmForceCancel = () => {
+    if (!reason.trim())
+      return toast.error('Please enter a cancellation reason.');
+
+    if (isInsufficientBalance) {
+      setIsForceCancelOpen(false);
+      setShowInsufficientBalanceDialog(true);
+      return;
+    }
+
+    if (forceCancelBlockReason) {
+      setIsForceCancelOpen(false);
+      return;
+    }
+
+    forceCancel.mutate(
+      {
+        bookingId: locationBookingId,
+        payload: { cancellationReason: reason },
+      },
+      {
+        onSuccess: () => {
+          setIsForceCancelOpen(false);
+          setReason('');
+          toast.success('Booking successfully cancelled');
+        },
+        onError: (err: any) => {
+          const errorMessage = err?.message || 'Failed to cancel booking.';
+          const lower = errorMessage.toLowerCase();
+
+          if (lower.includes('insufficient') || lower.includes('balance')) {
+            setIsForceCancelOpen(false);
+            setShowInsufficientBalanceDialog(true);
+          } else {
+            toast.error(errorMessage);
+          }
+        },
+      }
+    );
+  };
+
   const handleImageClick = (src: string) => {
     setCurrentImageSrc(src);
     setIsImageViewerOpen(true);
@@ -652,15 +705,15 @@ export default function LocationBookingDetailPage({
             {getStatusBadge(booking.status)}
             {(booking.status === 'APPROVED' ||
               booking.status === 'PAYMENT_RECEIVED') && (
-              <Button
-                variant='default'
-                className='bg-red-600 hover:bg-red-700 text-white'
-                onClick={() => setIsForceCancelOpen(true)}
-              >
-                <X className='h-4 w-4 mr-2' />
-                Force Cancel
-              </Button>
-            )}
+                <Button
+                  variant='default'
+                  className='bg-red-600 hover:bg-red-700 text-white'
+                  onClick={() => setIsForceCancelOpen(true)}
+                >
+                  <X className='h-4 w-4 mr-2' />
+                  Force Cancel
+                </Button>
+              )}
             {booking.status === 'AWAITING_BUSINESS_PROCESSING' && (
               <>
                 <Button
@@ -1191,16 +1244,16 @@ export default function LocationBookingDetailPage({
           {/* Force Cancel (moved below booking calendar) */}
           {(booking.status === 'APPROVED' ||
             booking.status === 'PAYMENT_RECEIVED') && (
-            <Button
-              variant='default'
-              className='w-full bg-red-600 hover:bg-red-700 text-white'
-              onClick={handleForceCancelClick}
-              disabled={Boolean(forceCancelBlockReason)}
-            >
-              <X className='h-4 w-4 mr-2' />
-              Force Cancel
-            </Button>
-          )}
+              <Button
+                variant='default'
+                className='w-full bg-red-600 hover:bg-red-700 text-white'
+                onClick={handleForceCancelClick}
+                disabled={Boolean(forceCancelBlockReason)}
+              >
+                <X className='h-4 w-4 mr-2' />
+                Force Cancel
+              </Button>
+            )}
 
           {(booking.status === 'APPROVED' ||
             booking.status === 'PAYMENT_RECEIVED') &&
@@ -1483,14 +1536,14 @@ export default function LocationBookingDetailPage({
                                   'aspect-square flex items-center justify-center text-xs font-medium rounded-md transition-colors cursor-default',
                                   !isCurrentMonth && 'text-muted-foreground/40',
                                   isCurrentMonth &&
-                                    !isBookingDate &&
-                                    !isToday &&
-                                    'text-foreground hover:bg-muted/50',
+                                  !isBookingDate &&
+                                  !isToday &&
+                                  'text-foreground hover:bg-muted/50',
                                   isToday &&
-                                    !isBookingDate &&
-                                    'bg-primary/10 text-primary font-semibold ring-2 ring-primary/20',
+                                  !isBookingDate &&
+                                  'bg-primary/10 text-primary font-semibold ring-2 ring-primary/20',
                                   isBookingDate &&
-                                    'bg-primary text-primary-foreground font-semibold shadow-sm'
+                                  'bg-primary text-primary-foreground font-semibold shadow-sm'
                                 )}
                               >
                                 {format(day, 'd')}
@@ -1575,18 +1628,16 @@ export default function LocationBookingDetailPage({
           <div className='overflow-y-auto flex-1 px-6 pt-6'>
             <div className='space-y-4 pb-4'>
               <div
-                className={`flex items-center gap-3 p-4 rounded-xl ${
-                  pendingStatus === 'APPROVED'
-                    ? 'bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800'
-                    : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800'
-                }`}
+                className={`flex items-center gap-3 p-4 rounded-xl ${pendingStatus === 'APPROVED'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800'
+                  : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800'
+                  }`}
               >
                 <div
-                  className={`h-12 w-12 rounded-full flex items-center justify-center ${
-                    pendingStatus === 'APPROVED'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/40'
-                      : 'bg-red-100 dark:bg-red-900/40'
-                  }`}
+                  className={`h-12 w-12 rounded-full flex items-center justify-center ${pendingStatus === 'APPROVED'
+                    ? 'bg-emerald-100 dark:bg-emerald-900/40'
+                    : 'bg-red-100 dark:bg-red-900/40'
+                    }`}
                 >
                   {pendingStatus === 'APPROVED' ? (
                     <CheckCircle className='h-6 w-6 text-emerald-600 dark:text-emerald-400' />
@@ -1766,11 +1817,10 @@ export default function LocationBookingDetailPage({
             <AlertDialogAction
               onClick={handleProcessConfirm}
               disabled={approveBooking.isPending || rejectBookings.isPending}
-              className={`min-w-[140px] font-semibold shadow-md ${
-                pendingStatus === 'REJECTED'
-                  ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800'
-                  : 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800'
-              }`}
+              className={`min-w-[140px] font-semibold shadow-md ${pendingStatus === 'REJECTED'
+                ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800'
+                : 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800'
+                }`}
             >
               {approveBooking.isPending || rejectBookings.isPending ? (
                 <>
@@ -2016,59 +2066,234 @@ export default function LocationBookingDetailPage({
 
       {/* Force Cancel Booking Confirmation Dialog */}
       <AlertDialog open={isForceCancelOpen} onOpenChange={setIsForceCancelOpen}>
-        <AlertDialogContent className='max-w-md'>
-          <AlertDialogHeader>
-            <AlertDialogTitle className='text-red-600 flex items-center gap-2'>
-              <AlertCircle className='h-5 w-5' /> Confirm force cancel
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. A refund will be issued after
-              deducting the cancellation fee.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+        <AlertDialogContent className="!max-w-5xl max-h-[80vh] overflow-y-auto">
+          {/* ================= HEADER ================= */}
+          <div className="relative border-b pb-4">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-xl text-red-600">
+                <AlertTriangle className="h-6 w-6" />
+                Force Cancellation Warning
+              </AlertDialogTitle>
+              <AlertDialogDescription className="max-w-[90%]">
+                This action is permanent and will immediately affect customer funds and
+                your wallet balance.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
 
-          <div className='space-y-4 py-4'>
-            {/* Fee breakdown */}
-            <div className='rounded-lg border bg-muted/30 p-4 space-y-2 text-sm'>
-              <div className='flex justify-between'>
-                <span className='text-muted-foreground'>Order amount:</span>
-                <span>{formatCurrency(booking.amountToPay)}</span>
-              </div>
-              <div className='flex justify-between text-red-600 font-medium'>
-                <span>Cancellation fee ({cancellationPercentage * 100}%):</span>
-                <span>-{formatCurrency(cancellationFee.toString())}</span>
-              </div>
-              <div className='pt-2 border-t flex justify-between font-bold text-base text-green-600'>
-                <span>Refund amount:</span>
-                <span>{formatCurrency(refundAmount.toString())}</span>
-              </div>
+            {/* Close button */}
+            <AlertDialogCancel
+              className="
+          absolute right-0 top-0
+          h-8 w-8 p-0
+          rounded-md
+          text-muted-foreground
+          hover:text-foreground
+          hover:bg-muted
+        "
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </AlertDialogCancel>
+          </div>
+
+          {/* ================= DANGER SUMMARY ================= */}
+          <div className="mt-4 rounded-lg border border-red-300 bg-red-50 p-4 flex gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+            <div className="text-sm text-red-800">
+              <p className="font-semibold uppercase tracking-wide mb-1">
+                Force cancellation will immediately
+              </p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li>Cancel this booking</li>
+                <li>Refund customer from your wallet</li>
+                <li>Deduct funds permanently</li>
+                <li>Cannot be undone</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* ================= FINANCIAL SECTION ================= */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            {/* ===== LEFT: CUSTOMER REFUND ===== */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Customer Refund (Charged to Your Wallet)
+              </h4>
+
+              <Card className="border shadow-none">
+                <CardContent className="p-5 space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Booking Amount
+                    </span>
+                    <span className="font-medium">
+                      {formatCurrency(booking.amountToPay)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Cancellation Penalty ({(cancellationPercentage * 100).toFixed(0)}%)
+                    </span>
+                    <span className="font-medium text-amber-600">
+                      {formatCurrency(cancellationFee.toString())}
+                    </span>
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex justify-between">
+                    <span className="text-sm font-semibold">
+                      Total Refund to Customer
+                    </span>
+                    <span className="font-bold text-green-600 text-lg">
+                      {formatCurrency(totalDeduction.toString())}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
+            {/* ===== RIGHT: WALLET IMPACT ===== */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                <Wallet className="h-4 w-4" />
+                Wallet Impact
+              </h4>
+
+              <Card
+                className={`border shadow-none ${isInsufficientBalance
+                    ? "bg-red-50 border-red-300"
+                    : "bg-emerald-50 border-emerald-300"
+                  }`}
+              >
+                <CardContent className="p-5 space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Current Balance
+                    </span>
+                    <span className="font-medium">
+                      {formatCurrency(currentBalance.toString())}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-red-600">
+                      Total Deduction
+                    </span>
+                    <span className="font-bold text-red-600">
+                      -{formatCurrency(totalDeduction.toString())}
+                    </span>
+                  </div>
+
+                  <Separator
+                    className={
+                      isInsufficientBalance ? "bg-red-300" : "bg-emerald-300"
+                    }
+                  />
+
+                  <div className="flex justify-between">
+                    <span className="text-sm font-semibold">Balance After</span>
+                    <span
+                      className={`font-bold text-lg ${isInsufficientBalance
+                          ? "text-red-600"
+                          : "text-emerald-600"
+                        }`}
+                    >
+                      {formatCurrency(remainingBalance.toString())}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Wallet usage:{" "}
+                    <strong>
+                      {Math.round((totalDeduction / currentBalance) * 100)}%
+                    </strong>{" "}
+                    of current balance
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* ================= INSUFFICIENT BALANCE ================= */}
+          {isInsufficientBalance && (
+            <div className="mt-4 rounded-lg border border-red-300 bg-red-100 p-4 flex gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+              <div className="text-sm text-red-800">
+                <p className="font-semibold">Insufficient Wallet Balance</p>
+                <p>
+                  You must have at least{" "}
+                  <strong>{formatCurrency(totalDeduction.toString())}</strong>{" "}
+                  available to perform this action.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ================= REASON ================= */}
+          <div className="mt-5">
+            <label className="text-sm font-medium">
+              Cancellation Reason <span className="text-red-500">*</span>
+            </label>
+            <p className="text-xs text-muted-foreground mb-2">
+              This reason will be stored in audit logs and reviewed if disputes occur.
+            </p>
             <textarea
-              className='w-full min-h-[100px] p-3 text-sm border rounded-md focus:ring-1 focus:ring-red-500 outline-none'
-              placeholder='Cancellation reason (e.g., venue issue...)'
+              required
+              className="
+          w-full min-h-[100px] p-3 text-sm
+          border rounded-md
+          focus:ring-2 focus:ring-red-500/30
+          focus:border-red-500
+          outline-none
+          disabled:opacity-70
+        "
+              placeholder="Example: Customer violated venue policy by bringing prohibited equipment"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
+              disabled={isInsufficientBalance}
             />
           </div>
 
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={forceCancel.isPending}>
-              Back
-            </AlertDialogCancel>
-            <Button
-              variant='destructive'
-              onClick={handleConfirm}
-              disabled={forceCancel.isPending || !reason.trim()}
+          {/* ================= FOOTER ================= */}
+          <AlertDialogFooter className="mt-6 gap-3">
+            <AlertDialogCancel
+              disabled={forceCancel.isPending}
+              className="w-full sm:w-auto"
             >
-              {forceCancel.isPending && (
-                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+              Keep Booking
+            </AlertDialogCancel>
+
+            <Button
+              variant="destructive"
+              onClick={handleConfirmForceCancel}
+              disabled={
+                forceCancel.isPending ||
+                !reason.trim() ||
+                isInsufficientBalance
+              }
+              className="
+          w-full sm:w-auto
+          h-11 text-base
+          bg-red-600 hover:bg-red-700
+        "
+            >
+              {forceCancel.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Confirm Force Cancellation"
               )}
-              Confirm force cancel
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+
     </PageContainer>
   );
 }
