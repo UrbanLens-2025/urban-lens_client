@@ -162,8 +162,8 @@ export default function BusinessDashboardPage() {
 
     const totalRevenue = revenueData?.totalRevenue || 0;
     const totalWithdrawals = revenueData?.pendingWithdraw || 0;
-    const availableRevenue = revenueData?.available || 0;
-    const pendingRevenue = revenueData?.pending || 0;
+    const availableRevenue = revenueData?.availableBalance || 0;
+    const pendingRevenue = revenueData?.pendingRevenue || 0;
 
     const thisMonthRevenue = thisMonthBookings
       .filter((b) => b.status?.toUpperCase() === 'PAYMENT_RECEIVED')
