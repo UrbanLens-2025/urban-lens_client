@@ -42,6 +42,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   CheckCircle,
   Clock,
+  ImageIcon,
   Loader2,
   MapPin,
   MapPinOff,
@@ -81,7 +82,7 @@ import {
 } from '@vis.gl/react-google-maps';
 import { ImageViewer } from '@/components/shared/ImageViewer'; // Ensure this path is correct
 
-type StatusFilter = 'all' | 'PENDING' | 'APPROVED' | 'REJECTED';
+type StatusFilter = 'all' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED_BY_BUSINESS';
 
 export default function LocationRequestsPage() {
   const router = useRouter();
@@ -131,7 +132,9 @@ export default function LocationRequestsPage() {
     if (statusFilter === 'all') return undefined;
     if (statusFilter === 'PENDING') return 'AWAITING_ADMIN_REVIEW';
     if (statusFilter === 'APPROVED') return 'APPROVED';
-    return 'REJECTED';
+    if (statusFilter === 'REJECTED') return 'REJECTED';
+    if (statusFilter === 'CANCELLED_BY_BUSINESS') return 'CANCELLED_BY_BUSINESS';
+    return undefined;
   };
 
   const {
@@ -299,6 +302,16 @@ export default function LocationRequestsPage() {
         </Badge>
       );
     }
+    if (statusUpper === 'CANCELLED_BY_BUSINESS') {
+      return (
+        <Badge
+          variant='outline'
+          className='px-2.5 py-0.5 bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950 dark:text-gray-400 dark:border-gray-800'
+        >
+          Cancelled
+        </Badge>
+      );
+    }
     return (
       <Badge variant='outline' className='px-2.5 py-0.5'>
         {status || 'Unknown'}
@@ -413,6 +426,7 @@ export default function LocationRequestsPage() {
                 <SelectItem value='PENDING'>Pending</SelectItem>
                 <SelectItem value='APPROVED'>Approved</SelectItem>
                 <SelectItem value='REJECTED'>Rejected</SelectItem>
+                <SelectItem value='CANCELLED_BY_BUSINESS'>Cancelled by Business</SelectItem>
               </SelectContent>
             </Select>
             <div className='text-sm text-muted-foreground'>
@@ -563,9 +577,9 @@ export default function LocationRequestsPage() {
                 </div>
 
                 {/* Two Column Grid */}
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-6'>
+                <div className='grid grid-cols-1 md:grid-cols-4 gap-4 mt-6'>
                   {/* Location Information Card */}
-                  <Card>
+                  <Card className='col-span-3'>
                     <CardContent className='space-y-4'>
                       {selectedRequest.description && (
                         <div className='space-y-2'>
@@ -626,7 +640,7 @@ export default function LocationRequestsPage() {
 
                   {/* Submission Details Card */}
                   <Card>
-                    <CardContent className='space-y-4'>
+                    <CardContent className='space-y-4 flex items-center justify-center h-full'>
                       {selectedRequest.createdBy && (
                         <div className='flex flex-col items-center gap-3'>
                           <Avatar className='h-20 w-20 border-2 border-background'>
@@ -655,32 +669,6 @@ export default function LocationRequestsPage() {
                               </p>
                             )}
                           </div>
-                          <div className='flex items-center gap-2 w-full justify-center pt-2'>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              className='flex-1 max-w-[100px]'
-                            >
-                              <IconUser className='h-4 w-4 mr-1' />
-                              Profile
-                            </Button>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              className='flex-1 max-w-[100px]'
-                            >
-                              <IconMail className='h-4 w-4 mr-1' />
-                              Contact
-                            </Button>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              className='flex-1 max-w-[100px]'
-                            >
-                              <IconFileText className='h-4 w-4 mr-1' />
-                              Details
-                            </Button>
-                          </div>
                         </div>
                       )}
                     </CardContent>
@@ -689,7 +677,7 @@ export default function LocationRequestsPage() {
                   {/* Documents Card */}
                   {selectedRequest.locationValidationDocuments &&
                     selectedRequest.locationValidationDocuments.length > 0 && (
-                      <Card>
+                      <Card className='col-span-4 gap-3'>
                         <CardHeader>
                           <CardTitle className='text-base flex items-center gap-2'>
                             <IconFileText className='h-4 w-4' />
@@ -738,7 +726,13 @@ export default function LocationRequestsPage() {
                 {/* Location Images - Full Width */}
                 {selectedRequest.locationImageUrls &&
                   selectedRequest.locationImageUrls.length > 0 && (
-                    <Card className='mt-4'>
+                    <Card className='mt-4 gap-3'>
+                      <CardHeader className=''>
+                        <CardTitle className='text-base flex items-center gap-2'>
+                          <ImageIcon className='h-4 w-4' />
+                          Location Images
+                        </CardTitle>
+                      </CardHeader>
                       <CardContent>
                         <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3'>
                           {selectedRequest.locationImageUrls.map(
@@ -746,7 +740,7 @@ export default function LocationRequestsPage() {
                               <div
                                 key={index}
                                 onClick={() => handleImageClick(url)}
-                                className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors cursor-pointer'
+                                className='group relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors cursor-pointer size-24'
                               >
                                 <Image
                                   src={url}

@@ -10,9 +10,10 @@ export function useCancelLocationRequest() {
   return useMutation({
     mutationFn: (requestId: string) => cancelLocationRequest(requestId),
     
-    onSuccess: () => {
+    onSuccess: (_, requestId) => {
       toast.success("Request has been cancelled.");
       queryClient.invalidateQueries({ queryKey: ['locationRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['locationRequest', requestId] });
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to cancel request.");

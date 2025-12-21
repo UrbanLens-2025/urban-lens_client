@@ -17,6 +17,7 @@ import {
   ChevronRight,
   FileText,
   AlertCircle,
+  X,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { GoogleMapsPicker } from "@/components/shared/GoogleMapsPicker";
@@ -25,7 +26,18 @@ import { Button } from "@/components/ui/button";
 import { ImageViewer } from "@/components/shared/ImageViewer";
 import { PageContainer, PageHeader } from "@/components/shared";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatDocumentType } from "@/lib/utils";
+import { useCancelLocationRequest } from "@/hooks/locations/useCancelLocationRequest";
 
 function InfoRow({
   label,
@@ -65,6 +77,9 @@ export default function LocationRequestDetailsPage({
     type: string;
     images: string[];
   } | null>(null);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  
+  const { mutate: cancelRequest, isPending: isCancelling } = useCancelLocationRequest();
 
   const handleImageClick = (src: string, alt: string) => {
     setCurrentImageSrc(src);
@@ -218,6 +233,13 @@ export default function LocationRequestDetailsPage({
               }
             >
               <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setIsCancelDialogOpen(true)}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Cancel Request
             </Button>
           </div>
         }
@@ -510,6 +532,42 @@ export default function LocationRequestDetailsPage({
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Cancel Request Confirmation Modal */}
+      <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will cancel your location request.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                cancelRequest(requestId, {
+                  onSuccess: () => {
+                    setIsCancelDialogOpen(false);
+                    router.push("/dashboard/business/location-requests");
+                  },
+                });
+              }}
+              disabled={isCancelling}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                "Yes, cancel request"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   );
 }
