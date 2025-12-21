@@ -17,6 +17,14 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { StatCard } from '@/components/shared/StatCard';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import {
   Loader2,
   MapPin,
   User,
@@ -32,6 +40,7 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Target,
   ExternalLink,
   FileCheck,
@@ -72,6 +81,7 @@ export default function EventOverviewPage({
   const { eventId } = use(params);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [visibleTagsCount, setVisibleTagsCount] = useState(10);
+  const [isRevenueModalOpen, setIsRevenueModalOpen] = useState(false);
 
   const { data: event, isLoading: isLoadingEvent } = useEventById(eventId);
   const { data: generalAnalytics, isLoading: isLoadingGeneralAnalytics } = useEventGeneralAnalytics(eventId);
@@ -148,11 +158,12 @@ export default function EventOverviewPage({
         <StatCard
           title='Net Revenue'
           value={formatCurrency(totalRevenue)}
-          icon={DollarSign}
+          icon={ChevronRight}
           color='emerald'
           description={`From gross ${formatCurrency(totalRevenueBeforeTax)}`}
           isLoading={isLoadingGeneralAnalytics}
           className="p-0 h-min"
+          onClick={() => setIsRevenueModalOpen(true)}
         />
 
         {/* Tickets Sold */}
@@ -550,6 +561,82 @@ export default function EventOverviewPage({
             )}
         </div>
       </div>
+
+      {/* Revenue Breakdown Modal */}
+      <Dialog open={isRevenueModalOpen} onOpenChange={setIsRevenueModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-emerald-600" />
+              Revenue Breakdown
+            </DialogTitle>
+            <DialogDescription>
+              Detailed breakdown of your event revenue
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Mock Data */}
+            {(() => {
+              // Mock data - replace with actual data later
+              const totalTicketSales = parseFloat(String(totalRevenueBeforeTax));
+              const platformFeePercentage = parseFloat(String(event.systemCutPercentage)) * 100 
+              const platformFee = totalTicketSales * (platformFeePercentage / 100);
+              const netRevenue = totalTicketSales - platformFee;
+
+              return (
+                <>
+                  {/* Total Ticket Sales */}
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Total Ticket Sales
+                      </p>
+                      <p className="text-2xl font-bold text-blue-700 dark:text-blue-400 mt-1">
+                        {formatCurrency(totalTicketSales)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Platform Fee */}
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Platform Fee
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {platformFeePercentage}% of ticket sales
+                      </p>
+                    </div>
+                    <p className="text-xl font-bold text-amber-700 dark:text-amber-400">
+                      -{formatCurrency(platformFee)}
+                    </p>
+                  </div>
+
+                  <Separator />
+
+                  {/* Net Revenue */}
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border-2 border-emerald-300 dark:border-emerald-700">
+                    <div>
+                      <p className="text-sm font-semibold text-muted-foreground">
+                        Net Revenue
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+                      {formatCurrency(netRevenue)}
+                    </p>
+                  </div>
+
+                  {/* Note */}
+                  <p className="text-xs text-muted-foreground text-center pt-2">
+                    Revenue will be transfered to your wallet 7 days after you finish the event
+                  </p>
+                </>
+              );
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

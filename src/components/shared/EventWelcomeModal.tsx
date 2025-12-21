@@ -16,20 +16,28 @@ import { useRouter } from "next/navigation";
 interface EventWelcomeModalProps {
   eventId: string;
   eventName: string;
+  eventStatus?: string;
 }
 
-export function EventWelcomeModal({ eventId, eventName }: EventWelcomeModalProps) {
+export function EventWelcomeModal({ eventId, eventName, eventStatus }: EventWelcomeModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    // Only show modal if event status is DRAFT
+    const isDraft = eventStatus?.toUpperCase() === "DRAFT";
+    
+    if (!isDraft) {
+      return;
+    }
+
     // Check if user has seen this modal for this event
     const hasSeenModal = localStorage.getItem(`event-welcome-${eventId}`);
     
     if (!hasSeenModal) {
       setIsOpen(true);
     }
-  }, [eventId]);
+  }, [eventId, eventStatus]);
 
   const handleClose = () => {
     // Mark this event as seen
