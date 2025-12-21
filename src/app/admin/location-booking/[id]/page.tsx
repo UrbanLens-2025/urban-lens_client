@@ -2,7 +2,7 @@
 
 import { useLocationBookingDetail } from '@/hooks/admin/useDashboardAdmin';
 import { useParams, useRouter } from 'next/navigation';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ArrowLeft,
   Calendar,
@@ -11,15 +11,8 @@ import {
   DollarSign,
   MapPin,
   User,
-  Building,
-  CreditCard,
   CheckCircle,
-  CheckCircle2,
   AlertCircle,
-  XCircle,
-  Lock,
-  Mail,
-  Phone,
   Globe,
   FileText,
   Sparkles,
@@ -28,6 +21,7 @@ import {
   Star,
   ChevronLeft,
   ChevronRight,
+  Flag,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -46,7 +40,7 @@ import {
   getDay,
   isSameMonth,
 } from 'date-fns';
-import { formatCurrency, formatDate, formatDateTime, cn } from '@/lib/utils';
+import { formatCurrency, formatDateTime, cn } from '@/lib/utils';
 import LoadingCustom from '@/components/shared/LoadingCustom';
 import ErrorCustom from '@/components/shared/ErrorCustom';
 import { ImageViewer } from '@/components/shared/ImageViewer';
@@ -57,6 +51,12 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from '@/components/ui/tooltip';
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/tabs';
 import Link from 'next/link';
 
 const getStatusBadge = (status: string) => {
@@ -151,6 +151,7 @@ export default function LocationBookingDetail() {
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState('');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [activeTab, setActiveTab] = useState<'overview' | 'reports'>('overview');
 
   const {
     data: bookingDetail,
@@ -215,8 +216,33 @@ export default function LocationBookingDetail() {
         }
       />
 
-      {/* Grid Content */}
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+      {/* Tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as 'overview' | 'reports')}
+        className='flex flex-col gap-2 space-y-4'
+      >
+        <TabsList className='bg-transparent h-auto p-0 border-b border-border rounded-none flex gap-8'>
+          <TabsTrigger
+            value='overview'
+            className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2 data-[state=active]:text-foreground after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent data-[state=active]:after:bg-primary"
+          >
+            <FileText className='h-4 w-4' />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger
+            value='reports'
+            className="relative bg-transparent border-none rounded-none px-0 py-3 h-auto data-[state=active]:shadow-none text-muted-foreground hover:text-foreground transition-colors gap-2 data-[state=active]:text-foreground after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-transparent data-[state=active]:after:bg-primary"
+          >
+            <Flag className='h-4 w-4' />
+            Reports
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value='overview' className='mt-6'>
+          {/* Grid Content */}
+          <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
         {/* Left Column */}
         <div className='lg:col-span-2 space-y-6'>
           {/* Event Information */}
@@ -835,6 +861,13 @@ export default function LocationBookingDetail() {
             })()}
         </div>
       </div>
+        </TabsContent>
+
+        {/* Reports Tab */}
+        <TabsContent value='reports' className='mt-6'>
+          {/* Reports content will be added here */}
+        </TabsContent>
+      </Tabs>
 
       <ImageViewer
         src={currentImageSrc}
