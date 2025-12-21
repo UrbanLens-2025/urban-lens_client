@@ -185,7 +185,7 @@ export default function VerifyVoucherPage({
         });
 
         // Lấy ID để redirect
-        const voucherId = response?.data?.id || response?.data?.voucherId || response?.data?.voucher?.id;
+        const voucherId = response?.voucher?.voucherId;
 
         if (voucherId) {
             setTimeout(() => {
