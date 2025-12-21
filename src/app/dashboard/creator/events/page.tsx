@@ -199,7 +199,7 @@ export default function CreatorEventsPage() {
       />
 
       {/* Quick Statistics */}
-      <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
+      <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
         <StatCard
           title='Total Events'
           value={stats.totalEvents}
