@@ -284,7 +284,7 @@ export function ReportsPanel({
                   </div>
                 </SelectItem>
               )}
-              {targetType === "location" && (
+              {targetType === "booking" && (
                 <SelectItem value="booking_refund" className="text-xs py-1.5">
                   <div className="flex items-center gap-2">
                     <Receipt className="h-4 w-4 text-sky-600" />
@@ -305,7 +305,7 @@ export function ReportsPanel({
                 setIsApologyModalOpen(true);
               } else if (resolutionAction === "ticket_refund" && targetType === "event") {
                 setIsRefundModalOpen(true);
-              } else if (resolutionAction === "booking_refund" && targetType === "location") {
+              } else if (resolutionAction === "booking_refund" && targetType === "booking") {
                 setIsBookingRefundModalOpen(true);
               }
             }}
@@ -1362,12 +1362,11 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
   const isForceCancelEventDisabled =
     targetType !== "event" ||
     penaltyAction !== "force_cancel_event" ||
-    selectedCount === 0 ||
     !forceCancelEventReason.trim() ||
     isForceCancelingEvent;
 
   const isSuspendLocationBookingDisabled =
-    targetType !== "location" ||
+    targetType !== "booking" ||
     penaltyAction !== "suspend_location_booking" ||
     !suspensionReason.trim() ||
     !suspendUntil.trim() ||
@@ -1467,7 +1466,7 @@ const AddPenaltyDialog = memo(function AddPenaltyDialog({
                     Force cancel event
                   </SelectItem>
                 )}
-                {targetType === "location" && (
+                {targetType === "booking" && (
                   <SelectItem value="suspend_location_booking" className="text-sm">
                     Suspend booking ability
                   </SelectItem>
@@ -2184,7 +2183,7 @@ const BookingRefundDialog = memo(function BookingRefundDialog({
     Number.isNaN(parsedPercentage) || parsedPercentage < 0 || parsedPercentage > 1;
 
   const disabled =
-    targetType !== "location" ||
+    targetType !== "booking" ||
     selectedCount !== 1 ||
     isProcessingRefund ||
     !refundReason.trim() ||
@@ -2196,7 +2195,7 @@ const BookingRefundDialog = memo(function BookingRefundDialog({
         <DialogHeader>
           <DialogTitle>Refund booking</DialogTitle>
           <DialogDescription>
-            Submit a booking refund request for the selected report. Available for locations only.
+            Submit a booking refund request for the selected report. Available for bookings only.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -2238,7 +2237,7 @@ const BookingRefundDialog = memo(function BookingRefundDialog({
               </div>
             </div>
           </div>
-          {targetType === "location" && selectedCount !== 1 && (
+          {targetType === "booking" && selectedCount !== 1 && (
             <p className="text-[11px] text-muted-foreground">
               Select exactly 1 report to refund a booking.
             </p>
