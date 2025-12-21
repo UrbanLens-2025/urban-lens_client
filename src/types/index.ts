@@ -855,6 +855,8 @@ export interface LocationBooking {
 
 export interface LocationBookingDetail
   extends Omit<LocationBooking, 'createdBy'> {
+  businessPayoutTransactionId: any;
+  paidOutAt: any;
   createdBy: UserWithCreatorProfile;
   referencedTransaction: ReferencedTransaction | null;
 }

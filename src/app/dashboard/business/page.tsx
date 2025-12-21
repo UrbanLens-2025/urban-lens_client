@@ -623,7 +623,7 @@ export default function BusinessDashboardPage() {
                       <div className='flex items-center justify-between'>
                         <p className='text-sm font-semibold text-emerald-600'>
                           {formatCurrency(
-                            parseFloat(booking.amountToPay || '0')
+                            parseFloat(booking.amountToReceive || '0')
                           )}
                         </p>
                         <ArrowRight className='h-4 w-4 text-muted-foreground' />
