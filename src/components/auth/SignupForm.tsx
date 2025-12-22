@@ -486,7 +486,7 @@ export function SignupForm() {
             <Button 
               type="submit" 
               className="w-full h-12 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg transition-all" 
-              disabled={isPending}
+              disabled={isPending || !form.formState.isValid || !form.formState.isDirty}
             >
               {isPending ? (
                 <>
