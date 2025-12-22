@@ -258,7 +258,7 @@ export default function CreatorEventsPage() {
                     { value: 'PUBLISHED', label: 'Published' },
                     { value: 'ACTIVE', label: 'Active' },
                     { value: 'DRAFT', label: 'Draft' },
-                    { value: 'COMPLETED', label: 'Completed' },
+                    { value: 'FINISHED', label: 'Finished' },
                     { value: 'CANCELLED', label: 'Cancelled' },
                   ],
                   onValueChange: (value) => {
