@@ -737,6 +737,10 @@ export interface GetWalletExternalTransactionsParams {
   page?: number;
   limit?: number;
   sortBy?: string;
+  filters?: {
+    status?: string;
+    direction?: string;
+  };
 }
 
 export interface WalletExternalTransactionTimelineEvent {

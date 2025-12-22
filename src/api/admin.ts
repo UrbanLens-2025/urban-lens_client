@@ -337,10 +337,19 @@ export const getAdminExternalTransactions = async ({
   page = 1,
   limit = 20,
   sortBy = 'createdAt:DESC',
+  filters,
 }: GetWalletExternalTransactionsParams): Promise<
   PaginatedData<WalletExternalTransaction>
 > => {
   const params: any = { page, limit, sortBy };
+
+  if (filters?.status) {
+    params['filter.status'] = `$eq:${filters.status}`;
+  }
+
+  if (filters?.direction) {
+    params['filter.direction'] = `$eq:${filters.direction}`;
+  }
 
   const { data } = await axiosInstance.get<
     ApiResponse<PaginatedData<WalletExternalTransaction>>
