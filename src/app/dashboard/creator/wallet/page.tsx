@@ -214,7 +214,7 @@ function mapInternalType(
 
 type PeriodType = 'day' | 'month' | 'year';
 
-export default function BusinessWalletPage() {
+export default function CreatorWalletPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: walletData, isLoading, error } = useWallet();
@@ -706,7 +706,7 @@ export default function BusinessWalletPage() {
             </Badge>
           )}
           <div className='flex gap-3 pt-2'>
-            <Link href='/dashboard/business/wallet/deposit' className='flex-1'>
+            <Link href='/dashboard/creator/wallet/deposit' className='flex-1'>
               <Button
                 className='w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all'
                 disabled={walletData?.isLocked}
@@ -715,7 +715,7 @@ export default function BusinessWalletPage() {
                 Deposit
               </Button>
             </Link>
-            <Link href='/dashboard/business/wallet/withdraw' className='flex-1'>
+            <Link href='/dashboard/creator/wallet/withdraw' className='flex-1'>
               <Button
                 className='w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all'
                 disabled={walletData?.isLocked}

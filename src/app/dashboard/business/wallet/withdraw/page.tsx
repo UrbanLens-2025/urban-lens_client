@@ -23,10 +23,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, ArrowLeft, Landmark, Building2, CreditCard } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { useWalletLimit } from "@/hooks/wallet/useWalletLimit";
 
 const withdrawSchema = z.object({
   amountToWithdraw: z
-    .number({ invalid_type_error: "Amount is required" })
+    .number({ error: "Amount is required" })
     .int("Amount must be a whole number")
     .positive("Amount must be greater than 0"),
   currency: z.string().min(1, "Currency is required"),
@@ -83,11 +84,25 @@ export default function BusinessWalletWithdrawPage() {
     }).format(amount);
   };
 
+  const { data: limit } = useWalletLimit(wallet?.id);
+
+  const remainingLimit = limit ? limit.maxAmount - limit.currentAmount : 0;
+
   const onSubmit = (data: WithdrawForm) => {
+    // 1. Kiểm tra số dư ví
     if (data.amountToWithdraw > totalBalance) {
       form.setError("amountToWithdraw", {
         type: "manual",
         message: "Withdrawal amount cannot exceed your balance",
+      });
+      return;
+    }
+
+    // 2. Kiểm tra hạn mức ngày (Mới)
+    if (limit && data.amountToWithdraw > remainingLimit) {
+      form.setError("amountToWithdraw", {
+        type: "manual",
+        message: `Amount exceeds your remaining daily limit (${formatCurrency(remainingLimit)})`,
       });
       return;
     }
@@ -103,6 +118,7 @@ export default function BusinessWalletWithdrawPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
+          <h1 className="text-2xl font-semibold tracking-tight">Withdraw from Wallet</h1>
         </div>
       </div>
 
@@ -110,11 +126,32 @@ export default function BusinessWalletWithdrawPage() {
       <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Available Balance</p>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {formatCurrency(totalBalance)}
-              </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
+                <CardContent className="pt-6">
+                  <p className="text-sm text-muted-foreground mb-1">Available Balance</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {formatCurrency(totalBalance)}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800">
+                <CardContent className="pt-6">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Daily Limit Remaining</p>
+                      <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                        {limit ? formatCurrency(remainingLimit) : "---"}
+                      </p>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground">
+                      <p>Max: {limit ? formatCurrency(limit.maxAmount) : "---"}</p>
+                      <p>Used: {limit ? formatCurrency(limit.currentAmount) : "---"}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
             {wallet?.isLocked && (
               <Alert variant="destructive" className="max-w-md">
