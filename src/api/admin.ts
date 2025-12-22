@@ -24,6 +24,7 @@ import type {
   User,
   WalletTransaction,
   LocationBooking,
+  Order,
 } from '@/types';
 import { GetAllBookingsAtLocationParams } from './locations';
 
@@ -836,6 +837,27 @@ export const getBookingsAtLocationForAdmin = async ({
   >(
     `/v1/admin/location-bookings/all-bookings-at-location-paged/${locationId}`,
     { params }
+  );
+  return data.data;
+};
+
+export const getAdminLocationBookingById = async (id: string): Promise<LocationBooking> => {
+  const { data } = await axiosInstance.get<ApiResponse<LocationBooking>>(
+    `/v1/admin/location-bookings/${id}`
+  );
+  return data.data;
+};
+
+export const getAdminEventById = async (id: string): Promise<Event> => {
+  const { data } = await axiosInstance.get<ApiResponse<Event>>(
+    `/v1/admin/events/${id}`
+  );
+  return data.data;
+};
+
+export const getAdminTicketOrderById = async (id: string): Promise<Order> => {
+  const { data } = await axiosInstance.get<ApiResponse<Order>>(
+    `/v1/admin/events/ticket-orders/${id}`
   );
   return data.data;
 };
