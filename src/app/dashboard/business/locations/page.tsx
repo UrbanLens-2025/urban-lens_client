@@ -229,7 +229,7 @@ export default function MyLocationsPage() {
                 setSearch(value);
                 setPage(1);
               }}
-              searchPlaceholder='Search by location name, address, or tags...'
+              searchPlaceholder='Search by location name or address...'
               filters={[
                 {
                   key: 'visibility',
