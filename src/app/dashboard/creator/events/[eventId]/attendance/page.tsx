@@ -31,10 +31,29 @@ import {
   QrCode,
   ChevronLeft,
   ChevronRight,
+  CheckCircle,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import { MoreVertical } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
+import { useConfirmAttendanceV2 } from '@/hooks/events/useConfirmAttendanceV2';
 
 export default function EventAttendancePage({
   params,
@@ -45,11 +64,18 @@ export default function EventAttendancePage({
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  // Cập nhật state filter để hỗ trợ tách biệt Cancelled và Refunded
   const [statusFilter, setStatusFilter] = useState<
     'all' | 'checked_in' | 'not_checked_in' | 'cancelled' | 'refunded'
   >('all');
+  const [isCheckInDialogOpen, setIsCheckInDialogOpen] = useState(false);
+  const [selectedAttendance, setSelectedAttendance] = useState<{
+    id: string;
+    orderId: string;
+    ownerName: string;
+  } | null>(null);
   const limit = 20;
+
+  const confirmAttendance = useConfirmAttendanceV2(eventId);
 
   const {
     data: attendanceData,
@@ -129,7 +155,6 @@ export default function EventAttendancePage({
 
     const status = attendance.status?.toUpperCase();
 
-
     // Logic lọc trạng thái chi tiết
     let matchesStatus = false;
     if (statusFilter === 'all') {
@@ -198,7 +223,9 @@ export default function EventAttendancePage({
             </div>
             <Select
               value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}
+              onValueChange={(value) =>
+                setStatusFilter(value as typeof statusFilter)
+              }
             >
               <SelectTrigger className='w-full md:w-[220px]'>
                 <SelectValue placeholder='Filter by status' />
@@ -233,15 +260,13 @@ export default function EventAttendancePage({
               <Table>
                 <TableHeader className='bg-muted/40'>
                   <TableRow>
-                    <TableHead className='w-[180px]'>
-                      Order & Ticket ID
-                    </TableHead>
+                    <TableHead className='w-[180px]'>Order</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Ticket Type</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Check-in Time</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className='w-[50px]'></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -258,14 +283,8 @@ export default function EventAttendancePage({
                         className='hover:bg-muted/20'
                       >
                         <TableCell>
-                          <div className='space-y-1'>
-                            <div className='font-semibold text-sm'>
-                              {attendance.order.orderNumber.slice(0, 16)}...
-                            </div>
-                            <div className='flex items-center gap-1 text-xs text-muted-foreground font-mono'>
-                              <Ticket className='h-3 w-3' />
-                              {attendance.id.slice(0, 8)}...
-                            </div>
+                          <div className='font-semibold text-sm'>
+                            {attendance.order.orderNumber.slice(0, 16)}...
                           </div>
                         </TableCell>
                         <TableCell>
@@ -311,11 +330,6 @@ export default function EventAttendancePage({
                               attendance.status
                             )}
                           >
-                          <Badge
-                            variant={getAttendanceStatusVariant(
-                              attendance.status
-                            )}
-                          >
                             {getAttendanceStatusLabel(attendance.status)}
                           </Badge>
                         </TableCell>
@@ -327,7 +341,6 @@ export default function EventAttendancePage({
                               </span>
                             ) : (
                               <span>-</span>
-                              <span>-</span>
                             )}
                           </div>
                         </TableCell>
@@ -335,16 +348,18 @@ export default function EventAttendancePage({
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
+                                variant='ghost'
+                                size='icon'
+                                className='h-8 w-8'
                               >
-                                <MoreVertical className="h-4 w-4" />
+                                <MoreVertical className='h-4 w-4' />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align='end'>
                               <DropdownMenuItem
-                                disabled={attendance.status?.toUpperCase() !== "CREATED"}
+                                disabled={
+                                  attendance.status?.toUpperCase() !== 'CREATED'
+                                }
                                 onClick={() => {
                                   setSelectedAttendance({
                                     id: attendance.id,
@@ -354,7 +369,7 @@ export default function EventAttendancePage({
                                   setIsCheckInDialogOpen(true);
                                 }}
                               >
-                                <CheckCircle className="h-4 w-4 mr-2" />
+                                <CheckCircle className='h-4 w-4 mr-2' />
                                 Check In
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -407,20 +422,26 @@ export default function EventAttendancePage({
       </Card>
 
       {/* Check In Confirmation Dialog */}
-      <AlertDialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen}>
+      <AlertDialog
+        open={isCheckInDialogOpen}
+        onOpenChange={setIsCheckInDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Check In</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to check in {selectedAttendance?.ownerName}? This action cannot be undone.
+              Are you sure you want to check in {selectedAttendance?.ownerName}?
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isConfirming}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={confirmAttendance.isPending}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (selectedAttendance) {
-                  confirmAttendance(
+                  confirmAttendance.mutate(
                     {
                       eventAttendanceIds: [selectedAttendance.id],
                       ticketOrderId: selectedAttendance.orderId,
@@ -434,15 +455,15 @@ export default function EventAttendancePage({
                   );
                 }
               }}
-              disabled={isConfirming}
+              disabled={confirmAttendance.isPending}
             >
-              {isConfirming ? (
+              {confirmAttendance.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                   Checking In...
                 </>
               ) : (
-                "Check In"
+                'Check In'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -451,4 +472,3 @@ export default function EventAttendancePage({
     </div>
   );
 }
-

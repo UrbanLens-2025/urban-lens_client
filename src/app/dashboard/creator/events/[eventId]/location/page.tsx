@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import React, { use, useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+import React, { use, useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -13,8 +13,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+} from '@/components/ui/table';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import {
   MapPin,
   Calendar,
@@ -39,10 +39,10 @@ import {
   Copy,
   Check,
   Wallet,
-} from "lucide-react";
-import { useEventTabs } from "@/contexts/EventTabContext";
-import { useEventById } from "@/hooks/events/useEventById";
-import { useBookableLocationById } from "@/hooks/events/useBookableLocationById";
+} from 'lucide-react';
+import { useEventTabs } from '@/contexts/EventTabContext';
+import { useEventById } from '@/hooks/events/useEventById';
+import { useBookableLocationById } from '@/hooks/events/useBookableLocationById';
 import {
   format,
   startOfDay,
@@ -57,22 +57,22 @@ import {
   setHours,
   setMinutes,
   isSameDay,
-} from "date-fns";
-import Image from "next/image";
+} from 'date-fns';
+import Image from 'next/image';
 import {
   APIProvider,
   Map,
   AdvancedMarker,
   Pin,
-} from "@vis.gl/react-google-maps";
-import { toast } from "sonner";
-import type { LocationBooking } from "@/types";
-import { PaymentModal } from "@/components/shared/PaymentModal";
-import { ReportBookingModal } from "@/components/shared/ReportBookingModal";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { initiateLocationBookingPayment } from "@/api/events";
-import { useEventLocationBookings } from "@/hooks/events/useEventLocationBookings";
-import { CancelBookingDialog } from "./_components/CancelBookingDialog";
+} from '@vis.gl/react-google-maps';
+import { toast } from 'sonner';
+import type { LocationBooking } from '@/types';
+import { PaymentModal } from '@/components/shared/PaymentModal';
+import { ReportBookingModal } from '@/components/shared/ReportBookingModal';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { initiateLocationBookingPayment } from '@/api/events';
+import { useEventLocationBookings } from '@/hooks/events/useEventLocationBookings';
+import { CancelBookingDialog } from './_components/CancelBookingDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,8 +82,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { formatDateTime } from "@/lib/utils";
+} from '@/components/ui/alert-dialog';
+import { formatDateTime } from '@/lib/utils';
 
 // ... [GoogleMapsErrorBoundary class remains the same] ...
 class GoogleMapsErrorBoundary extends React.Component<
@@ -97,43 +97,43 @@ class GoogleMapsErrorBoundary extends React.Component<
   }
 
   static getDerivedStateFromError(error: any) {
-    const errorMessage = error?.message || String(error) || "";
-    const errorName = error?.name || "";
+    const errorMessage = error?.message || String(error) || '';
+    const errorName = error?.name || '';
 
     // Check if it's a Google Maps error
     const isGoogleMapsError =
-      errorName === "ExpiredKeyMapError" ||
-      errorName === "InvalidKeyMapError" ||
-      errorMessage.includes("ExpiredKeyMapError") ||
-      errorMessage.includes("InvalidKeyMapError") ||
-      errorMessage.includes("Google Maps API") ||
-      errorMessage.includes("Google Maps JavaScript API") ||
-      errorMessage.includes("maps.googleapis.com");
+      errorName === 'ExpiredKeyMapError' ||
+      errorName === 'InvalidKeyMapError' ||
+      errorMessage.includes('ExpiredKeyMapError') ||
+      errorMessage.includes('InvalidKeyMapError') ||
+      errorMessage.includes('Google Maps API') ||
+      errorMessage.includes('Google Maps JavaScript API') ||
+      errorMessage.includes('maps.googleapis.com');
 
     // Always catch errors in the map component to prevent page crash
     return { hasError: true, isGoogleMapsError };
   }
 
   componentDidCatch(error: any) {
-    const errorMessage = error?.message || String(error) || "";
+    const errorMessage = error?.message || String(error) || '';
     if (this.state.isGoogleMapsError) {
-      console.warn("Google Maps API error (non-blocking):", errorMessage);
+      console.warn('Google Maps API error (non-blocking):', errorMessage);
     } else {
-      console.error("Map component error (non-blocking):", errorMessage);
+      console.error('Map component error (non-blocking):', errorMessage);
     }
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center h-full bg-muted text-muted-foreground">
-          <div className="text-center">
-            <MapPin className="h-12 w-12 mx-auto mb-2 opacity-20" />
-            <p className="text-sm">Map unavailable</p>
-            <p className="text-xs mt-2 opacity-60">
+        <div className='flex items-center justify-center h-full bg-muted text-muted-foreground'>
+          <div className='text-center'>
+            <MapPin className='h-12 w-12 mx-auto mb-2 opacity-20' />
+            <p className='text-sm'>Map unavailable</p>
+            <p className='text-xs mt-2 opacity-60'>
               {this.state.isGoogleMapsError
-                ? "Google Maps API error"
-                : "Map error"}
+                ? 'Google Maps API error'
+                : 'Map error'}
             </p>
           </div>
         </div>
@@ -148,49 +148,49 @@ class GoogleMapsErrorBoundary extends React.Component<
 const getStatusBadge = (status: string) => {
   const statusUpper = status?.toUpperCase();
   switch (statusUpper) {
-    case "PAYMENT_RECEIVED":
+    case 'PAYMENT_RECEIVED':
       return (
         <Badge
-          variant="outline"
-          className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700"
+          variant='outline'
+          className='bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700'
         >
-          <CheckCircle className="h-3 w-3 mr-1" />
+          <CheckCircle className='h-3 w-3 mr-1' />
           Payment Received
         </Badge>
       );
-    case "AWAITING_BUSINESS_PROCESSING":
+    case 'AWAITING_BUSINESS_PROCESSING':
       return (
         <Badge
-          variant="outline"
-          className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700"
+          variant='outline'
+          className='bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700'
         >
-          <Clock className="h-3 w-3 mr-1" />
+          <Clock className='h-3 w-3 mr-1' />
           Awaiting Processing
         </Badge>
       );
-    case "SOFT_LOCKED":
+    case 'SOFT_LOCKED':
       return (
         <Badge
-          variant="outline"
-          className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-700"
+          variant='outline'
+          className='bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-700'
         >
-          <Clock className="h-3 w-3 mr-1" />
+          <Clock className='h-3 w-3 mr-1' />
           Soft Locked
         </Badge>
       );
-    case "CANCELLED":
+    case 'CANCELLED':
       return (
         <Badge
-          variant="outline"
-          className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700"
+          variant='outline'
+          className='bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700'
         >
-          <AlertCircle className="h-3 w-3 mr-1" />
+          <AlertCircle className='h-3 w-3 mr-1' />
           Cancelled
         </Badge>
       );
     default:
       return (
-        <Badge variant="outline">
+        <Badge variant='outline'>
           {status?.charAt(0).toUpperCase() + status?.slice(1).toLowerCase() ||
             status}
         </Badge>
@@ -201,9 +201,9 @@ const getStatusBadge = (status: string) => {
 // ... [formatCurrency function remains the same] ...
 const formatCurrency = (amount: string) => {
   const num = parseFloat(amount);
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
     minimumFractionDigits: 0,
   }).format(num);
 };
@@ -212,7 +212,7 @@ const formatCurrency = (amount: string) => {
 const formatDateRange = (
   dates: { startDateTime: string; endDateTime: string }[]
 ) => {
-  if (dates.length === 0) return "No dates";
+  if (dates.length === 0) return 'No dates';
 
   // 1. Sort dates by start time
   const sortedDates = [...dates].sort(
@@ -248,21 +248,21 @@ const formatDateRange = (
 
   // 3. Render the merged list
   return (
-    <div className="flex flex-col gap-1">
+    <div className='flex flex-col gap-1'>
       {mergedDates.map((date, index) => {
         const start = new Date(date.startDateTime);
         const end = new Date(date.endDateTime);
         const isSameDay = start.toDateString() === end.toDateString();
 
         return (
-          <div key={index} className="text-sm">
-            <span className="font-medium">{format(start, "MMM dd, yyyy")}</span>
-            :{" "}
-            <span className="text-muted-foreground">
-              {format(start, "HH:mm")} - {format(end, "HH:mm")}
+          <div key={index} className='text-sm'>
+            <span className='font-medium'>{format(start, 'MMM dd, yyyy')}</span>
+            :{' '}
+            <span className='text-muted-foreground'>
+              {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
               {/* Optional indicator if the merged slot spans across midnight */}
               {!isSameDay && (
-                <span className="text-xs ml-1 italic">(+1 day)</span>
+                <span className='text-xs ml-1 italic'>(+1 day)</span>
               )}
             </span>
           </div>
@@ -288,21 +288,21 @@ function TransactionIdDisplay({ transactionId }: { transactionId: string }) {
   };
 
   return (
-    <div className="flex items-center justify-between gap-3">
-      <p className="text-sm text-muted-foreground">Transaction ID</p>
-      <div className="flex items-center gap-2">
-        <p className="text-xs font-mono text-muted-foreground">{truncatedId}</p>
+    <div className='flex items-center justify-between gap-3'>
+      <p className='text-sm text-muted-foreground'>Transaction ID</p>
+      <div className='flex items-center gap-2'>
+        <p className='text-xs font-mono text-muted-foreground'>{truncatedId}</p>
         <Button
-          variant="ghost"
-          size="icon"
+          variant='ghost'
+          size='icon'
           onClick={handleCopy}
-          className="h-6 w-6"
-          title="Copy transaction ID"
+          className='h-6 w-6'
+          title='Copy transaction ID'
         >
           {copied ? (
-            <Check className="h-3 w-3 text-green-600" />
+            <Check className='h-3 w-3 text-green-600' />
           ) : (
-            <Copy className="h-3 w-3" />
+            <Copy className='h-3 w-3' />
           )}
         </Button>
       </div>
@@ -363,7 +363,7 @@ function BookingCalendar({
         // If end is exactly 00:00 of the next day, preserve it (it's 24:00 of current day)
         // Otherwise use endOfDay
         if (
-          format(end, "yyyy-MM-dd") === format(addDays(day, 1), "yyyy-MM-dd") &&
+          format(end, 'yyyy-MM-dd') === format(addDays(day, 1), 'yyyy-MM-dd') &&
           getHours(end) === 0 &&
           getMinutes(end) === 0
         ) {
@@ -379,7 +379,7 @@ function BookingCalendar({
         dayEnd = endOfDay(day);
       }
 
-      const dateKey = format(day, "yyyy-MM-dd");
+      const dateKey = format(day, 'yyyy-MM-dd');
       if (!bookingMap[dateKey]) {
         bookingMap[dateKey] = [];
       }
@@ -413,7 +413,7 @@ function BookingCalendar({
 
   // Check if a time slot cell should be colored
   const getCellBooking = (day: Date, timeSlotHour: number) => {
-    const dateKey = format(day, "yyyy-MM-dd");
+    const dateKey = format(day, 'yyyy-MM-dd');
     const bookings = bookingMap[dateKey] || [];
 
     // Handle 22:00 slot specially (spans to next day: 22:00-00:00)
@@ -511,7 +511,7 @@ function BookingCalendar({
         // Also check if the original string indicates 24:00
         const originalEndTime = dateRange.endDateTime;
         const is24Hour =
-          originalEndTime.includes("T24:00") ||
+          originalEndTime.includes('T24:00') ||
           (endsAt00 &&
             endsOnNextDay &&
             Math.abs(bookingEndTime - bookingStartTime - 60 * 60 * 1000) <
@@ -535,8 +535,8 @@ function BookingCalendar({
         const endsAtMidnight = bookings.some((b) => {
           const endHour = getHours(b.end);
           const endMin = getMinutes(b.end);
-          const endDate = format(b.end, "yyyy-MM-dd");
-          const nextDate = format(addDays(day, 1), "yyyy-MM-dd");
+          const endDate = format(b.end, 'yyyy-MM-dd');
+          const nextDate = format(addDays(day, 1), 'yyyy-MM-dd');
           // Check if it ends at 00:00 of the next day
           return endHour === 0 && endMin === 0 && endDate === nextDate;
         });
@@ -630,62 +630,62 @@ function BookingCalendar({
     })();
 
   return (
-    <div className="space-y-4">
+    <div className='space-y-4'>
       {/* Calendar Navigation - Compact */}
-      <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-border bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
+      <div className='flex items-center justify-between gap-3 p-2.5 rounded-lg border border-border bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10'>
         <Button
-          variant="outline"
-          size="sm"
+          variant='outline'
+          size='sm'
           onClick={goToPrevious}
-          className="h-8 px-3 flex items-center gap-1.5 border-primary/20 hover:bg-primary/10 hover:border-primary/30 transition-all"
+          className='h-8 px-3 flex items-center gap-1.5 border-primary/20 hover:bg-primary/10 hover:border-primary/30 transition-all'
         >
-          <ChevronLeft className="h-3.5 w-3.5" />
-          <span className="text-[10px] font-medium">Prev</span>
+          <ChevronLeft className='h-3.5 w-3.5' />
+          <span className='text-[10px] font-medium'>Prev</span>
         </Button>
-        <div className="flex-1 text-center px-3 py-1.5 bg-background/80 rounded-md border border-border/50">
-          <div className="flex items-center justify-center gap-1.5">
-            <CalendarDays className="h-3.5 w-3.5 text-primary" />
-            <span className="text-xs font-bold text-foreground">
-              {format(displayedDays[0], "MMM dd")} -{" "}
-              {format(displayedDays[DAYS_TO_SHOW - 1], "MMM dd, yyyy")}
+        <div className='flex-1 text-center px-3 py-1.5 bg-background/80 rounded-md border border-border/50'>
+          <div className='flex items-center justify-center gap-1.5'>
+            <CalendarDays className='h-3.5 w-3.5 text-primary' />
+            <span className='text-xs font-bold text-foreground'>
+              {format(displayedDays[0], 'MMM dd')} -{' '}
+              {format(displayedDays[DAYS_TO_SHOW - 1], 'MMM dd, yyyy')}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className='flex items-center gap-1.5'>
           {dates.length > 0 && !isViewingBookings && (
             <Button
-              variant="outline"
-              size="sm"
+              variant='outline'
+              size='sm'
               onClick={goToBookings}
-              className="h-8 px-2 border-primary/20 hover:bg-primary/10 hover:border-primary/30 transition-all"
-              title="Return to bookings"
+              className='h-8 px-2 border-primary/20 hover:bg-primary/10 hover:border-primary/30 transition-all'
+              title='Return to bookings'
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <RotateCcw className='h-3.5 w-3.5' />
             </Button>
           )}
           <Button
-            variant="outline"
-            size="sm"
+            variant='outline'
+            size='sm'
             onClick={goToNext}
-            className="h-8 px-3 flex items-center gap-1.5 border-primary/20 hover:bg-primary/10 hover:border-primary/30 transition-all"
+            className='h-8 px-3 flex items-center gap-1.5 border-primary/20 hover:bg-primary/10 hover:border-primary/30 transition-all'
           >
-            <span className="text-[10px] font-medium">Next</span>
-            <ChevronRight className="h-3.5 w-3.5" />
+            <span className='text-[10px] font-medium'>Next</span>
+            <ChevronRight className='h-3.5 w-3.5' />
           </Button>
         </div>
       </div>
 
       {/* Calendar Grid - Compact, No Scroll */}
-      <div className="border-2 border-border rounded-xl overflow-hidden bg-card shadow-lg">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+      <div className='border-2 border-border rounded-xl overflow-hidden bg-card shadow-lg'>
+        <div className='overflow-x-auto'>
+          <table className='w-full border-collapse'>
             <thead>
-              <tr className="bg-gradient-to-br from-muted/60 via-muted/40 to-muted/30 border-b-2 border-border">
+              <tr className='bg-gradient-to-br from-muted/60 via-muted/40 to-muted/30 border-b-2 border-border'>
                 {/* Time Column Header */}
-                <th className="w-16 p-1.5 text-center border-r-2 border-border sticky left-0 z-10 bg-gradient-to-br from-muted/60 via-muted/40 to-muted/30 shadow-sm">
-                  <div className="flex flex-col items-center gap-0.5">
-                    <Clock className="h-3 w-3 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-wide">
+                <th className='w-16 p-1.5 text-center border-r-2 border-border sticky left-0 z-10 bg-gradient-to-br from-muted/60 via-muted/40 to-muted/30 shadow-sm'>
+                  <div className='flex flex-col items-center gap-0.5'>
+                    <Clock className='h-3 w-3 text-primary' />
+                    <span className='text-[10px] font-bold uppercase tracking-wide'>
                       Time
                     </span>
                   </div>
@@ -695,21 +695,21 @@ function BookingCalendar({
                   const isToday = isSameDay(day, new Date());
                   return (
                     <th
-                      key={format(day, "yyyy-MM-dd")}
-                      className="min-w-[100px] max-w-[100px] p-1.5 text-center border-r last:border-r-0"
+                      key={format(day, 'yyyy-MM-dd')}
+                      className='min-w-[100px] max-w-[100px] p-1.5 text-center border-r last:border-r-0'
                     >
-                      <div className="flex flex-col items-center gap-0.5">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">
-                          {format(day, "EEE")}
+                      <div className='flex flex-col items-center gap-0.5'>
+                        <span className='text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground'>
+                          {format(day, 'EEE')}
                         </span>
-                        <span className="text-sm font-black leading-none">
-                          {format(day, "d")}
+                        <span className='text-sm font-black leading-none'>
+                          {format(day, 'd')}
                         </span>
-                        <span className="text-[9px] font-semibold uppercase text-muted-foreground">
-                          {format(day, "MMM")}
+                        <span className='text-[9px] font-semibold uppercase text-muted-foreground'>
+                          {format(day, 'MMM')}
                         </span>
                         {isToday && (
-                          <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-primary ring-1 ring-primary/30"></div>
+                          <div className='mt-0.5 w-1.5 h-1.5 rounded-full bg-primary ring-1 ring-primary/30'></div>
                         )}
                       </div>
                     </th>
@@ -721,12 +721,12 @@ function BookingCalendar({
               {timeSlots.map((hour) => (
                 <tr
                   key={hour}
-                  className="border-b last:border-b-0 hover:bg-muted/20 transition-colors"
+                  className='border-b last:border-b-0 hover:bg-muted/20 transition-colors'
                 >
                   {/* Time Label - Sticky, Compact */}
-                  <td className="w-16 p-1 text-[10px] font-bold font-mono text-muted-foreground border-r-2 border-border bg-gradient-to-r from-muted/40 to-muted/20 sticky left-0 z-10">
-                    <div className="text-right pr-1">
-                      {String(hour).padStart(2, "0")}:00
+                  <td className='w-16 p-1 text-[10px] font-bold font-mono text-muted-foreground border-r-2 border-border bg-gradient-to-r from-muted/40 to-muted/20 sticky left-0 z-10'>
+                    <div className='text-right pr-1'>
+                      {String(hour).padStart(2, '0')}:00
                     </div>
                   </td>
                   {/* 7 Day Cells - Compact */}
@@ -734,33 +734,33 @@ function BookingCalendar({
                     const cellBooking = getCellBooking(day, hour);
                     return (
                       <td
-                        key={`${format(day, "yyyy-MM-dd")}-${hour}`}
-                        className="min-w-[100px] max-w-[100px] h-6 p-0.5 border-r last:border-r-0 relative bg-background hover:bg-muted/10 transition-colors"
+                        key={`${format(day, 'yyyy-MM-dd')}-${hour}`}
+                        className='min-w-[100px] max-w-[100px] h-6 p-0.5 border-r last:border-r-0 relative bg-background hover:bg-muted/10 transition-colors'
                       >
                         {cellBooking.isBooked && (
                           <div
                             className={`absolute rounded ${
                               cellBooking.isFullCell || cellBooking.isMiddle
-                                ? "inset-0 bg-gradient-to-br from-primary/30 via-primary/25 to-primary/20 border border-primary/50"
+                                ? 'inset-0 bg-gradient-to-br from-primary/30 via-primary/25 to-primary/20 border border-primary/50'
                                 : cellBooking.isTopHalf
-                                ? "bg-gradient-to-br from-primary/30 via-primary/25 to-primary/20 border border-primary/50 border-b-0 rounded-b-none"
+                                ? 'bg-gradient-to-br from-primary/30 via-primary/25 to-primary/20 border border-primary/50 border-b-0 rounded-b-none'
                                 : cellBooking.isBottomHalf
-                                ? "bg-gradient-to-br from-primary/30 via-primary/25 to-primary/20 border border-primary/50 border-t-0 rounded-t-none"
-                                : "inset-0 bg-gradient-to-br from-primary/30 via-primary/25 to-primary/20 border border-primary/50"
+                                ? 'bg-gradient-to-br from-primary/30 via-primary/25 to-primary/20 border border-primary/50 border-t-0 rounded-t-none'
+                                : 'inset-0 bg-gradient-to-br from-primary/30 via-primary/25 to-primary/20 border border-primary/50'
                             }`}
                             style={{
                               ...(cellBooking.isTopHalf && {
                                 top: 0,
                                 left: 0,
                                 right: 0,
-                                height: "50%",
+                                height: '50%',
                               }),
                               ...(cellBooking.isBottomHalf && {
                                 bottom: 0,
                                 left: 0,
                                 right: 0,
-                                height: "50%",
-                                top: "auto",
+                                height: '50%',
+                                top: 'auto',
                               }),
                             }}
                           />
@@ -835,7 +835,7 @@ function LocationCard({
   const totalCheckInsValue =
     (displayLocation as LocationWithAnalytics)?.totalCheckIns ?? 0;
   const totalCheckIns =
-    typeof totalCheckInsValue === "string"
+    typeof totalCheckInsValue === 'string'
       ? parseInt(totalCheckInsValue, 10)
       : totalCheckInsValue;
   const ratingValue = averageRating ? parseFloat(String(averageRating)) : 0;
@@ -847,78 +847,78 @@ function LocationCard({
     ?.website;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
       {/* Left Column: Location Data Card */}
-      <Card className="h-[520px] flex flex-col p-0 overflow-hidden col-span-2">
+      <Card className='h-[520px] flex flex-col p-0 overflow-hidden col-span-2'>
         {/* Hero Image */}
         {location.imageUrl && location.imageUrl.length > 0 && (
-          <div className="relative w-full h-48 flex-shrink-0">
+          <div className='relative w-full h-48 flex-shrink-0'>
             <Image
               src={location.imageUrl[0]}
-              alt={location.name || "Location"}
+              alt={location.name || 'Location'}
               fill
-              className="object-cover"
+              className='object-cover'
             />
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-6 pt-0">
+        <div className='flex-1 overflow-y-auto p-6 pt-0'>
           {/* Location Name */}
-          <h2 className="text-2xl font-bold mb-1">
-            {location.name || "Unknown Location"}
+          <h2 className='text-2xl font-bold mb-1'>
+            {location.name || 'Unknown Location'}
           </h2>
 
           {/* Rating, Reviews, and Check-ins */}
-          <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6">
-            <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-              <span className="text-foreground font-medium">
+          <div className='flex items-center gap-3 text-sm text-muted-foreground mb-6'>
+            <div className='flex items-center gap-1'>
+              <Star className='h-4 w-4 fill-yellow-400 text-yellow-400' />
+              <span className='text-foreground font-medium'>
                 {ratingValue.toFixed(1)}
               </span>
             </div>
             <span>•</span>
             <span>
-              {totalReviews} {totalReviews === 1 ? "review" : "reviews"}
+              {totalReviews} {totalReviews === 1 ? 'review' : 'reviews'}
             </span>
             <span>•</span>
             <span>
-              {totalCheckIns} {totalCheckIns === 1 ? "check-in" : "check-ins"}
+              {totalCheckIns} {totalCheckIns === 1 ? 'check-in' : 'check-ins'}
             </span>
           </div>
 
           {/* Address */}
-          <div className="flex items-center gap-2 mb-2">
-            <MapPin className="h-5 w-5 text-red-500 flex-shrink-0" />
-            <p className="text-sm text-foreground">
+          <div className='flex items-center gap-2 mb-2'>
+            <MapPin className='h-5 w-5 text-red-500 flex-shrink-0' />
+            <p className='text-sm text-foreground'>
               {`${location.addressLine}${
-                location.addressLevel1 ? `, ${location.addressLevel1}` : ""
-              }${location.addressLevel2 ? `, ${location.addressLevel2}` : ""}`}
+                location.addressLevel1 ? `, ${location.addressLevel1}` : ''
+              }${location.addressLevel2 ? `, ${location.addressLevel2}` : ''}`}
             </p>
           </div>
 
           {/* Contact Information */}
           {(businessEmail || businessPhone || businessWebsite) && (
-            <div className="space-y-2 mb-6">
+            <div className='space-y-2 mb-6'>
               {businessEmail && (
-                <div className="flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                  <p className="text-sm text-foreground">{businessEmail}</p>
+                <div className='flex items-center gap-2'>
+                  <Mail className='h-5 w-5 text-blue-500 flex-shrink-0' />
+                  <p className='text-sm text-foreground'>{businessEmail}</p>
                 </div>
               )}
               {businessPhone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-5 w-5 text-green-500 flex-shrink-0" />
-                  <p className="text-sm text-foreground">{businessPhone}</p>
+                <div className='flex items-center gap-2'>
+                  <Phone className='h-5 w-5 text-green-500 flex-shrink-0' />
+                  <p className='text-sm text-foreground'>{businessPhone}</p>
                 </div>
               )}
               {businessWebsite && (
-                <div className="flex items-center gap-2">
-                  <Globe className="h-5 w-5 text-purple-500 flex-shrink-0" />
+                <div className='flex items-center gap-2'>
+                  <Globe className='h-5 w-5 text-purple-500 flex-shrink-0' />
                   <a
                     href={businessWebsite}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:underline"
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='text-sm text-blue-600 hover:underline'
                   >
                     {businessWebsite}
                   </a>
@@ -928,15 +928,15 @@ function LocationCard({
           )}
 
           {/* Separator */}
-          <div className="border-t border-border mb-6"></div>
+          <div className='border-t border-border mb-6'></div>
 
           {/* Description */}
           {location.description && (
-            <div className="space-y-2">
+            <div className='space-y-2'>
               <p
                 ref={descriptionRef}
                 className={`text-sm text-foreground leading-relaxed ${
-                  !isDescriptionExpanded ? "line-clamp-2" : ""
+                  !isDescriptionExpanded ? 'line-clamp-2' : ''
                 }`}
               >
                 {location.description}
@@ -946,9 +946,9 @@ function LocationCard({
                   onClick={() =>
                     setIsDescriptionExpanded(!isDescriptionExpanded)
                   }
-                  className="text-sm text-primary hover:underline"
+                  className='text-sm text-primary hover:underline'
                 >
-                  {isDescriptionExpanded ? "Read less" : "Read more"}
+                  {isDescriptionExpanded ? 'Read less' : 'Read more'}
                 </button>
               )}
             </div>
@@ -957,15 +957,15 @@ function LocationCard({
       </Card>
 
       {/* Right Column: Map */}
-      <div className="relative h-[520px] w-full rounded-lg overflow-hidden border">
+      <div className='relative h-[520px] w-full rounded-lg overflow-hidden border'>
         {apiKey && hasValidCoords ? (
           <GoogleMapsErrorBoundary>
             <APIProvider apiKey={apiKey}>
               <Map
                 defaultCenter={mapCenter}
                 defaultZoom={15}
-                mapId="location-details-map"
-                gestureHandling="none"
+                mapId='location-details-map'
+                gestureHandling='none'
                 disableDefaultUI={true}
                 zoomControl={false}
                 mapTypeControl={false}
@@ -976,13 +976,13 @@ function LocationCard({
               >
                 <AdvancedMarker
                   position={mapCenter}
-                  title={location.name || "Location"}
+                  title={location.name || 'Location'}
                 >
-                  <div title={location.name || "Location"}>
+                  <div title={location.name || 'Location'}>
                     <Pin
-                      background="#ef4444"
-                      borderColor="#991b1b"
-                      glyphColor="#fff"
+                      background='#ef4444'
+                      borderColor='#991b1b'
+                      glyphColor='#fff'
                       scale={1.2}
                     />
                   </div>
@@ -991,10 +991,10 @@ function LocationCard({
             </APIProvider>
           </GoogleMapsErrorBoundary>
         ) : (
-          <div className="flex items-center justify-center h-full bg-muted text-muted-foreground">
-            <div className="text-center">
-              <MapPin className="h-12 w-12 mx-auto mb-2 opacity-20" />
-              <p className="text-sm">Map unavailable</p>
+          <div className='flex items-center justify-center h-full bg-muted text-muted-foreground'>
+            <div className='text-center'>
+              <MapPin className='h-12 w-12 mx-auto mb-2 opacity-20' />
+              <p className='text-sm'>Map unavailable</p>
             </div>
           </div>
         )}
@@ -1021,36 +1021,37 @@ export default function EventLocationPage({
     isLoading: isBookingsLoading,
     refetch: refetchBookings,
   } = useEventLocationBookings(eventId);
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [isReportBookingModalOpen, setIsReportBookingModalOpen] = useState(false);
+  const [isReportBookingModalOpen, setIsReportBookingModalOpen] =
+    useState(false);
   const [showInsufficientBalanceDialog, setShowInsufficientBalanceDialog] =
     useState(false);
   const paymentReturnUrl =
-    typeof window !== "undefined" ? window.location.href : undefined;
+    typeof window !== 'undefined' ? window.location.href : undefined;
 
   const { openBookLocationTab } = useEventTabs();
 
-  const isEventCancelled = event?.status?.toUpperCase() === "CANCELLED";
-  const isPublished = event?.status?.toUpperCase() === "PUBLISHED";
-  const isDraft = event?.status?.toUpperCase() === "DRAFT";
+  const isEventCancelled = event?.status?.toUpperCase() === 'CANCELLED';
+  const isPublished = event?.status?.toUpperCase() === 'PUBLISHED';
+  const isDraft = event?.status?.toUpperCase() === 'DRAFT';
 
   // ... [useEffect for Google Maps error handling remains same] ...
   useEffect(() => {
     const isGoogleMapsError = (error: any): boolean => {
       if (!error) return false;
-      const errorName = error?.name || "";
-      const errorMessage = error?.message || String(error) || "";
+      const errorName = error?.name || '';
+      const errorMessage = error?.message || String(error) || '';
 
       return (
-        errorName === "ExpiredKeyMapError" ||
-        errorName === "InvalidKeyMapError" ||
-        errorMessage.includes("ExpiredKeyMapError") ||
-        errorMessage.includes("InvalidKeyMapError") ||
-        errorMessage.includes("Google Maps API") ||
-        errorMessage.includes("Google Maps JavaScript API") ||
-        errorMessage.includes("maps.googleapis.com")
+        errorName === 'ExpiredKeyMapError' ||
+        errorName === 'InvalidKeyMapError' ||
+        errorMessage.includes('ExpiredKeyMapError') ||
+        errorMessage.includes('InvalidKeyMapError') ||
+        errorMessage.includes('Google Maps API') ||
+        errorMessage.includes('Google Maps JavaScript API') ||
+        errorMessage.includes('maps.googleapis.com')
       );
     };
 
@@ -1061,8 +1062,8 @@ export default function EventLocationPage({
       if (isGoogleMapsError(error)) {
         event.preventDefault();
         event.stopPropagation();
-        const errorMessage = error?.message || String(error) || "";
-        console.warn("Google Maps API error (suppressed):", errorMessage);
+        const errorMessage = error?.message || String(error) || '';
+        console.warn('Google Maps API error (suppressed):', errorMessage);
         return false;
       }
     };
@@ -1073,9 +1074,9 @@ export default function EventLocationPage({
       // Only suppress Google Maps promise rejections
       if (isGoogleMapsError(error)) {
         event.preventDefault();
-        const errorMessage = error?.message || String(error) || "";
+        const errorMessage = error?.message || String(error) || '';
         console.warn(
-          "Google Maps API promise rejection (suppressed):",
+          'Google Maps API promise rejection (suppressed):',
           errorMessage
         );
         return false;
@@ -1083,17 +1084,17 @@ export default function EventLocationPage({
     };
 
     // Use capture phase to catch errors early, but don't override console.error
-    window.addEventListener("error", handleError, true);
+    window.addEventListener('error', handleError, true);
     window.addEventListener(
-      "unhandledrejection",
+      'unhandledrejection',
       handleUnhandledRejection,
       true
     );
 
     return () => {
-      window.removeEventListener("error", handleError, true);
+      window.removeEventListener('error', handleError, true);
       window.removeEventListener(
-        "unhandledrejection",
+        'unhandledrejection',
         handleUnhandledRejection,
         true
       );
@@ -1106,11 +1107,11 @@ export default function EventLocationPage({
       // Refetch event and bookings to check for payment status updates
       refetch();
       refetchBookings();
-      queryClient.invalidateQueries({ queryKey: ["eventDetail", eventId] });
+      queryClient.invalidateQueries({ queryKey: ['eventDetail', eventId] });
     };
 
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [eventId, refetch, refetchBookings, queryClient]);
 
   // ... [Booking calculations remain same] ...
@@ -1118,9 +1119,9 @@ export default function EventLocationPage({
     ?.filter((booking) => {
       const status = booking.status?.toUpperCase();
       return (
-        status === "AWAITING_BUSINESS_PROCESSING" ||
-        status === "APPROVED" ||
-        status === "PAYMENT_RECEIVED"
+        status === 'AWAITING_BUSINESS_PROCESSING' ||
+        status === 'APPROVED' ||
+        status === 'PAYMENT_RECEIVED'
       );
     })
     ?.sort(
@@ -1131,7 +1132,7 @@ export default function EventLocationPage({
 
   // Check if payment has been received (either status is PAYMENT_RECEIVED or referencedTransactionId exists)
   const isPaymentReceived = currentBooking
-    ? currentBooking.status?.toUpperCase() === "PAYMENT_RECEIVED" ||
+    ? currentBooking.status?.toUpperCase() === 'PAYMENT_RECEIVED' ||
       currentBooking.referencedTransactionId !== null
     : false;
 
@@ -1145,11 +1146,11 @@ export default function EventLocationPage({
       await initiateLocationBookingPayment(eventId, bookingId);
     },
     onSuccess: () => {
-      toast.success("Payment completed successfully.");
+      toast.success('Payment completed successfully.');
       // Invalidate all relevant queries to refresh payment status
-      queryClient.invalidateQueries({ queryKey: ["eventDetail", eventId] });
+      queryClient.invalidateQueries({ queryKey: ['eventDetail', eventId] });
       queryClient.invalidateQueries({
-        queryKey: ["eventLocationBookings", eventId],
+        queryKey: ['eventLocationBookings', eventId],
       });
       // Refetch event and bookings data
       refetch();
@@ -1157,14 +1158,14 @@ export default function EventLocationPage({
       router.refresh();
     },
     onError: (err: Error) => {
-      const errorMessage = err?.message || "Failed to complete payment.";
+      const errorMessage = err?.message || 'Failed to complete payment.';
       const lower = errorMessage.toLowerCase();
 
-      if (lower.includes("insufficient") || lower.includes("balance")) {
+      if (lower.includes('insufficient') || lower.includes('balance')) {
         setShowInsufficientBalanceDialog(true);
-        toast.error("Insufficient funds", {
+        toast.error('Insufficient funds', {
           description:
-            "Your wallet balance is not enough to complete this venue booking payment. Please deposit funds and try again.",
+            'Your wallet balance is not enough to complete this venue booking payment. Please deposit funds and try again.',
           duration: 6000,
         });
       } else {
@@ -1175,15 +1176,15 @@ export default function EventLocationPage({
 
   const handleProceedPayment = async () => {
     if (!currentBooking?.id) {
-      throw new Error("No active booking found.");
+      throw new Error('No active booking found.');
     }
     await paymentMutation.mutateAsync({ bookingId: currentBooking.id });
   };
 
   if (isEventLoading || isBookingsLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
+      <div className='flex items-center justify-center py-12'>
+        <Loader2 className='h-12 w-12 animate-spin text-muted-foreground' />
       </div>
     );
   }
@@ -1191,40 +1192,40 @@ export default function EventLocationPage({
   const hasLocation = !!event?.locationId;
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-lg font-semibold">
-            <MapPin className="h-5 w-5 text-primary" />
+    <div className='space-y-6'>
+      <div className='space-y-4'>
+        <div className='space-y-1'>
+          <div className='flex items-center gap-2 text-lg font-semibold'>
+            <MapPin className='h-5 w-5 text-primary' />
             <span>Venue Booking</span>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className='text-sm text-muted-foreground'>
             Current booking status and venue details
           </p>
         </div>
 
-        <Tabs defaultValue="current" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="current">Current Booking</TabsTrigger>
-            <TabsTrigger value="all">
-              <List className="h-4 w-4 mr-2" />
+        <Tabs defaultValue='current' className='w-full'>
+          <TabsList className='grid w-full max-w-md grid-cols-2'>
+            <TabsTrigger value='current'>Current Booking</TabsTrigger>
+            <TabsTrigger value='all'>
+              <List className='h-4 w-4 mr-2' />
               Booking History
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="current" className="mt-6">
+          <TabsContent value='current' className='mt-6'>
             {hasCurrentBooking && currentBooking ? (
-              <div className="space-y-6">
+              <div className='space-y-6'>
                 {/* Callout - show for awaiting approval status */}
                 {currentBooking.status?.toUpperCase() ===
-                  "AWAITING_BUSINESS_PROCESSING" ||
-                currentBooking.status?.toUpperCase() === "SOFT_LOCKED" ? (
-                  <Alert className="bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800">
-                    <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
-                    <AlertTitle className="text-yellow-900 dark:text-yellow-100">
+                  'AWAITING_BUSINESS_PROCESSING' ||
+                currentBooking.status?.toUpperCase() === 'SOFT_LOCKED' ? (
+                  <Alert className='bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800'>
+                    <Info className='h-4 w-4 text-yellow-600 dark:text-yellow-500' />
+                    <AlertTitle className='text-yellow-900 dark:text-yellow-100'>
                       Awaiting Confirmation
                     </AlertTitle>
-                    <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+                    <AlertDescription className='text-yellow-800 dark:text-yellow-200'>
                       We&apos;re waiting for the Owner of the location to
                       confirm this booking.
                     </AlertDescription>
@@ -1232,35 +1233,35 @@ export default function EventLocationPage({
                 ) : null}
 
                 {/* Callout - show for approved status (but not if payment already received) */}
-                {currentBooking.status?.toUpperCase() === "APPROVED" &&
+                {currentBooking.status?.toUpperCase() === 'APPROVED' &&
                   !isPaymentReceived && (
-                    <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800">
-                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-500" />
-                      <div className="flex-1 flex items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <AlertTitle className="text-green-900 dark:text-green-100 mb-2">
+                    <Alert className='bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800'>
+                      <CheckCircle className='h-4 w-4 text-green-600 dark:text-green-500' />
+                      <div className='flex-1 flex items-center justify-between gap-4'>
+                        <div className='flex-1'>
+                          <AlertTitle className='text-green-900 dark:text-green-100 mb-2'>
                             Location Approved
                           </AlertTitle>
-                          <AlertDescription className="text-green-800 dark:text-green-200">
+                          <AlertDescription className='text-green-800 dark:text-green-200'>
                             <p>
                               Your location booking has been approved. Please
-                              pay before:{" "}
+                              pay before:{' '}
                               {currentBooking.softLockedUntil ? (
-                                <span className="font-semibold">
+                                <span className='font-semibold'>
                                   {format(
                                     new Date(currentBooking.softLockedUntil),
                                     "MMM dd, yyyy 'at' HH:mm"
                                   )}
                                 </span>
                               ) : (
-                                <span className="font-semibold">N/A</span>
+                                <span className='font-semibold'>N/A</span>
                               )}
                             </p>
                           </AlertDescription>
                         </div>
                         <Button
                           onClick={() => setIsPaymentModalOpen(true)}
-                          className="shrink-0 bg-green-600 hover:bg-green-700 text-white"
+                          className='shrink-0 bg-green-600 hover:bg-green-700 text-white'
                           disabled={paymentMutation.isPending}
                         >
                           Complete Payment
@@ -1273,8 +1274,8 @@ export default function EventLocationPage({
                 {currentBooking.location &&
                   (() => {
                     const location = currentBooking.location;
-                    const locationLat = parseFloat(location.latitude || "0");
-                    const locationLng = parseFloat(location.longitude || "0");
+                    const locationLat = parseFloat(location.latitude || '0');
+                    const locationLng = parseFloat(location.longitude || '0');
                     const hasValidCoords =
                       !isNaN(locationLat) &&
                       !isNaN(locationLng) &&
@@ -1296,20 +1297,20 @@ export default function EventLocationPage({
                   })()}
 
                 {/* Booking Information */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-                  <Card className="col-span-2">
+                <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch'>
+                  <Card className='col-span-2'>
                     <CardHeader>
-                      <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Calendar className="h-5 w-5 text-primary" />
+                      <div className='flex items-center justify-between gap-4 flex-wrap'>
+                        <CardTitle className='text-lg flex items-center gap-2'>
+                          <Calendar className='h-5 w-5 text-primary' />
                           Booking Details
                         </CardTitle>
-                        <div className="flex items-center gap-4">
-                          <div className="text-sm">
-                            <span className="text-muted-foreground">
-                              Created:{" "}
+                        <div className='flex items-center gap-4'>
+                          <div className='text-sm'>
+                            <span className='text-muted-foreground'>
+                              Created:{' '}
                             </span>
-                            <span className="font-medium">
+                            <span className='font-medium'>
                               {format(
                                 new Date(currentBooking.createdAt),
                                 "MMM dd, yyyy 'at' HH:mm"
@@ -1320,24 +1321,14 @@ export default function EventLocationPage({
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className='space-y-6'>
                       {/* Display list of booked times */}
-                      {currentBooking.dates &&
-                        currentBooking.dates.length > 0 && (
-                          <div className="p-4 bg-muted/20 rounded-lg border border-border">
-                            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-primary" />
-                              Reserved Times
-                            </h4>
-                            {formatDateRange(currentBooking.dates)}
-                          </div>
-                        )}
 
                       {currentBooking.dates &&
                       currentBooking.dates.length > 0 ? (
                         <BookingCalendar dates={currentBooking.dates} />
                       ) : (
-                        <div className="text-center py-8 text-muted-foreground">
+                        <div className='text-center py-8 text-muted-foreground'>
                           No booking dates available
                         </div>
                       )}
@@ -1345,8 +1336,8 @@ export default function EventLocationPage({
                   </Card>
 
                   {/* Payment Details & Destructive Actions Card */}
-                  <Card className="h-full flex flex-col">
-                    <div className="flex flex-col flex-1">
+                  <Card className='h-full flex flex-col'>
+                    <div className='flex flex-col flex-1'>
                       {isPaymentReceived &&
                         currentBooking &&
                         (() => {
@@ -1373,46 +1364,46 @@ export default function EventLocationPage({
                           return (
                             <>
                               <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                  <CreditCard className="h-5 w-5 text-primary" />
+                                <CardTitle className='text-lg flex items-center gap-2'>
+                                  <CreditCard className='h-5 w-5 text-primary' />
                                   Payment Details
                                 </CardTitle>
                               </CardHeader>
-                              <CardContent className="space-y-6">
-                                <div className="space-y-3">
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-sm text-muted-foreground">
+                              <CardContent className='space-y-6'>
+                                <div className='space-y-3'>
+                                  <div className='flex items-center justify-between'>
+                                    <p className='text-sm text-muted-foreground'>
                                       Total Hours
                                     </p>
-                                    <p className="text-sm font-medium">
-                                      {totalHours}{" "}
-                                      {totalHours === 1 ? "hour" : "hours"}
+                                    <p className='text-sm font-medium'>
+                                      {totalHours}{' '}
+                                      {totalHours === 1 ? 'hour' : 'hours'}
                                     </p>
                                   </div>
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-sm text-muted-foreground">
+                                  <div className='flex items-center justify-between'>
+                                    <p className='text-sm text-muted-foreground'>
                                       Price per Hour
                                     </p>
-                                    <p className="text-sm font-medium">
+                                    <p className='text-sm font-medium'>
                                       {formatCurrency(pricePerHour.toString())}
                                       /hour
                                     </p>
                                   </div>
-                                  <div className="flex items-center justify-between pt-3 border-t">
-                                    <p className="text-sm font-semibold text-foreground">
+                                  <div className='flex items-center justify-between pt-3 border-t'>
+                                    <p className='text-sm font-semibold text-foreground'>
                                       Total Amount
                                     </p>
-                                    <p className="text-lg font-bold">
+                                    <p className='text-lg font-bold'>
                                       {formatCurrency(
                                         currentBooking.amountToPay
                                       )}
                                     </p>
                                   </div>
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-sm text-muted-foreground">
+                                  <div className='flex items-center justify-between'>
+                                    <p className='text-sm text-muted-foreground'>
                                       Paid At
                                     </p>
-                                    <p className="text-sm font-medium">
+                                    <p className='text-sm font-medium'>
                                       {formatDateTime(paidAt)}
                                     </p>
                                   </div>
@@ -1448,49 +1439,49 @@ export default function EventLocationPage({
                     </div>
                     <div
                       className={`${
-                        isPaymentReceived ? "pt-6 mt-6 border-t" : ""
+                        isPaymentReceived ? 'pt-6 mt-6 border-t' : ''
                       } mt-auto`}
                     >
-                      <CardHeader className={isPaymentReceived ? "pb-4" : ""}>
-                        <CardTitle className="text-lg">Actions</CardTitle>
+                      <CardHeader className={isPaymentReceived ? 'pb-4' : ''}>
+                        <CardTitle className='text-lg'>Actions</CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-3">
-                        {currentBooking.status === "APPROVED" && (
+                      <CardContent className='space-y-3'>
+                        {currentBooking.status === 'APPROVED' && (
                           <Button
-                            variant="outline"
-                            size="default"
+                            variant='outline'
+                            size='default'
                             onClick={() => setIsReportBookingModalOpen(true)}
-                            className="w-full"
+                            className='w-full'
                           >
-                            <AlertCircle className="h-4 w-4 mr-2" />
+                            <AlertCircle className='h-4 w-4 mr-2' />
                             Report booking
                           </Button>
                         )}
-                        <div className="space-y-2">
+                        <div className='space-y-2'>
                           {!isDraft ? (
-                            <Alert variant="destructive">
-                              <AlertCircle className="h-4 w-4" />
-                            <AlertDescription className="text-xs">
-                              You&apos;re only allowed to cancel booking when your
-                              event is in DRAFT status.
-                            </AlertDescription>
+                            <Alert variant='destructive'>
+                              <AlertCircle className='h-4 w-4' />
+                              <AlertDescription className='text-xs'>
+                                You&apos;re only allowed to cancel booking when
+                                your event is in DRAFT status.
+                              </AlertDescription>
                             </Alert>
                           ) : (
-                            <p className="text-xs text-muted-foreground">
+                            <p className='text-xs text-muted-foreground'>
                               This action cannot be undone. Cancelling will
                               refund 100% of the booking fee if already paid.
                             </p>
                           )}
                           <Button
-                            variant="destructive"
-                            size="default"
+                            variant='destructive'
+                            size='default'
                             onClick={() => setIsCancelDialogOpen(true)}
                             className={`w-full ${
-                              !isDraft ? "opacity-50 cursor-not-allowed" : ""
+                              !isDraft ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                             disabled={!isDraft}
                           >
-                            <XCircle className="h-4 w-4 mr-2" />
+                            <XCircle className='h-4 w-4 mr-2' />
                             Cancel Booking
                           </Button>
                         </div>
@@ -1540,52 +1531,52 @@ export default function EventLocationPage({
                       return (
                         <Card>
                           <CardHeader>
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              <CreditCard className="h-5 w-5 text-primary" />
+                            <CardTitle className='text-lg flex items-center gap-2'>
+                              <CreditCard className='h-5 w-5 text-primary' />
                               Payment
                             </CardTitle>
                           </CardHeader>
-                          <CardContent className="flex flex-col space-y-4">
-                            <div className="flex-grow flex flex-col space-y-4">
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm text-muted-foreground">
+                          <CardContent className='flex flex-col space-y-4'>
+                            <div className='flex-grow flex flex-col space-y-4'>
+                              <div className='flex items-center justify-between'>
+                                <p className='text-sm text-muted-foreground'>
                                   Total Hours
                                 </p>
-                                <p className="text-base font-medium">
-                                  {totalHours}{" "}
-                                  {totalHours === 1 ? "hour" : "hours"}
+                                <p className='text-base font-medium'>
+                                  {totalHours}{' '}
+                                  {totalHours === 1 ? 'hour' : 'hours'}
                                 </p>
                               </div>
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm text-muted-foreground">
+                              <div className='flex items-center justify-between'>
+                                <p className='text-sm text-muted-foreground'>
                                   Price per Hour
                                 </p>
-                                <p className="text-base font-medium">
+                                <p className='text-base font-medium'>
                                   {formatCurrency(pricePerHour.toString())}/hour
                                 </p>
                               </div>
-                              <div className="flex items-center justify-between pt-2 border-t">
-                                <p className="text-sm text-muted-foreground">
+                              <div className='flex items-center justify-between pt-2 border-t'>
+                                <p className='text-sm text-muted-foreground'>
                                   Total Amount
                                 </p>
-                                <p className="text-xl font-bold">
+                                <p className='text-xl font-bold'>
                                   {formatCurrency(currentBooking.amountToPay)}
                                 </p>
                               </div>
                             </div>
-                            <div className="mt-auto pt-4">
+                            <div className='mt-auto pt-4'>
                               {currentBooking.status?.toUpperCase() ===
-                                "AWAITING_BUSINESS_PROCESSING" ||
+                                'AWAITING_BUSINESS_PROCESSING' ||
                               currentBooking.status?.toUpperCase() ===
-                                "SOFT_LOCKED" ? (
-                                <div className="w-full rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 py-2.5 px-4">
-                                  <div className="flex items-center justify-center gap-2">
-                                    <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 animate-pulse" />
-                                    <div className="flex flex-col items-center">
-                                      <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                                'SOFT_LOCKED' ? (
+                                <div className='w-full rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 py-2.5 px-4'>
+                                  <div className='flex items-center justify-center gap-2'>
+                                    <Clock className='h-4 w-4 text-amber-600 dark:text-amber-400 animate-pulse' />
+                                    <div className='flex flex-col items-center'>
+                                      <span className='text-sm font-semibold text-amber-700 dark:text-amber-300'>
                                         Awaiting Confirmation
                                       </span>
-                                      <span className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                                      <span className='text-xs text-amber-600 dark:text-amber-400 mt-0.5'>
                                         Business owner is reviewing your booking
                                       </span>
                                     </div>
@@ -1593,17 +1584,17 @@ export default function EventLocationPage({
                                 </div>
                               ) : (
                                 <Button
-                                  className="w-full"
+                                  className='w-full'
                                   onClick={() => setIsPaymentModalOpen(true)}
                                   disabled={paymentMutation.isPending}
                                 >
                                   {paymentMutation.isPending ? (
                                     <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                                       Processing...
                                     </>
                                   ) : (
-                                    "Proceed to Payment"
+                                    'Proceed to Payment'
                                   )}
                                 </Button>
                               )}
@@ -1635,7 +1626,7 @@ export default function EventLocationPage({
                         open={isPaymentModalOpen}
                         onOpenChange={setIsPaymentModalOpen}
                         amount={currentBooking.amountToPay}
-                        currency="VND"
+                        currency='VND'
                         returnUrl={paymentReturnUrl}
                         onConfirm={() => {
                           setIsPaymentModalOpen(false);
@@ -1645,20 +1636,20 @@ export default function EventLocationPage({
                         }}
                         onProceed={handleProceedPayment}
                       >
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm text-muted-foreground">
+                        <div className='space-y-3'>
+                          <div className='flex items-center justify-between'>
+                            <p className='text-sm text-muted-foreground'>
                               Total Hours
                             </p>
-                            <p className="text-base font-medium">
-                              {totalHours} {totalHours === 1 ? "hour" : "hours"}
+                            <p className='text-base font-medium'>
+                              {totalHours} {totalHours === 1 ? 'hour' : 'hours'}
                             </p>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm text-muted-foreground">
+                          <div className='flex items-center justify-between'>
+                            <p className='text-sm text-muted-foreground'>
                               Price per Hour
                             </p>
-                            <p className="text-base font-medium">
+                            <p className='text-base font-medium'>
                               {formatCurrency(pricePerHour.toString())}/hour
                             </p>
                           </div>
@@ -1668,21 +1659,21 @@ export default function EventLocationPage({
                   })()}
               </div>
             ) : (
-              <div className="text-center py-16 border rounded-lg bg-muted/10">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <Building2 className="h-8 w-8 text-primary" />
+              <div className='text-center py-16 border rounded-lg bg-muted/10'>
+                <div className='w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4'>
+                  <Building2 className='h-8 w-8 text-primary' />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">
-                  {hasLocation ? "No Active Booking" : "No Venue Booked Yet"}
+                <h3 className='text-lg font-semibold mb-2'>
+                  {hasLocation ? 'No Active Booking' : 'No Venue Booked Yet'}
                 </h3>
-                <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                <p className='text-sm text-muted-foreground mb-6 max-w-md mx-auto'>
                   {hasLocation
-                    ? "Your previous booking has been cancelled. You can now book a new venue for your event."
-                    : "Your event needs a location. Browse our available venues to find the perfect spot for your event."}
+                    ? 'Your previous booking has been cancelled. You can now book a new venue for your event.'
+                    : 'Your event needs a location. Browse our available venues to find the perfect spot for your event.'}
                 </p>
                 {!isEventCancelled && (
                   <Button
-                    size="lg"
+                    size='lg'
                     onClick={() => {
                       openBookLocationTab();
                       router.push(
@@ -1690,19 +1681,19 @@ export default function EventLocationPage({
                       );
                     }}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {hasLocation ? "Book a New Venue" : "Book a Venue"}
+                    <Plus className='h-4 w-4 mr-2' />
+                    {hasLocation ? 'Book a New Venue' : 'Book a Venue'}
                   </Button>
                 )}
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="all" className="mt-6">
+          <TabsContent value='all' className='mt-6'>
             {/* ... [Booking History Table remains the same] ... */}
             {locationBookings && locationBookings.length > 0 ? (
-              <div className="space-y-4">
-                <div className="rounded-md border">
+              <div className='space-y-4'>
+                <div className='rounded-md border'>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1716,31 +1707,31 @@ export default function EventLocationPage({
                     <TableBody>
                       {locationBookings.map((booking: LocationBooking) => (
                         <TableRow key={booking.id}>
-                          <TableCell className="font-medium">
-                            {booking.location?.name || "Unknown Location"}
+                          <TableCell className='font-medium'>
+                            {booking.location?.name || 'Unknown Location'}
                           </TableCell>
                           <TableCell>
                             {getStatusBadge(booking.status)}
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
+                          <TableCell className='text-sm text-muted-foreground'>
                             {/* Use the new formatter here too if you want detailed list, or keep simple range */}
                             {booking.dates.length === 1
                               ? `${format(
                                   new Date(booking.dates[0].startDateTime),
-                                  "MMM dd, HH:mm"
+                                  'MMM dd, HH:mm'
                                 )} - ${format(
                                   new Date(booking.dates[0].endDateTime),
-                                  "HH:mm"
+                                  'HH:mm'
                                 )}`
                               : `${booking.dates.length} slots`}
                           </TableCell>
-                          <TableCell className="font-medium">
+                          <TableCell className='font-medium'>
                             {formatCurrency(booking.amountToPay)}
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
+                          <TableCell className='text-sm text-muted-foreground'>
                             {format(
                               new Date(booking.createdAt),
-                              "MMM dd, yyyy"
+                              'MMM dd, yyyy'
                             )}
                           </TableCell>
                         </TableRow>
@@ -1750,18 +1741,18 @@ export default function EventLocationPage({
                 </div>
               </div>
             ) : (
-              <div className="text-center py-16 border rounded-lg bg-muted/10">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                  <List className="h-8 w-8 text-muted-foreground" />
+              <div className='text-center py-16 border rounded-lg bg-muted/10'>
+                <div className='w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4'>
+                  <List className='h-8 w-8 text-muted-foreground' />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">No Bookings Yet</h3>
-                <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                <h3 className='text-lg font-semibold mb-2'>No Bookings Yet</h3>
+                <p className='text-sm text-muted-foreground mb-6 max-w-md mx-auto'>
                   You haven&apos;t made any location bookings for this event
                   yet.
                 </p>
                 {!isEventCancelled && (
                   <Button
-                    size="lg"
+                    size='lg'
                     onClick={() => {
                       openBookLocationTab();
                       router.push(
@@ -1769,7 +1760,7 @@ export default function EventLocationPage({
                       );
                     }}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className='h-4 w-4 mr-2' />
                     Book a Venue
                   </Button>
                 )}
@@ -1786,8 +1777,8 @@ export default function EventLocationPage({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-primary" />
+            <AlertDialogTitle className='flex items-center gap-2'>
+              <Wallet className='h-5 w-5 text-primary' />
               Insufficient wallet balance
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -1804,8 +1795,8 @@ export default function EventLocationPage({
                   ? `/dashboard/creator/wallet/deposit?returnUrl=${encodeURIComponent(
                       paymentReturnUrl
                     )}`
-                  : "/dashboard/creator/wallet/deposit";
-                window.open(depositPath, "_blank");
+                  : '/dashboard/creator/wallet/deposit';
+                window.open(depositPath, '_blank');
               }}
             >
               Open wallet in new tab

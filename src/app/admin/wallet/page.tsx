@@ -56,6 +56,7 @@ import { PageContainer } from '@/components/shared/PageContainer';
 import { StatCard } from '@/components/shared/StatCard';
 import LoadingCustom from '@/components/shared/LoadingCustom';
 import ErrorCustom from '@/components/shared/ErrorCustom';
+import { IconEye, IconTransfer } from '@tabler/icons-react';
 
 const formatCurrency = (amount: string, currency: string = 'VND') => {
   const num = parseFloat(amount);
@@ -264,11 +265,9 @@ export default function AdminWalletPage() {
     useState<string>('all');
   const [escrowInternalSortBy, setEscrowInternalSortBy] =
     useState<string>('createdAt:DESC');
-  const itemsPerPage = 20;
+  const itemsPerPage = 10;
 
-  const { escrowWallet, systemWallet, isLoading, isError, error } =
-    useAdminWallets();
-  const queryClient = useQueryClient();
+  const { escrowWallet, systemWallet, isLoading } = useAdminWallets();
 
   const { data: transactionsData, isLoading: isLoadingTransactions } =
     useAdminExternalTransactions({
@@ -297,6 +296,10 @@ export default function AdminWalletPage() {
 
   const systemInternalTransactions: WalletTransaction[] =
     systemInternalData?.data || [];
+  console.log(
+    '🚀 ~ AdminWalletPage ~ systemInternalTransactions:',
+    systemInternalTransactions
+  );
 
   const { data: escrowInternalData, isLoading: isLoadingEscrowInternal } =
     useAdminInternalWalletTransactions(
@@ -312,6 +315,10 @@ export default function AdminWalletPage() {
 
   const escrowInternalTransactions: WalletTransaction[] =
     escrowInternalData?.data || [];
+  console.log(
+    '🚀 ~ AdminWalletPage ~ escrowInternalTransactions:',
+    escrowInternalTransactions
+  );
 
   // Filter transactions client-side
   const filteredTransactions = useMemo(() => {
@@ -492,26 +499,27 @@ export default function AdminWalletPage() {
         onValueChange={setActiveTab}
         className='space-y-6'
       >
-        <TabsList className='grid w-full max-w-md grid-cols-3'>
+        <TabsList className='grid w-full max-w-xl grid-cols-3 h-12 bg-primary/10'>
           <TabsTrigger
             value='external-transactions'
             className='flex items-center gap-2'
           >
-            External Transactions
+            <Building2 className='h-4 w-4' />
+            <span className='text-sm font-medium'>External Transactions</span>
           </TabsTrigger>
           <TabsTrigger
             value='system-wallet'
             className='flex items-center gap-2'
           >
             <Wallet className='h-4 w-4' />
-            System wallet
+            <span className='text-sm font-medium'>System wallet</span>
           </TabsTrigger>
           <TabsTrigger
             value='escrow-wallet'
             className='flex items-center gap-2'
           >
             <Lock className='h-4 w-4' />
-            Escrow wallet
+            <span className='text-sm font-medium'>Escrow wallet</span>
           </TabsTrigger>
         </TabsList>
 
@@ -522,9 +530,9 @@ export default function AdminWalletPage() {
           ) : !systemWallet ? (
             <ErrorCustom />
           ) : (
-            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
               <StatCard
-                title='System wallet balance'
+                title='System Wallet Balance'
                 value={formatCurrency(
                   systemWallet.balance,
                   systemWallet.currency
@@ -541,8 +549,15 @@ export default function AdminWalletPage() {
                   systemWallet.totalTransactions
                 }
                 icon={TrendingUp}
-                color='emerald'
+                color='amber'
                 description='Internal movements for this wallet'
+              />
+              <StatCard
+                title='Completed'
+                value={999}
+                icon={TrendingUp}
+                color='emerald'
+                description='Completed transactions for this wallet'
               />
               <StatCard
                 title='Status'
@@ -633,7 +648,7 @@ export default function AdminWalletPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className='bg-muted/50'>
-                        <TableHead className='font-semibold'>ID</TableHead>
+                        <TableHead className='font-semibold'>#</TableHead>
                         <TableHead className='font-semibold'>Type</TableHead>
                         <TableHead className='font-semibold'>Amount</TableHead>
                         <TableHead className='font-semibold'>Status</TableHead>
@@ -641,11 +656,11 @@ export default function AdminWalletPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredSystemInternal.map((t) => (
+                      {filteredSystemInternal.map((t: any, index: number) => (
                         <TableRow key={t.id}>
                           <TableCell>
                             <div className='font-mono text-xs max-w-[140px] truncate'>
-                              {t.id}
+                              {index + 1}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -681,7 +696,7 @@ export default function AdminWalletPage() {
           ) : !escrowWallet ? (
             <ErrorCustom />
           ) : (
-            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
               <StatCard
                 title='Escrow wallet balance'
                 value={formatCurrency(
@@ -689,8 +704,29 @@ export default function AdminWalletPage() {
                   escrowWallet.currency
                 )}
                 icon={Wallet}
-                color='green'
+                color='blue'
                 description='Funds held in escrow for bookings'
+              />
+
+              <StatCard
+                title='Payout for locations'
+                value={formatCurrency(
+                  escrowWallet.balance,
+                  escrowWallet.currency
+                )}
+                icon={TrendingUp}
+                color='emerald'
+                description='Completed transactions for this wallet'
+              />
+              <StatCard
+                title='Payout for events'
+                value={formatCurrency(
+                  escrowWallet.balance,
+                  escrowWallet.currency
+                )}
+                icon={TrendingUp}
+                color='emerald'
+                description='Completed transactions for this wallet'
               />
               <StatCard
                 title='Total transactions'
@@ -700,15 +736,8 @@ export default function AdminWalletPage() {
                   escrowWallet.totalTransactions
                 }
                 icon={TrendingUp}
-                color='emerald'
+                color='amber'
                 description='Internal movements for this wallet'
-              />
-              <StatCard
-                title='Status'
-                value={escrowWallet.isLocked ? 'Locked' : 'Active'}
-                icon={escrowWallet.isLocked ? Lock : Unlock}
-                color={escrowWallet.isLocked ? 'red' : 'green'}
-                description='Escrow wallet for location bookings'
               />
             </div>
           )}
@@ -788,7 +817,7 @@ export default function AdminWalletPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className='bg-muted/50'>
-                        <TableHead className='font-semibold'>ID</TableHead>
+                        <TableHead className='font-semibold'>#</TableHead>
                         <TableHead className='font-semibold'>Type</TableHead>
                         <TableHead className='font-semibold'>Amount</TableHead>
                         <TableHead className='font-semibold'>
@@ -799,11 +828,11 @@ export default function AdminWalletPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredEscrowInternal.map((t) => (
+                      {filteredEscrowInternal.map((t: any, index: number) => (
                         <TableRow key={t.id}>
                           <TableCell>
                             <div className='font-mono text-xs max-w-[140px] truncate'>
-                              {t.id}
+                              {index + 1}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -844,39 +873,38 @@ export default function AdminWalletPage() {
               value={formatCurrency(stats.totalDeposits.toString(), 'VND')}
               icon={Download}
               color='green'
-              description='Sum of all completed deposit transactions'
             />
             <StatCard
               title='Total Withdrawals'
               value={formatCurrency(stats.totalWithdrawals.toString(), 'VND')}
               icon={Upload}
               color='orange'
-              description='Sum of all completed withdrawal transactions'
             />
-            <StatCard
-              title='Pending'
-              value={stats.pendingCount.toString()}
-              icon={CreditCard}
-              color='blue'
-              description='Transactions waiting for processing'
-            />
+
             <StatCard
               title='Completed'
               value={stats.completedCount.toString()}
               icon={Calendar}
               color='purple'
-              description='Total number of completed transactions'
+            />
+            <StatCard
+              title='Transferred'
+              value={999}
+              icon={IconTransfer}
+              color='green'
             />
           </div>
 
           {/* Transactions Table */}
           <Card className='border-2 border-primary/10 shadow-xl bg-card/80 backdrop-blur-sm'>
-            <CardHeader className='pb-4 border-b border-primary/10'>
+            <CardHeader className='border-b border-primary/10'>
               <div className='flex items-center justify-between gap-4'>
                 <div>
                   <CardTitle className='flex items-center gap-2'>
-                    <CreditCard className='h-4 w-4 text-blue-600 dark:text-blue-400' />
-                    External transactions
+                    <CreditCard className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+                    <span className='text-base font-semibold'>
+                      External transactions
+                    </span>
                   </CardTitle>
                   <CardDescription>
                     All deposit and withdrawal transactions across wallets
@@ -1011,7 +1039,14 @@ export default function AdminWalletPage() {
                           </TableCell>
                           <TableCell>
                             <Badge variant='outline' className='text-xs mt-0.5'>
-                              {transaction.createdBy?.role || 'Unknown'}
+                              {transaction.createdBy?.role === 'EVENT_CREATOR'
+                                ? 'Event Creator'
+                                : transaction.createdBy?.role ===
+                                  'BUSINESS_OWNER'
+                                ? 'Business Owner'
+                                : transaction.createdBy?.role === 'USER'
+                                ? 'User'
+                                : 'Unknown'}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -1058,7 +1093,7 @@ export default function AdminWalletPage() {
                                 size='sm'
                                 className='hover:bg-primary/10'
                               >
-                                <ExternalLink className='h-4 w-4' />
+                                <IconEye className='h-4 w-4' />
                               </Button>
                             </Link>
                           </TableCell>

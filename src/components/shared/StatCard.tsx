@@ -138,7 +138,7 @@ export function StatCard({
               </div>
             ) : (
               <>
-                <p className='text-2xl font-bold'>{value}</p>
+                <p className='text-xl font-bold'>{value}</p>
                 {description && (
                   <p className='text-xs text-muted-foreground'>{description}</p>
                 )}

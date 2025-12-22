@@ -48,6 +48,8 @@ import { TableFilters } from '@/components/shared/TableFilters';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { PageContainer } from '@/components/shared/PageContainer';
 import { StatCard } from '@/components/shared/StatCard';
+import { formatCurrency } from '@/lib/utils';
+import { IconUsers } from '@tabler/icons-react';
 
 // Event data will come from API
 
@@ -120,6 +122,7 @@ export default function CreatorEventsPage() {
   });
 
   const allEvents = eventsData?.data || [];
+  console.log('🚀 ~ CreatorEventsPage ~ allEvents:', allEvents);
   const meta = eventsData?.meta;
 
   // Filter events by status if status filter is set
@@ -139,6 +142,8 @@ export default function CreatorEventsPage() {
         e.status?.toUpperCase() === 'ACTIVE'
     ).length,
     draftEvents: events.filter((e) => e.status?.toUpperCase() === 'DRAFT')
+      .length,
+    finishedEvents: events.filter((e) => e.status?.toUpperCase() === 'FINISHED')
       .length,
     totalTags: events.reduce((sum, e) => sum + (e.tags?.length || 0), 0),
   };
@@ -199,7 +204,7 @@ export default function CreatorEventsPage() {
       />
 
       {/* Quick Statistics */}
-      <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
+      <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
         <StatCard
           title='Total Events'
           value={stats.totalEvents}
@@ -215,7 +220,13 @@ export default function CreatorEventsPage() {
           color='emerald'
           description='Currently active'
         />
-
+        <StatCard
+          title='Finished Events'
+          value={stats.finishedEvents}
+          icon={CheckCircle2}
+          color='purple'
+          description='Completed events'
+        />
         <StatCard
           title='Draft Events'
           value={stats.draftEvents}
@@ -301,7 +312,14 @@ export default function CreatorEventsPage() {
                         currentSort={sort}
                         onSort={handleSort}
                       >
-                        Location
+                        Booking Location
+                      </SortableTableHeader>
+                      <SortableTableHeader
+                        column='participants'
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Participants
                       </SortableTableHeader>
                       <SortableTableHeader
                         column='startDate'
@@ -364,64 +382,89 @@ export default function CreatorEventsPage() {
                                 {rowNumber}
                               </span>
                             </TableCell>
-                            <TableCell className='py-4'>
+                            <TableCell className='py-2'>
                               <Link
                                 href={`/dashboard/creator/events/${event.id}`}
-                                className='hover:underline'
+                                className='block max-w-[300px] overflow-hidden'
                               >
-                                <div className='flex items-center gap-1'>
-                                  <div className='w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0'>
+                                <div className='flex items-center gap-3'>
+                                  <div className='flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted'>
                                     {event.avatarUrl ? (
                                       <Image
                                         src={event.avatarUrl}
                                         alt={event.displayName}
                                         width={48}
                                         height={48}
-                                        className='w-full h-full object-cover'
+                                        className='h-full w-full object-cover'
                                       />
                                     ) : (
                                       <ImageIcon className='h-6 w-6 text-muted-foreground' />
                                     )}
                                   </div>
-                                  <div className='flex flex-col gap-1'>
-                                    <span className='font-semibold text-foreground hover:text-primary transition-colors'>
+
+                                  <div className='flex min-w-0 flex-1 flex-col gap-1'>
+                                    <span
+                                      title={event.displayName}
+                                      className='truncate text-sm font-semibold text-foreground transition-colors hover:text-primary'
+                                    >
                                       {event.displayName}
                                     </span>
-                                    <span className='text-xs text-muted-foreground truncate max-w-[300px]'>
-                                      {event.description}
-                                    </span>
+
+                                    {event.description && (
+                                      <span
+                                        title={event.description}
+                                        className='truncate text-xs text-muted-foreground'
+                                      >
+                                        {event.description}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               </Link>
                             </TableCell>
-                            <TableCell className='py-4'>
-                              <div className='flex items-center gap-2 max-w-[400px]'>
-                                <div className='w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0'>
-                                  {event.location?.imageUrl &&
-                                  event.location.imageUrl.length > 0 ? (
+
+                            <TableCell className='py-2'>
+                              <div className='flex max-w-[300px] items-center gap-3 overflow-hidden'>
+                                <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted'>
+                                  {event.location?.imageUrl?.length ? (
                                     <Image
-                                      src={event.location?.imageUrl[0]}
+                                      src={event.location.imageUrl[0]}
                                       alt={event.location.name}
-                                      width={48}
-                                      height={48}
-                                      className='w-full h-full object-cover'
+                                      width={40}
+                                      height={40}
+                                      className='h-full w-full object-cover'
                                     />
                                   ) : (
-                                    <ImageIcon className='h-6 w-6 text-muted-foreground' />
+                                    <ImageIcon className='h-5 w-5 text-muted-foreground' />
                                   )}
                                 </div>
-                                <MapPin className='h-4 w-4 text-muted-foreground flex-shrink-0' />
-                                <div className='flex flex-col min-w-0 gap-0.5'>
-                                  <span className='text-sm font-medium truncate'>
+
+                                <div className='flex min-w-0 flex-1 flex-col gap-0.5'>
+                                  <span
+                                    title={event.location?.name}
+                                    className='truncate text-sm font-medium'
+                                  >
                                     {event.location?.name || 'N/A'}
                                   </span>
-                                  <span className='text-xs text-muted-foreground truncate'>
-                                    {event.location?.addressLine || ''}
-                                  </span>
+
+                                  {event.location?.addressLine && (
+                                    <span
+                                      title={event.location.addressLine}
+                                      className='truncate text-xs text-muted-foreground'
+                                    >
+                                      {event.location.addressLine}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className='py-4'>
+                            <TableCell className='py-2 flex items-center gap-1 my-2'>
+                              <IconUsers className='h-4 w-4 text-muted-foreground' />
+                              <span className='text-sm font-medium'>
+                                {event.expectedNumberOfParticipants || 0}
+                              </span>
+                            </TableCell>
+                            <TableCell className='py-2'>
                               {event.startDate ? (
                                 <div className='flex flex-col gap-0.5'>
                                   <span className='text-sm font-medium'>
@@ -437,7 +480,8 @@ export default function CreatorEventsPage() {
                                 </span>
                               )}
                             </TableCell>
-                            <TableCell className='py-4'>
+
+                            <TableCell className='py-2'>
                               {event.endDate ? (
                                 <div className='flex flex-col gap-0.5'>
                                   <span className='text-sm font-medium'>
@@ -454,7 +498,7 @@ export default function CreatorEventsPage() {
                               )}
                             </TableCell>
 
-                            <TableCell className='py-4 pr-6'>
+                            <TableCell className='py-2 pr-6'>
                               <Badge
                                 variant='outline'
                                 className={`${getStatusBadgeStyle(

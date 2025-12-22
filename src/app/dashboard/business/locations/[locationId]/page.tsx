@@ -5,7 +5,11 @@ import {
   Rocket,
   Ticket,
   DollarSign,
-  Users, ArrowRight, Calendar, MapPin as MapPinIcon, Clock
+  Users,
+  ArrowRight,
+  Calendar,
+  MapPin as MapPinIcon,
+  Clock,
 } from 'lucide-react';
 import {
   Card,
@@ -24,9 +28,7 @@ import React from 'react';
 import { ImageViewer } from '@/components/shared/ImageViewer';
 import { useLocationVouchers } from '@/hooks/vouchers/useLocationVouchers';
 import { useLocationMissions } from '@/hooks/missions/useLocationMissions';
-import {
-  CalendarDays as CalendarDaysIcon, Megaphone
-} from 'lucide-react';
+import { CalendarDays as CalendarDaysIcon, Megaphone } from 'lucide-react';
 import { useOwnerLocationBookingConfig } from '@/hooks/locations/useOwnerLocationBookingConfig';
 import { Label } from '@/components/ui/label';
 import { useAnnouncements } from '@/hooks/announcements/useAnnouncements';
@@ -35,10 +37,7 @@ import { StatCard } from '@/components/shared/StatCard';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useOwnerLocationBookings } from '@/hooks/locations/useOwnerLocationBookings';
 import { useLocationCheckIns } from '@/hooks/locations/useLocationCheckIns';
-import {
-  format,
-  formatDistanceToNow
-} from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { useLocationGeneralAnalytics } from '@/hooks/locations/useLocationGeneralAnalytics';
 
 export default function LocationDetailsPage({
@@ -53,7 +52,7 @@ export default function LocationDetailsPage({
   const [activeTab, setActiveTab] = useState('overview');
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState<string>('');
-  
+
   // Fetch booking config to check if bookings are enabled
   const { data: bookingConfig } = useOwnerLocationBookingConfig(locationId);
 
@@ -214,7 +213,6 @@ export default function LocationDetailsPage({
 
             {/* Upcoming Bookings & Recent Activity */}
             <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
-
               {/* Upcoming Bookings Widget */}
               <Card className='border-border/60 shadow-sm py-2'>
                 <CardHeader className='pb-3 pt-4'>
@@ -233,7 +231,8 @@ export default function LocationDetailsPage({
                           Bookings are disabled
                         </p>
                         <p className='text-xs text-muted-foreground mb-4'>
-                          Go to Booking and Availability to enable location bookings.
+                          Go to Booking and Availability to enable location
+                          bookings.
                         </p>
                         <Button
                           variant='outline'
@@ -324,7 +323,11 @@ export default function LocationDetailsPage({
                   <GoogleMapsPicker
                     position={position}
                     onPositionChange={() => {}}
-                    label={`${location.addressLine}${location.addressLevel1 && location.addressLevel2 ? `, ${location.addressLevel1}, ${location.addressLevel2}` : ''}`}
+                    label={`${location.addressLine}${
+                      location.addressLevel1 && location.addressLevel2
+                        ? `, ${location.addressLevel1}, ${location.addressLevel2}`
+                        : ''
+                    }`}
                     readOnly={true}
                   />
                 </CardContent>
@@ -338,7 +341,9 @@ export default function LocationDetailsPage({
                   <MapPinIcon className='h-5 w-5 text-primary' />
                   Recent Check-ins
                 </CardTitle>
-                <CardDescription>Latest check-ins at this location</CardDescription>
+                <CardDescription>
+                  Latest check-ins at this location
+                </CardDescription>
               </CardHeader>
               <CardContent className='space-y-3'>
                 {recentCheckIns.length === 0 ? (
@@ -351,11 +356,14 @@ export default function LocationDetailsPage({
                     <div className='space-y-2'>
                       {recentCheckIns.map((checkIn: any) => {
                         const userName = checkIn.userProfile?.account
-                          ? `${checkIn.userProfile.account.firstName} ${checkIn.userProfile.account.lastName}`.trim() || checkIn.userProfile.account.email
+                          ? `${checkIn.userProfile.account.firstName} ${checkIn.userProfile.account.lastName}`.trim() ||
+                            checkIn.userProfile.account.email
                           : 'Unknown User';
                         const checkInDate = new Date(checkIn.createdAt);
-                        const timeAgo = formatDistanceToNow(checkInDate, { addSuffix: true });
-                        
+                        const timeAgo = formatDistanceToNow(checkInDate, {
+                          addSuffix: true,
+                        });
+
                         return (
                           <div
                             key={checkIn.id}

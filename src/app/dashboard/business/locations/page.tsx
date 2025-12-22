@@ -42,6 +42,12 @@ import { TableFilters } from '@/components/shared/TableFilters';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { PageContainer } from '@/components/shared/PageContainer';
 import { StatCard } from '@/components/shared/StatCard';
+import {
+  IconFile,
+  IconMapPin,
+  IconMessageCircle,
+  IconStar,
+} from '@tabler/icons-react';
 
 const getStatusLabel = (isVisible: boolean) => {
   return isVisible ? 'Visible' : 'Hidden';
@@ -295,6 +301,13 @@ export default function MyLocationsPage() {
                         Radius (m)
                       </SortableTableHeader>
                       <SortableTableHeader
+                        column='statistics'
+                        currentSort={sort}
+                        onSort={handleSort}
+                      >
+                        Stats
+                      </SortableTableHeader>
+                      <SortableTableHeader
                         column='createdAt'
                         currentSort={sort}
                         onSort={handleSort}
@@ -376,7 +389,7 @@ export default function MyLocationsPage() {
                                     <span className='font-semibold text-foreground hover:text-primary transition-colors truncate'>
                                       {location.name}
                                     </span>
-                                    <span className='text-sm text-gray-500 truncate max-w-[200px]'>
+                                    <span className='text-sm text-gray-500 truncate max-w-[400px]'>
                                       {location.description}
                                     </span>
                                   </div>
@@ -405,6 +418,26 @@ export default function MyLocationsPage() {
                               <span className='text-sm font-medium'>
                                 {location.radiusMeters || 0} m
                               </span>
+                            </TableCell>
+                            <TableCell className='flex items-center gap-2 my-4'>
+                              <div className='flex items-center gap-2'>
+                                <IconMapPin className='h-4 w-4 text-muted-foreground' />
+                                <span className='text-sm font-medium'>
+                                  {location.totalCheckIns || 0}
+                                </span>
+                              </div>
+                              <div className='flex items-center gap-2'>
+                                <IconMessageCircle className='h-4 w-4 text-muted-foreground' />
+                                <span className='text-sm font-medium'>
+                                  {location.totalReviews || 0}
+                                </span>
+                              </div>
+                              <div className='flex items-center gap-2'>
+                                <IconStar className='h-4 w-4 text-muted-foreground' />
+                                <span className='text-sm font-medium'>
+                                  {location.averageRating || 0}
+                                </span>
+                              </div>
                             </TableCell>
                             <TableCell className='py-4'>
                               <div className='flex flex-col gap-0.5'>

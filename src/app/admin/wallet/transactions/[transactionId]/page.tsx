@@ -509,7 +509,7 @@ export default function AdminTransactionDetailPage({
                 </CardTitle>
               </CardHeader>
               <CardContent className='space-y-4'>
-                <div className='grid gap-4 md:grid-cols-2'>
+                <div className='grid gap-4 md:grid-cols-3'>
                   <div>
                     <p className='text-xs text-muted-foreground mb-1'>
                       Bank Name
@@ -526,21 +526,9 @@ export default function AdminTransactionDetailPage({
                       <p className='font-mono text-sm flex-1'>
                         {transaction.withdrawBankAccountNumber}
                       </p>
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        onClick={() =>
-                          copyToClipboard(
-                            transaction.withdrawBankAccountNumber || ''
-                          )
-                        }
-                        title='Copy Account Number'
-                      >
-                        <Copy className='h-4 w-4' />
-                      </Button>
                     </div>
                   </div>
-                  <div className='md:col-span-2'>
+                  <div>
                     <p className='text-xs text-muted-foreground mb-1'>
                       Account Holder Name
                     </p>
@@ -634,49 +622,26 @@ export default function AdminTransactionDetailPage({
                     </div>
                   )}
                   <div className='flex-1'>
-                    <p className='font-semibold'>
-                      {transaction.createdBy.firstName}{' '}
-                      {transaction.createdBy.lastName}
-                    </p>
+                    <div className='flex items-center justify-between gap-2'>
+                      <p className='font-semibold'>
+                        {transaction.createdBy.firstName}{' '}
+                        {transaction.createdBy.lastName}
+                      </p>
+                      <Badge variant='outline' className=''>
+                        {transaction.createdBy.role}
+                      </Badge>
+                    </div>
                     <p className='text-sm text-muted-foreground'>
                       {transaction.createdBy.email}
                     </p>
-                    <Badge variant='outline' className='mt-1'>
-                      {transaction.createdBy.role}
-                    </Badge>
+                    {transaction.createdBy.phoneNumber && (
+                      <p className='text-sm text-muted-foreground'>
+                        {transaction.createdBy.phoneNumber}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className='space-y-2 pt-4 border-t'>
-                  <div>
-                    <p className='text-xs text-muted-foreground mb-1'>
-                      User ID
-                    </p>
-                    <div className='flex items-center gap-2'>
-                      <p className='font-mono text-xs flex-1 truncate'>
-                        {transaction.createdBy.id}
-                      </p>
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        onClick={() =>
-                          copyToClipboard(transaction.createdBy!.id)
-                        }
-                        title='Copy User ID'
-                      >
-                        <Copy className='h-3 w-3' />
-                      </Button>
-                    </div>
-                  </div>
-                  {transaction.createdBy.phoneNumber && (
-                    <div>
-                      <p className='text-xs text-muted-foreground mb-1'>
-                        Phone Number
-                      </p>
-                      <p className='text-sm font-medium'>
-                        {transaction.createdBy.phoneNumber}
-                      </p>
-                    </div>
-                  )}
                   <div>
                     <p className='text-xs text-muted-foreground mb-1'>
                       Onboarding Status

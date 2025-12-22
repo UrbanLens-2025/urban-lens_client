@@ -57,12 +57,13 @@ import {
   ChartTooltipContent,
   ChartConfig,
 } from '@/components/ui/chart';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDateTime } from '@/lib/utils';
 // Updated import to include useTopRevenueEvents
 import {
   useRevenueSummary,
   useTopRevenueEvents,
 } from '@/hooks/dashboard/useDashboardCreator';
+import { IconTicket } from '@tabler/icons-react';
 
 type PeriodType = 'day' | 'month' | 'year';
 
@@ -283,6 +284,10 @@ export default function CreatorDashboardPage() {
       return {
         id: event.id,
         eventName: event.displayName || 'Untitled event',
+        eventImage: event.avatarUrl || '',
+        locationImage: event.location?.imageUrl?.[0] || '',
+        locationName: event.location?.name || '',
+        locationAddress: event.location?.addressLine || '',
         reportType: [
           'Event Summary',
           'Revenue Report',
@@ -297,6 +302,7 @@ export default function CreatorDashboardPage() {
       };
     });
   }, [events]);
+  console.log('🚀 ~ CreatorDashboardPage ~ reportList:', reportList);
 
   const eventChartConfig: ChartConfig = {
     revenue: {
@@ -342,15 +348,6 @@ export default function CreatorDashboardPage() {
           value={stats.totalEvents}
           icon={CalendarDays}
           color='blue'
-          description={`${stats.activeEvents} active`}
-          trend={
-            stats.eventsChange !== 0
-              ? {
-                  value: stats.eventsChange,
-                  isPositive: stats.eventsChange > 0,
-                }
-              : undefined
-          }
           onClick={() => router.push('/dashboard/creator/events')}
         />
 
@@ -359,7 +356,6 @@ export default function CreatorDashboardPage() {
           value={upcomingEvents.length}
           icon={Ticket}
           color='amber'
-          description='Scheduled events'
           onClick={() => router.push('/dashboard/creator/events')}
         />
 
@@ -368,14 +364,6 @@ export default function CreatorDashboardPage() {
           value={stats.activeEvents}
           icon={MapPin}
           color='purple'
-          description={`${stats.draftEvents} drafts`}
-          footer={
-            stats.completedEvents > 0 && (
-              <Badge variant='outline' className='text-xs'>
-                {stats.completedEvents} completed
-              </Badge>
-            )
-          }
           onClick={() => router.push('/dashboard/creator/events')}
         />
 
@@ -384,15 +372,6 @@ export default function CreatorDashboardPage() {
           value={formatCurrency(stats.totalRevenue)}
           icon={DollarSign}
           color='green'
-          description={`${formatCurrency(stats.thisMonthRevenue)} this month`}
-          trend={
-            stats.revenueChange !== 0
-              ? {
-                  value: stats.revenueChange,
-                  isPositive: stats.revenueChange > 0,
-                }
-              : undefined
-          }
           onClick={() => router.push('/dashboard/creator/wallet')}
         />
       </div>
@@ -415,7 +394,7 @@ export default function CreatorDashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className='h-48'>
+            <div className='h-64'>
               {isLoadingTopEvents ? (
                 <div className='flex items-center justify-center h-full'>
                   <Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
@@ -577,16 +556,15 @@ export default function CreatorDashboardPage() {
               <Table>
                 <TableHeader>
                   <TableRow className='hover:bg-transparent border-b'>
-                    <TableHead className='w-12 font-semibold'>#</TableHead>
                     <TableHead className='font-semibold min-w-[200px]'>
                       Event
                     </TableHead>
-                    <TableHead className='font-semibold text-right'>
-                      Tickets Sold
+                    <TableHead className='font-semibold text-left'>
+                      Sold
                     </TableHead>
-                    <TableHead className='font-semibold text-right'>
+                    {/* <TableHead className='font-semibold text-right'>
                       Revenue
-                    </TableHead>
+                    </TableHead> */}
                     <TableHead className='font-semibold'>Start Date</TableHead>
                     <TableHead className='font-semibold'>End Date</TableHead>
                     <TableHead className='font-semibold'>Status</TableHead>
@@ -607,36 +585,39 @@ export default function CreatorDashboardPage() {
                           router.push(`/dashboard/creator/events/${event.id}`)
                         }
                       >
-                        <TableCell className='font-medium text-muted-foreground py-2'>
-                          <div className='flex items-center justify-center w-7 h-7 rounded-full bg-muted font-bold text-xs'>
-                            {index + 1}
-                          </div>
-                        </TableCell>
                         <TableCell className='py-2'>
-                          <div className='flex items-center gap-2 min-w-0'>
+                          <div className='flex items-center gap-3 max-w-[220px] overflow-hidden'>
                             {eventImage ? (
-                              <div className='relative w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0'>
+                              <div className='relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg bg-muted'>
                                 <Image
                                   src={eventImage}
                                   alt={event.displayName}
                                   fill
                                   className='object-cover'
-                                  sizes='48px'
+                                  sizes='40px'
                                 />
                               </div>
                             ) : (
-                              <div className='w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0'>
+                              <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10'>
                                 <CalendarDays className='h-4 w-4 text-primary/60' />
                               </div>
                             )}
-                            <div className='flex flex-col gap-1 min-w-0 flex-1'>
-                              <span className='font-semibold text-sm truncate'>
+
+                            <div className='flex min-w-0 flex-1 flex-col'>
+                              <span
+                                title={event.displayName}
+                                className='truncate text-sm font-semibold'
+                              >
                                 {event.displayName || 'Untitled event'}
                               </span>
+
                               {event.location?.name && (
-                                <div className='flex items-center gap-1 min-w-0'>
-                                  <MapPin className='h-3 w-3 shrink-0 text-muted-foreground' />
-                                  <span className='text-xs text-muted-foreground truncate'>
+                                <div className='flex min-w-0 items-center gap-1'>
+                                  <MapPin className='h-3 w-3 flex-shrink-0 text-muted-foreground' />
+                                  <span
+                                    title={event.location.name}
+                                    className='truncate text-xs text-muted-foreground'
+                                  >
                                     {event.location.name}
                                   </span>
                                 </div>
@@ -644,22 +625,23 @@ export default function CreatorDashboardPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className='text-right py-2'>
-                          <div className='flex items-center justify-end gap-1.5'>
-                            <Users className='h-3.5 w-3.5 text-muted-foreground' />
+
+                        <TableCell className='text-left py-2'>
+                          <div className='flex items-center justify-start gap-1'>
+                            <IconTicket className='h-4 w-4 text-muted-foreground' />
                             <span className='font-semibold text-sm'>
                               {event.ticketsSold?.toLocaleString() || '0'}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className='text-right py-2'>
+                        {/* <TableCell className='text-right py-2'>
                           <div className='flex items-center justify-end gap-1.5'>
                             <DollarSign className='h-3.5 w-3.5 text-emerald-600' />
                             <span className='font-bold text-sm text-emerald-600'>
                               {formatCurrency(event.revenue || 0)}
                             </span>
                           </div>
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell className='py-2'>
                           {startDate ? (
                             <span className='text-xs font-medium'>
@@ -698,9 +680,8 @@ export default function CreatorDashboardPage() {
             </div>
           )}
         </DashboardSection>
-
         <DashboardSection
-          title='Report List'
+          title='Recent Reports'
           icon={FileText}
           action={{
             label: 'View all',
@@ -724,11 +705,9 @@ export default function CreatorDashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow className='hover:bg-transparent border-b'>
-                  <TableHead className='font-semibold'>Event Name</TableHead>
+                  <TableHead className='font-semibold'>Event</TableHead>
                   <TableHead className='font-semibold'>Report Type</TableHead>
-                  <TableHead className='font-semibold'>
-                    Generated Date
-                  </TableHead>
+                  <TableHead className='font-semibold'>Report Date</TableHead>
                   <TableHead className='font-semibold'>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -738,14 +717,32 @@ export default function CreatorDashboardPage() {
                     key={report.id}
                     className='hover:bg-muted/50 cursor-pointer transition-colors'
                   >
-                    <TableCell className='font-medium text-sm py-2'>
-                      {report.eventName}
+                    <TableCell className='py-2'>
+                      <div className='flex items-center gap-3 max-w-[200px] overflow-hidden'>
+                        <Image
+                          src={report.eventImage}
+                          alt={report.eventName}
+                          width={40}
+                          height={40}
+                          className='h-10 w-10 flex-shrink-0 rounded-lg object-cover'
+                        />
+
+                        <div className='flex min-w-0 flex-col'>
+                          <span className='truncate text-sm font-semibold'>
+                            {report.eventName}
+                          </span>
+                          <span className='truncate text-xs text-muted-foreground'>
+                            {report.locationName}
+                          </span>
+                        </div>
+                      </div>
                     </TableCell>
+
                     <TableCell className='text-xs text-muted-foreground py-2'>
                       {report.reportType}
                     </TableCell>
                     <TableCell className='text-xs text-muted-foreground py-2'>
-                      {format(report.generatedDate, 'MMM dd, yyyy')}
+                      {formatDateTime(report.generatedDate.toISOString())}
                     </TableCell>
                     <TableCell className='py-2'>
                       <Badge
