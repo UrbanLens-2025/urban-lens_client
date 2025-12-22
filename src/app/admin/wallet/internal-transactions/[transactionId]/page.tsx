@@ -1,485 +1,953 @@
-'use client';
+"use client";
 
-import { useRouter, useParams } from 'next/navigation';
-import { useAdminInternalWalletTransactionById } from '@/hooks/admin/useAdminInternalWalletTransactionById';
+import { useRouter, useParams } from "next/navigation";
+import { useAdminInternalWalletTransactionById } from "@/hooks/admin/useAdminInternalWalletTransactionById";
+import { useAdminWallets } from "@/hooks/admin/useAdminWallets";
+import { useAdminTicketOrderById } from "@/hooks/admin/useAdminTicketOrderById";
+import { useAdminLocationBookingById } from "@/hooks/admin/useAdminLocationBookingById";
+import { useEventByIdForAdmin } from "@/hooks/admin/useEventByIdForAdmin";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
-  Activity,
+  Wallet,
+  ArrowRight,
   Calendar,
   Hash,
-  Wallet,
-  ArrowUpRight,
-  MapPin,
-  ExternalLink,
-  Ticket,
-  Percent,
-  ShieldCheck,
-  Tag,
-  Users,
-  Receipt,
-  Undo2,
-  Info,
   User,
-} from 'lucide-react';
-import { PageContainer } from '@/components/shared/PageContainer';
-import Image from 'next/image';
-import { Avatar, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
-import { useAdminLocationBookingById } from '@/hooks/admin/useAdminLocationBookingById';
-import { useAdminEventById } from '@/hooks/admin/useAdminEventById';
-import { useAdminTicketOrderById } from '@/hooks/admin/useAdminTicketOrderById';
+  Building2,
+  Lock,
+  Receipt,
+  NotepadText,
+  Ticket,
+  ShoppingCart,
+  MapPin,
+  Clock,
+  ExternalLink,
+} from "lucide-react";
+import { PageContainer } from "@/components/shared/PageContainer";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import LoadingCustom from "@/components/shared/LoadingCustom";
+import ErrorCustom from "@/components/shared/ErrorCustom";
 
 // --- Helpers ---
 const formatDateTime = (d: string) =>
-  d ? new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+  d
+    ? new Date(d).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "N/A";
 
-const formatCurrency = (v: string | number) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 0 }).format(Number(v));
+const formatCurrency = (v: string | number, currency: string = "VND") =>
+  new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: 0,
+  }).format(Number(v));
 
-const getStatusVariant = (status: string) => {
-  const u = (status || '').toUpperCase();
-  if (['COMPLETED', 'APPROVED', 'FINISHED', 'PAID'].includes(u)) return 'default' as const;
-  if (u === 'PENDING') return 'secondary' as const;
-  if (['FAILED', 'CANCELLED'].includes(u)) return 'destructive' as const;
-  return 'outline' as const;
-};
 
-const getTypeLabel = (type: string) => {
-  const t = (type || '').toUpperCase();
-  if (t === 'TO_ESCROW') return 'Transfer to escrow';
-  if (t === 'FROM_ESCROW') return 'Transfer from escrow';
-  if (t === 'TO_REVENUE') return 'System Revenue';
-  if (t === 'TO_WALLET') return 'Refund to Wallet';
-  return type || 'Internal transfer';
-};
+interface WalletOwner {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string;
+  role: string;
+  avatarUrl?: string | null;
+}
+
+interface WalletInfoCardProps {
+  walletOwner: WalletOwner | null;
+  isSystem: boolean;
+  isEscrow: boolean;
+  label: string;
+  isSource: boolean;
+}
+
+function WalletInfoCard({
+  walletOwner,
+  isSystem,
+  isEscrow,
+  label,
+  isSource,
+}: WalletInfoCardProps) {
+  return (
+    <Card className="h-full border-2 border-primary/10 shadow-lg">
+      <CardHeader className="border-b border-primary/10">
+        <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+          {isSource ? (
+            <ArrowRight className="h-4 w-4 rotate-180 text-orange-600" />
+          ) : (
+            <ArrowRight className="h-4 w-4 text-green-600" />
+          )}
+          {label}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isSystem ? (
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center border-2 border-blue-200 dark:border-blue-800">
+              <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-lg text-foreground">System Wallet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Platform revenue
+              </p>
+            </div>
+          </div>
+        ) : isEscrow ? (
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center border-2 border-green-200 dark:border-green-800">
+              <Lock className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-lg text-foreground">Escrow Wallet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Funds held in escrow
+              </p>
+            </div>
+          </div>
+        ) : walletOwner ? (
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16 border-2 border-primary/20">
+              <AvatarImage src={walletOwner.avatarUrl || undefined} />
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                {walletOwner.firstName?.[0] || ""}
+                {walletOwner.lastName?.[0] || ""}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-lg text-foreground truncate">
+                {walletOwner.firstName} {walletOwner.lastName}
+              </p>
+              <p className="text-sm text-muted-foreground truncate mt-1">
+                {walletOwner.email}
+              </p>
+              <div className="mt-2">
+                <Badge variant="outline" className="text-xs">
+                  {walletOwner.role}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center border-2">
+              <User className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-lg text-foreground">
+                Unknown Wallet
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Owner information not available
+              </p>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function AdminInternalWalletTransactionDetailPage() {
   const params = useParams<{ transactionId: string }>();
   const router = useRouter();
-  const transactionId = params?.transactionId || '';
+  const transactionId = params?.transactionId || "";
 
-  // 1. Fetch Transaction gốc
-  const { data: transaction, isLoading: isLoadingTx, isError: isErrorTx } = useAdminInternalWalletTransactionById(transactionId);
+  // Fetch transaction
+  const {
+    data: transaction,
+    isLoading: isLoadingTx,
+    isError: isErrorTx,
+  } = useAdminInternalWalletTransactionById(transactionId);
 
-  // 2. Định nghĩa các biến điều kiện
-  const initType = transaction?.referencedInitType;
-  const initId = transaction?.referencedInitId;
-  const isLocationBooking = initType === 'LOCATION_BOOKING';
-  const isEventInit = initType === 'EVENT';
-  const isTicketOrder = initType === 'TICKET_ORDER';
+  // Fetch system and escrow wallets to identify them
+  const {
+    systemWallet,
+    escrowWallet,
+    isLoading: isLoadingWallets,
+  } = useAdminWallets();
 
-  // 3. Fetch dữ liệu tham chiếu (Sử dụng flag enabled để tối ưu performance)
-  const { data: bookingData, isLoading: isLoadingBooking } = useAdminLocationBookingById(initId, isLocationBooking);
-  const { data: eventData, isLoading: isLoadingEvent } = useAdminEventById(initId, isEventInit);
-  const { data: ticketOrderData, isLoading: isLoadingTicket } = useAdminTicketOrderById(initId, isTicketOrder);
+  // Determine wallet types and get referencedInitType/Id before early returns
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tx = transaction as any;
+  const referencedInitType = tx?.referencedInitType;
+  const referencedInitId = tx?.referencedInitId;
 
-  // Logic hiển thị Loading
-  const isGlobalLoading = isLoadingTx ||
-    (isLocationBooking && isLoadingBooking) ||
-    (isEventInit && isLoadingEvent) ||
-    (isTicketOrder && isLoadingTicket);
+  // Fetch ticket order if referencedInitType is TICKET_ORDER (must be before early returns)
+  const {
+    data: ticketOrder,
+    isLoading: isLoadingTicketOrder,
+  } = useAdminTicketOrderById(
+    referencedInitType === "TICKET_ORDER" ? referencedInitId : null
+  );
 
-  if (isGlobalLoading) {
-    return <PageContainer><div className="flex items-center justify-center py-20 animate-pulse text-muted-foreground italic font-medium">Processing audit data...</div></PageContainer>;
+  // Fetch location booking if referencedInitType is LOCATION_BOOKING (must be before early returns)
+  const {
+    data: locationBooking,
+    isLoading: isLoadingLocationBooking,
+  } = useAdminLocationBookingById(
+    referencedInitType === "LOCATION_BOOKING" ? referencedInitId : null
+  );
+
+  // Fetch event if referencedInitType is EVENT (must be before early returns)
+  const {
+    data: event,
+    isLoading: isLoadingEvent,
+  } = useEventByIdForAdmin(
+    referencedInitType === "EVENT" ? referencedInitId || "" : ""
+  );
+
+  const isLoading = isLoadingTx || isLoadingWallets;
+
+  if (isLoading) {
+    return (
+      <PageContainer>
+        <LoadingCustom />
+      </PageContainer>
+    );
   }
 
   if (isErrorTx || !transaction) {
-    return <PageContainer><div className="p-4 text-destructive border rounded-lg bg-destructive/10 text-center font-bold">Failed to retrieve transaction audit record.</div></PageContainer>;
+    return (
+      <PageContainer>
+        <ErrorCustom />
+      </PageContainer>
+    );
   }
+
+  // Determine wallet types
+  const sourceWalletId = tx.sourceWalletId || "";
+  const destinationWalletId = tx.destinationWalletId || "";
+  const sourceWalletOwner = tx.sourceWalletOwner as WalletOwner | null;
+  const destinationWalletOwner =
+    tx.destinationWalletOwner as WalletOwner | null;
+
+  const isSourceSystem = !!(systemWallet && sourceWalletId === systemWallet.id);
+  const isSourceEscrow = !!(escrowWallet && sourceWalletId === escrowWallet.id);
+  const isDestinationSystem = !!(
+    systemWallet && destinationWalletId === systemWallet.id
+  );
+  const isDestinationEscrow = !!(
+    escrowWallet && destinationWalletId === escrowWallet.id
+  );
 
   return (
     <PageContainer>
       <div className="mb-6 flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => router.back()} className="group hover:bg-muted transition-all">
-          <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Back to Audit Log
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="group hover:bg-muted transition-all"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />{" "}
+          Back
         </Button>
       </div>
 
-      <Card className="shadow-2xl border-muted/50 overflow-hidden bg-slate-50/30">
-        <CardHeader className="border-b bg-white/60 py-5 flex flex-row items-center justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-lg font-black flex items-center gap-2 tracking-tight uppercase text-slate-800 text-left">
-              <Activity className="h-5 w-5 text-primary" /> AUDIT MEMORANDUM
-            </CardTitle>
-            <CardDescription className="text-[10px] font-mono opacity-60 uppercase tracking-widest text-left">
-              Ref Type: {initType || 'DIRECT_TRANSFER'}
-            </CardDescription>
-          </div>
-          <Badge variant={getStatusVariant(transaction.status)} className="px-4 py-1 font-black uppercase tracking-tighter shadow-sm border-none text-[11px]">
-            {transaction.status}
-          </Badge>
-        </CardHeader>
-
-        <CardContent className="p-6 space-y-8">
-          {/* SECTION 1: TRANSACTION MASTER DATA */}
-          <div className="rounded-[2rem] bg-slate-950 p-10 text-white relative shadow-2xl overflow-hidden border border-white/5">
-            <div className="absolute -right-6 -bottom-6 opacity-10 text-white rotate-12 pointer-events-none"><Wallet size={200} /></div>
-            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8 text-left">
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-2">Net Value Impact</p>
-                <h2 className="text-5xl md:text-6xl font-black tabular-nums tracking-tighter leading-none underline decoration-primary decoration-4 underline-offset-8">
-                  {formatCurrency(transaction.amount)}
-                </h2>
-                <div className="flex items-center gap-3 pt-4">
-                  <Badge className="bg-primary text-white border-none text-[10px] font-black py-1 px-3 uppercase tracking-widest leading-none">{getTypeLabel(transaction.type)}</Badge>
-                  <Separator orientation="vertical" className="h-4 bg-white/20" />
-                  <span className="text-[11px] text-slate-400 font-medium italic">Verified at {formatDateTime(transaction.createdAt)}</span>
-                </div>
+      {/* Transaction Amount Card */}
+      <Card className="mb-6 border-2 border-primary/20 shadow-xl bg-gradient-to-br from-primary/5 via-background to-background">
+        <CardContent className="">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex-1 text-center md:text-left">
+              <CardDescription className="text-sm font-semibold mb-2 text-muted-foreground">
+                Transaction amount
+              </CardDescription>
+              <div className="text-5xl font-black tracking-tight text-foreground">
+                {formatCurrency(transaction.amount, transaction.currency)}
               </div>
-              <div className="hidden md:block bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-sm min-w-[220px]">
-                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 italic">Internal Audit ID</p>
-                <p className="text-[10px] font-mono text-slate-300 break-all leading-relaxed">{transaction.id}</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+                <Wallet className="h-10 w-10 text-primary" />
               </div>
             </div>
           </div>
-
-          {/* DYNAMIC SECTION */}
-          {/* --- CASE 1: TICKET ORDER --- */}
-          {(isTicketOrder && ticketOrderData) && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-              <div className="lg:col-span-2">
-                <Card className="h-full border-none shadow-sm ring-1 ring-slate-200 overflow-hidden flex flex-col md:flex-row bg-white rounded-[1.5rem]">
-                  <div className="w-full md:w-72 shrink-0 border-r border-slate-100 bg-slate-50/50 flex flex-col text-left">
-                    <div className="relative aspect-video md:aspect-square">
-                      {ticketOrderData.event?.avatarUrl ? (
-                        <Image src={ticketOrderData.event.avatarUrl} fill className="object-cover" alt="event" />
-                      ) : <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-300"><Ticket size={40} /></div>}
-                    </div>
-                    <div className="p-6 space-y-6 flex-1">
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 italic text-primary">Order Trace</p>
-                        <div className="space-y-4">
-                          <div className="flex items-start gap-2 text-[11px] text-slate-600 font-mono">
-                            <Receipt className="h-3.5 w-3.5 mt-0.5 opacity-40" /> {ticketOrderData.orderNumber}
-                          </div>
-                          <Badge variant="outline" className="text-[9px] h-5 font-black px-2 uppercase border-emerald-100 text-emerald-600">{ticketOrderData.status}</Badge>
-                        </div>
-                      </div>
-                      <div className="mt-auto pt-4 border-t border-slate-100 italic text-[11px] text-slate-400">
-                        &ldquo;{transaction.note || "System processed ticket order payment."}&rdquo;
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-8 flex-1 flex flex-col justify-between text-left">
-                    <div className="space-y-8">
-                      <div>
-                        <h4 className="text-[10px] font-black text-primary uppercase tracking-widest mb-1 opacity-70 italic">Purchased for</h4>
-                        <h4 className="font-black text-2xl text-slate-900 leading-tight tracking-tighter uppercase">{ticketOrderData.event?.displayName}</h4>
-                      </div>
-                      <div className="p-5 rounded-[1.5rem] bg-indigo-50/50 border border-indigo-100 flex items-center gap-5">
-                        <div className="h-14 w-14 rounded-2xl bg-white shadow-md flex items-center justify-center text-indigo-600 shrink-0 border border-indigo-100"><MapPin size={28} /></div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-md font-black text-slate-800 truncate uppercase tracking-tighter leading-none italic">{ticketOrderData.event?.location?.name || 'Standard Site'}</p>
-                          <p className="text-xs text-slate-400 mt-2 font-medium italic">{ticketOrderData.event?.location?.addressLine}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-              <div className="flex flex-col gap-6">
-                <Card className="flex-1 bg-white p-8 shadow-xl ring-1 ring-slate-200 rounded-[2rem] flex flex-col justify-center text-left">
-                  <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6 border-b pb-2">Financial Analysis</p>
-                  <div className="space-y-5">
-                    <div className="flex justify-between text-[11px] font-black text-slate-400 uppercase italic">
-                      <span>Gross Payment</span>
-                      <span className="font-mono text-slate-600 tabular-nums">{formatCurrency(ticketOrderData.totalPaymentAmount)}</span>
-                    </div>
-                    {ticketOrderData.refundedAmount > 0 && (
-                      <div className="flex justify-between items-center text-sm py-4 px-5 bg-red-50 rounded-[1rem] border border-dashed border-red-200 relative">
-                        <div className="absolute left-0 top-0 h-full w-1.5 bg-red-500"></div>
-                        <span className="text-red-800 font-black italic text-[10px] uppercase tracking-tighter">Refund Applied</span>
-                        <span className="font-mono font-black text-red-600 tabular-nums">-{formatCurrency(ticketOrderData.refundedAmount)}</span>
-                      </div>
-                    )}
-                    <Separator />
-                    <div className="space-y-2">
-                      <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest italic opacity-60">Impacted Amount</p>
-                      <p className="font-mono text-slate-900 font-black text-3xl tracking-tighter leading-none tabular-nums italic underline decoration-primary decoration-2 underline-offset-4">{formatCurrency(transaction.amount)}</p>
-                    </div>
-                  </div>
-                </Card>
-              </div>
+        </CardContent>
+        <Separator />
+        <CardContent>
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <span className="font-mono text-sm text-muted-foreground break-all">
+                Transaction ID: {transaction.id}
+              </span>
             </div>
-          )}
-
-          {/* --- CASE 2: EVENT --- */}
-          {(isEventInit && eventData) && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch animate-in slide-in-from-bottom-2 duration-500">
-              <div className="lg:col-span-2 text-left">
-                <Card className="h-full border-none shadow-sm ring-1 ring-slate-200 overflow-hidden flex flex-col md:flex-row bg-white rounded-[1.5rem]">
-                  <div className="w-full md:w-72 shrink-0 border-r border-slate-100 bg-slate-50/50 flex flex-col">
-                    <div className="relative aspect-video md:aspect-square">
-                      {eventData.avatarUrl ? <Image src={eventData.avatarUrl} fill className="object-cover" alt="event" /> : <div className="h-full w-full bg-slate-100" />}
-                    </div>
-                    <div className="p-6 space-y-6 flex-1">
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 italic text-emerald-600">Event Metadata</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {eventData.tags?.slice(0, 8).map((tag: any) => (
-                            <Badge key={tag.id} style={{ color: tag.color, borderColor: `${tag.color}30`, backgroundColor: `${tag.color}10` }} variant="outline" className="text-[9px] font-black px-1.5 py-0 border italic">{tag.icon} {tag.displayName}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="mt-auto pt-4 border-t border-slate-100">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-slate-400 font-bold uppercase tracking-widest">Expected PAX</span>
-                          <span className="font-mono font-black text-primary flex items-center gap-1.5 uppercase tracking-tighter"><Users size={12} /> {eventData.expectedNumberOfParticipants}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-8 flex-1 flex flex-col justify-between">
-                    <div className="space-y-8">
-                      <div>
-                        <h4 className="font-black text-3xl text-slate-900 leading-tight tracking-tighter uppercase mb-2 italic underline decoration-primary/10 decoration-4 underline-offset-4">{eventData.displayName}</h4>
-                        <p className="text-sm text-slate-500 italic leading-relaxed border-l-2 border-primary/20 pl-4 italic">"{eventData.description}"</p>
-                      </div>
-                      <div className="space-y-4">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 italic">
-                          <span className="h-px w-5 bg-slate-200"></span> Ticketing Context
-                        </p>
-                        <div className="grid gap-3">
-                          {eventData.tickets?.map((t: any) => (
-                            <div key={t.id} className="flex justify-between items-center p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
-                              <div className="flex gap-4 items-center">
-                                <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary shrink-0 border border-primary/10 shadow-inner"><Ticket size={18} /></div>
-                                <div className="min-w-0">
-                                  <p className="text-[11px] font-black text-slate-700 uppercase italic tracking-tighter leading-none">{t.displayName}</p>
-                                  <p className="text-[9px] text-slate-400 font-mono tracking-tighter mt-1 leading-none uppercase italic">Sold: {t.totalQuantity - t.totalQuantityAvailable}/{t.totalQuantity}</p>
-                                </div>
-                              </div>
-                              <span className="text-sm font-black text-primary tabular-nums tracking-tighter leading-none italic">{formatCurrency(t.price)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
-              <div className="flex flex-col gap-6 text-left">
-                <Card className="flex-1 bg-emerald-600 p-8 text-white overflow-hidden shadow-xl border-none relative flex flex-col justify-center rounded-[2rem]">
-                  <div className="absolute -top-6 -right-6 opacity-10 rotate-12 pointer-events-none"><Percent size={140} /></div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80 mb-2 leading-none uppercase tracking-widest">Admin Net Payout (Result)</p>
-                  <p className="text-4xl font-black tabular-nums tracking-tighter shadow-emerald-700 drop-shadow-md italic leading-none font-mono">
-                    {formatCurrency(transaction.amount)}
-                  </p>
-                  <div className="mt-8 space-y-3 pt-6 border-t border-white/20">
-                    <div className="flex justify-between text-[10px] uppercase font-bold text-emerald-100 opacity-60 italic leading-none">
-                      <span>Total Processed Volume</span>
-                      <span className="font-mono tabular-nums leading-none tracking-tight">{formatCurrency(Number(transaction.amount) / (parseFloat(eventData?.systemCutPercentage)))}</span>
-                    </div>
-                  </div>
-                </Card>
-                <div className="p-6 rounded-[1.5rem] bg-white border border-slate-200 shadow-sm flex items-center gap-4 group hover:border-primary transition-colors cursor-default">
-                  <Avatar className="h-12 w-12 border-4 border-slate-50 shadow-md ring-1 ring-slate-100 shrink-0">
-                    <AvatarImage src={eventData.createdBy?.avatarUrl || ''} />
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[9px] font-black text-slate-400 uppercase leading-none mb-1.5 opacity-70 tracking-widest italic leading-none uppercase">Requested by Organizer</p>
-                    <p className="text-sm font-black text-slate-800 truncate uppercase tracking-tighter leading-none italic">{eventData.createdBy?.firstName} {eventData.createdBy?.lastName}</p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-300 group-hover:text-primary transition-colors" onClick={() => router.push(`/admin/accounts/${eventData.createdById}`)}>
-                    <ExternalLink size={16} />
-                  </Button>
-                </div>
-              </div>
+            <div className="text-sm text-muted-foreground">
+              {formatDateTime(transaction.createdAt)}
             </div>
-          )}
-
-          {/* --- CASE 3: LOCATION BOOKING --- */}
-          {(isLocationBooking && bookingData) && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch animate-in slide-in-from-bottom-2 duration-500">
-              <div className="lg:col-span-2 text-left">
-                <Card className="h-full border-none shadow-sm ring-1 ring-slate-200 overflow-hidden flex flex-col md:flex-row bg-white rounded-[1.5rem]">
-                  <div className="w-full md:w-72 shrink-0 border-r border-slate-100 bg-slate-50/50 flex flex-col">
-                    <div className="relative aspect-video md:aspect-square">
-                      {bookingData.location.imageUrl?.[0] ? <Image src={bookingData.location.imageUrl[0]} fill className="object-cover" alt="location" /> : <div className="h-full w-full bg-slate-100" />}
-                    </div>
-                    <div className="p-6 space-y-6 flex-1 flex flex-col">
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 italic text-amber-600 leading-none">Booking Trace</p>
-                        <div className="space-y-4 font-mono">
-                          <div className="flex items-start gap-2 text-[11px] text-slate-600 italic">
-                            <Hash className="h-3.5 w-3.5 mt-0.5 opacity-40 shrink-0" />
-                            <span className="break-all">{transaction.id}</span>
-                          </div>
-                          <Badge variant="outline" className="text-[9px] h-5 font-black uppercase border-amber-100 text-amber-600 leading-none">{transaction.status}</Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-8 flex-1 flex flex-col justify-between">
-                    <div className="space-y-10">
-                      <div>
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-black text-3xl text-slate-900 tracking-tighter uppercase italic">{bookingData.location.name}</h4>
-                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold px-3 py-1 uppercase text-[10px] shadow-sm">{bookingData.status}</Badge>
-                        </div>
-                        <p className="text-sm text-slate-500 flex items-center gap-1.5 font-medium italic leading-none opacity-70">
-                          <MapPin className="h-4 w-4 text-primary opacity-60" /> {bookingData.location.addressLine}
-                        </p>
-                      </div>
-                      <div className="p-6 rounded-[1.5rem] bg-indigo-50/50 border border-indigo-100 flex items-center gap-6 group hover:bg-indigo-50 transition-all shadow-sm">
-                        <div className="h-16 w-16 rounded-2xl bg-white shadow-md flex items-center justify-center text-indigo-600 shrink-0 border border-indigo-100 group-hover:scale-110 transition-transform"><Calendar size={32} /></div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1.5 opacity-60 italic leading-none uppercase tracking-widest">Assignment context</p>
-                          <p className="text-lg font-black text-slate-800 truncate uppercase tracking-tighter leading-none italic underline decoration-indigo-200 underline-offset-4 decoration-2">{bookingData.event.displayName}</p>
-                          <p className="text-xs text-slate-400 mt-3 font-medium italic leading-none italic">{formatDateTime(bookingData.event.startDate)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
-              <div className="flex flex-col gap-8 text-left">
-                <Card className="flex-1 bg-amber-500 p-8 text-white overflow-hidden shadow-xl border-none relative flex flex-col justify-center rounded-[2rem]">
-                  <div className="absolute -top-6 -right-6 opacity-10 rotate-12 pointer-events-none"><Percent size={140} /></div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80 mb-2 leading-none uppercase tracking-widest italic">Platform Commission Result</p>
-                  <p className="text-4xl font-black tabular-nums tracking-tighter drop-shadow-md italic leading-none font-mono">
-                    {formatCurrency(parseFloat(bookingData.amountToPay) * parseFloat(bookingData.systemCutPercentage))}
-                  </p>
-                  <div className="mt-8 space-y-3 pt-6 border-t border-white/10 italic text-[10px] font-bold uppercase text-amber-100 opacity-70">
-                    <div className="flex justify-between items-center leading-none">
-                      <span>Gross Transaction Vol</span>
-                      <span className="font-mono tabular-nums leading-none tracking-tight">{formatCurrency(bookingData.amountToPay)}</span>
-                    </div>
-                  </div>
-                </Card>
-                <Card className="p-6 space-y-5 border-none shadow-sm ring-1 ring-slate-200 rounded-[1.5rem] bg-white">
-                  <h5 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] border-b border-slate-50 pb-3 italic text-center leading-none uppercase tracking-widest">Stakeholder Identity</h5>
-                  <div className="flex items-center gap-4 group border-t border-slate-50 pt-4 cursor-default first:border-none first:pt-0">
-                    <Avatar className="h-11 w-11 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0 transition-transform group-hover:scale-110"><AvatarImage src={bookingData.createdBy?.avatarUrl || ''} /></Avatar>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-black text-slate-400 uppercase leading-none mb-1 opacity-70 tracking-widest italic uppercase leading-none">Client Identity</p>
-                      <p className="text-[13px] font-black text-slate-800 truncate uppercase tracking-tighter leading-none italic">{bookingData.createdBy?.firstName}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-200 hover:text-primary transition-all" onClick={() => router.push(`/admin/accounts/${bookingData.createdById}`)}><ExternalLink size={15} /></Button>
-                  </div>
-                  <div className="flex items-center gap-4 group border-t border-slate-50 pt-4 cursor-default">
-                    <Avatar className="h-11 w-11 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0 transition-transform group-hover:scale-110"><AvatarImage src={bookingData.location.business?.avatar || ''} /></Avatar>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-black text-slate-400 uppercase leading-none mb-1 opacity-70 tracking-widest italic uppercase leading-none">Provider Holder</p>
-                      <p className="text-[13px] font-black text-slate-800 truncate uppercase tracking-tighter leading-none italic">{bookingData.location.business?.name}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-200 hover:text-primary transition-all" onClick={() => router.push(`/admin/accounts/${bookingData.location.businessId}`)}><ExternalLink size={15} /></Button>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          )}
-
-          {/* --- CASE: FALLBACK / DIRECT REVENUE (When referencedInitType is NULL) --- */}
-          {!isLocationBooking && !isEventInit && !isTicketOrder && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch animate-in fade-in duration-700">
-
-              {/* Cột Trái: Thông tin đối soát từ Ghi chú (2/3 width) */}
-              <div className="lg:col-span-2">
-                <Card className="h-full border-none shadow-sm ring-1 ring-slate-200 bg-white rounded-[1.5rem] overflow-hidden flex flex-col md:flex-row">
-                  {/* Sidebar Kỹ thuật */}
-                  <div className="w-full md:w-72 border-r border-slate-100 bg-slate-50/50 p-6 flex flex-col">
-                    <div className="p-4 rounded-2xl bg-white shadow-inner mb-6 flex items-center justify-center">
-                      <ShieldCheck size={48} className="text-slate-300" />
-                    </div>
-                    <div className="space-y-5">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 italic">Accounting Trace</p>
-                        <div className="p-3 bg-white rounded-xl border border-slate-100 font-mono text-[10px] break-all leading-relaxed text-slate-500">
-                          {transaction.id}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Entry Type</span>
-                        <Badge variant="secondary" className="text-[9px] uppercase font-bold px-2">{transaction.type}</Badge>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Nội dung chính: Phân tích ghi chú */}
-                  <div className="p-8 flex-1 flex flex-col justify-between text-left">
-                    <div className="space-y-8">
-                      <div>
-                        <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1 opacity-70 italic leading-none">Manual Liquidity Entry</h4>
-                        <h4 className="font-black text-2xl text-slate-900 leading-tight tracking-tighter uppercase mb-6">Unstructured Transaction Data</h4>
-
-                        <div className="p-6 rounded-[1.5rem] bg-slate-50 border-2 border-dashed border-slate-200">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                            <Receipt size={14} /> Official Record Note
-                          </p>
-                          <p className="text-sm text-slate-600 font-medium italic leading-relaxed">
-                            &ldquo;{transaction.note || "No additional context provided for this manual transaction."}&rdquo;
-                          </p>
-                        </div>
-
-                        {/* Gợi ý cho Admin: Trích xuất ID nếu có trong Note */}
-                        {transaction.note?.includes("ID:") && (
-                          <div className="mt-6 flex items-center gap-3 p-3 bg-amber-50 rounded-xl border border-amber-100">
-                            <Info size={16} className="text-amber-500" />
-                            <p className="text-[11px] text-amber-700 font-medium tracking-tight">
-                              Detected a reference ID in notes. Use the <b>Trace ID</b> for manual verification.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between opacity-50">
-                      <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none tracking-[0.3em]">Operational Auditing</span>
-                      <div className="h-1.5 w-1.5 rounded-full bg-slate-200"></div>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Cột Phải: Tài chính & Revenue (1/3 width) */}
-              <div className="flex flex-col gap-6 text-left">
-                <Card className="flex-1 bg-slate-900 p-8 text-white overflow-hidden shadow-xl border-none relative flex flex-col justify-center rounded-[2rem]">
-                  <div className="absolute -top-6 -right-6 opacity-5 rotate-12 pointer-events-none"><Activity size={140} /></div>
-
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-2 leading-none italic">
-                    Platform Net Impact
-                  </p>
-
-                  <p className="text-4xl font-black tabular-nums tracking-tighter drop-shadow-md italic leading-none font-mono text-emerald-400">
-                    {formatCurrency(transaction.amount)}
-                  </p>
-
-                  <div className="mt-8 space-y-4 pt-6 border-t border-white/10 italic text-[10px] font-bold uppercase text-slate-500">
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-slate-400 text-center text-[9px] leading-relaxed">
-                      This transaction was logged without an explicit reference type. Figures represent the net impact to the system revenue wallet.
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Placeholder Stakeholder */}
-                <Card className="p-6 border-none shadow-sm ring-1 ring-slate-200 rounded-[1.5rem] bg-white opacity-60 grayscale">
-                  <div className="flex items-center gap-4">
-                    <div className="h-11 w-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200 shadow-inner">
-                      <User size={20} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-black text-slate-400 uppercase leading-none mb-1 opacity-70 tracking-widest italic uppercase">Stakeholder Offline</p>
-                      <p className="text-[11px] font-bold text-slate-400 italic">No associated entity profile.</p>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          )}
+          </div>
         </CardContent>
       </Card>
+
+      <Card className='bg-primary/10 gap-3'>
+        <CardHeader className='pb-0'>
+          <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+            <NotepadText />
+            Note
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='pt-0'>
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <span className="font-mono text-sm break-all">
+                {transaction.note}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Source and Destination Wallets */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <WalletInfoCard
+          walletOwner={sourceWalletOwner}
+          isSystem={isSourceSystem}
+          isEscrow={isSourceEscrow}
+          label="Source Wallet"
+          isSource={true}
+        />
+        <WalletInfoCard
+          walletOwner={destinationWalletOwner}
+          isSystem={isDestinationSystem}
+          isEscrow={isDestinationEscrow}
+          label="Destination Wallet"
+          isSource={false}
+        />
+      </div>
+      <Separator/>
+
+      {/* Ticket Order Section */}
+      {referencedInitType === "TICKET_ORDER" && (
+        <div className="mt-6">
+          {isLoadingTicketOrder ? (
+            <Card>
+              <CardContent className="pt-6">
+                <LoadingCustom />
+              </CardContent>
+            </Card>
+          ) : ticketOrder ? (
+            <Card className="border-2 border-primary/20 shadow-lg">
+              <CardHeader className="pb-4 border-b border-primary/10">
+                <CardTitle className="flex items-center gap-2">
+                  <Ticket className="h-5 w-5 text-primary" />
+                  Ticket Order Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Order Header */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Hash className="h-4 w-4" />
+                      <span className="font-medium">Order Number</span>
+                    </div>
+                    <p className="font-mono text-sm text-foreground pl-6">
+                      {ticketOrder.orderNumber}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span className="font-medium">Order Date</span>
+                    </div>
+                    <p className="text-sm text-foreground pl-6">
+                      {formatDateTime(ticketOrder.createdAt)}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <ShoppingCart className="h-4 w-4" />
+                      <span className="font-medium">Total Amount</span>
+                    </div>
+                    <p className="text-lg font-bold text-foreground pl-6">
+                      {formatCurrency(
+                        ticketOrder.totalPaymentAmount,
+                        ticketOrder.currency
+                      )}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Receipt className="h-4 w-4" />
+                      <span className="font-medium">Status</span>
+                    </div>
+                    <Badge
+                      variant={
+                        ticketOrder.status === "PAID" ? "default" : "secondary"
+                      }
+                      className="ml-6"
+                    >
+                      {ticketOrder.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                {ticketOrder.refundedAmount && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      <span className="font-medium">Refunded Amount</span>
+                    </div>
+                    <p className="text-lg font-bold text-orange-600 pl-6">
+                      {formatCurrency(
+                        ticketOrder.refundedAmount,
+                        ticketOrder.currency
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Event Information */}
+                {ticketOrder.event && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <MapPin className="h-4 w-4" />
+                        Event Information
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          router.push(`/admin/events/${ticketOrder.event.id}`)
+                        }
+                        className="flex items-center gap-2"
+                      >
+                        <span>View Event</span>
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Event Name</p>
+                        <p className="font-semibold text-foreground">
+                          {ticketOrder.event.displayName}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Event Date</p>
+                        <p className="text-foreground">
+                          {formatDateTime(ticketOrder.event.startDate)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Order Details */}
+                {ticketOrder.orderDetails && ticketOrder.orderDetails.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Ticket className="h-4 w-4" />
+                      Order Items
+                    </div>
+                    <div className="space-y-3 pl-6">
+                      {ticketOrder.orderDetails.map((detail: {
+                        id?: string;
+                        quantity: number;
+                        unitPrice: string;
+                        currency: string;
+                        subTotal: number;
+                        ticketSnapshot?: {
+                          displayName?: string;
+                          description?: string;
+                        };
+                      }, index: number) => (
+                        <div
+                          key={detail.id || index}
+                          className="flex items-start justify-between gap-4 py-3 border-b border-primary/10 last:border-b-0"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-foreground mb-1">
+                              {detail.ticketSnapshot?.displayName || "Ticket"}
+                            </p>
+                            {detail.ticketSnapshot?.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {detail.ticketSnapshot.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-3 mt-2">
+                              <span className="text-xs text-muted-foreground">
+                                {detail.quantity} × {formatCurrency(detail.unitPrice, detail.currency)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="font-bold text-foreground">
+                              {formatCurrency(detail.subTotal, detail.currency)}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Subtotal
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      )}
+
+      {/* Location Booking Section */}
+      {referencedInitType === "LOCATION_BOOKING" && (
+        <div className="mt-6">
+          {isLoadingLocationBooking ? (
+            <Card>
+              <CardContent className="pt-6">
+                <LoadingCustom />
+              </CardContent>
+            </Card>
+          ) : locationBooking ? (
+            <Card className="border-2 border-primary/20 shadow-lg">
+              <CardHeader className="pb-4 border-b border-primary/10">
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  Location Booking Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Booking Header */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Hash className="h-4 w-4" />
+                      <span className="font-medium">Booking ID</span>
+                    </div>
+                    <p className="font-mono text-sm text-foreground pl-6">
+                      {locationBooking.id}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span className="font-medium">Booking Date</span>
+                    </div>
+                    <p className="text-sm text-foreground pl-6">
+                      {formatDateTime(locationBooking.createdAt)}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Receipt className="h-4 w-4" />
+                      <span className="font-medium">Amount to Pay</span>
+                    </div>
+                    <p className="text-lg font-bold text-foreground pl-6">
+                      {formatCurrency(
+                        locationBooking.amountToPay,
+                        "VND"
+                      )}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Receipt className="h-4 w-4" />
+                      <span className="font-medium">Status</span>
+                    </div>
+                    <Badge
+                      variant={
+                        locationBooking.status === "APPROVED" ? "default" : "secondary"
+                      }
+                      className="ml-6"
+                    >
+                      {locationBooking.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {(locationBooking as any).refundedAmount && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      <span className="font-medium">Refunded Amount</span>
+                    </div>
+                    <p className="text-lg font-bold text-orange-600 pl-6">
+                      {formatCurrency(
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        (locationBooking as any).refundedAmount,
+                        "VND"
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                {/* Booking Dates - Show earliest start and latest end */}
+                {locationBooking.dates && locationBooking.dates.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span className="font-medium">Booking Period</span>
+                    </div>
+                    <div className="pl-6 space-y-1">
+                      {(() => {
+                        const startDates = locationBooking.dates.map(
+                          (d) => new Date(d.startDateTime).getTime()
+                        );
+                        const endDates = locationBooking.dates.map(
+                          (d) => new Date(d.endDateTime).getTime()
+                        );
+                        const earliestStart = new Date(Math.min(...startDates));
+                        const latestEnd = new Date(Math.max(...endDates));
+                        return (
+                          <>
+                            <p className="text-sm text-foreground">
+                              <span className="font-medium">Start:</span>{" "}
+                              {formatDateTime(earliestStart.toISOString())}
+                            </p>
+                            <p className="text-sm text-foreground">
+                              <span className="font-medium">End:</span>{" "}
+                              {formatDateTime(latestEnd.toISOString())}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Total time slots: {locationBooking.dates.length}
+                            </p>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Location Information */}
+                {locationBooking.location && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <MapPin className="h-4 w-4" />
+                        Location Information
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          router.push(`/admin/locations/${locationBooking.location.id}`)
+                        }
+                        className="flex items-center gap-2"
+                      >
+                        <span>View Location</span>
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Location Name</p>
+                        <p className="font-semibold text-foreground">
+                          {locationBooking.location.name}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Address</p>
+                        <p className="text-foreground">
+                          {locationBooking.location.addressLine}
+                          {locationBooking.location.addressLevel1 &&
+                            `, ${locationBooking.location.addressLevel1}`}
+                          {locationBooking.location.addressLevel2 &&
+                            `, ${locationBooking.location.addressLevel2}`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Event Information */}
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {(locationBooking as any).event && (
+                  <>
+                    <Separator />
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <Ticket className="h-4 w-4" />
+                          Event Information
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            router.push(
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              `/admin/events/${(locationBooking as any).event.id}`
+                            )
+                          }
+                          className="flex items-center gap-2"
+                        >
+                          <span>View Event</span>
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">Event Name</p>
+                          <p className="font-semibold text-foreground">
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            {(locationBooking as any).event.displayName}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">Event Date</p>
+                          <p className="text-foreground">
+                            {formatDateTime(
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              (locationBooking as any).event.startDate
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Creator Information */}
+                {locationBooking.createdBy && (
+                  <>
+                    <Separator />
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <User className="h-4 w-4" />
+                        Creator Information
+                      </div>
+                      <div className="flex items-center gap-4 pl-6">
+                        <Avatar className="h-12 w-12 border-2 border-primary/20">
+                          <AvatarImage
+                            src={locationBooking.createdBy.avatarUrl || undefined}
+                          />
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                            {locationBooking.createdBy.firstName?.[0] || ""}
+                            {locationBooking.createdBy.lastName?.[0] || ""}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground">
+                            {locationBooking.createdBy.firstName}{" "}
+                            {locationBooking.createdBy.lastName}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {locationBooking.createdBy.email}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      )}
+
+      {/* Event Section */}
+      {referencedInitType === "EVENT" && (
+        <div className="mt-6">
+          {isLoadingEvent ? (
+            <Card>
+              <CardContent className="pt-6">
+                <LoadingCustom />
+              </CardContent>
+            </Card>
+          ) : event ? (
+            <Card className="border-2 border-primary/20 shadow-lg">
+              <CardHeader className="pb-4 border-b border-primary/10">
+                <CardTitle className="flex items-center gap-2">
+                  <Ticket className="h-5 w-5 text-primary" />
+                  Event Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Event Header */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Hash className="h-4 w-4" />
+                      <span className="font-medium">Event ID</span>
+                    </div>
+                    <p className="font-mono text-sm text-foreground pl-6">
+                      {event.id}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span className="font-medium">Created Date</span>
+                    </div>
+                    <p className="text-sm text-foreground pl-6">
+                      {formatDateTime(event.createdAt)}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Receipt className="h-4 w-4" />
+                      <span className="font-medium">Status</span>
+                    </div>
+                    <Badge
+                      variant={
+                        event.status === "PUBLISHED" || event.status === "FINISHED"
+                          ? "default"
+                          : "secondary"
+                      }
+                      className="ml-6"
+                    >
+                      {event.status}
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span className="font-medium">Event Dates</span>
+                    </div>
+                    <div className="pl-6 space-y-1">
+                      <p className="text-sm text-foreground">
+                        <span className="font-medium">Start:</span>{" "}
+                        {formatDateTime(event.startDate)}
+                      </p>
+                      <p className="text-sm text-foreground">
+                        <span className="font-medium">End:</span>{" "}
+                        {formatDateTime(event.endDate)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Event Information */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Ticket className="h-4 w-4" />
+                      Event Information
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push(`/admin/events/${event.id}`)}
+                      className="flex items-center gap-2"
+                    >
+                      <span>View Event</span>
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">Event Name</p>
+                      <p className="font-semibold text-foreground">
+                        {event.displayName}
+                      </p>
+                    </div>
+                    {event.description && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Description</p>
+                        <p className="text-sm text-foreground line-clamp-3">
+                          {event.description}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Location Information */}
+                {event.location && (
+                  <>
+                    <Separator />
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <MapPin className="h-4 w-4" />
+                          Location Information
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            router.push(`/admin/locations/${event.location.id}`)
+                          }
+                          className="flex items-center gap-2"
+                        >
+                          <span>View Location</span>
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">Location Name</p>
+                          <p className="font-semibold text-foreground">
+                            {event.location.name}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">Address</p>
+                          <p className="text-foreground">
+                            {event.location.addressLine}
+                            {event.location.addressLevel1 &&
+                              `, ${event.location.addressLevel1}`}
+                            {event.location.addressLevel2 &&
+                              `, ${event.location.addressLevel2}`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Creator Information */}
+                {event.createdBy && (
+                  <>
+                    <Separator />
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <User className="h-4 w-4" />
+                        Creator Information
+                      </div>
+                      <div className="flex items-center gap-4 pl-6">
+                        <Avatar className="h-12 w-12 border-2 border-primary/20">
+                          <AvatarImage
+                            src={event.createdBy.avatarUrl || undefined}
+                          />
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                            {event.createdBy.firstName?.[0] || ""}
+                            {event.createdBy.lastName?.[0] || ""}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground">
+                            {event.createdBy.firstName} {event.createdBy.lastName}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {event.createdBy.email}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      )}
     </PageContainer>
   );
 }

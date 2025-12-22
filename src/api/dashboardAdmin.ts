@@ -78,8 +78,21 @@ export const getEventsLocationsTotals = async (
   return response.data.data || [];
 };
 
-export const getAllReports = async () => {
-  const response = await axiosInstance.get('/v1/admin/report');
+export interface GetAllReportsParams {
+  status?: string;
+}
+
+export const getAllReports = async (params?: GetAllReportsParams) => {
+  const queryParams: Record<string, string> = {};
+
+  if (params?.status) {
+    queryParams['filter.status'] = `$eq:${params.status}`;
+  }
+
+  const queryString = new URLSearchParams(queryParams).toString();
+  const url = `/v1/admin/report${queryString ? `?${queryString}` : ''}`;
+
+  const response = await axiosInstance.get(url);
   return response.data.data || { data: [], meta: {}, links: {} };
 };
 

@@ -7,6 +7,7 @@ import {
   getWalletAnalytics,
   getEventsLocationsTotals,
   getAllReports,
+  GetAllReportsParams,
   getAnnouncementsByLocationId,
   getLocationBookingDetail,
   getReviewsByLocationId,
@@ -44,10 +45,10 @@ export const useEventsLocationsTotals = (filter: UserAnalyticsFilter) => {
   });
 };
 
-export const useAllReports = () => {
+export const useAllReports = (params?: GetAllReportsParams) => {
   return useQuery({
-    queryKey: ['admin-all-reports'],
-    queryFn: () => getAllReports(),
+    queryKey: ['admin-all-reports', params],
+    queryFn: () => getAllReports(params),
     placeholderData: (previousData) => previousData,
   });
 };

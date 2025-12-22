@@ -1,13 +1,12 @@
-import { getAdminTicketOrderById } from '@/api/admin';
-import { useQuery } from '@tanstack/react-query';
+"use client";
 
-export function useAdminTicketOrderById(id: string | undefined, enabled: boolean = true) {
-    return useQuery({
-        queryKey: ["admin-ticket-order", id],
-        queryFn: () => {
-            if (!id) throw new Error("ID is required");
-            return getAdminTicketOrderById(id);
-        },
-        enabled: enabled && !!id,
-    });
+import { useQuery } from "@tanstack/react-query";
+import { getAdminTicketOrderByIdForTransaction } from "@/api/admin";
+
+export function useAdminTicketOrderById(ticketOrderId: string | null) {
+  return useQuery({
+    queryKey: ["adminTicketOrderForTransaction", ticketOrderId],
+    queryFn: () => getAdminTicketOrderByIdForTransaction(ticketOrderId!),
+    enabled: !!ticketOrderId,
+  });
 }

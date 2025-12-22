@@ -3,6 +3,7 @@
 import { use, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEventByIdForAdmin } from '@/hooks/admin/useEventByIdForAdmin';
+import { useEventTicketOrders } from '@/hooks/admin/useEventTicketOrders';
 import {
   ArrowLeft,
   Calendar,
@@ -21,6 +22,7 @@ import {
   ImageIcon,
   Mail,
   Phone,
+  ShoppingCart,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -85,7 +87,7 @@ export default function AdminEventDetailsPage({
 
   const activeTab = searchParams.get('tab') || 'overview';
 
-  const validTabs = ['overview', 'tickets', 'reports', 'penalties'];
+  const validTabs = ['overview', 'tickets', 'orders', 'reports', 'penalties'];
   const currentTab = validTabs.includes(activeTab) ? activeTab : 'overview';
 
   const handleTabChange = (value: string) => {
@@ -101,6 +103,13 @@ export default function AdminEventDetailsPage({
     isLoading: isLoadingPenalties,
     isError: isErrorPenalties,
   } = usePenaltiesByTarget(eventId, 'event');
+
+  const {
+    data: ticketOrdersData,
+    isLoading: isLoadingTicketOrders,
+  } = useEventTicketOrders(eventId, { page: 1, limit: 1000 });
+
+  const ticketOrders = ticketOrdersData?.data || [];
 
   if (isLoading) {
     return <LoadingCustom />;
@@ -261,6 +270,17 @@ export default function AdminEventDetailsPage({
                 Tickets
               </button>
               <button
+                onClick={() => handleTabChange('orders')}
+                className={`flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  currentTab === 'orders'
+                    ? 'border-foreground text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <ShoppingCart className='h-4 w-4' />
+                Orders
+              </button>
+              <button
                 onClick={() => handleTabChange('reports')}
                 className={`flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
                   currentTab === 'reports'
@@ -287,6 +307,7 @@ export default function AdminEventDetailsPage({
           <TabsList className='hidden'>
             <TabsTrigger value='overview'>Overview</TabsTrigger>
             <TabsTrigger value='tickets'>Tickets</TabsTrigger>
+            <TabsTrigger value='orders'>Orders</TabsTrigger>
             <TabsTrigger value='reports'>Reports</TabsTrigger>
             <TabsTrigger value='penalties'>Penalties</TabsTrigger>
           </TabsList>
@@ -751,6 +772,119 @@ export default function AdminEventDetailsPage({
                 </Card>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value='orders' className='space-y-6'>
+            {isLoadingTicketOrders ? (
+              <Card className='shadow-sm'>
+                <CardContent className='py-10'>
+                  <LoadingCustom />
+                </CardContent>
+              </Card>
+            ) : ticketOrders.length === 0 ? (
+              <Card className='shadow-sm'>
+                <CardContent className='py-10 text-center text-muted-foreground text-sm'>
+                  No orders found for this event.
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className='shadow-sm'>
+                <CardHeader>
+                  <CardTitle className='text-lg flex items-center gap-2'>
+                    <ShoppingCart className='h-5 w-5 text-primary' />
+                    Orders ({ticketOrders.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className='rounded-md border overflow-hidden'>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Order Number</TableHead>
+                          <TableHead>Customer</TableHead>
+                          <TableHead>Items</TableHead>
+                          <TableHead>Total Amount</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Refunded</TableHead>
+                          <TableHead>Order Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {ticketOrders.map((order: {
+                          id: string;
+                          orderNumber: string;
+                          totalPaymentAmount: string;
+                          currency: string;
+                          status: string;
+                          refundedAmount?: number | null;
+                          createdAt: string;
+                          orderDetails?: Array<unknown>;
+                          createdBy?: {
+                            firstName: string;
+                            lastName: string;
+                            email: string;
+                          } | null;
+                        }) => (
+                          <TableRow key={order.id}>
+                            <TableCell className='font-mono text-xs'>
+                              {order.orderNumber}
+                            </TableCell>
+                            <TableCell>
+                              {order.createdBy ? (
+                                <div className='flex flex-col'>
+                                  <span className='font-medium'>
+                                    {order.createdBy.firstName}{' '}
+                                    {order.createdBy.lastName}
+                                  </span>
+                                  <span className='text-xs text-muted-foreground'>
+                                    {order.createdBy.email}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className='text-muted-foreground'>N/A</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className='font-medium'>
+                                {order.orderDetails?.length || 0}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <span className='font-semibold'>
+                                {Number(order.totalPaymentAmount).toLocaleString()}{' '}
+                                {order.currency}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  order.status === 'PAID' ? 'default' : 'secondary'
+                                }
+                              >
+                                {order.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {order.refundedAmount && order.refundedAmount > 0 ? (
+                                <span className='text-orange-600 font-semibold'>
+                                  {Number(order.refundedAmount).toLocaleString()}{' '}
+                                  {order.currency}
+                                </span>
+                              ) : (
+                                <span className='text-muted-foreground'>-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {formatDateTime(order.createdAt)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent

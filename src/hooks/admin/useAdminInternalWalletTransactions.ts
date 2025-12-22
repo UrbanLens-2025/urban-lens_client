@@ -9,7 +9,7 @@ export function useAdminInternalWalletTransactions(
 ) {
   return useQuery({
     queryKey: params
-      ? ['adminInternalWalletTransactions', params.walletId, params.page, params.limit, params.sortBy]
+      ? ['adminInternalWalletTransactions', params.walletId, params.page, params.limit, params.sortBy, params.search]
       : ['adminInternalWalletTransactions', 'disabled'],
     queryFn: () => {
       if (!params) {

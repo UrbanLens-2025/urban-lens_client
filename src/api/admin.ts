@@ -267,15 +267,49 @@ export const getAdminInternalWalletTransactions = async ({
   page = 1,
   limit = 20,
   sortBy = 'createdAt:DESC',
+  search,
+  searchBy = [
+    'note',
+    'id',
+    'sourceWallet.owner.email',
+    'destinationWallet.owner.email',
+    // 'sourceWallet.owner.firstName',
+    // 'sourceWallet.owner.lastName',
+    // 'destinationWallet.owner.firstName',
+    // 'destinationWallet.owner.lastName',
+    'sourceWalletId',
+    'destinationWalletId',
+  ],
 }: GetAdminWalletTransactionsParams): Promise<
   PaginatedData<WalletTransaction>
 > => {
   const params: any = { page, limit, sortBy };
+  
+  if (search) {
+    params.search = search;
+    // Set searchBy as array - will be serialized as multiple query params
+    params.searchBy = searchBy;
+  }
 
   const { data } = await axiosInstance.get<
     ApiResponse<PaginatedData<WalletTransaction>>
   >(`/v1/admin/wallet/transactions/internal/${walletId}`, {
     params,
+    paramsSerializer: (params) => {
+      const searchParams = new URLSearchParams();
+      Object.keys(params).forEach((key) => {
+        const value = params[key];
+        if (Array.isArray(value)) {
+          // For arrays, add each value as a separate query parameter
+          value.forEach((item) => {
+            searchParams.append(key, item);
+          });
+        } else if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+      return searchParams.toString();
+    },
   });
 
   return data.data;
@@ -286,6 +320,15 @@ export const getAdminInternalWalletTransactionById = async (
 ): Promise<WalletTransaction> => {
   const { data } = await axiosInstance.get<ApiResponse<WalletTransaction>>(
     `/v1/admin/wallet/transactions/internal/get-by-id/${transactionId}`
+  );
+  return data.data;
+};
+
+export const getAdminTicketOrderByIdForTransaction = async (
+  ticketOrderId: string
+): Promise<any> => {
+  const { data } = await axiosInstance.get<ApiResponse<any>>(
+    `/v1/admin/events/ticket-orders/${ticketOrderId}`
   );
   return data.data;
 };
@@ -398,6 +441,22 @@ export const getAllEventsForAdmin = async ({
 export const getEventByIdForAdmin = async (id: string): Promise<any> => {
   const { data } = await axiosInstance.get<ApiResponse<any>>(
     `/v1/admin/events/${id}`
+  );
+  return data.data;
+};
+
+export const getEventTicketOrders = async (
+  eventId: string,
+  params?: { page?: number; limit?: number }
+): Promise<PaginatedData<any>> => {
+  const queryParams: any = {
+    page: params?.page ?? 1,
+    limit: params?.limit ?? 1000,
+  };
+
+  const { data } = await axiosInstance.get<ApiResponse<PaginatedData<any>>>(
+    `/v1/admin/events/${eventId}/ticket-orders`,
+    { params: queryParams }
   );
   return data.data;
 };

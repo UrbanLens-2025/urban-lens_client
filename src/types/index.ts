@@ -781,6 +781,8 @@ export interface GetWalletTransactionsParams {
   page?: number;
   limit?: number;
   sortBy?: string; // e.g., createdAt:DESC
+  search?: string;
+  searchBy?: string[];
 }
 
 // Admin: get internal wallet transactions for a specific wallet
