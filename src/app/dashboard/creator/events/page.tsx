@@ -247,7 +247,7 @@ export default function CreatorEventsPage() {
                 setSearch(value);
                 setPage(1);
               }}
-              searchPlaceholder='Search by event name or location...'
+              searchPlaceholder='Search by event name'
               filters={[
                 {
                   key: 'status',
