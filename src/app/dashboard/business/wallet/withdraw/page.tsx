@@ -191,9 +191,6 @@ export default function BusinessWalletWithdrawPage() {
                           disabled={wallet?.isLocked}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Maximum: {formatCurrency(totalBalance)}
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -191,9 +191,6 @@ export default function CreatorWalletWithdrawPage() {
                           disabled={wallet?.isLocked}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Maximum: {formatCurrency(totalBalance)}
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
