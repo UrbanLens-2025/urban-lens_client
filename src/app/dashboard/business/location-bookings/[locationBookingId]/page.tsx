@@ -244,7 +244,7 @@ export default function LocationBookingDetailPage({
 
   const { data: revenueData, isLoading: isLoadingRevenue } =
     useRevenueSummary();
-  const currentBalance = revenueData?.available || 0;
+  const currentBalance = revenueData?.availableBalance || 0;
 
   const {
     data: booking,
