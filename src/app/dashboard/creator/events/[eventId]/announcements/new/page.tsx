@@ -192,7 +192,6 @@ export default function NewCreatorAnnouncementPage({
                             disabled={isCreating}
                             minDate={new Date()}
                             // Optional: Constrain max date to event end date if desired
-                            maxDate={event?.endDate ? new Date(event.endDate) : undefined}
                             placeholder="Pick a start date & time"
                             showTime
                           />
@@ -223,7 +222,6 @@ export default function NewCreatorAnnouncementPage({
                                 : new Date()
                             }
                             // Max date is the event end date
-                            maxDate={event?.endDate ? new Date(event.endDate) : undefined}
                             placeholder="Pick an end date & time"
                             showTime
                           />
