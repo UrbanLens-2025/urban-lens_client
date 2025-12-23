@@ -66,7 +66,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import Link from "next/link";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn, formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -74,6 +74,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { addDays } from "date-fns";
+import { useEventGeneralAnalytics } from "@/hooks/events/useEventGeneralAnalytics";
 
 function EventDetailLayoutContent({
   eventId,
@@ -128,6 +130,8 @@ function EventDetailLayoutContent({
   } = useEventById(eventId);
   const { data: tickets } = useEventTickets(eventId);
   const { data: locationBookings } = useEventLocationBookings(eventId);
+  const { data: generalAnalytics, isLoading: isLoadingGeneralAnalytics } =
+    useEventGeneralAnalytics(eventId);
   const publishEvent = usePublishEvent();
   const finishEvent = useFinishEvent();
 
@@ -703,8 +707,8 @@ function EventDetailLayoutContent({
     <div className="space-y-0">
       {/* Welcome Modal - Only show for DRAFT events */}
       {event.status?.toUpperCase() === "DRAFT" && (
-        <EventWelcomeModal 
-          eventId={eventId} 
+        <EventWelcomeModal
+          eventId={eventId}
           eventName={event.displayName}
           eventStatus={event.status}
         />
@@ -863,7 +867,10 @@ function EventDetailLayoutContent({
                         {event.endDate &&
                           new Date(event.endDate) > new Date() && (
                             <TooltipContent>
-                              <p>You cannot finish the event before the end date: {formatDateTime(event.endDate)}</p>
+                              <p>
+                                You cannot finish the event before the end date:{" "}
+                                {formatDateTime(event.endDate)}
+                              </p>
                             </TooltipContent>
                           )}
                       </Tooltip>
@@ -1097,6 +1104,100 @@ function EventDetailLayoutContent({
               </Card>
             );
           })()}
+
+        {/* Placeholder fullscreen-width card */}
+        {(function EventTimePassedCard() {
+          const startDate = event?.startDate;
+          const endDate = event?.endDate;
+
+          const hasEventTimePassed =
+            startDate &&
+            endDate &&
+            new Date(startDate) < new Date() &&
+            new Date(endDate) < new Date();
+          const hasEventMarkedFinished = event.status === "FINISHED";
+
+          if (hasEventTimePassed && !hasEventMarkedFinished) {
+            return (
+              <Card className="w-full bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                <CardContent>
+                  <div className="flex items-center gap-3">
+                    <AlertCircle />
+                    <div>
+                      Your event has ended.{" "}
+                      <span className="font-semibold underline">
+                        Please mark it as finished to receive the payout for
+                        your event.
+                      </span>{" "}
+                      You should receive your payout at{" "}
+                      {formatDateTime(addDays(new Date(), 7).toISOString())}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }
+        })()}
+
+        {(function EventFinishedNotPaidO() {
+          const hasEventMarkedFinished = event.status === "FINISHED";
+          const hasEventBeenPaidOut = event.paidOutAt !== null;
+
+          if (hasEventMarkedFinished && !hasEventBeenPaidOut) {
+            const amount = formatCurrency(generalAnalytics?.totalRevenue || 0);
+            const date = event.scheduledJob?.executeAt;
+
+            return (
+              <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                <CardContent className="flex items-center gap-3">
+                  <AlertCircle />
+                  <div>
+                    Your event has been marked finished.{" "}
+                    <span className="font-semibold underline">
+                      You will receive your payout amount of {amount}{" "}
+                      {date ? `on ${formatDateTime(date)}` : ""}.
+                    </span>
+                  </div>{" "}
+                </CardContent>
+              </Card>
+            );
+          }
+        })()}
+
+        {(function EventPaidOut() {
+          const hasEventBeenPaidOut = event.paidOutAt !== null;
+          const hasEventFinished = event.status === "FINISHED";
+
+          if (hasEventBeenPaidOut && hasEventFinished) {
+            const amount = formatCurrency(generalAnalytics?.totalRevenue || 0);
+            const date = event.scheduledJob?.executeAt;
+
+            return (
+              <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                <CardContent className="flex items-center gap-3">
+                  <AlertCircle />
+                  <div className="flex-1">
+                    Your event has been paid out with amount of{" "}
+                    <span className="font-semibold underline">{amount}</span>
+                  </div>
+                  {event.payoutTransactionCreatorId && (
+                    <div>
+                      <Button
+                        onClick={() =>
+                          router.push(
+                            `/dashboard/creator/wallet/${event.payoutTransactionCreatorId}`
+                          )
+                        }
+                      >
+                        View Transaction
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          }
+        })()}
 
         {/* Tabs Navigation */}
         <div className="border-b">

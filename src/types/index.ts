@@ -1,3 +1,5 @@
+import { ScheduledJob } from "@/api/admin";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface ApiResponse<T> {
   success: boolean;
@@ -946,6 +948,9 @@ export interface Event {
 
   // Misc / extensions (keep flexible for API evolution)
   referencedEventRequestId?: string | null;
+  scheduledJob?: ScheduledJob;
+  payoutTransactionCreatorId?: string | null;
+  paidOutAt?: string | null;
   [key: string]: unknown;
 }
 

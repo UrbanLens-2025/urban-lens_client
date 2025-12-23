@@ -2,7 +2,13 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getScheduledJobs, getScheduledJobTypes, runScheduledJob, GetScheduledJobsParams } from "@/api/admin";
+import {
+  getScheduledJobs,
+  getScheduledJobTypes,
+  retryScheduledJob,
+  runScheduledJob,
+  GetScheduledJobsParams,
+} from "@/api/admin";
 
 export function useScheduledJobs(params: GetScheduledJobsParams) {
   return useQuery({
@@ -30,6 +36,21 @@ export function useRunScheduledJob() {
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to run job. Please try again.");
+    },
+  });
+}
+
+export function useRetryScheduledJob() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (scheduledJobId: number) => retryScheduledJob(scheduledJobId),
+    onSuccess: () => {
+      toast.success("Job retry requested");
+      queryClient.invalidateQueries({ queryKey: ["adminScheduledJobs"] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to retry job. Please try again.");
     },
   });
 }

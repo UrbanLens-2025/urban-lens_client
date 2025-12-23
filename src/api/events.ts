@@ -434,6 +434,16 @@ export const getEventOrderById = async (
   return data.data;
 };
 
+export const getEventOrderByOrderCode = async (
+  eventId: string,
+  orderCode: string
+): Promise<Order> => {
+  const { data } = await axiosInstance.get<ApiResponse<Order>>(
+    `/v1/creator/events/${eventId}/order-by-order-code/${orderCode}`
+  );
+  return data.data;
+};
+
 export interface ConfirmAttendanceV2Payload {
   eventAttendanceIds: string[];
   ticketOrderId: string;

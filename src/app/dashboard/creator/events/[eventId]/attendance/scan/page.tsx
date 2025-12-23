@@ -4,7 +4,7 @@ import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Html5Qrcode } from "html5-qrcode";
 import { useEventById } from "@/hooks/events/useEventById";
-import { useEventOrder } from "@/hooks/events/useEventOrder";
+import { useEventOrderByOrderCode } from "@/hooks/events/useEventOrderByOrderCode";
 import { useConfirmAttendanceV2 } from "@/hooks/events/useConfirmAttendanceV2";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -175,7 +175,7 @@ export default function QRScanPage({
   const lastDimensionsRef = useRef<{ width: number; height: number } | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
-  const [scannedOrderId, setScannedOrderId] = useState<string | null>(null);
+  const [scannedOrderNumber, setScannedOrderNumber] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
@@ -192,7 +192,7 @@ export default function QRScanPage({
   const [showCheckInConfirm, setShowCheckInConfirm] = useState(false);
 
   const { data: event, isLoading: isLoadingEvent } = useEventById(eventId);
-  const { data: orderData, isLoading: isLoadingOrder, error: orderError, refetch: refetchOrder } = useEventOrder(eventId, scannedOrderId);
+  const { data: orderData, isLoading: isLoadingOrder, error: orderError, refetch: refetchOrder } = useEventOrderByOrderCode(eventId, scannedOrderNumber);
   const confirmAttendance = useConfirmAttendanceV2(eventId);
 
   // Group attendances by ticket
@@ -275,7 +275,7 @@ export default function QRScanPage({
       setSelectedAttendances(new Set());
       setShowCheckInConfirm(false);
       refetchOrder();
-    } catch (error) {
+    } catch {
       // Error is handled by the hook
       setShowCheckInConfirm(false);
     }
@@ -401,7 +401,7 @@ export default function QRScanPage({
   // Handle order error
   useEffect(() => {
     if (orderError) {
-      const errorMessage = (orderError as any)?.response?.data?.message || "Failed to fetch order details";
+      const errorMessage = (orderError as any)?.response?.data?.message || "Could not find that order for this event.";
       setScanError(errorMessage);
       toast.error(errorMessage);
     }
@@ -591,7 +591,7 @@ export default function QRScanPage({
 
     setCameraError(null);
     setScanError(null);
-    setScannedOrderId(null);
+    setScannedOrderNumber(null);
     setIsStarting(true);
 
     // Show the scanner container first - this will trigger useEffect to initialize
@@ -623,21 +623,21 @@ export default function QRScanPage({
     // Trim whitespace
     const trimmed = qrText.trim();
 
-    // UUID regex pattern
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    // Order number pattern: TO-XXXXXXXXX-XXXXXXXXX (e.g., TO-1765797079238-4EB918283645)
+    const orderNumberPattern = /^TO-[A-Z0-9]+-[A-Z0-9]+$/i;
 
-    if (uuidPattern.test(trimmed)) {
-      return trimmed;
+    if (orderNumberPattern.test(trimmed)) {
+      return trimmed.toUpperCase();
     }
 
-    // Try to extract UUID from JSON
+    // Try to extract order number from JSON
     try {
       const parsed = JSON.parse(trimmed);
-      if (parsed.orderId && uuidPattern.test(parsed.orderId)) {
-        return parsed.orderId;
+      if (parsed.orderNumber && orderNumberPattern.test(parsed.orderNumber)) {
+        return parsed.orderNumber.toUpperCase();
       }
-      if (parsed.id && uuidPattern.test(parsed.id)) {
-        return parsed.id;
+      if (parsed.orderCode && orderNumberPattern.test(parsed.orderCode)) {
+        return parsed.orderCode.toUpperCase();
       }
     } catch {
       // Not JSON, continue
@@ -655,21 +655,21 @@ export default function QRScanPage({
     setLastScannedCode(decodedText);
     stopScanner();
 
-    const orderId = parseQRCodeData(decodedText);
+    const orderNumber = parseQRCodeData(decodedText);
 
-    if (!orderId) {
-      setScanError("Invalid QR code format. Expected a valid order ID.");
+    if (!orderNumber) {
+      setScanError("Invalid QR code format. Expected a valid order number.");
       toast.error("Invalid QR code format");
       return;
     }
 
-    // Set the order ID to trigger the query
-    setScannedOrderId(orderId);
+    // Set the order number to trigger the query
+    setScannedOrderNumber(orderNumber);
     setScanError(null);
   };
 
   const resetScan = () => {
-    setScannedOrderId(null);
+    setScannedOrderNumber(null);
     setScanError(null);
     setLastScannedCode(null);
     setCollapsedGroups(new Set());
@@ -710,7 +710,7 @@ export default function QRScanPage({
   }
 
   // Show order details screen
-  if (scannedOrderId && (orderData || isLoadingOrder)) {
+  if (scannedOrderNumber && (orderData || isLoadingOrder)) {
     return (
       <div className="space-y-6 p-6 max-w-4xl mx-auto">
         {/* Header */}
@@ -1345,7 +1345,7 @@ export default function QRScanPage({
           )}
 
           {/* Scan Error */}
-          {scanError && !scannedOrderId && (
+          {scanError && !scannedOrderNumber && (
             <div className="p-4 rounded-lg border-2 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
               <div className="flex items-start gap-3">
                 <XCircle className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
@@ -1391,12 +1391,12 @@ export default function QRScanPage({
           <div className="space-y-3">
             <div>
               <label className="text-sm font-medium mb-2 block">
-                Order ID (UUID)
+                Order Number
               </label>
               <input
                 type="text"
                 className="w-full p-3 border rounded-md font-mono text-sm"
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                placeholder="TO-XXXXXXXXX-XXXXXXXXX"
                 id="manual-qr-input"
               />
             </div>
@@ -1408,7 +1408,7 @@ export default function QRScanPage({
                   handleScanSuccess(value);
                   input.value = "";
                 } else {
-                  toast.error("Please enter an order ID");
+                  toast.error("Please enter an order number");
                 }
               }}
               className="w-full"

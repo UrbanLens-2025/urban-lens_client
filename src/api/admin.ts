@@ -843,6 +843,14 @@ export const runScheduledJob = async (
   );
 };
 
+export const retryScheduledJob = async (
+  scheduledJobId: number
+): Promise<void> => {
+  await axiosInstance.post<ApiResponse<void>>(
+    `/v1/admin/scheduled-jobs/${scheduledJobId}/retry`
+  );
+};
+
 export interface SystemConfigValue {
   id: string;
   key: string;

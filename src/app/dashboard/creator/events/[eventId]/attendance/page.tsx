@@ -73,7 +73,7 @@ export default function EventAttendancePage({
     orderId: string;
     ownerName: string;
   } | null>(null);
-  const limit = 20;
+  const limit = 100;
 
   const confirmAttendance = useConfirmAttendanceV2(eventId);
 

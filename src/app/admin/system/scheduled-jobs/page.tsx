@@ -41,8 +41,9 @@ import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatShortDate, formatDateTime } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
-import { useScheduledJobs, useScheduledJobTypes, useRunScheduledJob } from '@/hooks/admin/useScheduledJobs';
+import { useScheduledJobs, useScheduledJobTypes, useRunScheduledJob, useRetryScheduledJob } from '@/hooks/admin/useScheduledJobs';
 import type { ScheduledJob } from '@/api/admin';
+import { ScheduledJobStatus } from '@/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,7 +61,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-type JobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+type JobStatus = ScheduledJobStatus;
 
 function getStatusBadge(status: JobStatus) {
   switch (status) {
@@ -128,7 +129,9 @@ export default function ScheduledJobsPage() {
   );
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [selectedRetryJobId, setSelectedRetryJobId] = useState<number | null>(null);
   const [isRunJobDialogOpen, setIsRunJobDialogOpen] = useState(false);
+  const [isRetryJobDialogOpen, setIsRetryJobDialogOpen] = useState(false);
   const itemsPerPage = 10;
 
   // Fetch job types
@@ -180,6 +183,7 @@ export default function ScheduledJobsPage() {
   const jobs = useMemo(() => data?.data || [], [data?.data]);
   const meta = data?.meta;
   const runJob = useRunScheduledJob();
+  const retryJob = useRetryScheduledJob();
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['adminScheduledJobs'] });
@@ -197,6 +201,23 @@ export default function ScheduledJobsPage() {
         onSuccess: () => {
           setIsRunJobDialogOpen(false);
           setSelectedJobId(null);
+          refresh();
+        },
+      });
+    }
+  };
+
+  const handleRetryJobClick = (jobId: number) => {
+    setSelectedRetryJobId(jobId);
+    setIsRetryJobDialogOpen(true);
+  };
+
+  const handleRetryJobConfirm = () => {
+    if (selectedRetryJobId !== null) {
+      retryJob.mutate(selectedRetryJobId, {
+        onSuccess: () => {
+          setIsRetryJobDialogOpen(false);
+          setSelectedRetryJobId(null);
           refresh();
         },
       });
@@ -411,6 +432,14 @@ export default function ScheduledJobsPage() {
                               <IconPlayerPlay className="mr-2 h-4 w-4" />
                               Run job now
                             </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleRetryJobClick(job.id)}
+                            disabled={job.status !== 'FAILED'}
+                            className="cursor-pointer"
+                          >
+                            <IconRefresh className="mr-2 h-4 w-4" />
+                            Retry job
+                          </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -496,6 +525,43 @@ export default function ScheduledJobsPage() {
                 <>
                   <IconPlayerPlay className="h-4 w-4 mr-2" />
                   Confirm
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Retry Job Confirmation Dialog */}
+      <AlertDialog open={isRetryJobDialogOpen} onOpenChange={setIsRetryJobDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <IconRefresh className="h-5 w-5 text-primary" />
+              Retry Job
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will retry the failed job. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={retryJob.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRetryJobConfirm}
+              disabled={retryJob.isPending}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {retryJob.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Retrying...
+                </>
+              ) : (
+                <>
+                  <IconRefresh className="h-4 w-4 mr-2" />
+                  Confirm Retry
                 </>
               )}
             </AlertDialogAction>
