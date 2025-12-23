@@ -159,10 +159,10 @@ export default function SystemConfigurationPage() {
     const isPercentage = editingConfig.key.includes('PERCENTAGE');
     if (isPercentage) {
       const numValue = parseFloat(newValue);
-      if (isNaN(numValue) || numValue < 0 || numValue > 1) {
+      if (isNaN(numValue) || numValue < 0 || numValue > 5) {
         form.setError('value', {
           type: 'manual',
-          message: 'Percentage value must be between 0 and 1',
+          message: 'Percentage value must be between 0 and 5 (500%)',
         });
         return;
       }
@@ -366,7 +366,7 @@ export default function SystemConfigurationPage() {
                           type={isPercentage ? 'number' : 'text'}
                           step={isPercentage ? '0.01' : undefined}
                           min={isPercentage ? '0' : undefined}
-                          max={isPercentage ? '1' : undefined}
+                          max={isPercentage ? '5' : undefined}
                         />
                       </FormControl>
                       {isPercentage && (
